@@ -2,7 +2,7 @@
 // (thalamus-shell.yml wire.replay, wire.workspace). Pure; App sends and draws.
 import { asked, empty, type Queue } from './approvals';
 import type { ToShell, ToThalamus } from './wire';
-import type { Layout } from './workspace';
+import { migrate, type Layout } from './workspace';
 
 export type Entry = { me: string } | { msg: ToShell } | { note: string };
 
@@ -32,11 +32,11 @@ export function replayed(m: Extract<ToShell, { t: 'replay' }>): {
 	return { log, q, asking };
 }
 
-/** The thalamus's copy wins; with none held, the local one goes up, once (it is held from then on). */
+/** The thalamus's copy wins (a v2 one as v3); with none held, the local one goes up, once (it is held from then on). */
 export const adopt = (
 	local: Layout,
 	doc: object | null
 ): { send: ToThalamus | null; layout: Layout | null } =>
 	doc
-		? { send: null, layout: doc as Layout }
+		? { send: null, layout: migrate(doc as Layout) }
 		: { send: { t: 'workspace_save', doc: local }, layout: null };

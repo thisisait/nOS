@@ -5,7 +5,7 @@
 import { usGet, usSet } from '$lib/api/userstate';
 import type { Transport } from './transport';
 import type { Link, ToShell } from './wire';
-import { empty, type Layout } from './workspace';
+import { empty, migrate } from './workspace';
 
 const NS = 'app.iris';
 
@@ -73,8 +73,9 @@ export function webTransport(base = '/bff/iris'): Transport & { close(): void } 
 			return () => link.delete(cb);
 		},
 		async loadLayout() {
-			const l = await usGet<Layout>(NS, 'layout');
-			return l?.version === 2 && Array.isArray(l.workspaces) && l.workspaces.length ? l : empty();
+			const l = await usGet<Parameters<typeof migrate>[0]>(NS, 'layout');
+			const known = l && [1, 2, 3].includes(l.version) && Array.isArray(l.workspaces);
+			return known && l.workspaces.length ? migrate(l) : empty();
 		},
 		saveLayout: (layout) => usSet(NS, 'layout', layout),
 		async exportCsv(name, csv) {

@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import Message from './Message.svelte';
 import type { Component, ToShell, WidgetSpec } from './wire';
 import { route } from './widgets';
-import { addSpace, empty, pin } from './workspace';
+import { addSpace, empty, pin, widgetsOf } from './workspace';
 
 const S = '0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b';
 const pie: Component = {
@@ -93,10 +93,10 @@ describe('a click places the pin', () => {
 	it('adds exactly one widget to the active tab, holding the spec and no rows, and runs it once', () => {
 		const r = pin(two, {}, 'w1', sourced);
 		const [ws1, ws2] = r.layout.workspaces;
-		expect([ws1.widgets.length, ws2.widgets.length]).toEqual([0, 1]);
-		const box = ws2.widgets[0];
+		expect([ws1.items.length, ws2.items.length]).toEqual([0, 1]);
+		const box = widgetsOf(ws2)[0];
 		expect(box.spec).toEqual(chartPin);
-		expect(Object.keys(box).sort()).toEqual(['h', 'id', 'spec', 'title', 'w', 'x', 'y']);
+		expect(Object.keys(box).sort()).toEqual(['h', 'id', 'kind', 'spec', 'title', 'w', 'x', 'y']);
 		expect(box.title).toBe('Expenses by kind');
 		expect(JSON.stringify(r.layout), "the model's numbers are not stored").not.toMatch(
 			/120|42|travel/
@@ -117,7 +117,7 @@ describe('a click places the pin', () => {
 			});
 		const m = { ...sourced, pin: proxied(structuredClone(chartPin)) } as ToShell;
 		const r = pin(two, {}, 'w4', m);
-		expect(r.layout.workspaces[1].widgets[0].spec).toEqual(chartPin);
+		expect(widgetsOf(r.layout.workspaces[1])[0].spec).toEqual(chartPin);
 		expect(() => structuredClone(r.layout)).not.toThrow();
 	});
 
@@ -125,14 +125,19 @@ describe('a click places the pin', () => {
 		const m = structuredClone(rows);
 		const r = pin(two, {}, 'w2', m);
 		(m as { pin: { rows: Record<string, unknown> } }).pin.rows.table = 'changed';
-		expect(r.layout.workspaces[1].widgets[0]).toMatchObject({ title: 'Expenses', spec: rowsPin });
+		expect(widgetsOf(r.layout.workspaces[1])[0]).toMatchObject({
+			title: 'Expenses',
+			spec: rowsPin
+		});
 	});
 
 	it('"Nový tab" makes one new active tab holding just that widget', () => {
 		const r = pin(two, {}, 'w5', sourced, 'ws3');
 		expect(r.layout.workspaces.length).toBe(3);
 		expect(r.layout.active).toBe('ws3');
-		expect(r.layout.workspaces[2].widgets.map((x) => [x.id, x.spec])).toEqual([['w5', chartPin]]);
+		expect(widgetsOf(r.layout.workspaces[2]).map((x) => [x.id, x.spec])).toEqual([
+			['w5', chartPin]
+		]);
 		expect(r.layout.workspaces.slice(0, 2)).toEqual(two.workspaces);
 	});
 

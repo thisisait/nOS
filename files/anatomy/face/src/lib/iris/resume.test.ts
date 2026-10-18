@@ -108,9 +108,9 @@ describe('a replay redraws the chat', () => {
 describe("the workspace is the thalamus's", () => {
 	const local: ws.Layout = {
 		...ws.empty(),
-		workspaces: [{ id: 'ws1', name: 'Local', widgets: [] }]
+		workspaces: [{ id: 'ws1', name: 'Local', items: [] }]
 	};
-	const held: ws.Layout = { ...ws.empty(), workspaces: [{ id: 'ws1', name: 'Held', widgets: [] }] };
+	const held: ws.Layout = { ...ws.empty(), workspaces: [{ id: 'ws1', name: 'Held', items: [] }] };
 
 	it('none held: the local layout moves up once, and stays', () => {
 		expect(adopt(local, null)).toEqual({ send: { t: 'workspace_save', doc: local }, layout: null });

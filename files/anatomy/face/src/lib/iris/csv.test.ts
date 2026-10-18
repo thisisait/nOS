@@ -78,6 +78,7 @@ describe('csvName', () => {
 describe('a rows widget offers its rows as CSV', () => {
 	const box = {
 		id: 'w1',
+		kind: 'widget' as const,
 		title: 'Faktury',
 		spec: { rows: { table: 't1' } },
 		x: 0,
@@ -92,8 +93,6 @@ describe('a rows widget offers its rows as CSV', () => {
 				state: { component, error: null, at: 1 } as never,
 				now: 2,
 				top: false,
-				unit: () => ({ col: 1, row: 1 }),
-				onplace() {},
 				ontop() {},
 				onrerun() {},
 				onremove() {},

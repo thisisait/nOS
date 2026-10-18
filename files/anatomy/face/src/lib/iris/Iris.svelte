@@ -1,5 +1,5 @@
 <!--
-  Iris: the person's workspaces (tabs of widgets on a grid) under one floating chat onto
+  Iris: the person's workspaces (tabs, each a canvas of widgets) under one floating chat onto
   the thalamus. It holds no socket and no secret: everything goes through `transport`
   (transport.ts), which the pupil backs with its Rust bridge and the face with its BFF.
   null is no bridge at all (the pupil's page opened outside the app), and that is said.
@@ -291,7 +291,7 @@
 	}
 
 	function rerun(id: string) {
-		const box = space.widgets.find((b) => b.id === id);
+		const box = ws.widgetsOf(space).find((b) => b.id === id);
 		if (box)
 			sendAll([
 				{ t: 'widget', widget: id, spec: ws.lensed(box.spec, space.lens), trigger: 'click' }
@@ -299,10 +299,16 @@
 	}
 
 	function removed(id: string) {
-		layout = ws.removeWidget(layout, id);
+		layout = ws.removeItem(layout, id);
 		const rest = { ...widgets };
 		delete rest[id];
 		widgets = rest;
+	}
+
+	function addItem(kind: 'heading' | 'frame') {
+		const next = ws.addItem(layout, newId(), kind);
+		if (next === layout) layoutNote = `a workspace holds at most ${ws.MAX_ITEMS} items`;
+		layout = next;
 	}
 
 	function newTab() {
@@ -320,7 +326,7 @@
 
 	async function loadLayout() {
 		try {
-			layout = (await transport?.loadLayout()) as ws.Layout;
+			layout = ws.migrate((await transport?.loadLayout()) ?? ws.empty());
 		} catch (e) {
 			layout = ws.empty();
 			layoutNote = `${e}; starting with one empty workspace`;
@@ -515,6 +521,8 @@
 			<button class="ghost" onclick={closeTab} aria-label="close this workspace">close tab</button>
 		{/if}
 		<button onclick={() => (adding = !adding)} aria-expanded={adding}>+ widget</button>
+		<button class="ghost" onclick={() => addItem('heading')}>+ heading</button>
+		<button class="ghost" onclick={() => addItem('frame')}>+ frame</button>
 	</nav>
 	{#if layoutNote}<StatusNote kind="error" block={false}>{layoutNote}</StatusNote>{/if}
 	{#if adding}<AddWidget onadd={added} oncancel={() => (adding = false)} />{/if}
@@ -524,6 +532,8 @@
 		{now}
 		{top}
 		onplace={(id, g) => (layout = ws.setBox(layout, id, g))}
+		ontext={(id, t) => (layout = ws.setText(layout, id, t))}
+		onview={(v) => (layout = ws.setView(layout, layout.active, v))}
 		ontop={(id) => (top = id)}
 		onrerun={rerun}
 		onremove={removed}
@@ -608,8 +618,9 @@
 
 <style>
 	main {
-		min-height: 100vh;
-		overflow-y: auto;
+		display: flex;
+		flex-direction: column;
+		height: 100vh;
 	}
 	.bar {
 		display: flex;

@@ -108,7 +108,7 @@ describe('webTransport', () => {
 		reply = () => Response.json({ value: { nope: 1 } });
 		const t = webTransport();
 		const l = await t.loadLayout();
-		expect(l.version).toBe(2);
+		expect(l.version).toBe(3);
 		expect(calls[0].url).toContain('ns=app.iris');
 		reply = () => Response.json({ ok: true });
 		await t.saveLayout(l);

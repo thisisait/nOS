@@ -3,18 +3,19 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { route } from './widgets';
-import { onTableChanged, restore, type Layout } from './workspace';
+import { migrate, onTableChanged, restore, widgetsOf } from './workspace';
 
 const POC = new URL(
 	'../../../../../../state/fixtures/genui-workspace-poc/workspace.json',
 	import.meta.url
 );
-const layout = JSON.parse(readFileSync(POC, 'utf8')) as Layout;
+// The PoC file is v2, as it was written: it loads as v3, as every v2 file does.
+const layout = migrate(JSON.parse(readFileSync(POC, 'utf8')));
 
 describe('the PoC workspace', () => {
 	it('is one tab of a table, a chart and a form over expenses', () => {
 		expect(layout.workspaces.length).toBe(1);
-		expect(layout.workspaces[0].widgets.map((w) => Object.keys(w.spec)[0])).toEqual([
+		expect(widgetsOf(layout.workspaces[0]).map((w) => Object.keys(w.spec)[0])).toEqual([
 			'rows',
 			'chart',
 			'form'
@@ -22,7 +23,7 @@ describe('the PoC workspace', () => {
 	});
 
 	it('restores by re-sending its three specs, and a write re-runs the two readers', () => {
-		const boxes = layout.workspaces[0].widgets;
+		const boxes = widgetsOf(layout.workspaces[0]);
 		const r = restore(layout);
 		expect(r.send).toEqual(
 			boxes.map((b) => ({ t: 'widget', widget: b.id, spec: b.spec, trigger: 'restore' }))

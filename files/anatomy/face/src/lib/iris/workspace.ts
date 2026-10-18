@@ -1,54 +1,68 @@
-// The person's workspaces: tabs of widgets on a 12-column grid and a floating chat
-// (files/anatomy/contracts/workspace-layout.yml). Pure reducers; the Rust bridge checks
-// and stores the layout, the model never sees it.
+// The person's workspaces: tabs, each an infinite canvas of widgets, headings and frames in world
+// pixels, and a floating chat (files/anatomy/contracts/workspace-layout.yml v3). Pure reducers; the
+// Rust bridge checks and stores the layout, the model never sees it.
 import type { DashboardProps, Lens, ToShell, ToThalamus, WidgetSpec } from './wire';
 import { onTableChanged as staleOrSend, tableOf, type WidgetState, type Widgets } from './widgets';
 
-export type Grid = { x: number; y: number; w: number; h: number };
-export type WidgetBox = Grid & { id: string; title: string; spec: WidgetSpec };
-/** `lens`: the tab's shared filter (a placed dashboard's); it joins a widget's where only when it is sent. */
-export type Space = { id: string; name: string; lens?: Lens[]; widgets: WidgetBox[] };
+export type Box = { x: number; y: number; w: number; h: number };
+export type WidgetItem = Box & { id: string; kind: 'widget'; title: string; spec: WidgetSpec };
+export type HeadingItem = Box & { id: string; kind: 'heading'; text: string };
+/** A titled rectangle drawn behind the other items. */
+export type FrameItem = Box & { id: string; kind: 'frame'; title: string };
+export type Item = WidgetItem | HeadingItem | FrameItem;
+/** Svelte Flow's viewport: the screen px of world 0,0, and the zoom. */
+export type View = { x: number; y: number; zoom: number };
+/** `lens`: the tab's shared filter (a placed dashboard's); it joins a widget's where only when it is sent.
+ *  `parent`: reserved for nested boards (checked, not drawn yet); `view`: where the canvas was left. */
+export type Space = {
+	id: string;
+	name: string;
+	parent?: string;
+	lens?: Lens[];
+	view?: View;
+	items: Item[];
+};
 export type Chat = { x: number; y: number; w: number; h: number; open: boolean };
-export type Layout = { version: 2; active: string; chat: Chat; workspaces: Space[] };
+export type Layout = { version: 3; active: string; chat: Chat; workspaces: Space[] };
 type Send = ToThalamus[];
 
-export const COLS = 12;
-export const ROW_PX = 40;
 export const MAX_SPACES = 12;
 export const MAX_WIDGETS = 24;
+export const MAX_ITEMS = 64;
+/** The snap of a drag or an arrow, in world px. */
+export const SNAP = 8;
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+const snap = (v: number) => Math.round(v / SNAP) * SNAP;
 
 export const empty = (): Layout => ({
-	version: 2,
+	version: 3,
 	active: 'ws1',
 	chat: { x: 0, y: 0, w: 0, h: 0, open: true },
-	workspaces: [{ id: 'ws1', name: 'Workspace', widgets: [] }]
+	workspaces: [{ id: 'ws1', name: 'Workspace', items: [] }]
 });
 
-/** Integer units inside the grid: w 2..12, h 2..40, x + w <= 12, y 0..400. */
-export function place(g: Grid): Grid {
-	const w = clamp(Math.round(g.w), 2, COLS);
+/** Integer world px: |x|, |y| <= 100 000, w 80..4000, h 32..4000. */
+export function place(g: Box): Box {
 	return {
-		x: clamp(Math.round(g.x), 0, COLS - w),
-		y: clamp(Math.round(g.y), 0, 400),
-		w,
-		h: clamp(Math.round(g.h), 2, 40)
+		x: clamp(Math.round(g.x), -100_000, 100_000),
+		y: clamp(Math.round(g.y), -100_000, 100_000),
+		w: clamp(Math.round(g.w), 80, 4000),
+		h: clamp(Math.round(g.h), 32, 4000)
 	};
 }
 
-/** A drag from `start` by (dx, dy) px; resize grows to the right edge, never past it. */
+/** A drag from `start` by (dx, dy) screen px at `zoom`, snapped to 8 world px. */
 export function byPointer(
-	start: Grid,
+	start: Box,
 	mode: 'move' | 'resize',
 	dx: number,
 	dy: number,
-	colPx: number,
-	rowPx: number
-): Grid {
-	const du = Math.round(dx / colPx),
-		dv = Math.round(dy / rowPx);
+	zoom: number
+): Box {
+	const du = snap(dx / zoom),
+		dv = snap(dy / zoom);
 	if (mode === 'move') return place({ ...start, x: start.x + du, y: start.y + dv });
-	return place({ ...start, w: clamp(start.w + du, 2, COLS - start.x), h: start.h + dv });
+	return place({ ...start, w: start.w + du, h: start.h + dv });
 }
 
 const ARROWS: Record<string, [number, number]> = {
@@ -58,16 +72,54 @@ const ARROWS: Record<string, [number, number]> = {
 	ArrowDown: [0, 1]
 };
 
-/** Arrows move a focused handle one unit, shift+arrows resize; null for any other key. */
-export function byKey(g: Grid, key: string, shift: boolean): Grid | null {
+/** Arrows move a focused item 8 px, shift+arrows resize it; null for any other key. */
+export function byKey(g: Box, key: string, shift: boolean): Box | null {
 	const d = ARROWS[key];
 	if (!d) return null;
+	const dx = d[0] * SNAP,
+		dy = d[1] * SNAP;
 	return shift
-		? place({ ...g, w: clamp(g.w + d[0], 2, COLS - g.x), h: g.h + d[1] })
-		: place({ ...g, x: g.x + d[0], y: g.y + d[1] });
+		? place({ ...g, w: g.w + dx, h: g.h + dy })
+		: place({ ...g, x: g.x + dx, y: g.y + dy });
 }
 
+type GridBox = Box & { id: string; title: string; spec: WidgetSpec };
+type Old = {
+	version: 1 | 2;
+	active: string;
+	chat: Chat;
+	workspaces: { id: string; name: string; lens?: Lens[]; widgets: GridBox[] }[];
+};
+
+/** A v1/v2 file's grid units as world px: a column was 100 px on a 1232 px panel, a row 40 px + 8 gap. */
+export function migrate(l: Layout | Old): Layout {
+	if (l.version === 3) return l;
+	return {
+		version: 3,
+		active: l.active,
+		chat: l.chat,
+		workspaces: l.workspaces.map(({ widgets, ...s }) => ({
+			...s,
+			items: widgets.map(({ id, title, spec, x, y, w, h }) => ({
+				id,
+				kind: 'widget' as const,
+				title,
+				spec,
+				x: x * 100,
+				y: y * 48,
+				w: w * 100 - 8,
+				h: h * 48 - 8
+			}))
+		}))
+	};
+}
+
+export const widgetsOf = (s: Space): WidgetItem[] =>
+	s.items.filter((i): i is WidgetItem => i.kind === 'widget');
 const activeSpace = (l: Layout) => l.workspaces.find((s) => s.id === l.active) ?? l.workspaces[0];
+const below = (s: Space) => Math.max(0, ...s.items.map((i) => i.y + i.h + SNAP));
+const W = 592,
+	H = 376; // a v2 widget of 6 x 8 units
 
 /** The lens on a spec as it is sent: each set condition joins a rows, chart or kpi where, after its own; a form is untouched. */
 export function lensed(spec: WidgetSpec, lens: Lens[] = []): WidgetSpec {
@@ -97,16 +149,63 @@ export function lensed(spec: WidgetSpec, lens: Lens[] = []): WidgetSpec {
 	};
 }
 
-const mapWidgets = (l: Layout, f: (w: WidgetBox[]) => WidgetBox[]): Layout => ({
+const mapItems = (l: Layout, f: (i: Item[]) => Item[]): Layout => ({
 	...l,
-	workspaces: l.workspaces.map((s) => ({ ...s, widgets: f(s.widgets) }))
+	workspaces: l.workspaces.map((s) => ({ ...s, items: f(s.items) }))
 });
 
-export function setBox(l: Layout, id: string, g: Grid): Layout {
-	return mapWidgets(l, (ws) => ws.map((w) => (w.id === id ? { ...w, ...place(g) } : w)));
+export function setBox(l: Layout, id: string, g: Box): Layout {
+	return mapItems(l, (is) => is.map((i) => (i.id === id ? { ...i, ...place(g) } : i)));
 }
 
-// ponytail: no collision check; boxes may overlap like windows, add packing if people ask.
+/** A heading's text or a frame's title, as the person typed it. */
+export function setText(l: Layout, id: string, text: string): Layout {
+	const t = text.slice(0, 120);
+	return mapItems(l, (is) =>
+		is.map((i) =>
+			i.id !== id
+				? i
+				: i.kind === 'heading'
+					? { ...i, text: t }
+					: i.kind === 'frame'
+						? { ...i, title: t }
+						: i
+		)
+	);
+}
+
+/** Where the person left tab `tab`'s canvas; the same view is the same layout. */
+export function setView(l: Layout, tab: string, v: View): Layout {
+	const view = {
+		x: Math.round(v.x),
+		y: Math.round(v.y),
+		zoom: Math.round(clamp(v.zoom, 0.1, 4) * 1000) / 1000
+	};
+	const s = l.workspaces.find((x) => x.id === tab);
+	if (!s || JSON.stringify(s.view) === JSON.stringify(view)) return l;
+	return { ...l, workspaces: l.workspaces.map((x) => (x === s ? { ...s, view } : x)) };
+}
+
+const withItem = (l: Layout, here: Space, item: Item): Layout => ({
+	...l,
+	workspaces: l.workspaces.map((s) => (s === here ? { ...s, items: [...s.items, item] } : s))
+});
+
+// ponytail: new items land below the others, not at the view's centre; place at the view if people ask.
+/** A heading or a frame on the active tab, below the others; l itself when the tab is full. */
+export function addItem(l: Layout, id: string, kind: 'heading' | 'frame'): Layout {
+	const here = activeSpace(l);
+	if (here.items.length >= MAX_ITEMS) return l;
+	const y = below(here);
+	return withItem(
+		l,
+		here,
+		kind === 'heading'
+			? { id, kind, text: 'Heading', ...place({ x: 0, y, w: 400, h: 48 }) }
+			: { id, kind, title: 'Frame', ...place({ x: 0, y, w: 800, h: 480 }) }
+	);
+}
+
 /** A new widget on the active tab, below the others; it runs once, as a click. */
 export function addWidget(
 	l: Layout,
@@ -115,19 +214,17 @@ export function addWidget(
 	spec: WidgetSpec
 ): { layout: Layout; send: ToThalamus | null } {
 	const here = activeSpace(l);
-	if (here.widgets.length >= MAX_WIDGETS) return { layout: l, send: null };
-	const y = Math.max(0, ...here.widgets.map((w) => w.y + w.h));
-	const box: WidgetBox = {
+	if (widgetsOf(here).length >= MAX_WIDGETS || here.items.length >= MAX_ITEMS)
+		return { layout: l, send: null };
+	const box: WidgetItem = {
 		id,
+		kind: 'widget',
 		title: title.slice(0, 120),
 		spec,
-		...place({ x: 0, y, w: 6, h: 8 })
+		...place({ x: 0, y: below(here), w: W, h: H })
 	};
 	return {
-		layout: {
-			...l,
-			workspaces: l.workspaces.map((s) => (s === here ? { ...s, widgets: [...s.widgets, box] } : s))
-		},
+		layout: withItem(l, here, box),
 		send: { t: 'widget', widget: id, spec: lensed(spec, here.lens), trigger: 'click' }
 	};
 }
@@ -168,15 +265,15 @@ export function pin(
 	return fresh === l ? { layout: l, w, send: null } : placed(fresh, w, id, title, spec);
 }
 
-export const removeWidget = (l: Layout, id: string): Layout =>
-	mapWidgets(l, (ws) => ws.filter((w) => w.id !== id));
+export const removeItem = (l: Layout, id: string): Layout =>
+	mapItems(l, (is) => is.filter((i) => i.id !== id));
 
 export function addSpace(l: Layout, id: string, name: string): Layout {
 	if (l.workspaces.length >= MAX_SPACES) return l;
 	return {
 		...l,
 		active: id,
-		workspaces: [...l.workspaces, { id, name: name.slice(0, 40), widgets: [] }]
+		workspaces: [...l.workspaces, { id, name: name.slice(0, 40), items: [] }]
 	};
 }
 
@@ -194,7 +291,7 @@ function due(l: Layout, w: Widgets): { w: Widgets; send: Send } {
 	const out = { ...w };
 	const send: Send = [];
 	const here = activeSpace(l);
-	for (const box of here.widgets) {
+	for (const box of widgetsOf(here)) {
 		const s = out[box.id];
 		if (!s || !(s.stale || s.due)) continue;
 		send.push({ t: 'widget', widget: box.id, spec: lensed(box.spec, here.lens), trigger: run(s) });
@@ -207,7 +304,7 @@ function due(l: Layout, w: Widgets): { w: Widgets; send: Send } {
 export function restore(l: Layout): { w: Widgets; send: Send } {
 	const w: Widgets = {};
 	for (const s of l.workspaces)
-		for (const box of s.widgets)
+		for (const box of widgetsOf(s))
 			w[box.id] = { component: null, error: null, at: 0, spec: box.spec, due: true };
 	return due(l, w);
 }
@@ -229,7 +326,7 @@ export function onTableChanged(l: Layout, w: Widgets, table: string): { w: Widge
 	const r = staleOrSend(
 		w,
 		table,
-		here.widgets.map((b) => b.id)
+		widgetsOf(here).map((b) => b.id)
 	);
 	return {
 		w: r.w,
@@ -249,7 +346,7 @@ export function setLens(
 	const lens = s.lens.map((c, j) => (j === i ? { ...c, value: value.slice(0, 120) } : c));
 	return {
 		layout: { ...l, workspaces: l.workspaces.map((x) => (x === s ? { ...s, lens } : x)) },
-		send: s.widgets.map((b) => ({
+		send: widgetsOf(s).map((b) => ({
 			t: 'widget',
 			widget: b.id,
 			spec: lensed(b.spec, lens),
@@ -270,7 +367,7 @@ export function placeOffer(
 ): { layout: Layout; w: Widgets; send: Send } {
 	const into = activeSpace(l);
 	const room = here
-		? MAX_WIDGETS - into.widgets.length
+		? Math.min(MAX_WIDGETS - widgetsOf(into).length, MAX_ITEMS - into.items.length)
 		: l.workspaces.length < MAX_SPACES
 			? MAX_WIDGETS
 			: 0;
@@ -278,12 +375,13 @@ export function placeOffer(
 	// The offer lives in $state: a Proxy. JSON is all an offer is.
 	const { name, lens, widgets } = JSON.parse(JSON.stringify(d)) as DashboardProps;
 	// ponytail: "here" bakes the offer's set lens into each spec and drops an unset one; merge lenses if people ask.
-	const y0 = here ? Math.max(0, ...into.widgets.map((x) => x.y + x.h)) : 0;
-	const boxes: WidgetBox[] = widgets.slice(0, room).map((x, i) => ({
+	const y0 = here ? below(into) : 0;
+	const boxes: WidgetItem[] = widgets.slice(0, room).map((x, i) => ({
 		id: id(),
+		kind: 'widget',
 		title: x.title.slice(0, 120),
 		spec: here ? lensed(x.spec, lens) : x.spec,
-		...place({ x: (i % 2) * 6, y: y0 + Math.floor(i / 2) * 8, w: 6, h: 8 })
+		...place({ x: (i % 2) * (W + SNAP), y: y0 + Math.floor(i / 2) * (H + SNAP), w: W, h: H })
 	}));
 	const out = { ...w };
 	for (const b of boxes) out[b.id] = { component: null, error: null, at: 0, spec: b.spec };
@@ -293,13 +391,13 @@ export function placeOffer(
 			? {
 					...l,
 					workspaces: l.workspaces.map((s) =>
-						s === into ? { ...s, widgets: [...s.widgets, ...boxes] } : s
+						s === into ? { ...s, items: [...s.items, ...boxes] } : s
 					)
 				}
 			: {
 					...l,
 					active: tab,
-					workspaces: [...l.workspaces, { id: tab, name: name.slice(0, 40), lens, widgets: boxes }]
+					workspaces: [...l.workspaces, { id: tab, name: name.slice(0, 40), lens, items: boxes }]
 				},
 		w: out,
 		send: boxes.map((b) => ({

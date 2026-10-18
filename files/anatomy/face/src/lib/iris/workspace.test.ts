@@ -1,11 +1,13 @@
-// The workspace: tabs of widgets on a 12-column grid and a floating chat (genui I5h).
-// Every move, resize, restore and re-run goes through these pure reducers.
+// The workspace: tabs, each a canvas of widgets, headings and frames in world px, and a floating
+// chat (genui I5h; workspace-layout.yml v3). Every move, resize, restore and re-run goes through
+// these pure reducers; the canvas journey (canvas.test.ts) drives them through Svelte Flow.
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { lensPrefill } from './form';
 import type { DashboardProps, FormField, Lens, WidgetSpec } from './wire';
 import type { Widgets } from './widgets';
 import {
+	addItem,
 	addSpace,
 	addWidget,
 	age,
@@ -14,85 +16,108 @@ import {
 	byPointer,
 	clampChat,
 	lensed,
+	migrate,
 	onTableChanged,
 	place,
 	placeOffer,
-	removeWidget,
+	removeItem,
 	restore,
 	setLens,
+	setView,
 	show,
+	widgetsOf,
 	type Layout
 } from './workspace';
 
 const FIXTURE = new URL('../../../../contracts/workspace-layout.fixture.json', import.meta.url);
 const fx = JSON.parse(readFileSync(FIXTURE, 'utf8')) as {
 	samples: { case: string; layout: Layout }[];
+	migrated: { case: string; v2: Exclude<Parameters<typeof migrate>[0], Layout>; v3: Layout }[];
 };
 const sample = (i: number) => structuredClone(fx.samples[i].layout);
-const inGrid = (l: Layout) =>
+const inWorld = (l: Layout) =>
 	l.workspaces.every((s) =>
-		s.widgets.every(
-			(w) =>
-				w.x >= 0 && w.x + w.w <= 12 && w.w >= 2 && w.h >= 2 && w.h <= 40 && w.y >= 0 && w.y <= 400
+		s.items.every(
+			(i) =>
+				Math.abs(i.x) <= 100_000 &&
+				Math.abs(i.y) <= 100_000 &&
+				i.w >= 80 &&
+				i.w <= 4000 &&
+				i.h >= 32 &&
+				i.h <= 4000
 		)
 	);
 const rows: WidgetSpec = { rows: { table: 'expenses' } };
 
-describe('place snaps to grid units', () => {
-	it('rounds to integers and clamps to 12 columns', () => {
-		expect(place({ x: 3.4, y: 1.6, w: 4.5, h: 2.2 })).toEqual({ x: 3, y: 2, w: 5, h: 2 });
-		expect(place({ x: 11, y: 0, w: 4, h: 8 }), 'a box past the edge slides back').toEqual({
-			x: 8,
-			y: 0,
-			w: 4,
-			h: 8
-		});
-		expect(place({ x: -3, y: -2, w: 1, h: 99 })).toEqual({ x: 0, y: 0, w: 2, h: 40 });
-		expect(place({ x: 0, y: 0, w: 30, h: 8 }).w).toBe(12);
-		expect(place({ x: 0, y: 999, w: 2, h: 2 }).y).toBe(400);
+describe('a v1 or v2 file loads as v3', () => {
+	it('every migrated fixture case: grid units become world px, widgets become widget items', () => {
+		for (const c of fx.migrated) expect(migrate(c.v2), c.case).toEqual(c.v3);
+		const v1 = { ...structuredClone(fx.migrated[0].v2), version: 1 as const };
+		expect(migrate(v1)).toEqual(fx.migrated[0].v3);
+		expect(migrate(sample(0)), 'a v3 file is itself').toEqual(sample(0));
 	});
 });
 
-describe('move and resize keep every widget inside the grid', () => {
-	const g = { x: 6, y: 2, w: 6, h: 8 };
-	it('by pointer, in pixels snapped to units', () => {
-		expect(byPointer(g, 'move', -95, 41, 50, 48)).toEqual({ x: 4, y: 3, w: 6, h: 8 });
-		expect(byPointer(g, 'move', 400, 0, 50, 48).x, 'cannot leave on the right').toBe(6);
-		expect(byPointer(g, 'resize', 300, -1000, 50, 48), 'resize stops at column 12, at h 2').toEqual(
-			{ x: 6, y: 2, w: 6, h: 2 }
-		);
-		expect(byPointer(g, 'resize', -1000, 0, 50, 48).w).toBe(2);
-	});
-	it('by arrow keys: arrows move, shift+arrows resize', () => {
-		expect(byKey(g, 'ArrowLeft', false)).toEqual({ ...g, x: 5 });
-		expect(byKey(g, 'ArrowDown', false)).toEqual({ ...g, y: 3 });
-		expect(byKey(g, 'ArrowRight', false), 'already at the edge').toEqual(g);
-		expect(byKey(g, 'ArrowLeft', true)).toEqual({ ...g, w: 5 });
-		expect(byKey(g, 'ArrowUp', true)).toEqual({ ...g, h: 7 });
-		expect(byKey({ ...g, x: 0, w: 2 }, 'ArrowLeft', true), 'w stays >= 2').toEqual({
-			...g,
-			x: 0,
-			w: 2
+describe('place keeps an item in the world', () => {
+	it('rounds to integer px and clamps the size and the reach', () => {
+		expect(place({ x: 3.4, y: -1.6, w: 400.5, h: 48.2 })).toEqual({ x: 3, y: -2, w: 401, h: 48 });
+		expect(place({ x: -200_000, y: 200_000, w: 1, h: 9999 })).toEqual({
+			x: -100_000,
+			y: 100_000,
+			w: 80,
+			h: 4000
 		});
+	});
+});
+
+describe('move and resize, in world px snapped to 8', () => {
+	const g = { x: 600, y: 96, w: 592, h: 376 };
+	it('by pointer: screen px divided by the zoom', () => {
+		expect(byPointer(g, 'move', -95, 41, 1)).toEqual({ ...g, x: 504, y: 136 });
+		expect(byPointer(g, 'move', 100, 0, 0.5).x, 'at 50 % a screen px is 2 world px').toBe(800);
+		expect(byPointer(g, 'resize', 300, -1000, 1), 'h stops at 32').toEqual({
+			...g,
+			w: 896,
+			h: 32
+		});
+	});
+	it('by arrow keys: arrows move 8 px, shift+arrows resize', () => {
+		expect(byKey(g, 'ArrowLeft', false)).toEqual({ ...g, x: 592 });
+		expect(byKey(g, 'ArrowDown', false)).toEqual({ ...g, y: 104 });
+		expect(byKey(g, 'ArrowLeft', true)).toEqual({ ...g, w: 584 });
+		expect(byKey(g, 'ArrowUp', true)).toEqual({ ...g, h: 368 });
+		expect(byKey({ ...g, w: 80 }, 'ArrowLeft', true), 'w stays >= 80').toEqual({ ...g, w: 80 });
 		expect(byKey(g, 'Enter', false)).toBeNull();
 	});
 	it('add and remove keep the layout valid', () => {
 		let l = sample(0);
-		const before = l.workspaces[0].widgets.length;
+		const before = widgetsOf(l.workspaces[0]).length;
 		const a = addWidget(l, 'wnew', 'New', rows);
-		expect(inGrid(a.layout)).toBe(true);
-		expect(a.layout.workspaces[0].widgets.length).toBe(before + 1);
+		expect(inWorld(a.layout)).toBe(true);
+		expect(widgetsOf(a.layout.workspaces[0]).length).toBe(before + 1);
 		expect(a.send, 'a new widget runs once, as a click').toEqual({
 			t: 'widget',
 			widget: 'wnew',
 			spec: rows,
 			trigger: 'click'
 		});
-		const added = a.layout.workspaces[0].widgets.at(-1)!;
-		const below = Math.max(...l.workspaces[0].widgets.map((w) => w.y + w.h));
-		expect(added.y, 'lands below the others, never on top of one').toBe(below);
-		l = removeWidget(a.layout, 'wnew');
-		expect(l.workspaces[0].widgets.length).toBe(before);
+		const added = widgetsOf(a.layout.workspaces[0]).at(-1)!;
+		const below = Math.max(...l.workspaces[0].items.map((w) => w.y + w.h));
+		expect(added.y, 'lands below the others, never on top of one').toBeGreaterThan(below);
+		l = removeItem(a.layout, 'wnew');
+		expect(widgetsOf(l.workspaces[0]).length).toBe(before);
+	});
+	it('a heading and a frame land below the others; neither is a widget, so neither runs', () => {
+		const l = addItem(addItem(sample(0), 'h1', 'heading'), 'f1', 'frame');
+		const [h, f] = l.workspaces[0].items.slice(-2);
+		expect([h.kind, f.kind]).toEqual(['heading', 'frame']);
+		expect(f.y).toBeGreaterThan(h.y);
+		expect(restore(l).send.map((m) => m.t === 'widget' && m.widget)).toEqual(['w1', 'w2', 'w3']);
+	});
+	it('a view is kept rounded, and the same view is the same layout', () => {
+		const l = setView(sample(0), 'main', { x: 10.4, y: -3.6, zoom: 1.23456 });
+		expect(l.workspaces[0].view).toEqual({ x: 10, y: -4, zoom: 1.235 });
+		expect(setView(l, 'main', { x: 10, y: -4, zoom: 1.235 })).toBe(l);
 	});
 });
 
@@ -100,7 +125,7 @@ describe('re-runs: the active tab only', () => {
 	const ran = (l: Layout): Widgets => {
 		const w: Widgets = {};
 		for (const s of l.workspaces)
-			for (const x of s.widgets)
+			for (const x of widgetsOf(s))
 				w[x.id] = {
 					component: { kind: 'markdown', props: { text: '' } },
 					error: null,
@@ -129,13 +154,13 @@ describe('re-runs: the active tab only', () => {
 	it('a restored layout re-sends exactly the active tab, as restore', () => {
 		for (const c of fx.samples) {
 			const r = restore(c.layout);
-			const active = c.layout.workspaces.find((s) => s.id === c.layout.active)!.widgets;
+			const active = widgetsOf(c.layout.workspaces.find((s) => s.id === c.layout.active)!);
 			expect(r.send, c.case).toEqual(
 				active.map((w) => ({ t: 'widget', widget: w.id, spec: w.spec, trigger: 'restore' }))
 			);
 			const off = c.layout.workspaces
 				.filter((s) => s.id !== c.layout.active)
-				.flatMap((s) => s.widgets);
+				.flatMap((s) => widgetsOf(s));
 			for (const w of off)
 				expect(r.w[w.id]?.spec, `${c.case}: ${w.id} remembers its spec`).toEqual(w.spec);
 		}
@@ -205,7 +230,7 @@ describe('a lens is merged at send time', () => {
 	const ran = (l: Layout): Widgets => {
 		const out: Widgets = {};
 		for (const s of l.workspaces)
-			for (const x of s.widgets)
+			for (const x of widgetsOf(s))
 				out[x.id] = {
 					component: { kind: 'markdown', props: { text: '' } },
 					error: null,
@@ -244,15 +269,15 @@ describe('a lens is merged at send time', () => {
 		const l = lensOn(sample(1), 'b', [travel]);
 		const r = restore(l);
 		expect(r.send.map((m) => m.t === 'widget' && m.spec)).toEqual([
-			lensed(l.workspaces[1].widgets[0].spec, [travel]),
+			lensed(widgetsOf(l.workspaces[1])[0].spec, [travel]),
 			{ rows: { table: 'notes', q: 'x', where: w } }
 		]);
-		expect(l.workspaces[1].widgets[1].spec, 'the saved spec is untouched').toEqual({
+		expect(widgetsOf(l.workspaces[1])[1].spec, 'the saved spec is untouched').toEqual({
 			rows: { table: 'notes', q: 'x' }
 		});
 		const changed = onTableChanged(l, ran(l), 'expenses');
 		expect(changed.send.map((m) => m.t === 'widget' && m.spec)).toEqual([
-			lensed(l.workspaces[1].widgets[0].spec, [travel])
+			lensed(widgetsOf(l.workspaces[1])[0].spec, [travel])
 		]);
 		const other = lensOn(sample(1), 'a', [travel]);
 		const shown = show(other, onTableChanged(other, ran(other), 'expenses').w, 'a');
@@ -271,7 +296,7 @@ describe('a lens is merged at send time', () => {
 			spec: { rows: { table: 'expenses', where: w } },
 			trigger: 'click'
 		});
-		expect(added.layout.workspaces[0].widgets.at(-1)!.spec).toEqual(rows);
+		expect(widgetsOf(added.layout.workspaces[0]).at(-1)!.spec).toEqual(rows);
 	});
 
 	it('a lens edit re-runs every widget of its tab, as a click', () => {
@@ -283,7 +308,7 @@ describe('a lens is merged at send time', () => {
 			{
 				t: 'widget',
 				widget: 'w2',
-				spec: lensed(l.workspaces[1].widgets[0].spec, [{ ...travel, value: 'tools' }]),
+				spec: lensed(widgetsOf(l.workspaces[1])[0].spec, [{ ...travel, value: 'tools' }]),
 				trigger: 'click'
 			},
 			{
@@ -343,12 +368,12 @@ describe('an offered dashboard is placed by the person', () => {
 		const tab = r.layout.workspaces.at(-1)!;
 		expect([tab.id, tab.name, tab.lens]).toEqual(['tab9', 'Bench board', offer.lens]);
 		expect(
-			tab.widgets.map((x) => [x.id, x.title, x.spec]),
+			widgetsOf(tab).map((x) => [x.id, x.title, x.spec]),
 			'saved as offered'
 		).toEqual(offer.widgets.map((x, i) => [`d${i + 1}`, x.title, x.spec]));
-		expect(inGrid(r.layout)).toBe(true);
+		expect(inWorld(r.layout)).toBe(true);
 		expect(
-			new Set(tab.widgets.map((x) => `${x.x},${x.y}`)).size,
+			new Set(widgetsOf(tab).map((x) => `${x.x},${x.y}`)).size,
 			'no two widgets on one spot'
 		).toBe(3);
 		expect(r.send).toEqual([
@@ -392,18 +417,18 @@ describe('an offered dashboard is placed by the person', () => {
 		expect(r.layout.workspaces.length).toBe(l.workspaces.length);
 		expect(r.layout.active).toBe(l.active);
 		const tab = r.layout.workspaces.find((s) => s.id === l.active)!;
-		expect(tab.widgets.slice(0, before.widgets.length), 'its own widgets stay').toEqual(
-			before.widgets
+		expect(widgetsOf(tab).slice(0, widgetsOf(before).length), 'its own widgets stay').toEqual(
+			widgetsOf(before)
 		);
-		const added = tab.widgets.slice(before.widgets.length);
+		const added = widgetsOf(tab).slice(widgetsOf(before).length);
 		expect(added.map((x) => x.id)).toEqual(['d1', 'd2', 'd3']);
-		const bottom = Math.max(0, ...before.widgets.map((x) => x.y + x.h));
+		const bottom = Math.max(0, ...before.items.map((x) => x.y + x.h));
 		expect(
 			added.every((x) => x.y >= bottom),
 			"below the tab's own"
 		).toBe(true);
 		expect(added[0].spec).toEqual({ rows: { table: 'bench', where } });
-		expect(inGrid(r.layout)).toBe(true);
+		expect(inWorld(r.layout)).toBe(true);
 		expect(r.send.map((m) => m.t === 'widget' && m.widget)).toEqual(['d1', 'd2', 'd3']);
 		expect(
 			r.layout.workspaces.filter((s) => s.id !== l.active),
