@@ -361,7 +361,7 @@ describe('an offered dashboard is placed by the person', () => {
 	let n = 0;
 	const id = () => `d${++n}`;
 
-	it('is a new active tab with its lens; each widget runs once, as a click, with the lens', () => {
+	it('is a new active board with its lens; each widget runs once, as a click, with the lens', () => {
 		n = 0;
 		const r = placeOffer(sample(0), {}, 'tab9', offer, id);
 		expect(r.layout.active).toBe('tab9');
@@ -389,20 +389,24 @@ describe('an offered dashboard is placed by the person', () => {
 			{ t: 'widget', widget: 'd3', spec: { form: { table: 'bench' } }, trigger: 'click' }
 		]);
 		expect(Object.keys(r.w)).toEqual(['d1', 'd2', 'd3']);
-		expect(r.layout.workspaces.slice(0, -1), 'the other tabs are untouched').toEqual(
-			sample(0).workspaces
+		// iris-canvas-nested-boards: a child of the open board, reached by its card there.
+		expect(tab.parent).toBe('main');
+		const [main] = r.layout.workspaces;
+		expect(main.items.slice(0, -1), 'the open board keeps its own').toEqual(
+			sample(0).workspaces[0].items
 		);
+		expect(main.items.at(-1)).toMatchObject({ kind: 'board', board: 'tab9' });
 	});
 
-	it('is refused, sending nothing, when 12 tabs are open', () => {
+	it('is refused, sending nothing, when 64 boards are open', () => {
 		let full = sample(0);
-		for (let i = 0; i < 11; i++) full = addSpace(full, `t${i}`, `T${i}`);
+		for (let i = 0; i < 63; i++) full = addSpace(full, `t${i}`, `T${i}`);
 		const r = placeOffer(full, {}, 'tab9', offer, id);
 		expect([r.layout, r.send]).toEqual([full, []]);
 	});
 
 	// Operator 2026-10-18: nearly every Iris widget landed on a new tab; the person chooses where.
-	it('"Place on a new tab" adds exactly one tab', () => {
+	it('"Place on a new board" adds exactly one board', () => {
 		const l = sample(0);
 		expect(placeOffer(l, {}, 'tab9', offer, id).layout.workspaces.length).toBe(
 			l.workspaces.length + 1

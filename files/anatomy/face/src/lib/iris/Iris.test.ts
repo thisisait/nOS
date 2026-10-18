@@ -151,16 +151,19 @@ describe('Iris on a transport', () => {
 			await settle();
 		};
 		await type('/branch');
-		const tabs = () => [...document.querySelectorAll('[role="tab"]')];
-		expect(tabs()).toHaveLength(2);
+		// A branch of a root is a root: the roots are listed in the breadcrumb's first crumb.
+		const roots = () => [
+			...document.querySelectorAll('nav[aria-label="workspace path"] details li button')
+		];
+		expect(roots()).toHaveLength(3); // two roots and "+ new workspace"
 		const branch = fake.sent.find((m) => m.t === 'branch') as { t: 'branch'; workspace: string };
 		expect(branch.workspace).toMatch(/^ws/);
 		expect(branch.workspace).not.toBe('ws1');
 		await type('/clear');
 		expect(fake.sent.at(-1)).toEqual({ t: 'clear' });
 		expect(fake.sent.some((m) => m.t === 'turn')).toBe(false);
-		// Showing the first tab again resumes its session.
-		(tabs()[0] as HTMLElement).click();
+		// Showing the first board again resumes its session.
+		(roots()[0] as HTMLElement).click();
 		await settle();
 		expect(fake.sent.at(-1)).toEqual({ t: 'resume', workspace: 'ws1' });
 		const stop = () =>

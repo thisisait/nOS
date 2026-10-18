@@ -2,7 +2,7 @@
 
 WHY. The layout is the one file the pupil writes on the person's Mac, and the face
 is to read the same format later. A layout the decoder accepts past its caps (a
-13th workspace, a widget narrower than 80 px, a spec with two keys, a parent cycle)
+65th workspace, a widget narrower than 80 px, a spec with two keys, a parent cycle)
 would be saved and restored as if valid; one it refuses must be refused on load,
 never half-drawn. A v2 file a person already has must load as v3, the same in Rust
 and in TypeScript, or one shell would draw it elsewhere. This runs `cargo test
@@ -26,7 +26,7 @@ SPEC = REPO / "files/anatomy/contracts/workspace-layout.yml"
 FIXTURE = REPO / "files/anatomy/contracts/workspace-layout.fixture.json"
 CRATE = REPO / "files/anatomy/pupil/src-tauri"
 # The cases the definition names; the fixture may hold more, never fewer.
-MUST_REFUSE = {"a 13th workspace", "a widget w: 79", "an unknown key", "a spec with two keys", "5 lens conditions",
+MUST_REFUSE = {"a 65th workspace", "a board on a workspace that is not its child", "a widget w: 79", "an unknown key", "a spec with two keys", "5 lens conditions",
                "a heading with a spec", "a parent that names no workspace", "a parent cycle", "nesting 7 deep"}
 
 
@@ -60,7 +60,7 @@ def test_the_fixture_migrates_v2_files_and_draws_every_kind():
     fx = _fixture()
     assert fx["migrated"] and all(c["v2"]["version"] == 2 and c["v3"]["version"] == 3 for c in fx["migrated"])
     kinds = {i["kind"] for c in fx["samples"] for s in c["layout"]["workspaces"] for i in s["items"]}
-    assert kinds == {"widget", "heading", "frame"}, kinds
+    assert kinds == {"widget", "heading", "frame", "board"}, kinds
     spaces = [s for c in fx["samples"] for s in c["layout"]["workspaces"]]
     assert any("view" in s for s in spaces) and any("parent" in s for s in spaces), "no sample keeps a view or a parent"
 

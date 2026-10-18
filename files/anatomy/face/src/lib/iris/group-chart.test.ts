@@ -51,8 +51,8 @@ describe('a grouped result draws its own chart', () => {
 		expect(document.querySelector('.chart svg'), 'a chart is drawn').not.toBeNull();
 		expect(button('Graf'), 'drawn once').toHaveLength(0);
 		expect(button('Sem')).toHaveLength(2);
-		expect(button('Nový tab')).toHaveLength(2);
-		button('Nový tab')[1].click();
+		expect(button('Nová plocha')).toHaveLength(2);
+		button('Nová plocha')[1].click();
 		expect(pinned).toHaveLength(1);
 		const [m, fresh] = pinned[0];
 		expect(fresh).toBe(true);

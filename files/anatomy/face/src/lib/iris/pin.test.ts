@@ -62,7 +62,7 @@ const list: ToShell = {
 const html = (msg: ToShell) => render(Message, { props: { msg, onpin: () => {} } }).body;
 const BUTTON = 'Připnout na plochu'; // the group's accessible name; its face is an icon and "pin"
 const HERE = 'Připnout sem',
-	FRESH = 'Připnout na nový tab';
+	FRESH = 'Připnout na novou plochu';
 const NOTE = 'jen náhled — Iris neuvedla zdroj čísel';
 
 describe('the pin buttons and the preview note', () => {
@@ -75,7 +75,7 @@ describe('the pin buttons and the preview note', () => {
 				new RegExp(`<button[^>]*aria-label="${HERE}"[^>]*>\\s*Sem\\s*</button>`)
 			);
 			expect(html(m)).toMatch(
-				new RegExp(`<button[^>]*aria-label="${FRESH}"[^>]*>\\s*Nový tab\\s*</button>`)
+				new RegExp(`<button[^>]*aria-label="${FRESH}"[^>]*>\\s*Nová plocha\\s*</button>`)
 			);
 		}
 		for (const m of [picture, list]) expect(html(m)).not.toContain(BUTTON);
@@ -131,14 +131,17 @@ describe('a click places the pin', () => {
 		});
 	});
 
-	it('"Nový tab" makes one new active tab holding just that widget', () => {
+	// iris-canvas-nested-boards: a new board is a child of the open one, reached by its card there.
+	it('"Nová plocha" makes one new active board inside the open one, holding just that widget', () => {
 		const r = pin(two, {}, 'w5', sourced, 'ws3');
 		expect(r.layout.workspaces.length).toBe(3);
 		expect(r.layout.active).toBe('ws3');
+		expect(r.layout.workspaces[2].parent).toBe('ws2');
 		expect(widgetsOf(r.layout.workspaces[2]).map((x) => [x.id, x.spec])).toEqual([
 			['w5', chartPin]
 		]);
-		expect(r.layout.workspaces.slice(0, 2)).toEqual(two.workspaces);
+		expect(r.layout.workspaces[0]).toEqual(two.workspaces[0]);
+		expect(r.layout.workspaces[1].items).toMatchObject([{ kind: 'board', board: 'ws3' }]);
 	});
 
 	it('a render without a pin places nothing', () => {

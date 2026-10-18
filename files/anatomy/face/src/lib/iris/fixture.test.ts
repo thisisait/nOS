@@ -99,7 +99,7 @@ function owedBy(c: Component): string[] {
 			...c.props.widgets.map((w) => w.title),
 			...c.props.dropped.flatMap((d) => [d.title, d.why]),
 			'Place here',
-			'Place on a new tab'
+			'Place on a new board'
 		];
 	// A KPI owes its number in the shell locale, its unit, the delta as a signed word-free arrow, and where it came from.
 	if (c.kind === 'kpi') {
