@@ -55,6 +55,25 @@ def _store() -> dict:
     return data if isinstance(data, dict) else {}
 
 
+OVERRIDDEN = "OVERRIDDEN in credentials.yml — the derived key is not this login's password"
+
+
+def _smoke():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("nos_smoke", REPO / "tools/nos-smoke.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _overridden(smoke=None) -> set[str]:
+    """Var NAMES the operator's credentials.yml sets — values are dropped unread."""
+    import yaml
+    f = (smoke or _smoke()).operator_file("credentials.yml")
+    data = yaml.safe_load(f.read_text()) if f.is_file() else None
+    return set(data) if isinstance(data, dict) else set()
+
+
 LOGIN_SUFFIXES = ("_admin_email", "_admin_user", "_admin_username", "_admin_login", "_user")
 
 
@@ -73,6 +92,7 @@ def accounts() -> int:
     v = {**plan._role_defaults(), **creds, **plan.smoke.load_vars()}
     v.setdefault("ansible_facts", {"user_id": getpass.getuser()})   # nos_primary_admin's source
     env = plan._env(v)
+    over = _overridden(plan.smoke)
     password_vars = {}   # registry key -> the config var that carries it
     for k, val in v.items():
         m = re.search(r"nos_derived_secrets\.(\w+)", str(val)) if isinstance(val, str) else None
@@ -84,18 +104,19 @@ def accounts() -> int:
         cands = [stem + s for s in ("_email", "_user", "_username", "_login")] + \
                 [stem.removesuffix("_admin") + s for s in LOGIN_SUFFIXES]
         login = next((plan._render(env, v[c]) for c in cands if c in v and c != var), "")
-        rows.append((stem, str(login) or "(see the service)", key))
+        rows.append((stem, str(login) or "(see the service)", key, var))
     for i in (v.get("nos_identities") or []) + plan.synthetic_identities(v):
         if "authentik" in (i.get("realms") or []):
             m = re.search(r"nos_derived_secrets\.(\w+)", str(v.get(i.get("password_var"), "")))
             svc = "authentik (synthetic)" if i.get("kind") == "synthetic" else "authentik"
-            rows.append((svc, plan._render(env, i["name"]), m.group(1) if m else i.get("password_var")))
+            rows.append((svc, plan._render(env, i["name"]), m.group(1) if m else i.get("password_var"),
+                         i.get("password_var")))
     for p in v.get("nos_extra_identities") or []:
-        rows.append(("authentik", p["name"], f"--user {p['name']} nos-identity password"))
+        rows.append(("authentik", p["name"], f"--user {p['name']} nos-identity password", None))
     w = max(len(r[0]) for r in rows)
     print(f"{'service'.ljust(w)}  login  →  tools/nos-secret.py <key>")
-    for svc, login, key in rows:
-        print(f"{svc.ljust(w)}  {login}  →  {key}")
+    for svc, login, key, var in rows:
+        print(f"{svc.ljust(w)}  {login}  →  {key}" + (f"  [{var} {OVERRIDDEN}]" if var in over else ""))
     return 0
 
 
@@ -137,6 +158,13 @@ def main(argv: list[str]) -> int:
         if key not in registry:
             print(f"unknown credential key {key!r} — see {REGISTRY}", file=sys.stderr)
             return 2
+        import re
+        import yaml
+        declared = yaml.safe_load((REPO / "default.credentials.yml").read_text()) or {}
+        hit = sorted(set(declared) & _overridden()
+                     & {k for k, val in declared.items() if re.search(rf"nos_derived_secrets\.{key}\b", str(val))})
+        for var in hit:
+            print(f"warning: {var} is {OVERRIDDEN}", file=sys.stderr)
     if scheme != "v2":
         print(
             f"refusing: the estate is on scheme {scheme}, where this value is "
