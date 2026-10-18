@@ -6379,3 +6379,40 @@ fn the_eye_hears_whether_the_local_model_is_in_memory_when_it_changes() {
     let paths: Vec<String> = rig.model.lock().unwrap().iter().map(|(h, _)| h.lines().next().unwrap_or("").to_string()).collect();
     assert!(paths[0].starts_with("GET /api/ps") && paths[1].starts_with("POST /v1/chat/completions"), "{paths:?}");
 }
+
+/// Live 2026-10-18 (qwen3.5:9b): "podle Qty mi udelej graf" - query_rows grouped and summed, then a chart
+/// written as x labels beside y numbers was refused twice, and the model said "Graf je hotový". The shape a
+/// small model writes is drawn and the model is told the one show takes; a turn whose every render was
+/// refused ends with the person told that nothing was drawn, after the model's own words.
+#[test]
+fn a_small_models_chart_is_drawn_and_a_turn_that_drew_nothing_says_so() {
+    let xy = call("show", &serde_json::json!({"component": {"kind": "chart", "props": {"title": "Amount by status", "chart": "bar",
+        "x": ["open", "done"], "y": [6, 10]}}}).to_string());
+    let unpaired = call("show", &serde_json::json!({"component": {"kind": "chart", "props": {"chart": "bar",
+        "x": "category", "y": [6, 10]}}}).to_string());
+    let rig = rig_at("forgive", mapped(), fake_table(SHEET, statuses()).0,
+        vec![query(r#"{"table": "sheet", "group_by": "status", "op": "sum", "y": "amount"}"#), xy, answer("Drawn."),
+             unpaired, answer("Graf je hotový.")], Some(local()));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let first = turn(&s, &mut r, None, "chart amount by status");
+    let charts: Vec<_> = rendered(&first).into_iter().filter(|m| m["component"]["kind"] == "chart").collect();
+    assert_eq!(charts.len(), 1, "the x/y chart is drawn: {first:?}; heard: {}", tool_result(&rig, 2));
+    assert_eq!(charts[0]["pin"]["chart"]["x"], "status", "drawn from the grouped query, so it pins: {}", charts[0]);
+    let taught = tool_result(&rig, 2)["normalised"].as_str().unwrap_or_default().to_string();
+    assert!(taught.contains("next time") && taught.contains(r#""series""#) && taught.contains(r#""points""#), "{taught}");
+    assert!(matches!(raw(&mut r), Some(ToShell::Activity { phase: Phase::Idle, .. })), "a turn that drew says nothing more");
+    let session = session_of(&first);
+    let used: Vec<_> = events(&rig.ledger, &session).into_iter().filter(|e| e.0 == "agent_tool_use" && e.1.ends_with("tool:show")).collect();
+    assert_eq!(used.len(), 1, "{used:?}");
+    assert_eq!(used[0].2["normalised"], true, "the ledger keeps that the shape was forgiven: {used:?}");
+
+    let second = turn(&s, &mut r, Some(session), "and again");
+    assert!(rendered(&second).is_empty(), "numbers without their labels are not guessed: {second:?}");
+    assert!(matches!(second.last(), Some(ToShell::Text { text, .. }) if text == "Graf je hotový."), "the model's words stand: {second:?}");
+    match next(&mut r) {
+        Some(ToShell::Refused { reason, widget: None }) => assert!(reason.starts_with("nothing was drawn in this turn: show: ")
+            && reason.contains("unknown field `y`"), "{reason}"),
+        other => panic!("the turn that drew nothing must say so after the text, got {other:?}"),
+    }
+}
