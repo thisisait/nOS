@@ -7,14 +7,14 @@
 	import Markdown from './Markdown.svelte';
 	import { phaseName, type DashboardProps, type ToShell, type ToThalamus } from './wire';
 
-	// onpin: the person clicked "Připnout na plochu" under a render serve gave a pin (genui I6).
+	// onpin: the person clicked "Sem" (the active tab) or "Nový tab" under a render serve gave a pin (genui I6).
 	// onchoose: the person answered a choice with "Odpovědět"; drawing one sends nothing.
-	// onplace: the person clicked "Place on a new tab" under an offered dashboard; true when it was placed.
+	// onplace: the person clicked "Place here" or "Place on a new tab" under an offered dashboard; true when it was placed.
 	let { msg, onpin, onchoose, onplace }: {
 		msg: ToShell;
-		onpin?: (m: ToShell) => void;
+		onpin?: (m: ToShell, fresh: boolean) => void;
 		onchoose?: (m: Extract<ToThalamus, { t: 'choice_reply' }>) => Promise<boolean>;
-		onplace?: (d: DashboardProps) => boolean;
+		onplace?: (d: DashboardProps, here: boolean) => boolean;
 	} = $props();
 </script>
 
@@ -31,10 +31,12 @@
 	{:else if msg.t === 'render'}
 		<ComponentView component={msg.component} />
 		{#if msg.pin}
-			<button class="pin" type="button" aria-label="Připnout na plochu" title="Připnout na plochu" onclick={() => onpin?.(msg)}>
+			<div class="pin" role="group" aria-label="Připnout na plochu">
 				<svg aria-hidden="true" viewBox="0 0 16 16" width="12" height="12"><path d="M10 1l5 5-2 1-3 3 1 4-1 1-4-4-4 4-1-1 4-4-4-4 1-1 4 1 3-3z" fill="currentColor" /></svg>
 				pin
-			</button>
+				<button type="button" aria-label="Připnout sem" title="Připnout na tento tab" onclick={() => onpin?.(msg, false)}>Sem</button>
+				<button type="button" aria-label="Připnout na nový tab" title="Připnout na nový tab" onclick={() => onpin?.(msg, true)}>Nový tab</button>
+			</div>
 		{:else if msg.component.kind === 'chart'}
 			<p class="muted">jen náhled — Iris neuvedla zdroj čísel</p>
 		{/if}
@@ -85,11 +87,17 @@
 		border-radius: 6px;
 		padding: 1px 6px;
 		font-size: 11px;
+	}
+	.pin button {
+		border: 0;
+		background: transparent;
+		color: inherit;
+		font: inherit;
+		padding: 0 2px;
 		cursor: pointer;
 	}
-	.pin:hover {
+	.pin button:hover {
 		color: var(--accent);
-		border-color: var(--accent);
 	}
 	.scope {
 		margin: 0;

@@ -805,7 +805,7 @@ pub struct Kpi {
     pub source: Option<String>,
 }
 
-/// A tab of widgets Iris offers (offer_dashboard); drawn with "Place on a new tab", it runs nothing
+/// A tab of widgets Iris offers (offer_dashboard); drawn with "Place here" and "Place on a new tab", it runs nothing
 /// until the person places it. `dropped` is every widget serve left out, with why.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

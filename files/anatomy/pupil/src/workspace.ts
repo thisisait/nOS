@@ -84,13 +84,17 @@ export function placed(l: Layout, w: Widgets, id: string, title: string, spec: W
 	return { layout: r.layout, w: { ...w, [id]: { component: null, error: null, at: 0, spec } }, send: r.send };
 }
 
-/** The person's click on a render's pin: a widget of a copy of that spec, titled as the render. Nothing for no pin. */
-export function pin(l: Layout, w: Widgets, id: string, m: ToShell): { layout: Layout; w: Widgets; send: ToThalamus | null } {
+/** The person's click on a render's pin: a widget of a copy of that spec, titled as the render, on the
+ *  active tab ("Sem") or, given `tab`, on a new tab of that id ("Nový tab"). Nothing for no pin or no room. */
+export function pin(l: Layout, w: Widgets, id: string, m: ToShell, tab?: string): { layout: Layout; w: Widgets; send: ToThalamus | null } {
 	if (m.t !== 'render' || !m.pin) return { layout: l, w, send: null };
 	const p = m.component.props as { title?: string; name?: string };
 	// msg lives in $state: a Proxy, which structuredClone refuses. JSON is all a spec is.
 	const spec = JSON.parse(JSON.stringify(m.pin)) as WidgetSpec;
-	return placed(l, w, id, p.title || p.name || tableOf(spec), spec);
+	const title = p.title || p.name || tableOf(spec);
+	if (tab === undefined) return placed(l, w, id, title, spec);
+	const fresh = addSpace(l, tab, title);
+	return fresh === l ? { layout: l, w, send: null } : placed(fresh, w, id, title, spec);
 }
 
 export const removeWidget = (l: Layout, id: string): Layout => mapWidgets(l, (ws) => ws.filter((w) => w.id !== id));
@@ -154,18 +158,29 @@ export function setLens(l: Layout, tab: string, i: number, value: string): { lay
 	};
 }
 
-/** The person's click on "Place on a new tab": a tab with the offer's lens, two widgets a row; each runs once, as a click. */
-export function placeOffer(l: Layout, w: Widgets, tab: string, d: DashboardProps, id: () => string): { layout: Layout; w: Widgets; send: Send } {
-	if (l.workspaces.length >= MAX_SPACES) return { layout: l, w, send: [] };
+/** The person's click on "Place on a new tab": a tab with the offer's lens, two widgets a row; each runs once, as a click.
+ *  `here` ("Place here"): the widgets join the active tab below its own, as addWidget places one. */
+export function placeOffer(l: Layout, w: Widgets, tab: string, d: DashboardProps, id: () => string, here = false): { layout: Layout; w: Widgets; send: Send } {
+	const into = activeSpace(l);
+	const room = here ? MAX_WIDGETS - into.widgets.length : l.workspaces.length < MAX_SPACES ? MAX_WIDGETS : 0;
+	if (room <= 0) return { layout: l, w, send: [] };
 	// The offer lives in $state: a Proxy. JSON is all an offer is.
 	const { name, lens, widgets } = JSON.parse(JSON.stringify(d)) as DashboardProps;
-	const boxes: WidgetBox[] = widgets.slice(0, MAX_WIDGETS).map((x, i) => ({ id: id(), title: x.title.slice(0, 120), spec: x.spec, ...place({ x: (i % 2) * 6, y: Math.floor(i / 2) * 8, w: 6, h: 8 }) }));
+	// ponytail: "here" bakes the offer's set lens into each spec and drops an unset one; merge lenses if people ask.
+	const y0 = here ? Math.max(0, ...into.widgets.map((x) => x.y + x.h)) : 0;
+	const boxes: WidgetBox[] = widgets.slice(0, room).map((x, i) => ({
+		id: id(), title: x.title.slice(0, 120), spec: here ? lensed(x.spec, lens) : x.spec,
+		...place({ x: (i % 2) * 6, y: y0 + Math.floor(i / 2) * 8, w: 6, h: 8 })
+	}));
 	const out = { ...w };
 	for (const b of boxes) out[b.id] = { component: null, error: null, at: 0, spec: b.spec };
+	const sent = here ? into.lens : lens;
 	return {
-		layout: { ...l, active: tab, workspaces: [...l.workspaces, { id: tab, name: name.slice(0, 40), lens, widgets: boxes }] },
+		layout: here
+			? { ...l, workspaces: l.workspaces.map((s) => (s === into ? { ...s, widgets: [...s.widgets, ...boxes] } : s)) }
+			: { ...l, active: tab, workspaces: [...l.workspaces, { id: tab, name: name.slice(0, 40), lens, widgets: boxes }] },
 		w: out,
-		send: boxes.map((b) => ({ t: 'widget', widget: b.id, spec: lensed(b.spec, lens), trigger: 'click' }))
+		send: boxes.map((b) => ({ t: 'widget', widget: b.id, spec: lensed(b.spec, sent), trigger: 'click' }))
 	};
 }
 

@@ -1,13 +1,13 @@
 <!--
   A dashboard Iris offers (renderers.rs Dashboard): its name, lens, widgets and what serve left out,
-  every word a text node. Nothing runs here: "Place on a new tab" hands the offer to `onplace`
+  every word a text node. Nothing runs here: "Place here" or "Place on a new tab" hands the offer to `onplace`
   (workspace.ts placeOffer), once; the model never places or runs it.
 -->
 <script lang="ts">
 	import { tableOf } from './widgets';
 	import type { DashboardProps, Lens, WidgetSpec } from './wire';
 
-	let { dashboard, onplace }: { dashboard: DashboardProps; onplace?: (d: DashboardProps) => boolean } = $props();
+	let { dashboard, onplace }: { dashboard: DashboardProps; onplace?: (d: DashboardProps, here: boolean) => boolean } = $props();
 
 	let placed = $state(false);
 	const OP: Record<Lens['op'], string> = { eq: '=', neq: '≠', lt: '<', gt: '>', contains: 'contains' };
@@ -27,9 +27,14 @@
 			{#each dashboard.dropped as d}<li>left out: {d.title} — {d.why}</li>{/each}
 		</ul>
 	{/if}
-	<button type="button" disabled={placed || !onplace} onclick={() => (placed = onplace?.(dashboard) ?? false)}>
-		{placed ? 'Placed' : 'Place on a new tab'}
-	</button>
+	{#if placed}
+		<p class="muted">Placed</p>
+	{:else}
+		<div class="place">
+			<button type="button" disabled={!onplace} onclick={() => (placed = onplace?.(dashboard, true) ?? false)}>Place here</button>
+			<button type="button" disabled={!onplace} onclick={() => (placed = onplace?.(dashboard, false) ?? false)}>Place on a new tab</button>
+		</div>
+	{/if}
 </section>
 
 <style>
@@ -60,7 +65,8 @@
 	.dropped {
 		color: var(--warn, var(--muted));
 	}
-	button {
-		justify-self: start;
+	.place {
+		display: flex;
+		gap: 6px;
 	}
 </style>

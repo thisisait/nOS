@@ -182,16 +182,22 @@
 
 	const added = (title: string, spec: WidgetSpec) => place(ws.placed(layout, widgets, newId(), title, spec));
 
-	// The person's click on "Připnout na plochu"; the model has no message that adds a widget.
-	function pinned(m: ToShell) {
-		place(ws.pin(layout, widgets, newId(), m));
+	// The person's click on "Sem" or "Nový tab" under a pin; the model has no message that adds a widget.
+	function pinned(m: ToShell, fresh: boolean) {
+		if (fresh && layout.workspaces.length >= ws.MAX_SPACES) {
+			layoutNote = `at most ${ws.MAX_SPACES} tabs: close one or pin here`;
+			return;
+		}
+		place(ws.pin(layout, widgets, newId(), m, fresh ? `ws${Date.now().toString(36)}` : undefined));
 	}
 
-	// The person's click on "Place on a new tab"; the model has no message that places or runs one.
-	function placedOffer(d: DashboardProps): boolean {
-		const r = ws.placeOffer(layout, widgets, `ws${Date.now().toString(36)}`, d, newId);
+	// The person's click on "Place here" or "Place on a new tab"; the model has no message that places or runs one.
+	function placedOffer(d: DashboardProps, here: boolean): boolean {
+		const r = ws.placeOffer(layout, widgets, `ws${Date.now().toString(36)}`, d, newId, here);
 		if (!r.send.length) {
-			layoutNote = `at most ${ws.MAX_SPACES} tabs: close one to place this dashboard`;
+			layoutNote = here
+				? `a workspace holds at most ${ws.MAX_WIDGETS} widgets: place it on a new tab`
+				: `at most ${ws.MAX_SPACES} tabs: close one to place this dashboard`;
 			return false;
 		}
 		layout = r.layout;

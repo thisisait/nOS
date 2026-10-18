@@ -437,7 +437,8 @@ table's rows pass `source`: the thalamus counts, sums or averages the rows as th
 in place of your series, and the person can pin the chart live. A kpi (one number on a tile) is drawn only with `source` \
 {query, op, y?}: the thalamus computes the number; never send it.";
 
-const OFFER_DASHBOARD: &str = "Offer the person a dashboard: a new tab of 1-8 widgets, each {title} and one of rows \
+const OFFER_DASHBOARD: &str = "Offer the person a dashboard of 2-8 widgets (one table, chart or kpi alone is query_rows or show, \
+which the person pins); they place it on the tab they choose. Each widget is {title} and one of rows \
 (query_rows arguments), chart ({query {table, q?, where?}, chart bar|line|pie, x, y?, op count|sum|avg}: show's source \
 plus its chart), kpi ({query {table, q?, where?}, op count|sum|avg, y?, unit?}: one total on a tile) or form ({table, columns?, prefill? {column: value}, when? {column: {key, op eq|neq, value}}}: a form \
 that adds a row; prefill is where the person's draft starts, when shows an optional field only while another field \
@@ -806,7 +807,7 @@ the value, never a day you worked out. To show structured output call show ({});
 nothing else. To count per value (for a chart) call query_rows with \
 group_by; for a sum or average per value add op and y, then show chart (the source is inferred and the chart pins); to chart a table's rows pass show's `source` {{query, x, y?, op}}, so the numbers drawn are \
 KEAP's and the person can pin the chart. For one number on a tile (a KPI) call show kpi with `source` {{query, op, y?}}: the thalamus \
-computes it; never write its number. For a dashboard call offer_dashboard; to put a chart you drew on a dashboard, pass the same source plus its chart (bar, line or pie); nothing runs until the person places it. To see which DataTables the person has, call list_tables, then query_rows with an id. For what is red or broken on the estate call red_status. Before recommending software, call estate_services: \
+computes it; never write its number. For a dashboard of 2 or more widgets call offer_dashboard (one widget alone is query_rows or show); to put a chart you drew on a dashboard, pass the same source plus its chart (bar, line or pie); nothing runs until the person places it. To see which DataTables the person has, call list_tables, then query_rows with an id. For what is red or broken on the estate call red_status. Before recommending software, call estate_services: \
 prefer a service the estate already has. For how to do something with nOS (turn a service on or off, update nOS, \
 fix what is red) call nos_guide and give its steps: the config.yml line the person edits by hand, the command they run, \
 what it does, how to verify, and the doc path. You never edit config.yml or run a command: the person decides and does \
