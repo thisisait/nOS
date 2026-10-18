@@ -10,7 +10,7 @@ import {
 	restore, setLens, show, type Layout
 } from './workspace';
 
-const FIXTURE = new URL('../../contracts/workspace-layout.fixture.json', import.meta.url);
+const FIXTURE = new URL('../../../../contracts/workspace-layout.fixture.json', import.meta.url);
 const fx = JSON.parse(readFileSync(FIXTURE, 'utf8')) as { samples: { case: string; layout: Layout }[] };
 const sample = (i: number) => structuredClone(fx.samples[i].layout);
 const inGrid = (l: Layout) =>

@@ -8,6 +8,8 @@ export default defineConfig({
 		// Unit tests co-locate as *.test.ts / *.spec.ts. Pure-logic modules
 		// (contracts, filename rules, window math) run in node.
 		include: ['src/**/*.{test,spec}.{js,ts}'],
-		environment: 'node'
+		environment: 'node',
+		// Iris's fmt.ts reads navigator.language: tests read in en whatever the host's LANG is.
+		setupFiles: ['src/lib/iris/test-locale.ts']
 	}
 });

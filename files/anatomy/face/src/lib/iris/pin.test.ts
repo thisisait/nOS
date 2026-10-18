@@ -131,7 +131,7 @@ describe('nothing adds a widget without a click', () => {
 	});
 
 	it('App places a pin only in the handler it gives Message as onpin', () => {
-		const { template, script } = nodes('./App.svelte');
+		const { template, script } = nodes('../../../../pupil/src/App.svelte');
 		const calls = script.filter(([n]) => n.type === 'CallExpression' && (n.callee as Node)?.type === 'MemberExpression'
 			&& ((n.callee as Node).property as Node)?.name === 'pin');
 		expect(calls.length).toBe(1);

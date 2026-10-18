@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import type { ToShell } from './wire';
 import { onTableChanged, route, submit, type Widgets } from './widgets';
 
-const FIXTURE = new URL('../../contracts/thalamus-shell.fixture.json', import.meta.url);
+const FIXTURE = new URL('../../../../contracts/thalamus-shell.fixture.json', import.meta.url);
 const fx = JSON.parse(readFileSync(FIXTURE, 'utf8')) as { to_shell: { case: string; msg: ToShell }[] };
 const sample = (name: string) => fx.to_shell.find((c) => c.case === name)!.msg;
 

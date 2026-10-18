@@ -1,5 +1,5 @@
 // A graph the model shows (renderers.rs Graph), laid out by the face's layered layout
-// ($face/lib/anatomy/graphLayered, one copy of the math): deterministic, no two node boxes
+// ($lib/anatomy/graphLayered, one copy of the math): deterministic, no two node boxes
 // overlap, a cycle still lays out, and a selection lights a node and its neighbours.
 import { render } from 'svelte/server';
 import { describe, expect, it } from 'vitest';

@@ -12,6 +12,7 @@
       src-tauri/Cargo.lock src-tauri/build.rs src-tauri/tauri.conf.json src-tauri/capabilities src-tauri/icons \
       ../thalamus/contract/src ../thalamus/contract/Cargo.toml \
       ../face/src/app.css ../face/src/lib/design ../face/src/lib/anatomy/graphLayered.ts ../face/src/lib/components/ui \
+      ../face/src/lib/iris \
       -type f \
       | LC_ALL=C sort | xargs cat | shasum -a 256 | cut -d' ' -f1
   args:

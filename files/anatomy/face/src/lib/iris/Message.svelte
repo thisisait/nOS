@@ -1,6 +1,6 @@
 <!-- One ToShell message in the chat column. A refusal is shown, never dropped. -->
 <script lang="ts">
-	import StatusNote from '$ui/StatusNote.svelte';
+	import StatusNote from '$lib/components/ui/StatusNote.svelte';
 	import Choice from './Choice.svelte';
 	import ComponentView from './Component.svelte';
 	import DashboardCard from './DashboardCard.svelte';

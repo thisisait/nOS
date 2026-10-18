@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { route } from './widgets';
 import { onTableChanged, restore, type Layout } from './workspace';
 
-const POC = new URL('../../../../state/fixtures/genui-workspace-poc/workspace.json', import.meta.url);
+const POC = new URL('../../../../../../state/fixtures/genui-workspace-poc/workspace.json', import.meta.url);
 const layout = JSON.parse(readFileSync(POC, 'utf8')) as Layout;
 
 describe('the PoC workspace', () => {

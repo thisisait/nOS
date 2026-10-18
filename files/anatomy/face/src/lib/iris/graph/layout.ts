@@ -1,7 +1,7 @@
 // A graph (renderers.rs Graph) as geometry: the face's layered layout places each node box
-// (one copy of the math, $face/lib/anatomy/graphLayered), edges are cubic paths between box
+// (one copy of the math, $lib/anatomy/graphLayered), edges are cubic paths between box
 // sides, a back edge or a loop bends below. Pure, so vitest runs it in node.
-import { layout } from '$face/lib/anatomy/graphLayered';
+import { layout } from '$lib/anatomy/graphLayered';
 import { FONT, GLYPH } from '../chart/geometry';
 import type { Component } from '../wire';
 

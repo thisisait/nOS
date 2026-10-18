@@ -4,7 +4,7 @@
   arrows on a focused handle move it, shift+arrows resize, through workspace.ts place().
 -->
 <script lang="ts">
-	import StatusNote from '$ui/StatusNote.svelte';
+	import StatusNote from '$lib/components/ui/StatusNote.svelte';
 	import ComponentView from './Component.svelte';
 	import { csvName, toCsv } from './csv';
 	import Form from './Form.svelte';

@@ -10,7 +10,7 @@ import Message from './Message.svelte';
 import type { Component, ToShell, Value } from './wire';
 
 // PUPIL_FIXTURE: a planted copy (tests/anatomy/test_pupil_renders_the_fixture.py) must go red here.
-const FIXTURE = process.env.PUPIL_FIXTURE ?? new URL('../../contracts/thalamus-shell.fixture.json', import.meta.url);
+const FIXTURE = process.env.PUPIL_FIXTURE ?? new URL('../../../../contracts/thalamus-shell.fixture.json', import.meta.url);
 const fx = JSON.parse(readFileSync(FIXTURE, 'utf8')) as { to_shell: { case: string; msg: ToShell }[] };
 // Each kind's props, as wire.ts types them: a prop the fixture renames is named here, not drawn as nothing.
 const PROPS: Record<string, string[]> = {

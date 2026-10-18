@@ -10,7 +10,7 @@ import ApprovalCard from './ApprovalCard.svelte';
 import { asked, closed, composerOpen, decide, empty, seen } from './approvals';
 import type { ToShell } from './wire';
 
-const FIXTURE = new URL('../../contracts/thalamus-shell.fixture.json', import.meta.url);
+const FIXTURE = new URL('../../../../contracts/thalamus-shell.fixture.json', import.meta.url);
 const fx = JSON.parse(readFileSync(FIXTURE, 'utf8')) as { to_shell: { msg: ToShell }[] };
 const req = fx.to_shell.map((c) => c.msg).find((m) => m.t === 'approval_request') as Extract<ToShell, { t: 'approval_request' }>;
 const two = asked(asked(empty(), req), { ...req, approval: 'second' });

@@ -4,9 +4,9 @@
   is a text node; an unknown or unreadable source is listed, never shown as empty.
 -->
 <script lang="ts">
-	import Badge from '$ui/Badge.svelte';
-	import StatusNote from '$ui/StatusNote.svelte';
-	import { severityTone } from '$ui/tone';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import StatusNote from '$lib/components/ui/StatusNote.svelte';
+	import { severityTone } from '$lib/components/ui/tone';
 	import Chart from './Chart.svelte';
 	import Form from './Form.svelte';
 	import Graph from './Graph.svelte';

@@ -15,7 +15,7 @@ consumer:
   code:
     - files/anatomy/thalamus/contract/examples/wire_fixture.rs
     - files/anatomy/pupil/src-tauri/src/bridge.rs        # the pupil (desktop window) decodes with the same crate
-    - files/anatomy/pupil/src/fixture.test.ts            # and draws every fixture component
+    - files/anatomy/face/src/lib/iris/fixture.test.ts     # and draws every fixture component
 gates:
   both: tests/anatomy/test_thalamus_shell_contract.py   # decodes, re-encodes and refuses the fixture
   pupil: tests/anatomy/test_pupil_renders_the_fixture.py
@@ -180,7 +180,7 @@ components:
       who sends what to whom, in order (show tool): {title?, participants[], steps[{from, to, text, dashed?} |
       {note, over[]} | {phase}]}; 2-8 participants, unique, at most 40 chars; at most 40 steps; a message text at
       most 120 (from may equal to), a note at most 200 over 1-2 participants, a phase at most 60; from, to and over
-      name participants exactly. The pupil draws SVG lifelines (pupil/src/sequence/layout.ts widens a gap until its
+      name participants exactly. The pupil draws SVG lifelines (face/src/lib/iris/sequence/layout.ts widens a gap until its
       labels fit), solid arrows, dashed replies, every word a text node; the terminal says "A -> B: text" (dashed
       "A --> B"), notes and phases as indented lines
     choice: >-

@@ -6,22 +6,22 @@
 -->
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
-	import StatusNote from '$ui/StatusNote.svelte';
-	import Tabs from '$ui/Tabs.svelte';
-	import AddWidget from './AddWidget.svelte';
-	import ApprovalCard from './ApprovalCard.svelte';
-	import Chat from './Chat.svelte';
-	import Eye from './Eye.svelte';
-	import { SETTLE_MS, eye, look, step, type Input } from './eye';
-	import Message from './Message.svelte';
-	import ModelPicker from './ModelPicker.svelte';
-	import { asked, closed, composerOpen, decide, empty, seen, type Decision } from './approvals';
-	import { adopt, replayed, type Entry } from './resume';
-	import { forCommand, rewall } from './scope';
-	import type { DashboardProps, Link, ModelOption, Scope, ToShell, ToThalamus, WidgetSpec } from './wire';
-	import { route, submit, type Widgets } from './widgets';
-	import WorkspaceView from './Workspace.svelte';
-	import * as ws from './workspace';
+	import StatusNote from '$lib/components/ui/StatusNote.svelte';
+	import Tabs from '$lib/components/ui/Tabs.svelte';
+	import AddWidget from '$iris/AddWidget.svelte';
+	import ApprovalCard from '$iris/ApprovalCard.svelte';
+	import Chat from '$iris/Chat.svelte';
+	import Eye from '$iris/Eye.svelte';
+	import { SETTLE_MS, eye, look, step, type Input } from '$iris/eye';
+	import Message from '$iris/Message.svelte';
+	import ModelPicker from '$iris/ModelPicker.svelte';
+	import { asked, closed, composerOpen, decide, empty, seen, type Decision } from '$iris/approvals';
+	import { adopt, replayed, type Entry } from '$iris/resume';
+	import { forCommand, rewall } from '$iris/scope';
+	import type { DashboardProps, Link, ModelOption, Scope, ToShell, ToThalamus, WidgetSpec } from '$iris/wire';
+	import { route, submit, type Widgets } from '$iris/widgets';
+	import WorkspaceView from '$iris/Workspace.svelte';
+	import * as ws from '$iris/workspace';
 
 	type Tauri = {
 		core: { invoke: (cmd: string, args?: Record<string, unknown>) => Promise<unknown> };
