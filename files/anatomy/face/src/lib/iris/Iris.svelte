@@ -539,7 +539,7 @@
 			<!-- The marks sit behind the transparent textarea, which keeps the focus, the text and a11y. -->
 			<div class="marks" aria-hidden="true">
 				{#each pieces as p}{#if p.kind}<mark data-kind={p.kind}>{p.text}</mark
-						>{:else}{p.text}{/if}{/each}&#8203;
+						>{:else}{p.text}{/if}{/each}{'​'}
 			</div>
 			<textarea
 				bind:value={draft}
