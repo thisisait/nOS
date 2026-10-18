@@ -51,7 +51,7 @@ Each line: level (count) — what it means (the lexicon's words), then the most 
 - **reflex** (43) — An automatic, scheduled response of an organ; Pulse runs each one on its clock. Most connected: pulse:conductor:self-test-001 (9), pulse:librarian:brief-taxonomy (9), pulse:librarian:describe-taxonomy (9)
 - **heartbeat** (1) — A periodic signal that proves something is still alive. Most connected: daemon:eu.thisisait.nos.heartbeat (0)
 
-Hidden plumbing: 74 internal nodes. Look closer: `tools/body.py <level>` or `tools/body.py <node>`.
+Hidden plumbing: 75 internal nodes. Look closer: `tools/body.py <level>` or `tools/body.py <node>`.
 
 ## 4. How to ask — the senses
 
@@ -118,7 +118,7 @@ KEAP_API_URL=http://127.0.0.1:8091 KEAP_AGENT_TOKEN_RO=<keap_agent_token_ro> pyt
 - Local models (Ollama, OpenAI-compatible): `http://127.0.0.1:11434/v1`, no token. Models the register names: `hermes3:8b`, `qwen3:14b`.
 - Web: Traefik owns ports 80/443. A service with a `domain_var` in state/manifest.yml (54 of 76) answers at that variable, by default `<name>.{{ tenant_domain }}` with `tenant_domain: dev.local`. This host's value: `tools/estate-status.py --config tenant_domain`. The routed ids are those rows' `id`s.
 
-The public organ systems (the apex ruling publishes 13; 486 of 549 ruled nodes are withheld):
+The public organ systems (the apex ruling publishes 13; 487 of 550 ruled nodes are withheld):
 
 - The Gatehouse — Access is decided in one place. (4 parts)
 - The Spine — The estate governs and audits itself. (5 parts)
