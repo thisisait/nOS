@@ -10,7 +10,8 @@ const files = readdirSync(dir).filter((f) => f.endsWith('.svelte'));
 
 describe('every <title> is an SVG title on the client', () => {
 	it.each(files)('%s builds no <title> through an HTML template', (f) => {
-		const js = compile(readFileSync(new URL(f, dir), 'utf8'), { filename: f, generate: 'client' }).js.code;
+		const js = compile(readFileSync(new URL(f, dir), 'utf8'), { filename: f, generate: 'client' })
+			.js.code;
 		expect(js.match(/from_html\(`(?:(?!<svg)[^`])*<title/g) ?? []).toEqual([]);
 	});
 });

@@ -24,11 +24,31 @@ describe('scales', () => {
 
 	it('time ticks step by hours, days, months or years and say it in that unit', () => {
 		const t = (s: string) => Date.parse(s);
-		expect(timeTicks(t('2026-10-13T00:00:00Z'), t('2026-10-13T12:00:00Z'), 4).map((x) => x.label)).toEqual(['00:00', '03:00', '06:00', '09:00', '12:00']);
-		expect(timeTicks(t('2026-10-01'), t('2026-10-05'), 4).map((x) => x.label)).toEqual(['10-01', '10-02', '10-03', '10-04', '10-05']);
-		expect(timeTicks(t('2026-01-15'), t('2026-06-15'), 5).map((x) => x.label)).toEqual(['2026-02', '2026-03', '2026-04', '2026-05', '2026-06']);
-		expect(timeTicks(t('2019-06-01'), t('2026-06-01'), 4).map((x) => x.label)).toEqual(['2020', '2022', '2024', '2026']);
-		for (const x of timeTicks(t('2026-01-15'), t('2026-06-15'), 5)) expect(new Date(x.v).getUTCDate()).toBe(1);
+		expect(
+			timeTicks(t('2026-10-13T00:00:00Z'), t('2026-10-13T12:00:00Z'), 4).map((x) => x.label)
+		).toEqual(['00:00', '03:00', '06:00', '09:00', '12:00']);
+		expect(timeTicks(t('2026-10-01'), t('2026-10-05'), 4).map((x) => x.label)).toEqual([
+			'10-01',
+			'10-02',
+			'10-03',
+			'10-04',
+			'10-05'
+		]);
+		expect(timeTicks(t('2026-01-15'), t('2026-06-15'), 5).map((x) => x.label)).toEqual([
+			'2026-02',
+			'2026-03',
+			'2026-04',
+			'2026-05',
+			'2026-06'
+		]);
+		expect(timeTicks(t('2019-06-01'), t('2026-06-01'), 4).map((x) => x.label)).toEqual([
+			'2020',
+			'2022',
+			'2024',
+			'2026'
+		]);
+		for (const x of timeTicks(t('2026-01-15'), t('2026-06-15'), 5))
+			expect(new Date(x.v).getUTCDate()).toBe(1);
 	});
 
 	it('a band splits the range into equal steps, mid on each centre', () => {

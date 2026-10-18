@@ -11,7 +11,12 @@
 	// onpin: the person clicked "Sem" (the active tab) or "Nový tab" under a render serve gave a pin (genui I6).
 	// onchoose: the person answered a choice with "Odpovědět"; drawing one sends nothing.
 	// onplace: the person clicked "Place here" or "Place on a new tab" under an offered dashboard; true when it was placed.
-	let { msg, onpin, onchoose, onplace }: {
+	let {
+		msg,
+		onpin,
+		onchoose,
+		onplace
+	}: {
 		msg: ToShell;
 		onpin?: (m: ToShell, fresh: boolean) => void;
 		onchoose?: (m: Extract<ToThalamus, { t: 'choice_reply' }>) => Promise<boolean>;
@@ -33,10 +38,25 @@
 		<ComponentView component={msg.component} />
 		{#if msg.pin}
 			<div class="pin" role="group" aria-label="Připnout na plochu">
-				<svg aria-hidden="true" viewBox="0 0 16 16" width="12" height="12"><path d="M10 1l5 5-2 1-3 3 1 4-1 1-4-4-4 4-1-1 4-4-4-4 1-1 4 1 3-3z" fill="currentColor" /></svg>
+				<svg aria-hidden="true" viewBox="0 0 16 16" width="12" height="12"
+					><path
+						d="M10 1l5 5-2 1-3 3 1 4-1 1-4-4-4 4-1-1 4-4-4-4 1-1 4 1 3-3z"
+						fill="currentColor"
+					/></svg
+				>
 				pin
-				<button type="button" aria-label="Připnout sem" title="Připnout na tento tab" onclick={() => onpin?.(msg, false)}>Sem</button>
-				<button type="button" aria-label="Připnout na nový tab" title="Připnout na nový tab" onclick={() => onpin?.(msg, true)}>Nový tab</button>
+				<button
+					type="button"
+					aria-label="Připnout sem"
+					title="Připnout na tento tab"
+					onclick={() => onpin?.(msg, false)}>Sem</button
+				>
+				<button
+					type="button"
+					aria-label="Připnout na nový tab"
+					title="Připnout na nový tab"
+					onclick={() => onpin?.(msg, true)}>Nový tab</button
+				>
 			</div>
 		{:else if msg.component.kind === 'chart'}
 			<p class="muted">jen náhled — Iris neuvedla zdroj čísel</p>
@@ -46,7 +66,10 @@
 		<p class="muted">approval {msg.approval}</p>
 		<ComponentView component={msg.component} />
 	{:else if msg.t === 'refused'}
-		<StatusNote kind="error" title="refused">{#if msg.widget}widget {msg.widget}: {/if}{msg.reason}</StatusNote>
+		<StatusNote kind="error" title="refused"
+			>{#if msg.widget}widget {msg.widget}:
+			{/if}{msg.reason}</StatusNote
+		>
 	{:else if msg.t === 'activity'}
 		<!-- App logs only a tool run; every phase goes to the eye. -->
 		<p class="muted">→ {phaseName(msg.phase)}</p>
@@ -58,12 +81,20 @@
 		<p class="muted">widget {msg.widget}: row {msg.row} added (form {msg.form})</p>
 	{:else if msg.t === 'working_for'}
 		<p class="scope">
-			{#if msg.scope === 'all'}working for everything (no wall){:else if msg.scope === 'personal'}working on {msg.name} data{:else}working for {msg.name} ({msg.scope.client}){/if}
+			{#if msg.scope === 'all'}working for everything (no wall){:else if msg.scope === 'personal'}working
+				on {msg.name} data{:else}working for {msg.name} ({msg.scope.client}){/if}
 		</p>
 	{:else if msg.t === 'model_options'}
 		<!-- App draws these in the header's picker; said here for any other host of a message. -->
 		<ul class="muted">
-			{#each msg.options as o}<li>{o.backend} {o.model} · {o.processor} · {o.transfers_outside_eu ? 'leaves the EU' : 'EU'}{#if o.current} (current){/if}{#if o.warning} — {o.warning}{/if}</li>{/each}
+			{#each msg.options as o}<li>
+					{o.backend}
+					{o.model} · {o.processor} · {o.transfers_outside_eu
+						? 'leaves the EU'
+						: 'EU'}{#if o.current}
+						(current){/if}{#if o.warning}
+						— {o.warning}{/if}
+				</li>{/each}
 			{#each msg.refused as r}<li>not offered: {r}</li>{/each}
 		</ul>
 	{:else if msg.t === 'table_changed'}
@@ -72,10 +103,14 @@
 		<p class="said">{msg.text}</p>
 	{:else if msg.t === 'replay'}
 		<!-- App unpacks a replay into its log (resume.ts); drawn here for any other host of a message. -->
-		<p class="muted">resumed session {msg.session}: {msg.log.map((m) => m.t).join(', ') || 'nothing said yet'}</p>
+		<p class="muted">
+			resumed session {msg.session}: {msg.log.map((m) => m.t).join(', ') || 'nothing said yet'}
+		</p>
 		{#each msg.log as m}<Message msg={m} />{/each}
 	{:else if msg.t === 'workspace'}
-		<p class="muted">{msg.doc ? 'the workspace the thalamus holds' : 'the thalamus holds no workspace yet'}</p>
+		<p class="muted">
+			{msg.doc ? 'the workspace the thalamus holds' : 'the thalamus holds no workspace yet'}
+		</p>
 	{/if}
 </div>
 

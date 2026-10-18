@@ -5,14 +5,19 @@ export type Delta = 'added' | 'removed' | 'changed';
 export type View = 'before' | 'changes' | 'after';
 
 export const MARK: Record<Delta, string> = { added: '+', removed: '−', changed: '~' };
-export const VIEWS: [View, string][] = [['before', 'Před'], ['changes', 'Změny'], ['after', 'Po']];
+export const VIEWS: [View, string][] = [
+	['before', 'Před'],
+	['changes', 'Změny'],
+	['after', 'Po']
+];
 
 /** An added or removed parent passes its state down; a changed one passes nothing (Delta::inherit). */
 export const inherit = (own: Delta | undefined, parent: Delta | undefined) =>
 	parent === 'added' || parent === 'removed' ? parent : own;
 
 /** Před hides what is added, Po what is removed, Změny shows all. */
-export const shownIn = (d: Delta | undefined, v: View) => !(v === 'before' && d === 'added') && !(v === 'after' && d === 'removed');
+export const shownIn = (d: Delta | undefined, v: View) =>
+	!(v === 'before' && d === 'added') && !(v === 'after' && d === 'removed');
 
 /** Every node's resolved delta, depth first. */
 export const treeDeltas = (nodes: TreeNode[], parent?: Delta): (Delta | undefined)[] =>

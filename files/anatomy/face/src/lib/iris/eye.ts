@@ -5,7 +5,8 @@
 // (asking > 0), and it wins in look().
 import type { Link, ToShell } from './wire';
 
-export type State = 'disconnected' | 'idle' | 'listening' | 'thinking' | 'tool' | 'writing' | 'said' | 'refused';
+export type State =
+	'disconnected' | 'idle' | 'listening' | 'thinking' | 'tool' | 'writing' | 'said' | 'refused';
 export type View = { state: State | 'waiting'; tool: string | null };
 type At = { state: State; tool: string | null };
 /** `prev` is where a refusal settles; `seq` names the timer that may settle this state. */
@@ -38,7 +39,12 @@ export function step(x: Eye, i: Input): Eye {
 	}
 	const m = i.msg;
 	if (m.t === 'text') return flash(x, 'said', at('idle'));
-	if (m.t === 'refused') return flash(x, 'refused', x.state === 'refused' ? x.prev : x.state === 'said' ? at('idle') : at(x.state, x.tool));
+	if (m.t === 'refused')
+		return flash(
+			x,
+			'refused',
+			x.state === 'refused' ? x.prev : x.state === 'said' ? at('idle') : at(x.state, x.tool)
+		);
 	if (m.t !== 'activity') return x;
 	const p = m.phase;
 	const to = typeof p === 'string' ? at(p) : at('tool', p.tool.name);
@@ -50,10 +56,13 @@ export function step(x: Eye, i: Input): Eye {
 }
 
 export const look = (x: Eye, pending: number, asking = 0): View =>
-	x.state === 'disconnected' ? at('disconnected')
-	: pending > 0 ? { state: 'waiting', tool: null }
-	: asking > 0 ? { state: 'waiting', tool: 'choice' }
-	: at(x.state, x.tool);
+	x.state === 'disconnected'
+		? at('disconnected')
+		: pending > 0
+			? { state: 'waiting', tool: null }
+			: asking > 0
+				? { state: 'waiting', tool: 'choice' }
+				: at(x.state, x.tool);
 
 const WORDS: Record<View['state'], string> = {
 	disconnected: 'disconnected',
@@ -68,4 +77,8 @@ const WORDS: Record<View['state'], string> = {
 };
 
 export const label = (v: View): string =>
-	v.state === 'tool' ? `tool: ${v.tool}` : v.state === 'waiting' && v.tool === 'choice' ? 'waiting for your answer' : WORDS[v.state];
+	v.state === 'tool'
+		? `tool: ${v.tool}`
+		: v.state === 'waiting' && v.tool === 'choice'
+			? 'waiting for your answer'
+			: WORDS[v.state];

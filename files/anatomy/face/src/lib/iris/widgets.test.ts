@@ -6,7 +6,9 @@ import type { ToShell } from './wire';
 import { onTableChanged, route, submit, type Widgets } from './widgets';
 
 const FIXTURE = new URL('../../../../contracts/thalamus-shell.fixture.json', import.meta.url);
-const fx = JSON.parse(readFileSync(FIXTURE, 'utf8')) as { to_shell: { case: string; msg: ToShell }[] };
+const fx = JSON.parse(readFileSync(FIXTURE, 'utf8')) as {
+	to_shell: { case: string; msg: ToShell }[];
+};
 const sample = (name: string) => fx.to_shell.find((c) => c.case === name)!.msg;
 
 describe('widget routing', () => {
@@ -28,8 +30,13 @@ describe('widget routing', () => {
 		expect(fresh.w2.error, 'a new answer clears the error').toBeNull();
 	});
 
-	it('every other message is the log\'s, and other widgets are left alone', () => {
-		for (const name of ['refusal', 'model text', 'a chart the model shows', 'a row edit awaits approval'])
+	it("every other message is the log's, and other widgets are left alone", () => {
+		for (const name of [
+			'refusal',
+			'model text',
+			'a chart the model shows',
+			'a row edit awaits approval'
+		])
 			expect(route({}, sample(name), 1), name).toBeNull();
 		const two = route(route({}, sample("a widget's chart"), 1)!, sample('a widget form'), 2)!;
 		expect(Object.keys(two).sort()).toEqual(['w2', 'w4']);
@@ -51,7 +58,12 @@ describe('form submit and table changes', () => {
 
 	it('a submit sends once while it is in flight', () => {
 		const one = submit(formed(), 'w4', { form: F, values: { amount: 42, kind: 'tools' } });
-		expect(one.send).toEqual({ t: 'form_submit', form: F, widget: 'w4', values: { amount: 42, kind: 'tools' } });
+		expect(one.send).toEqual({
+			t: 'form_submit',
+			form: F,
+			widget: 'w4',
+			values: { amount: 42, kind: 'tools' }
+		});
 		expect(one.w.w4.inFlight).toBe(true);
 		const two = submit(one.w, 'w4', { form: F, values: { amount: 42, kind: 'tools' } });
 		expect(two.send, 'a double click sends one message').toBeNull();
@@ -70,22 +82,52 @@ describe('form submit and table changes', () => {
 	it('a table change re-runs the active widgets that read it, marks the rest stale, never a form', () => {
 		const w: Widgets = {
 			rows: { component: null, error: null, at: 1, spec: { rows: { table: 'expenses' } } },
-			chart: { component: null, error: null, at: 1, spec: { chart: { query: { table: 'expenses' }, chart: 'bar', x: 'kind', op: 'count' } } },
+			chart: {
+				component: null,
+				error: null,
+				at: 1,
+				spec: { chart: { query: { table: 'expenses' }, chart: 'bar', x: 'kind', op: 'count' } }
+			},
 			away: { component: null, error: null, at: 1, spec: { rows: { table: 'expenses' } } },
 			form: { component: null, error: null, at: 1, spec: { form: { table: 'expenses' } } },
 			other: { component: null, error: null, at: 1, spec: { rows: { table: 'todos' } } },
-			bare: { component: null, error: null, at: 1 },
+			bare: { component: null, error: null, at: 1 }
 		};
 		const r = onTableChanged(w, 'expenses', ['rows', 'chart', 'form', 'other', 'bare']);
 		expect(r.send).toEqual([
-			{ t: 'widget', widget: 'rows', spec: { rows: { table: 'expenses' } }, trigger: 'table_changed' },
-			{ t: 'widget', widget: 'chart', spec: { chart: { query: { table: 'expenses' }, chart: 'bar', x: 'kind', op: 'count' } }, trigger: 'table_changed' },
+			{
+				t: 'widget',
+				widget: 'rows',
+				spec: { rows: { table: 'expenses' } },
+				trigger: 'table_changed'
+			},
+			{
+				t: 'widget',
+				widget: 'chart',
+				spec: { chart: { query: { table: 'expenses' }, chart: 'bar', x: 'kind', op: 'count' } },
+				trigger: 'table_changed'
+			}
 		]);
 		expect(r.w.away.stale, 'off the active tab: stale, run when shown').toBe(true);
-		expect([r.w.rows.stale, r.w.form.stale, r.w.other.stale]).toEqual([undefined, undefined, undefined]);
-		const fresh = route(r.w, { t: 'widget', session: 's', widget: 'away', component: (sample("a widget's chart") as Extract<ToShell, { t: 'widget' }>).component }, 9)!;
+		expect([r.w.rows.stale, r.w.form.stale, r.w.other.stale]).toEqual([
+			undefined,
+			undefined,
+			undefined
+		]);
+		const fresh = route(
+			r.w,
+			{
+				t: 'widget',
+				session: 's',
+				widget: 'away',
+				component: (sample("a widget's chart") as Extract<ToShell, { t: 'widget' }>).component
+			},
+			9
+		)!;
 		expect(fresh.away.stale, 'a new answer is not stale').toBe(false);
-		expect(fresh.away.spec, 'the spec survives its answer').toEqual({ rows: { table: 'expenses' } });
+		expect(fresh.away.spec, 'the spec survives its answer').toEqual({
+			rows: { table: 'expenses' }
+		});
 	});
 
 	it('a table change is not a widget message', () => {

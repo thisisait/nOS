@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { IDENTITY, drag, key, wheel, zoomAt, type Box } from './zoom';
 
 const box: Box = { w: 200, h: 100 };
-const world = (z: { k: number; tx: number; ty: number }, [x, y]: [number, number]) => [(x - z.tx) / z.k, (y - z.ty) / z.k];
+const world = (z: { k: number; tx: number; ty: number }, [x, y]: [number, number]) => [
+	(x - z.tx) / z.k,
+	(y - z.ty) / z.k
+];
 
 describe('zoom and pan', () => {
 	it('a wheel at a point keeps that point fixed', () => {

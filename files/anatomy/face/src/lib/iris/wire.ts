@@ -6,21 +6,118 @@ import type { Delta } from './delta';
 export type Value = null | boolean | number | string | Value[] | { [k: string]: Value };
 
 export type Component =
-	| { kind: 'table_results'; props: { table: string; name: string; query: string; matched: number; total: number; columns: string[]; rows: { __id: string; cells: Record<string, Value> }[]; projected: boolean } }
-	| { kind: 'row_diff_approval'; props: { table: string; title: string; op: 'insert' | 'update' | 'insert_many' | 'delete'; row_id?: string; cells: CellChange[]; read_from?: string[]; lines?: Lines; warning?: string } }
+	| {
+			kind: 'table_results';
+			props: {
+				table: string;
+				name: string;
+				query: string;
+				matched: number;
+				total: number;
+				columns: string[];
+				rows: { __id: string; cells: Record<string, Value> }[];
+				projected: boolean;
+			};
+	  }
+	| {
+			kind: 'row_diff_approval';
+			props: {
+				table: string;
+				title: string;
+				op: 'insert' | 'update' | 'insert_many' | 'delete';
+				row_id?: string;
+				cells: CellChange[];
+				read_from?: string[];
+				lines?: Lines;
+				warning?: string;
+			};
+	  }
 	| { kind: 'table_schema_approval'; props: TableSchemaProps }
 	| { kind: 'column_add_approval'; props: ColumnAddProps }
-	| { kind: 'inbox_list'; props: { items: { id: string; title: string; source: string; created_at: string }[]; refused: string[] } }
-	| { kind: 'approvals_list'; props: { items: { kind: string; severity: string; age: string; what: string; where: string; note?: string }[]; unknown: string[] } }
-	| { kind: 'red_status'; props: { red_count: number; reds: string[]; hold_count: number; holds: string[] } }
+	| {
+			kind: 'inbox_list';
+			props: {
+				items: { id: string; title: string; source: string; created_at: string }[];
+				refused: string[];
+			};
+	  }
+	| {
+			kind: 'approvals_list';
+			props: {
+				items: {
+					kind: string;
+					severity: string;
+					age: string;
+					what: string;
+					where: string;
+					note?: string;
+				}[];
+				unknown: string[];
+			};
+	  }
+	| {
+			kind: 'red_status';
+			props: { red_count: number; reds: string[]; hold_count: number; holds: string[] };
+	  }
 	| { kind: 'markdown'; props: { text: string } }
 	| { kind: 'table'; props: { title?: string; columns: string[]; rows: Value[][] } }
-	| { kind: 'list'; props: { title?: string; ordered: boolean; items: { text: string; detail?: string; tone?: 'ok' | 'info' | 'warn' | 'bad'; delta?: Delta }[] } }
-	| { kind: 'record'; props: { title?: string; fields: { key: string; value: Value; delta?: Delta; was?: Value }[] } }
-	| { kind: 'chart'; props: { title?: string; chart: 'bar' | 'stacked_bar' | 'line' | 'area' | 'scatter' | 'pie'; x: 'category' | 'number' | 'time'; series: { name: string; points: [string, number][] }[] } }
+	| {
+			kind: 'list';
+			props: {
+				title?: string;
+				ordered: boolean;
+				items: {
+					text: string;
+					detail?: string;
+					tone?: 'ok' | 'info' | 'warn' | 'bad';
+					delta?: Delta;
+				}[];
+			};
+	  }
+	| {
+			kind: 'record';
+			props: {
+				title?: string;
+				fields: { key: string; value: Value; delta?: Delta; was?: Value }[];
+			};
+	  }
+	| {
+			kind: 'chart';
+			props: {
+				title?: string;
+				chart: 'bar' | 'stacked_bar' | 'line' | 'area' | 'scatter' | 'pie';
+				x: 'category' | 'number' | 'time';
+				series: { name: string; points: [string, number][] }[];
+			};
+	  }
 	| { kind: 'tree'; props: { title?: string; nodes: TreeNode[] } }
-	| { kind: 'timeline'; props: { title?: string; items: { when: string; title: string; note?: string; hi?: boolean; until?: string; lane?: string }[] } }
-	| { kind: 'graph'; props: { title?: string; nodes: { id: string; label: string; note?: string; tone?: 'ok' | 'info' | 'warn' | 'bad' }[]; edges: { from: string; to: string; label?: string; dashed?: boolean }[] } }
+	| {
+			kind: 'timeline';
+			props: {
+				title?: string;
+				items: {
+					when: string;
+					title: string;
+					note?: string;
+					hi?: boolean;
+					until?: string;
+					lane?: string;
+				}[];
+			};
+	  }
+	| {
+			kind: 'graph';
+			props: {
+				title?: string;
+				nodes: {
+					id: string;
+					label: string;
+					note?: string;
+					tone?: 'ok' | 'info' | 'warn' | 'bad';
+				}[];
+				edges: { from: string; to: string; label?: string; dashed?: boolean }[];
+			};
+	  }
 	| { kind: 'sequence'; props: { title?: string; participants: string[]; steps: SequenceStep[] } }
 	| { kind: 'form'; props: FormProps }
 	| { kind: 'choice'; props: ChoiceProps }
@@ -28,43 +125,97 @@ export type Component =
 	| { kind: 'kpi'; props: KpiProps };
 
 /** One number serve computed from a table (renderers.rs Kpi); never the model's. */
-export type KpiProps = { title: string; value: number; unit?: string; delta?: number; delta_label?: string; source?: string };
+export type KpiProps = {
+	title: string;
+	value: number;
+	unit?: string;
+	delta?: number;
+	delta_label?: string;
+	source?: string;
+};
 
 /** A new private table Iris proposes (renderers.rs TableSchemaApproval): every column, under one approval. */
-export type TableSchemaProps = { title: string; description?: string; visibility: 'private'; columns: SchemaColumn[] };
+export type TableSchemaProps = {
+	title: string;
+	description?: string;
+	visibility: 'private';
+	columns: SchemaColumn[];
+};
 export type SchemaColumn = {
-	key: string; label: string; kind: 'text' | 'number' | 'date' | 'select' | 'boolean' | 'rowRef'; required: boolean;
-	options?: string[]; ref_table?: string; ref_title?: string; ref_display?: string;
+	key: string;
+	label: string;
+	kind: 'text' | 'number' | 'date' | 'select' | 'boolean' | 'rowRef';
+	required: boolean;
+	options?: string[];
+	ref_table?: string;
+	ref_title?: string;
+	ref_display?: string;
 };
 
 /** New columns for a table the person can read (renderers.rs ColumnAddApproval); `existing` is shown, never changed. */
-export type ColumnAddProps = { table: string; title: string; existing: { key: string; label: string; kind: string }[]; columns: SchemaColumn[] };
+export type ColumnAddProps = {
+	table: string;
+	title: string;
+	existing: { key: string; label: string; kind: string }[];
+	columns: SchemaColumn[];
+};
 
 /** A tab Iris offers (renderers.rs Dashboard): nothing runs until the person places it. */
-export type DashboardProps = { name: string; lens: Lens[]; widgets: { title: string; spec: WidgetSpec }[]; dropped: { title: string; why: string }[] };
+export type DashboardProps = {
+	name: string;
+	lens: Lens[];
+	widgets: { title: string; spec: WidgetSpec }[];
+	dropped: { title: string; why: string }[];
+};
 /** A tab-wide condition (renderers.rs Lens); an empty value is unset. */
 export type CellChange = { key: string; old: Value; new: Value };
 /** insert_many: line items written after the parent, each with ref_key = the parent's id (one approval). */
 export type Lines = { table: string; title: string; ref_key: string; rows: CellChange[][] };
-export type Lens = { column: string; op: 'eq' | 'neq' | 'lt' | 'gt' | 'contains'; value: string; kind?: FormField['kind']; options?: string[] };
+export type Lens = {
+	column: string;
+	op: 'eq' | 'neq' | 'lt' | 'gt' | 'contains';
+	value: string;
+	kind?: FormField['kind'];
+	options?: string[];
+};
 
 /** A question Iris asks at a fork (renderers.rs Choice); `id` is the one serve minted. */
-export type ChoiceProps = { id?: string; question: string; options: { label: string; note?: string }[]; suggested: string[]; multi: boolean };
+export type ChoiceProps = {
+	id?: string;
+	question: string;
+	options: { label: string; note?: string }[];
+	suggested: string[];
+	multi: boolean;
+};
 
 /** A widget form serve built from the table's schema (renderers.rs Form); never the model's. */
 export type FormProps = {
-	form: string; table: string; title: string; fields: FormField[]; omitted: { key: string; kind: string }[];
+	form: string;
+	table: string;
+	title: string;
+	fields: FormField[];
+	omitted: { key: string; kind: string }[];
 	prefill?: Record<string, string | number | boolean>;
 };
 export type FormField = {
-	key: string; label: string; kind: 'text' | 'number' | 'date' | 'select' | 'bool'; required: boolean;
-	options?: string[]; min?: number; max?: number; placeholder?: string; when?: When;
+	key: string;
+	label: string;
+	kind: 'text' | 'number' | 'date' | 'select' | 'bool';
+	required: boolean;
+	options?: string[];
+	min?: number;
+	max?: number;
+	placeholder?: string;
+	when?: When;
 };
 /** A field is drawn and sent only while another field's draft holds (eq) or does not hold (neq) `value`. */
 export type When = { key: string; op: 'eq' | 'neq'; value: string };
 
 /** A sequence step (renderers.rs Step), told apart by its fields. */
-export type SequenceStep = { from: string; to: string; text: string; dashed?: boolean } | { note: string; over: string[] } | { phase: string };
+export type SequenceStep =
+	| { from: string; to: string; text: string; dashed?: boolean }
+	| { note: string; over: string[] }
+	| { phase: string };
 
 export type TreeNode = { label: string; note?: string; delta?: Delta; children?: TreeNode[] };
 
@@ -104,10 +255,25 @@ export const phaseName = (p: Phase): string => (typeof p === 'string' ? p : `too
 
 export type ToThalamus =
 	| { t: 'turn'; session: string | null; text: string }
-	| { t: 'approval_decision'; approval: string; decision: 'approve' | 'reject'; note: string | null }
+	| {
+			t: 'approval_decision';
+			approval: string;
+			decision: 'approve' | 'reject';
+			note: string | null;
+	  }
 	| { t: 'control'; view: 'inbox' | 'approvals' | 'red_status' }
-	| { t: 'widget'; widget: string; spec: WidgetSpec; trigger: 'click' | 'restore' | 'table_changed' }
-	| { t: 'form_submit'; form: string; widget: string; values: Record<string, string | number | boolean> }
+	| {
+			t: 'widget';
+			widget: string;
+			spec: WidgetSpec;
+			trigger: 'click' | 'restore' | 'table_changed';
+	  }
+	| {
+			t: 'form_submit';
+			form: string;
+			widget: string;
+			values: Record<string, string | number | boolean>;
+	  }
 	| { t: 'choice_reply'; session: string; choice: string; picked: string[] }
 	| { t: 'working_for'; scope: Scope }
 	| { t: 'model_options' }
@@ -118,9 +284,31 @@ export type ToThalamus =
 /** What a widget re-runs, as the person and without the model (wire.rs WidgetSpec): exactly one key. */
 export type WidgetSpec =
 	| { rows: Record<string, Value> }
-	| { chart: { query: { table: string; q?: string; where?: Value[] }; chart: 'bar' | 'line' | 'pie'; x: string; y?: string; op: 'count' | 'sum' | 'avg' } }
-	| { form: { table: string; columns?: string[]; prefill?: Record<string, string | number | boolean>; when?: Record<string, When> } }
-	| { kpi: { query: { table: string; q?: string; where?: Value[] }; op: 'count' | 'sum' | 'avg'; y?: string; unit?: string } };
+	| {
+			chart: {
+				query: { table: string; q?: string; where?: Value[] };
+				chart: 'bar' | 'line' | 'pie';
+				x: string;
+				y?: string;
+				op: 'count' | 'sum' | 'avg';
+			};
+	  }
+	| {
+			form: {
+				table: string;
+				columns?: string[];
+				prefill?: Record<string, string | number | boolean>;
+				when?: Record<string, When>;
+			};
+	  }
+	| {
+			kpi: {
+				query: { table: string; q?: string; where?: Value[] };
+				op: 'count' | 'sum' | 'avg';
+				y?: string;
+				unit?: string;
+			};
+	  };
 
 export type Link = { state: 'connected' | 'closed'; reason: string | null };
 

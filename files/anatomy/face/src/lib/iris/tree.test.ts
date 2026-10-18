@@ -25,8 +25,10 @@ describe('tree and timeline are text, laid out by the shape', () => {
 			kind: 'tree',
 			props: {
 				title: 'Roadmap',
-				nodes: [{ label: 'nOS', children: [{ label: 'pupil', note: 'the eye' }, { label: 'keap' }] }],
-			},
+				nodes: [
+					{ label: 'nOS', children: [{ label: 'pupil', note: 'the eye' }, { label: 'keap' }] }
+				]
+			}
 		});
 		for (const s of ['Roadmap', 'nOS', 'pupil', 'the eye', 'keap']) expect(g.text).toContain(s);
 		expect(g.html).toContain('data-layout="org"');
@@ -34,11 +36,17 @@ describe('tree and timeline are text, laid out by the shape', () => {
 	});
 
 	it('a forest, or a root outside 2-4 children, is a nested list', () => {
-		const forest = draw({ kind: 'tree', props: { nodes: [{ label: 'only' }, { label: 'other' }] } });
+		const forest = draw({
+			kind: 'tree',
+			props: { nodes: [{ label: 'only' }, { label: 'other' }] }
+		});
 		expect(forest.text).toContain('only');
 		expect(forest.text).toContain('other');
 		expect(forest.html).toContain('data-layout="list"');
-		const one = draw({ kind: 'tree', props: { nodes: [{ label: 'root', children: [{ label: 'child' }] }] } });
+		const one = draw({
+			kind: 'tree',
+			props: { nodes: [{ label: 'root', children: [{ label: 'child' }] }] }
+		});
 		expect(one.html).toContain('data-layout="list"');
 	});
 
@@ -56,11 +64,12 @@ describe('tree and timeline are text, laid out by the shape', () => {
 				title: 'History',
 				items: [
 					{ when: 'Q3', title: 'I4a landed', note: 'query_rows' },
-					{ when: 'Q4', title: 'chart', hi: true },
-				],
-			},
+					{ when: 'Q4', title: 'chart', hi: true }
+				]
+			}
 		});
-		for (const s of ['History', 'Q3', 'I4a landed', 'query_rows', 'Q4', 'chart', 'hi']) expect(g.text).toContain(s);
+		for (const s of ['History', 'Q3', 'I4a landed', 'query_rows', 'Q4', 'chart', 'hi'])
+			expect(g.text).toContain(s);
 		expect(g.html).toContain('data-layout="horizontal"');
 	});
 
@@ -71,11 +80,20 @@ describe('tree and timeline are text, laid out by the shape', () => {
 				title: 'History',
 				items: [
 					{ when: '2026-10-12', title: 'I4a landed', note: 'query_rows' },
-					{ when: '2026-10-13', title: 'chart', hi: true },
-				],
-			},
+					{ when: '2026-10-13', title: 'chart', hi: true }
+				]
+			}
 		});
-		for (const s of ['History', '2026-10-12', 'I4a landed', 'query_rows', '2026-10-13', 'chart', 'hi']) expect(g.text).toContain(s);
+		for (const s of [
+			'History',
+			'2026-10-12',
+			'I4a landed',
+			'query_rows',
+			'2026-10-13',
+			'chart',
+			'hi'
+		])
+			expect(g.text).toContain(s);
 		expect(g.html).toContain('data-layout="time"');
 		expect(g.html).not.toContain('data-layout="horizontal"');
 	});
@@ -90,7 +108,7 @@ describe('tree and timeline are text, laid out by the shape', () => {
 	const spans = [
 		{ when: '2026-10-01', until: '2026-10-05', title: 'lanes and gates', lane: 'thalamus' },
 		{ when: '2026-10-06', until: '2026-10-09', title: 'chart axes', lane: 'pupil' },
-		{ when: '2026-10-13', title: 'timeline', lane: 'pupil', hi: true },
+		{ when: '2026-10-13', title: 'timeline', lane: 'pupil', hi: true }
 	];
 
 	it('three dated items: a <rect> per span, a <circle> per instant, lanes as <text>', () => {
@@ -104,18 +122,23 @@ describe('tree and timeline are text, laid out by the shape', () => {
 		const svg = g.html.match(/<svg[^>]*>/)?.[0] ?? '';
 		expect(svg).toContain('role="group"');
 		expect(g.html).not.toContain('role="img"');
-		for (const m of g.html.match(/<(rect|circle)[^>]*class="(span|instant)[^>]*>/g) ?? []) expect(m).toContain('tabindex="0"');
+		for (const m of g.html.match(/<(rect|circle)[^>]*class="(span|instant)[^>]*>/g) ?? [])
+			expect(m).toContain('tabindex="0"');
 	});
 
 	it('three items named Q1/Q2/Q3 keep the ordinal drawing', () => {
-		const g = draw({ kind: 'timeline', props: { items: ['Q1', 'Q2', 'Q3'].map((when) => ({ when, title: `in ${when}` })) } });
+		const g = draw({
+			kind: 'timeline',
+			props: { items: ['Q1', 'Q2', 'Q3'].map((when) => ({ when, title: `in ${when}` })) }
+		});
 		expect(g.html).toContain('data-layout="horizontal"');
 		expect(g.html).not.toContain('<svg');
 		for (const s of ['Q1', 'in Q2', 'Q3']) expect(g.text).toContain(s);
 	});
 
 	it('a now rule only when now is inside the range', () => {
-		const at = (now: number) => render(Timeline, { props: { timeline: { items: spans }, now } }).body;
+		const at = (now: number) =>
+			render(Timeline, { props: { timeline: { items: spans }, now } }).body;
 		expect(at(Date.parse('2026-10-07'))).toMatch(/<line[^>]*class="now/);
 		expect(at(Date.parse('2026-11-07'))).not.toMatch(/class="now/);
 	});

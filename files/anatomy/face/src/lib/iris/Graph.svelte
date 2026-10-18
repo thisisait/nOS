@@ -24,10 +24,20 @@
 		focused ||
 			g.nodes
 				.filter((n) => sel.includes(n.id))
-				.map((n) => `${n.tip}; linked: ${g.nodes.filter((m) => m.id !== n.id && on.has(m.id)).map((m) => m.text).join(', ') || 'none'}`)
+				.map(
+					(n) =>
+						`${n.tip}; linked: ${
+							g.nodes
+								.filter((m) => m.id !== n.id && on.has(m.id))
+								.map((m) => m.text)
+								.join(', ') || 'none'
+						}`
+				)
 				.join('; ')
 	);
-	const label = $derived(`${graph.title ? `${graph.title} — ` : ''}graph, ${graph.nodes.length} nodes and ${graph.edges.length} edges`);
+	const label = $derived(
+		`${graph.title ? `${graph.title} — ` : ''}graph, ${graph.nodes.length} nodes and ${graph.edges.length} edges`
+	);
 	const dim = (id: string) => sel.length > 0 && !on.has(id);
 
 	const point = (e: MouseEvent): [number, number] => {
@@ -81,33 +91,80 @@
 </script>
 
 <div class="graph">
-	<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
-	<svg bind:this={svg} viewBox="0 0 {g.W} {g.H}" style:max-width="{g.W * 1.4}px" role="group" aria-label={label} tabindex="0"
-		onkeydown={keys} onpointerdown={down} onpointermove={move} onpointerup={up} onpointercancel={up}>
+	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+	<svg
+		bind:this={svg}
+		viewBox="0 0 {g.W} {g.H}"
+		style:max-width="{g.W * 1.4}px"
+		role="group"
+		aria-label={label}
+		tabindex="0"
+		onkeydown={keys}
+		onpointerdown={down}
+		onpointermove={move}
+		onpointerup={up}
+		onpointercancel={up}
+	>
 		<title>{label}</title>
 		<defs>
-			<marker id={arrow} viewBox="0 0 8 8" refX="8" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+			<marker
+				id={arrow}
+				viewBox="0 0 8 8"
+				refX="8"
+				refY="4"
+				markerWidth="6"
+				markerHeight="6"
+				orient="auto-start-reverse"
+			>
 				<polygon class="head" points="0 0, 8 4, 0 8" />
 			</marker>
 		</defs>
 		<g transform="translate({zoom.tx} {zoom.ty}) scale({zoom.k})">
 			{#each g.edges as e (e.i)}
-				<path class="edge" class:dashed={e.dashed} class:dim={dim(e.from) || dim(e.to)} d={e.d} marker-end="url(#{arrow})"><title>{e.tip}</title></path>
-				{#if e.label}<text class="edge-label" x={e.label.x} y={e.label.y} text-anchor="middle" font-size={g.FONT}>{e.label.t}</text>{/if}
+				<path
+					class="edge"
+					class:dashed={e.dashed}
+					class:dim={dim(e.from) || dim(e.to)}
+					d={e.d}
+					marker-end="url(#{arrow})"><title>{e.tip}</title></path
+				>
+				{#if e.label}<text
+						class="edge-label"
+						x={e.label.x}
+						y={e.label.y}
+						text-anchor="middle"
+						font-size={g.FONT}>{e.label.t}</text
+					>{/if}
 			{/each}
 			{#each g.nodes as n (n.id)}
-				<g class="node tone-{n.tone ?? 'none'}" class:sel={sel.includes(n.id)} class:dim={dim(n.id)} tabindex="0" role="button"
-					aria-pressed={sel.includes(n.id)} onclick={() => (sel = toggle(sel, n.id))} onkeydown={(e) => nodeKey(e, n.id)}
-					onfocus={() => (focused = n.tip)} onblur={() => (focused = '')}>
+				<g
+					class="node tone-{n.tone ?? 'none'}"
+					class:sel={sel.includes(n.id)}
+					class:dim={dim(n.id)}
+					tabindex="0"
+					role="button"
+					aria-pressed={sel.includes(n.id)}
+					onclick={() => (sel = toggle(sel, n.id))}
+					onkeydown={(e) => nodeKey(e, n.id)}
+					onfocus={() => (focused = n.tip)}
+					onblur={() => (focused = '')}
+				>
 					<title>{n.tip}</title>
 					<rect x={n.x} y={n.y} width={NODE_W} height={NODE_H} rx="5" />
-					<text class="label" x={n.x + 4} y={n.y + NODE_H / 2 + g.FONT / 3} font-size={g.FONT}>{n.text}</text>
+					<text class="label" x={n.x + 4} y={n.y + NODE_H / 2 + g.FONT / 3} font-size={g.FONT}
+						>{n.text}</text
+					>
 				</g>
 			{/each}
 		</g>
 	</svg>
 	<p class="live" aria-live="polite">{live}</p>
-	<button type="button" onclick={() => (zoom = IDENTITY)} disabled={zoom.k === 1 && zoom.tx === 0 && zoom.ty === 0}>Reset zoom</button>
+	<button
+		type="button"
+		onclick={() => (zoom = IDENTITY)}
+		disabled={zoom.k === 1 && zoom.tx === 0 && zoom.ty === 0}>Reset zoom</button
+	>
 </div>
 
 <style>

@@ -7,16 +7,35 @@ import { IDENTITY, wheel } from './zoom';
 const items: Item[] = [
 	{ when: '2026-10-01', until: '2026-10-05', title: 'lanes and gates', lane: 'thalamus' },
 	{ when: '2026-10-06', until: '2026-10-09', title: 'chart axes', lane: 'pupil' },
-	{ when: '2026-10-13', title: 'timeline', lane: 'pupil', hi: true },
+	{ when: '2026-10-13', title: 'timeline', lane: 'pupil', hi: true }
 ];
 const day = (s: string) => Date.parse(s);
 
 describe('a timeline is time-scaled only when every date is a date', () => {
 	it('matches the thalamus date pattern (renderers.rs is_date)', () => {
-		for (const ok of ['2026-10-13', '2024-02-29', '2026-12-31T23:59:59Z', '2026-01-01T00:00:00+02:00', '2026-01-01T00:00:00-11:30'])
+		for (const ok of [
+			'2026-10-13',
+			'2024-02-29',
+			'2026-12-31T23:59:59Z',
+			'2026-01-01T00:00:00+02:00',
+			'2026-01-01T00:00:00-11:30'
+		])
 			expect(isDate(ok), ok).toBe(true);
-		for (const bad of ['2026-02-30', '2025-02-29', '2026-13-01', '2026-10-1', '2026/10/13', '2026-10-13T10:00', '2026-10-13T10:00:00',
-			'2026-10-13T24:00:00Z', '2026-10-13T10:00:00.5Z', ' 2026-10-13', 'Q1', 'yesterday', ''])
+		for (const bad of [
+			'2026-02-30',
+			'2025-02-29',
+			'2026-13-01',
+			'2026-10-1',
+			'2026/10/13',
+			'2026-10-13T10:00',
+			'2026-10-13T10:00:00',
+			'2026-10-13T24:00:00Z',
+			'2026-10-13T10:00:00.5Z',
+			' 2026-10-13',
+			'Q1',
+			'yesterday',
+			''
+		])
 			expect(isDate(bad), bad).toBe(false);
 	});
 
@@ -49,7 +68,15 @@ describe('the time layout', () => {
 	});
 
 	it('an item without a lane has its own row', () => {
-		const own = layoutTimeline([{ when: '2026-10-01', title: 'a' }, { when: '2026-10-02', title: 'b' }], 320, IDENTITY, 0);
+		const own = layoutTimeline(
+			[
+				{ when: '2026-10-01', title: 'a' },
+				{ when: '2026-10-02', title: 'b' }
+			],
+			320,
+			IDENTITY,
+			0
+		);
 		expect(own.marks[0].y).not.toBe(own.marks[1].y);
 	});
 
@@ -77,12 +104,15 @@ describe('the time layout', () => {
 			when: new Date(Date.UTC(2026, 0, 1 + i * 12)).toISOString().slice(0, 10),
 			until: new Date(Date.UTC(2026, 0, 6 + i * 12)).toISOString().slice(0, 10),
 			title: `a rather long item title number ${i}`,
-			lane: `lane ${'x'.repeat(30)} ${i % 4}`,
+			lane: `lane ${'x'.repeat(30)} ${i % 4}`
 		}));
 		for (const zoom of [IDENTITY, { k: 6, tx: -500, ty: 0 }]) {
 			const t = layoutTimeline(many, 320, zoom, 0);
-			const texts = [...t.lanes.map((l) => ({ t: l.t, x: l.x, anchor: 'end' })), ...t.xLabels.map((l) => ({ ...l, anchor: 'middle' })),
-				...t.marks.flatMap((m) => (m.label ? [{ ...m.label, anchor: 'start' }] : []))];
+			const texts = [
+				...t.lanes.map((l) => ({ t: l.t, x: l.x, anchor: 'end' })),
+				...t.xLabels.map((l) => ({ ...l, anchor: 'middle' })),
+				...t.marks.flatMap((m) => (m.label ? [{ ...m.label, anchor: 'start' }] : []))
+			];
 			// At rest every row is labelled; zoomed in, most items are out of view and drop their label.
 			expect(texts.length).toBeGreaterThan(zoom === IDENTITY ? 30 : 4);
 			for (const l of texts) {
@@ -91,7 +121,8 @@ describe('the time layout', () => {
 				expect(lo, l.t).toBeGreaterThanOrEqual(0);
 				expect(lo + w, l.t).toBeLessThanOrEqual(t.W);
 			}
-			for (const m of t.marks) if (m.label) expect(m.label.x, m.label.t).toBeGreaterThanOrEqual(t.L);
+			for (const m of t.marks)
+				if (m.label) expect(m.label.x, m.label.t).toBeGreaterThanOrEqual(t.L);
 		}
 	});
 });

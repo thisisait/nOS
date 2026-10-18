@@ -16,16 +16,39 @@ export const LOCALE = pickLocale(globalThis.navigator?.language);
 // By whole words without diacritics ("Částka", "Kč"; not "kcal", "scenario"); a word naming another
 // currency or a count/rate vetoes, as the data carries no currency of its own.
 const MONEY = new Set(['amount', 'castka', 'price', 'cena', 'total', 'czk', 'kc']);
-const NOT = new Set(['eur', 'usd', 'gbp', 'chf', 'pln', 'huf', 'jpy', 'count', 'rows', 'qty', 'pct', 'percent', 'rate']);
+const NOT = new Set([
+	'eur',
+	'usd',
+	'gbp',
+	'chf',
+	'pln',
+	'huf',
+	'jpy',
+	'count',
+	'rows',
+	'qty',
+	'pct',
+	'percent',
+	'rate'
+]);
 export function isMoney(name: string): boolean {
 	if (/[$€£¥]/.test(name)) return false;
-	const w = name.replace(/([a-z])([A-Z])/g, '$1 $2').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().match(/[a-z]+/g) ?? [];
+	const w =
+		name
+			.replace(/([a-z])([A-Z])/g, '$1 $2')
+			.normalize('NFD')
+			.replace(/\p{M}/gu, '')
+			.toLowerCase()
+			.match(/[a-z]+/g) ?? [];
 	return w.some((x) => MONEY.has(x)) && !w.some((x) => NOT.has(x));
 }
 
 // Up to 20 fraction digits: a double prints its shortest exact form, so nothing the person reads is rounded.
 export const number = (v: number, money = false, locale = LOCALE) =>
-	new Intl.NumberFormat(locale, { maximumFractionDigits: 20, ...(money ? { style: 'currency', currency: 'CZK' } : {}) }).format(v);
+	new Intl.NumberFormat(locale, {
+		maximumFractionDigits: 20,
+		...(money ? { style: 'currency', currency: 'CZK' } : {})
+	}).format(v);
 
 /** A change as an arrow and a sign (↑ +320, ↓ −3.5, → 0), never as colour only. */
 export const signed = (d: number, locale = LOCALE) =>

@@ -15,7 +15,8 @@ describe('cs-CZ formatting (display only)', () => {
 	});
 
 	it('a column that names money reads as CZK', () => {
-		for (const k of ['amount', 'castka', 'Částka', 'unit_price', 'Cena (Kč)', 'total', 'sum_czk']) expect(isMoney(k), k).toBe(true);
+		for (const k of ['amount', 'castka', 'Částka', 'unit_price', 'Cena (Kč)', 'total', 'sum_czk'])
+			expect(isMoney(k), k).toBe(true);
 		for (const k of ['qty', 'kcal', 'note']) expect(isMoney(k), k).toBe(false);
 		expect(cs(1234.5, 'amount')).toBe('1 234,50 Kč');
 	});
@@ -28,7 +29,16 @@ describe('cs-CZ formatting (display only)', () => {
 	});
 
 	it('a column is CZK only when no word of its name says otherwise', () => {
-		for (const k of ['amount_eur', 'price_usd', 'Price ($)', 'castka €', 'total_rows', 'subtotal_count', 'vat_rate_total_pct', 'scenario'])
+		for (const k of [
+			'amount_eur',
+			'price_usd',
+			'Price ($)',
+			'castka €',
+			'total_rows',
+			'subtotal_count',
+			'vat_rate_total_pct',
+			'scenario'
+		])
 			expect(isMoney(k), k).toBe(false);
 		expect(cs(1234.5, 'amount_eur')).toBe('1 234,5');
 	});
@@ -48,10 +58,17 @@ describe('cs-CZ formatting (display only)', () => {
 	});
 
 	it('a chart labels and tooltips in the locale; the points stay raw', () => {
-		expect(sp(tip('castka', '2026-03-05', 1234.5, 'cs-CZ'))).toBe('castka · 5. 3. 2026: 1 234,50 Kč');
+		expect(sp(tip('castka', '2026-03-05', 1234.5, 'cs-CZ'))).toBe(
+			'castka · 5. 3. 2026: 1 234,50 Kč'
+		);
 		expect(sp(fmt(1234567, 'cs-CZ'))).toBe('1,2 mil.');
 		const pts: [string, number][] = [['2026-03-05', 12345]];
-		const g = layout({ chart: 'bar', x: 'category', series: [{ name: 'n', points: pts }] }, 320, IDENTITY, 'cs-CZ');
+		const g = layout(
+			{ chart: 'bar', x: 'category', series: [{ name: 'n', points: pts }] },
+			320,
+			IDENTITY,
+			'cs-CZ'
+		);
 		expect(g.xLabels.map((l) => sp(l.t))).toEqual(['5. 3. 2026']);
 		expect(g.yLabels.map((l) => sp(l.t))).toContain('12,3 tis.');
 		expect(pts[0]).toEqual(['2026-03-05', 12345]);

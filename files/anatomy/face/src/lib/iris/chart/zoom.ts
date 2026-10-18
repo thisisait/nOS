@@ -21,9 +21,11 @@ export function zoomAt(z: Zoom, [x, y]: [number, number], factor: number, box: B
 }
 
 /** A wheel notch of 300 (deltaY) doubles or halves. */
-export const wheel = (z: Zoom, at: [number, number], deltaY: number, box: Box) => zoomAt(z, at, 2 ** (-deltaY / 300), box);
+export const wheel = (z: Zoom, at: [number, number], deltaY: number, box: Box) =>
+	zoomAt(z, at, 2 ** (-deltaY / 300), box);
 
-export const drag = (z: Zoom, dx: number, dy: number, box: Box) => clamp({ k: z.k, tx: z.tx + dx, ty: z.ty + dy }, box);
+export const drag = (z: Zoom, dx: number, dy: number, box: Box) =>
+	clamp({ k: z.k, tx: z.tx + dx, ty: z.ty + dy }, box);
 
 /** + (or =) and - zoom about the centre, 0 resets; any other key is not the zoom's. */
 export function key(z: Zoom, k: string, box: Box): Zoom | null {

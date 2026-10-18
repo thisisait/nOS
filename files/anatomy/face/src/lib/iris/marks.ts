@@ -4,7 +4,11 @@
  * Pure: no DOM, no deps. Offsets are UTF-16 indices into the original text.
  */
 export type Catalogue = {
-	tables: { id: string; title: string; columns: { key: string; label?: string; kind: string; options?: string[] }[] }[];
+	tables: {
+		id: string;
+		title: string;
+		columns: { key: string; label?: string; kind: string; options?: string[] }[];
+	}[];
 };
 export type Span = {
 	start: number;
@@ -57,8 +61,16 @@ const FIXED: Rule[] = [
 	{ re: word('\\d{1,2}\\.\\s?\\d{1,2}\\.(?:\\s?\\d{4})?'), kind: 'date' },
 	{ re: new RegExp(`(?<![\\p{L}\\p{N}.,])\\d+(?:[.,]\\d+)?(?!${W})`, 'gu'), kind: 'number' },
 	{ re: word('top\\s+\\d+'), kind: 'operator', ref: 'top' },
-	...PERIODS.map(([ref, ws]) => ({ re: word(ws.map(esc).join('|')), kind: 'period' as const, ref })),
-	...OPERATORS.map(([ref, ws]) => ({ re: word(ws.map(esc).join('|')), kind: 'operator' as const, ref }))
+	...PERIODS.map(([ref, ws]) => ({
+		re: word(ws.map(esc).join('|')),
+		kind: 'period' as const,
+		ref
+	})),
+	...OPERATORS.map(([ref, ws]) => ({
+		re: word(ws.map(esc).join('|')),
+		kind: 'operator' as const,
+		ref
+	}))
 ];
 
 function catalogueRules(cat: Catalogue): Rule[] {
@@ -84,7 +96,8 @@ export function mark(text: string, cat: Catalogue): Span[] {
 	const { f, at } = fold(text);
 	const found: Span[] = [];
 	for (const r of [...catalogueRules(cat), ...FIXED]) {
-		for (const m of f.matchAll(r.re)) found.push({ start: m.index, end: m.index + m[0].length, kind: r.kind, ref: r.ref });
+		for (const m of f.matchAll(r.re))
+			found.push({ start: m.index, end: m.index + m[0].length, kind: r.kind, ref: r.ref });
 	}
 	// Longest first, then earliest; the stable sort keeps catalogue order on a tie.
 	found.sort((a, b) => b.end - b.start - (a.end - a.start) || a.start - b.start);
@@ -92,5 +105,10 @@ export function mark(text: string, cat: Catalogue): Span[] {
 	for (const s of found) if (!taken.some((t) => s.start < t.end && t.start < s.end)) taken.push(s);
 	return taken
 		.sort((a, b) => a.start - b.start)
-		.map((s) => ({ start: at[s.start], end: at[s.end], kind: s.kind, ...(s.ref ? { ref: s.ref } : {}) }));
+		.map((s) => ({
+			start: at[s.start],
+			end: at[s.end],
+			kind: s.kind,
+			...(s.ref ? { ref: s.ref } : {})
+		}));
 }

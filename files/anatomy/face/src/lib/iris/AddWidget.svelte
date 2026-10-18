@@ -5,13 +5,16 @@
 <script lang="ts">
 	import type { Value, WidgetSpec } from './wire';
 
-	let { onadd, oncancel }: { onadd: (title: string, spec: WidgetSpec) => void; oncancel: () => void } = $props();
+	let {
+		onadd,
+		oncancel
+	}: { onadd: (title: string, spec: WidgetSpec) => void; oncancel: () => void } = $props();
 
 	let table = $state('');
 	let title = $state('');
 	let q = $state('');
 	let where = $state('');
-	let kind: 'rows' | 'chart' | 'form' = $state('rows');
+	let kind = $state<'rows' | 'chart' | 'form'>('rows');
 	let chart: 'bar' | 'line' | 'pie' = $state('bar');
 	let x = $state('');
 	let y = $state('');
@@ -21,14 +24,17 @@
 	function spec(): WidgetSpec {
 		const t = table.trim();
 		const w = where.trim() ? (JSON.parse(where) as Value[]) : undefined;
-		if (w !== undefined && !Array.isArray(w)) throw new Error('where is a JSON list of {column, op, value}');
+		if (w !== undefined && !Array.isArray(w))
+			throw new Error('where is a JSON list of {column, op, value}');
 		const query = { table: t, ...(q.trim() ? { q: q.trim() } : {}), ...(w ? { where: w } : {}) };
 		if (kind === 'form') return { form: { table: t } };
 		if (kind === 'rows') return { rows: query };
 		return { chart: { query, chart, x: x.trim(), ...(y.trim() ? { y: y.trim() } : {}), op } };
 	}
 
-	const ready = $derived(!!table.trim() && (kind !== 'chart' || (!!x.trim() && (op === 'count' || !!y.trim()))));
+	const ready = $derived(
+		!!table.trim() && (kind !== 'chart' || (!!x.trim() && (op === 'count' || !!y.trim())))
+	);
 
 	function add(e: SubmitEvent) {
 		e.preventDefault();
@@ -53,17 +59,25 @@
 	</label>
 	{#if kind !== 'form'}
 		<label>search<input bind:value={q} placeholder="optional" /></label>
-		<label>where<input bind:value={where} placeholder={'optional: [{"column": "kind", "op": "eq", "value": "food"}]'} /></label>
+		<label
+			>where<input
+				bind:value={where}
+				placeholder={'optional: [{"column": "kind", "op": "eq", "value": "food"}]'}
+			/></label
+		>
 	{/if}
 	{#if kind === 'chart'}
 		<label>
 			chart
-			<select bind:value={chart}><option>bar</option><option>line</option><option>pie</option></select>
+			<select bind:value={chart}
+				><option>bar</option><option>line</option><option>pie</option></select
+			>
 		</label>
 		<label>x column<input bind:value={x} required /></label>
 		<label>
 			op
-			<select bind:value={op}><option>count</option><option>sum</option><option>avg</option></select>
+			<select bind:value={op}><option>count</option><option>sum</option><option>avg</option></select
+			>
 		</label>
 		{#if op !== 'count'}<label>y column (a number)<input bind:value={y} required /></label>{/if}
 	{/if}

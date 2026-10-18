@@ -20,7 +20,15 @@
 	<svg viewBox="0 0 {g.W} {g.H}" width={g.W} height={g.H} role="group" aria-label={label}>
 		<title>{label}</title>
 		<defs>
-			<marker id={arrow} viewBox="0 0 8 8" refX="8" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+			<marker
+				id={arrow}
+				viewBox="0 0 8 8"
+				refX="8"
+				refY="4"
+				markerWidth="6"
+				markerHeight="6"
+				orient="auto-start-reverse"
+			>
 				<polygon class="head" points="0 0, 8 4, 0 8" />
 			</marker>
 		</defs>
@@ -36,14 +44,33 @@
 		{/each}
 		{#each g.steps as s (s.i)}
 			{#if s.kind === 'message'}
-				<path class="msg" class:dashed={s.dashed} d={s.d} marker-end="url(#{arrow})"><title>{s.tip}</title></path>
+				<path class="msg" class:dashed={s.dashed} d={s.d} marker-end="url(#{arrow})"
+					><title>{s.tip}</title></path
+				>
 			{:else if s.kind === 'note'}
-				<rect class="note" x={s.rect.x} y={s.rect.y} width={s.rect.w} height={s.rect.h} rx="2"><title>{s.tip}</title></rect>
+				<rect class="note" x={s.rect.x} y={s.rect.y} width={s.rect.w} height={s.rect.h} rx="2"
+					><title>{s.tip}</title></rect
+				>
 			{:else}
-				<line class="phase" x1={s.rule.x1} y1={s.rule.y} x2={s.rule.x2} y2={s.rule.y}><title>{s.tip}</title></line>
-				<rect class="phase-box" x={s.rect.x} y={s.rect.y} width={s.rect.w} height={s.rect.h} rx="2" />
+				<line class="phase" x1={s.rule.x1} y1={s.rule.y} x2={s.rule.x2} y2={s.rule.y}
+					><title>{s.tip}</title></line
+				>
+				<rect
+					class="phase-box"
+					x={s.rect.x}
+					y={s.rect.y}
+					width={s.rect.w}
+					height={s.rect.h}
+					rx="2"
+				/>
 			{/if}
-			<text class="label {s.kind}-label" x={s.label.x} y={s.label.y} text-anchor={s.label.anchor} font-size={g.FONT}>{s.label.t}</text>
+			<text
+				class="label {s.kind}-label"
+				x={s.label.x}
+				y={s.label.y}
+				text-anchor={s.label.anchor}
+				font-size={g.FONT}>{s.label.t}</text
+			>
 		{/each}
 	</svg>
 </div>

@@ -12,8 +12,15 @@ const field = (v: Value | undefined): string => {
 
 /** The rows the widget shows, under its columns, one CRLF line each. */
 export const toCsv = (t: Results): string =>
-	[t.columns.map(field), ...t.rows.map((r) => t.columns.map((c) => field(r.cells[c])))].map((l) => `${l.join(',')}\r\n`).join('');
+	[t.columns.map(field), ...t.rows.map((r) => t.columns.map((c) => field(r.cells[c])))]
+		.map((l) => `${l.join(',')}\r\n`)
+		.join('');
 
 /** A file name export.rs accepts: [A-Za-z0-9_-]{1,64}, diacritics dropped; "rows" when nothing is left. */
 export const csvName = (name: string): string =>
-	name.normalize('NFD').replace(/\p{M}/gu, '').replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 64) || 'rows';
+	name
+		.normalize('NFD')
+		.replace(/\p{M}/gu, '')
+		.replace(/[^A-Za-z0-9_-]+/g, '-')
+		.replace(/^-+|-+$/g, '')
+		.slice(0, 64) || 'rows';

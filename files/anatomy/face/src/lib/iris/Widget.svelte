@@ -15,9 +15,31 @@
 
 	type Submit = { form: string; widget: string; values: Record<string, string | number | boolean> };
 	// onexport: the person's click on CSV; the host saves the text and says where (export.rs), or why not.
-	let { box, state: st, lens = [], now, top, unit, onplace, ontop, onrerun, onremove, onsubmit, onexport }: {
-		box: WidgetBox; state: WidgetState | undefined; lens?: Lens[]; now: number; top: boolean; unit: () => { col: number; row: number };
-		onplace: (g: Grid) => void; ontop: () => void; onrerun: () => void; onremove: () => void; onsubmit: (m: Submit) => void;
+	let {
+		box,
+		state: st,
+		lens = [],
+		now,
+		top,
+		unit,
+		onplace,
+		ontop,
+		onrerun,
+		onremove,
+		onsubmit,
+		onexport
+	}: {
+		box: WidgetBox;
+		state: WidgetState | undefined;
+		lens?: Lens[];
+		now: number;
+		top: boolean;
+		unit: () => { col: number; row: number };
+		onplace: (g: Grid) => void;
+		ontop: () => void;
+		onrerun: () => void;
+		onremove: () => void;
+		onsubmit: (m: Submit) => void;
 		onexport?: (name: string, csv: string) => Promise<string>;
 	} = $props();
 
@@ -26,18 +48,42 @@
 	const exportRows = async () => {
 		if (st?.component?.kind !== 'table_results' || !onexport) return;
 		const t = st.component.props;
-		exported = await onexport(csvName(t.name || box.title), toCsv(t)).catch((e) => `not saved: ${e}`);
+		exported = await onexport(csvName(t.name || box.title), toCsv(t)).catch(
+			(e) => `not saved: ${e}`
+		);
 	};
 
-	let drag: { mode: 'move' | 'resize'; start: Grid; cx: number; cy: number; u: { col: number; row: number } } | null = null;
+	let drag: {
+		mode: 'move' | 'resize';
+		start: Grid;
+		cx: number;
+		cy: number;
+		u: { col: number; row: number };
+	} | null = null;
 
 	const grab = (mode: 'move' | 'resize') => (e: PointerEvent) => {
 		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-		drag = { mode, start: { x: box.x, y: box.y, w: box.w, h: box.h }, cx: e.clientX, cy: e.clientY, u: unit() };
+		drag = {
+			mode,
+			start: { x: box.x, y: box.y, w: box.w, h: box.h },
+			cx: e.clientX,
+			cy: e.clientY,
+			u: unit()
+		};
 		ontop();
 	};
 	const moved = (e: PointerEvent) => {
-		if (drag) onplace(byPointer(drag.start, drag.mode, e.clientX - drag.cx, e.clientY - drag.cy, drag.u.col, drag.u.row));
+		if (drag)
+			onplace(
+				byPointer(
+					drag.start,
+					drag.mode,
+					e.clientX - drag.cx,
+					e.clientY - drag.cy,
+					drag.u.col,
+					drag.u.row
+				)
+			);
 	};
 	const up = () => (drag = null);
 	const key = (resizeOnly: boolean) => (e: KeyboardEvent) => {
@@ -68,7 +114,12 @@
 		<h2>{box.title}</h2>
 		<span class="age">{age(st, now)}</span>
 		{#if st?.component?.kind === 'table_results'}
-			<button class="ghost" aria-label="export {box.title} as CSV" title="the rows shown, as CSV" onclick={exportRows}>CSV</button>
+			<button
+				class="ghost"
+				aria-label="export {box.title} as CSV"
+				title="the rows shown, as CSV"
+				onclick={exportRows}>CSV</button
+			>
 		{/if}
 		<button class="ghost" aria-label="re-run {box.title}" onclick={onrerun}>↻</button>
 		<button class="ghost" aria-label="remove {box.title}" onclick={onremove}>×</button>
@@ -79,8 +130,14 @@
 		{#if st?.component?.kind === 'form'}
 			<!-- A new row or a re-run redraws the form from the lens: Add row waits until it is filled again. -->
 			{#key st.at}{#key st.added}
-				<Form form={st.component.props} widget={box.id} inFlight={!!st.inFlight} prefill={lensPrefill(lens, st.component.props.fields)} {onsubmit} />
-			{/key}{/key}
+					<Form
+						form={st.component.props}
+						widget={box.id}
+						inFlight={!!st.inFlight}
+						prefill={lensPrefill(lens, st.component.props.fields)}
+						{onsubmit}
+					/>
+				{/key}{/key}
 			{#if st.added}<p class="added">row {st.added} added</p>{/if}
 		{:else if st?.component}<ComponentView component={st.component} />{/if}
 	</div>

@@ -6,7 +6,11 @@
 	const blocks = $derived(parse(text));
 </script>
 
-{#snippet line(xs: Inline[])}{#each xs as x}{#if x.t === 'strong'}<strong>{x.text}</strong>{:else if x.t === 'em'}<em>{x.text}</em>{:else if x.t === 'code'}<code>{x.text}</code>{:else if x.t === 'link'}{x.url ? `${x.text} (${x.url})` : x.text}{:else}{x.text}{/if}{/each}{/snippet}
+{#snippet line(xs: Inline[])}{#each xs as x}{#if x.t === 'strong'}<strong>{x.text}</strong
+			>{:else if x.t === 'em'}<em>{x.text}</em>{:else if x.t === 'code'}<code>{x.text}</code
+			>{:else if x.t === 'link'}{x.url
+				? `${x.text} (${x.url})`
+				: x.text}{:else}{x.text}{/if}{/each}{/snippet}
 
 <div class="md">
 	{#each blocks as b}
@@ -17,9 +21,17 @@
 		{:else if b.t === 'hr'}
 			<hr />
 		{:else if b.t === 'ul'}
-			<ul>{#each b.items as it}<li>{@render line(it.inl)}{#if it.sub.length}<ul>{#each it.sub as s}<li>{@render line(s)}</li>{/each}</ul>{/if}</li>{/each}</ul>
+			<ul>
+				{#each b.items as it}<li>
+						{@render line(it.inl)}{#if it.sub.length}<ul>
+								{#each it.sub as s}<li>{@render line(s)}</li>{/each}
+							</ul>{/if}
+					</li>{/each}
+			</ul>
 		{:else if b.t === 'ol'}
-			<ol>{#each b.items as it}<li value={it.n}>{@render line(it.inl)}</li>{/each}</ol>
+			<ol>
+				{#each b.items as it}<li value={it.n}>{@render line(it.inl)}</li>{/each}
+			</ol>
 		{:else}
 			<pre><code>{b.text}</code></pre>
 		{/if}

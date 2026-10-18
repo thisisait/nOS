@@ -24,8 +24,16 @@
 	const g = $derived(layout(chart, Math.max(320, Math.round(width / SCALE)), zoom));
 	const box = $derived({ w: g.W - g.L - g.R, h: g.H, xOnly: true });
 	const marks = $derived(g.series.flatMap((s) => s.marks));
-	const live = $derived(focused || marks.filter((m) => sel.includes(m.id)).map((m) => m.tip).join('; '));
-	const label = $derived(`${chart.title ? `${chart.title} — ` : ''}${chart.chart} chart, ${chart.x} x`);
+	const live = $derived(
+		focused ||
+			marks
+				.filter((m) => sel.includes(m.id))
+				.map((m) => m.tip)
+				.join('; ')
+	);
+	const label = $derived(
+		`${chart.title ? `${chart.title} — ` : ''}${chart.chart} chart, ${chart.x} x`
+	);
 
 	/** A client point as plot units, left edge of the plot = 0. */
 	const plotPoint = (e: MouseEvent): [number, number] => {
@@ -84,35 +92,93 @@
 	{#if g.empty}
 		<p class="empty">{label}: no rows yet</p>
 	{:else}
-		<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
-		<svg bind:this={svg} viewBox="0 0 {g.W} {g.H}" role="group" aria-label={label} tabindex="0"
-			onkeydown={keys} onpointerdown={down} onpointermove={move} onpointerup={up} onpointercancel={up}>
+		<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+		<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+		<svg
+			bind:this={svg}
+			viewBox="0 0 {g.W} {g.H}"
+			role="group"
+			aria-label={label}
+			tabindex="0"
+			onkeydown={keys}
+			onpointerdown={down}
+			onpointermove={move}
+			onpointerup={up}
+			onpointercancel={up}
+		>
 			<title>{label}</title>
 			{#if g.zoomable}
-				<defs><clipPath id={clip}><rect x={g.L} y="0" width={g.W - g.L - g.R} height={g.H} /></clipPath></defs>
+				<defs
+					><clipPath id={clip}><rect x={g.L} y="0" width={g.W - g.L - g.R} height={g.H} /></clipPath
+					></defs
+				>
 			{/if}
 			{#if chart.chart !== 'pie'}
 				<line class="axis" x1={g.L} y1={g.base} x2={g.W - g.R} y2={g.base} />
-				{#each g.yLabels as l}<text x={g.L - 3} y={l.y} text-anchor="end" font-size={g.FONT}>{l.t}</text>{/each}
-				{#each g.xLabels as l}<text x={l.x} y={g.H - 6} text-anchor="middle" font-size={g.FONT}>{l.t}</text>{/each}
+				{#each g.yLabels as l}<text x={g.L - 3} y={l.y} text-anchor="end" font-size={g.FONT}
+						>{l.t}</text
+					>{/each}
+				{#each g.xLabels as l}<text x={l.x} y={g.H - 6} text-anchor="middle" font-size={g.FONT}
+						>{l.t}</text
+					>{/each}
 			{/if}
 			<g clip-path={g.zoomable ? `url(#${clip})` : undefined}>
 				{#each g.series as s}
-					{#if s.area}<path class="area" d={s.area} style:fill={s.colour} style:stroke={s.colour} />{/if}
+					{#if s.area}<path
+							class="area"
+							d={s.area}
+							style:fill={s.colour}
+							style:stroke={s.colour}
+						/>{/if}
 					{#if s.line && !s.area}<polyline points={s.line} style:stroke={s.colour} />{/if}
 					{#each s.marks as m (m.id)}
 						{#if m.d !== undefined}
-							<path class="slice mark" class:dim={dimmed(sel, m.id)} d={m.d} style:fill={m.colour} tabindex="0" role="button"
-								aria-pressed={sel.includes(m.id)} onclick={() => pick(m.id)} onkeydown={(e) => markKey(e, m.id)}
-								onfocus={() => (focused = m.tip)} onblur={() => (focused = '')}><title>{m.tip}</title></path>
+							<path
+								class="slice mark"
+								class:dim={dimmed(sel, m.id)}
+								d={m.d}
+								style:fill={m.colour}
+								tabindex="0"
+								role="button"
+								aria-pressed={sel.includes(m.id)}
+								onclick={() => pick(m.id)}
+								onkeydown={(e) => markKey(e, m.id)}
+								onfocus={() => (focused = m.tip)}
+								onblur={() => (focused = '')}><title>{m.tip}</title></path
+							>
 						{:else if m.rx !== undefined}
-							<rect class="bar mark" class:dim={dimmed(sel, m.id)} x={m.rx} y={m.ry} width={m.rw} height={m.rh} style:fill={m.colour}
-								tabindex="0" role="button" aria-pressed={sel.includes(m.id)} onclick={() => pick(m.id)}
-								onkeydown={(e) => markKey(e, m.id)} onfocus={() => (focused = m.tip)} onblur={() => (focused = '')}><title>{m.tip}</title></rect>
+							<rect
+								class="bar mark"
+								class:dim={dimmed(sel, m.id)}
+								x={m.rx}
+								y={m.ry}
+								width={m.rw}
+								height={m.rh}
+								style:fill={m.colour}
+								tabindex="0"
+								role="button"
+								aria-pressed={sel.includes(m.id)}
+								onclick={() => pick(m.id)}
+								onkeydown={(e) => markKey(e, m.id)}
+								onfocus={() => (focused = m.tip)}
+								onblur={() => (focused = '')}><title>{m.tip}</title></rect
+							>
 						{:else}
-							<circle class="mark" class:dim={dimmed(sel, m.id)} cx={m.cx} cy={m.cy} r={chart.chart === 'scatter' ? 2.5 : 1.5}
-								style:fill={m.colour} tabindex="0" role="button" aria-pressed={sel.includes(m.id)} onclick={() => pick(m.id)}
-								onkeydown={(e) => markKey(e, m.id)} onfocus={() => (focused = m.tip)} onblur={() => (focused = '')}><title>{m.tip}</title></circle>
+							<circle
+								class="mark"
+								class:dim={dimmed(sel, m.id)}
+								cx={m.cx}
+								cy={m.cy}
+								r={chart.chart === 'scatter' ? 2.5 : 1.5}
+								style:fill={m.colour}
+								tabindex="0"
+								role="button"
+								aria-pressed={sel.includes(m.id)}
+								onclick={() => pick(m.id)}
+								onkeydown={(e) => markKey(e, m.id)}
+								onfocus={() => (focused = m.tip)}
+								onblur={() => (focused = '')}><title>{m.tip}</title></circle
+							>
 						{/if}
 					{/each}
 				{/each}
@@ -122,10 +188,16 @@
 	<p class="live" aria-live="polite">{live}</p>
 	<div class="foot">
 		<ul class="legend">
-			{#each g.legend as m}<li><span class="swatch" style:background={m.colour}></span>{m.name}</li>{/each}
+			{#each g.legend as m}<li>
+					<span class="swatch" style:background={m.colour}></span>{m.name}
+				</li>{/each}
 		</ul>
 		{#if g.zoomable && !g.empty}
-			<button type="button" onclick={() => (zoom = IDENTITY)} disabled={zoom.k === 1 && zoom.tx === 0}>Reset zoom</button>
+			<button
+				type="button"
+				onclick={() => (zoom = IDENTITY)}
+				disabled={zoom.k === 1 && zoom.tx === 0}>Reset zoom</button
+			>
 		{/if}
 	</div>
 </div>

@@ -17,9 +17,9 @@ describe('an ordered list keeps the numbers in the source', () => {
 				items: [
 					{ n: 3, inl: [{ t: 'text', text: 'three' }] },
 					{ n: 4, inl: [{ t: 'text', text: 'four' }] },
-					{ n: 9, inl: [{ t: 'text', text: 'nine' }] },
-				],
-			},
+					{ n: 9, inl: [{ t: 'text', text: 'nine' }] }
+				]
+			}
 		]);
 	});
 });
@@ -32,7 +32,7 @@ describe('unclosed inline markers do not backtrack', () => {
 		const cases: [string, string][] = [
 			['[', '['.repeat(n)],
 			['**', '**' + 'a'.repeat(n)],
-			['*', '*' + 'a'.repeat(n)],
+			['*', '*' + 'a'.repeat(n)]
 		];
 		for (const [name, s] of cases) {
 			const t0 = performance.now();
@@ -48,7 +48,9 @@ describe('unclosed inline markers do not backtrack', () => {
 // so the child was another top-level item.
 describe('an indented dash is a second list level', () => {
 	const drawn = (src: string) =>
-		render(Markdown, { props: { text: src } }).body.replace(/<!--[\s\S]*?-->/g, '').replace(/ class="[^"]*"/g, '');
+		render(Markdown, { props: { text: src } })
+			.body.replace(/<!--[\s\S]*?-->/g, '')
+			.replace(/ class="[^"]*"/g, '');
 
 	it('a "  - " under an item is nested, and the next "-" is not', () => {
 		const src = '- parent\n  - child\n- next';
@@ -58,9 +60,9 @@ describe('an indented dash is a second list level', () => {
 				t: 'ul',
 				items: [
 					{ inl: [{ t: 'text', text: 'parent' }], sub: [[{ t: 'text', text: 'child' }]] },
-					{ inl: [{ t: 'text', text: 'next' }], sub: [] },
-				],
-			},
+					{ inl: [{ t: 'text', text: 'next' }], sub: [] }
+				]
+			}
 		]);
 	});
 });
@@ -80,12 +82,12 @@ describe('an image is words, not a link', () => {
 				inl: [
 					{ t: 'text', text: 'see ' },
 					{ t: 'text', text: '[obrázek: plot]' },
-					{ t: 'text', text: ' now' },
-				],
-			},
+					{ t: 'text', text: ' now' }
+				]
+			}
 		]);
 		expect(inline('[docs](https://thisisait.eu)')).toEqual([
-			{ t: 'link', text: 'docs', url: 'https://thisisait.eu' },
+			{ t: 'link', text: 'docs', url: 'https://thisisait.eu' }
 		]);
 	});
 });
@@ -94,6 +96,9 @@ describe('an image is words, not a link', () => {
 describe('a thematic break', () => {
 	it('--- between paragraphs is a rule, not text', () => {
 		expect(parse('a\n---\nb')).toEqual([
-			{ t: 'p', inl: [{ t: 'text', text: 'a' }] }, { t: 'hr' }, { t: 'p', inl: [{ t: 'text', text: 'b' }] }]);
+			{ t: 'p', inl: [{ t: 'text', text: 'a' }] },
+			{ t: 'hr' },
+			{ t: 'p', inl: [{ t: 'text', text: 'b' }] }
+		]);
 	});
 });

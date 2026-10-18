@@ -11,14 +11,27 @@ export function toggle(c: ChoiceProps, picked: string[], label: string): string[
 }
 
 /** The reply to send, or null: already sent, nothing picked, a label not offered, two on a single. */
-export function reply(session: string, c: ChoiceProps, picked: string[], sent: boolean): ToThalamus | null {
+export function reply(
+	session: string,
+	c: ChoiceProps,
+	picked: string[],
+	sent: boolean
+): ToThalamus | null {
 	const ok = picked.every((p) => c.options.some((o) => o.label === p));
 	if (sent || !c.id || !picked.length || !ok || (!c.multi && picked.length > 1)) return null;
-	return { t: 'choice_reply', session, choice: c.id, picked: c.options.map((o) => o.label).filter((l) => picked.includes(l)) };
+	return {
+		t: 'choice_reply',
+		session,
+		choice: c.id,
+		picked: c.options.map((o) => o.label).filter((l) => picked.includes(l))
+	};
 }
 
 /** What the card shows as answered: m.picked once `onreply` accepted it, else null (send again). */
-export async function answer(m: Extract<ToThalamus, { t: 'choice_reply' }>, onreply?: (m: Extract<ToThalamus, { t: 'choice_reply' }>) => Promise<boolean>): Promise<string[] | null> {
+export async function answer(
+	m: Extract<ToThalamus, { t: 'choice_reply' }>,
+	onreply?: (m: Extract<ToThalamus, { t: 'choice_reply' }>) => Promise<boolean>
+): Promise<string[] | null> {
 	try {
 		return (await onreply?.(m)) ? m.picked : null;
 	} catch {

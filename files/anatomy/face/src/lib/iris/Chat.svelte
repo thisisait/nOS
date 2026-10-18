@@ -7,8 +7,20 @@
 	import type { Snippet } from 'svelte';
 	import type { Chat } from './workspace';
 
-	let { chat, top, onchat, ontop, head, children }: {
-		chat: Chat; top: boolean; onchat: (c: Chat) => void; ontop: () => void; head: Snippet; children: Snippet;
+	let {
+		chat,
+		top,
+		onchat,
+		ontop,
+		head,
+		children
+	}: {
+		chat: Chat;
+		top: boolean;
+		onchat: (c: Chat) => void;
+		ontop: () => void;
+		head: Snippet;
+		children: Snippet;
 	} = $props();
 
 	let panel: HTMLElement | undefined = $state();
@@ -21,12 +33,24 @@
 		ontop();
 	};
 	const moved = (e: PointerEvent) => {
-		if (drag) onchat({ ...chat, x: Math.round(drag.x + e.clientX - drag.cx), y: Math.round(drag.y + e.clientY - drag.cy) });
+		if (drag)
+			onchat({
+				...chat,
+				x: Math.round(drag.x + e.clientX - drag.cx),
+				y: Math.round(drag.y + e.clientY - drag.cy)
+			});
 	};
 	const up = () => (drag = null);
 	const STEP = 16;
 	const key = (e: KeyboardEvent) => {
-		const d = ({ ArrowLeft: [-STEP, 0], ArrowRight: [STEP, 0], ArrowUp: [0, -STEP], ArrowDown: [0, STEP] } as Record<string, number[]>)[e.key];
+		const d = (
+			{
+				ArrowLeft: [-STEP, 0],
+				ArrowRight: [STEP, 0],
+				ArrowUp: [0, -STEP],
+				ArrowDown: [0, STEP]
+			} as Record<string, number[]>
+		)[e.key];
 		if (!d) return;
 		e.preventDefault();
 		onchat({ ...chat, x: chat.x + d[0], y: chat.y + d[1] });
@@ -37,7 +61,8 @@
 		if (!panel || !chat.open) return;
 		const ro = new ResizeObserver(() => {
 			if (!panel) return;
-			const w = Math.round(panel.offsetWidth), h = Math.round(panel.offsetHeight);
+			const w = Math.round(panel.offsetWidth),
+				h = Math.round(panel.offsetHeight);
 			if (w !== chat.w || h !== chat.h) onchat({ ...chat, w, h });
 		});
 		ro.observe(panel);
@@ -54,7 +79,8 @@
 		style="left: {chat.x}px; top: {chat.y}px; width: {chat.w}px; height: {chat.h}px"
 		onpointerdowncapture={ontop}
 	>
-		<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
+		<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+		<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 		<header
 			class="handle"
 			role="group"
@@ -67,7 +93,11 @@
 			onkeydown={key}
 		>
 			{@render head()}
-			<button class="ghost" aria-label="close the chat" onclick={() => onchat({ ...chat, open: false })}>×</button>
+			<button
+				class="ghost"
+				aria-label="close the chat"
+				onclick={() => onchat({ ...chat, open: false })}>×</button
+			>
 		</header>
 		{@render children()}
 	</section>

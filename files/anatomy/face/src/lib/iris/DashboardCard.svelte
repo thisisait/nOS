@@ -7,20 +7,40 @@
 	import { tableOf } from './widgets';
 	import type { DashboardProps, Lens, WidgetSpec } from './wire';
 
-	let { dashboard, onplace }: { dashboard: DashboardProps; onplace?: (d: DashboardProps, here: boolean) => boolean } = $props();
+	let {
+		dashboard,
+		onplace
+	}: { dashboard: DashboardProps; onplace?: (d: DashboardProps, here: boolean) => boolean } =
+		$props();
 
 	let placed = $state(false);
-	const OP: Record<Lens['op'], string> = { eq: '=', neq: '≠', lt: '<', gt: '>', contains: 'contains' };
-	const kind = (s: WidgetSpec) => ('rows' in s ? 'rows' : 'chart' in s ? `${s.chart.chart} chart` : 'kpi' in s ? 'kpi' : 'form');
+	const OP: Record<Lens['op'], string> = {
+		eq: '=',
+		neq: '≠',
+		lt: '<',
+		gt: '>',
+		contains: 'contains'
+	};
+	const kind = (s: WidgetSpec) =>
+		'rows' in s ? 'rows' : 'chart' in s ? `${s.chart.chart} chart` : 'kpi' in s ? 'kpi' : 'form';
 </script>
 
 <section class="dashboard">
-	<h3>{dashboard.name} <span class="muted">— {dashboard.widgets.length} widgets, nothing runs until you place it</span></h3>
+	<h3>
+		{dashboard.name}
+		<span class="muted">— {dashboard.widgets.length} widgets, nothing runs until you place it</span>
+	</h3>
 	{#if dashboard.lens.length}
-		<p class="muted">lens: {#each dashboard.lens as l, i}{i ? '; ' : ''}{l.column} {OP[l.op]} {l.value || '(unset)'}{/each}</p>
+		<p class="muted">
+			lens: {#each dashboard.lens as l, i}{i ? '; ' : ''}{l.column}
+				{OP[l.op]}
+				{l.value || '(unset)'}{/each}
+		</p>
 	{/if}
 	<ul>
-		{#each dashboard.widgets as w}<li>{w.title} <span class="muted">({kind(w.spec)}, table {tableOf(w.spec)})</span></li>{/each}
+		{#each dashboard.widgets as w}<li>
+				{w.title} <span class="muted">({kind(w.spec)}, table {tableOf(w.spec)})</span>
+			</li>{/each}
 	</ul>
 	{#if dashboard.dropped.length}
 		<ul class="dropped">
@@ -31,8 +51,16 @@
 		<p class="muted">Placed</p>
 	{:else}
 		<div class="place">
-			<button type="button" disabled={!onplace} onclick={() => (placed = onplace?.(dashboard, true) ?? false)}>Place here</button>
-			<button type="button" disabled={!onplace} onclick={() => (placed = onplace?.(dashboard, false) ?? false)}>Place on a new tab</button>
+			<button
+				type="button"
+				disabled={!onplace}
+				onclick={() => (placed = onplace?.(dashboard, true) ?? false)}>Place here</button
+			>
+			<button
+				type="button"
+				disabled={!onplace}
+				onclick={() => (placed = onplace?.(dashboard, false) ?? false)}>Place on a new tab</button
+			>
 		</div>
 	{/if}
 </section>

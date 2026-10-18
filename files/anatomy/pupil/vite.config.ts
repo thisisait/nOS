@@ -11,7 +11,7 @@ const face = fileURLToPath(new URL('../face/src', import.meta.url));
 export default defineConfig({
 	plugins: [svelte()],
 	resolve: {
-		alias: { $face: face, $lib: `${face}/lib`, $iris: `${face}/lib/iris` },
+		alias: { $face: face, $lib: face + '/lib', $iris: face + '/lib/iris' },
 		dedupe: ['svelte']
 	},
 	server: { fs: { allow: ['.', face] } },

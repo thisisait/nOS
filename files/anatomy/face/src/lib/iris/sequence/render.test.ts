@@ -10,7 +10,12 @@ import { layoutSequence, measure, type SequenceProps } from './layout';
 const html = (sequence: SequenceProps) => render(Sequence, { props: { sequence } }).body;
 
 const unescape = (s: string) =>
-	s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+	s
+		.replace(/&lt;/g, '<')
+		.replace(/&gt;/g, '>')
+		.replace(/&quot;/g, '"')
+		.replace(/&#39;/g, "'")
+		.replace(/&amp;/g, '&');
 
 /** Every <text> as drawn: its box from x, y (baseline), anchor and font-size. */
 function texts(h: string) {
@@ -40,8 +45,8 @@ const path: SequenceProps = {
 		{ from: 'thalamus', to: 'KEAP', text: 'query_rows' },
 		{ from: 'KEAP', to: 'thalamus', text: '1 row', dashed: true },
 		{ note: 'the person decides', over: ['pupil'] },
-		{ from: 'thalamus', to: 'thalamus', text: 'check caps' },
-	],
+		{ from: 'thalamus', to: 'thalamus', text: 'check caps' }
+	]
 };
 
 /** The caps at their worst: 8 wide 40-char names, 40 steps of 120-char messages near and far, self calls, wide notes, long phases. */
@@ -51,18 +56,28 @@ const crowd: SequenceProps = {
 	participants: Array.from({ length: 8 }, (_, i) => W40(i)),
 	steps: Array.from({ length: 40 }, (_, i): SequenceProps['steps'][number] => {
 		const p = (k: number) => W40(k % 8);
-		if (i % 10 === 4) return { note: `note ${i} `.padEnd(200, 'MW m'), over: i % 20 === 4 ? [p(0)] : [p(7)] };
+		if (i % 10 === 4)
+			return { note: `note ${i} `.padEnd(200, 'MW m'), over: i % 20 === 4 ? [p(0)] : [p(7)] };
 		if (i % 10 === 9) return { phase: `phase ${i} `.padEnd(60, 'Wm') };
 		if (i % 7 === 0) return { from: p(i), to: p(i), text: `self ${i} `.padEnd(120, 'MW') };
 		if (i % 5 === 3) return { note: `two ${i} `.padEnd(200, 'W'), over: [p(i), p(i + 3)] };
-		return { from: p(i), to: p(i * 3 + 1), text: `message ${i} `.padEnd(120, 'MWmw'), dashed: i % 2 === 0 };
-	}),
+		return {
+			from: p(i),
+			to: p(i * 3 + 1),
+			text: `message ${i} `.padEnd(120, 'MWmw'),
+			dashed: i % 2 === 0
+		};
+	})
 };
 
 /** Two short lifelines under a phase wider than everything else: the phase sets W. */
 const narrow: SequenceProps = {
 	participants: ['a', 'b'],
-	steps: [{ phase: 'W@% '.repeat(15).trim() }, { from: 'a', to: 'b', text: 'x' }, { note: 'n', over: ['a'] }],
+	steps: [
+		{ phase: 'W@% '.repeat(15).trim() },
+		{ from: 'a', to: 'b', text: 'x' },
+		{ note: 'n', over: ['a'] }
+	]
 };
 
 describe('the sequence layout', () => {
@@ -71,12 +86,19 @@ describe('the sequence layout', () => {
 		expect(html(crowd)).toBe(html(crowd));
 	});
 
-	for (const [name, q] of [['an approval', path], ['8 participants with the longest labels', crowd], ['a phase wider than the diagram', narrow]] as const)
+	for (const [name, q] of [
+		['an approval', path],
+		['8 participants with the longest labels', crowd],
+		['a phase wider than the diagram', narrow]
+	] as const)
 		it(`every label is inside the viewBox and no two overlap: ${name}`, () => {
 			const h = html(q);
 			const { W, H } = box(h);
 			const ts = texts(h);
-			const words = [...q.participants, ...q.steps.map((s) => ('text' in s ? s.text : 'note' in s ? s.note : s.phase))];
+			const words = [
+				...q.participants,
+				...q.steps.map((s) => ('text' in s ? s.text : 'note' in s ? s.note : s.phase))
+			];
 			expect(ts.map((t) => t.t).sort()).toEqual(words.sort());
 			for (const t of ts) {
 				expect(t.lo, t.t).toBeGreaterThanOrEqual(0);
@@ -111,7 +133,8 @@ describe('the sequence layout', () => {
 		expect(ph.rule.x1).toBeGreaterThanOrEqual(0);
 		expect(ph.rule.x2).toBeLessThanOrEqual(g.W);
 		const [a, b] = g.actors;
-		const lo = a.box.x, hi = b.box.x + b.box.w;
+		const lo = a.box.x,
+			hi = b.box.x + b.box.w;
 		expect(Math.abs(lo - (g.W - hi)), `margins ${lo} | ${g.W - hi}`).toBeLessThanOrEqual(1);
 	});
 
@@ -130,16 +153,26 @@ describe('the sequence layout', () => {
 
 	// Helvetica's advance widths (Adobe Core14 AFM, per 1000 em): the reference sans the estimate must not undercut.
 	const HELVETICA: Record<string, number> = Object.fromEntries(
-		[...' !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~'].map((c, i) => [c, [
-			278, 278, 355, 556, 556, 889, 667, 191, 333, 333, 389, 584, 278, 333, 278, 278, 556, 556, 556, 556, 556, 556, 556, 556,
-			556, 556, 278, 278, 584, 584, 584, 556, 1015, 667, 667, 722, 722, 667, 611, 778, 722, 278, 500, 667, 556, 833, 722, 778,
-			667, 778, 722, 667, 611, 722, 667, 944, 667, 667, 611, 278, 278, 278, 469, 556, 333, 556, 556, 500, 556, 556, 278, 556,
-			556, 222, 222, 500, 222, 833, 556, 556, 556, 556, 333, 500, 278, 556, 500, 722, 500, 500, 500, 334, 260, 334, 584][i]]),
+		[
+			...' !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~'
+		].map((c, i) => [
+			c,
+			[
+				278, 278, 355, 556, 556, 889, 667, 191, 333, 333, 389, 584, 278, 333, 278, 278, 556, 556,
+				556, 556, 556, 556, 556, 556, 556, 556, 278, 278, 584, 584, 584, 556, 1015, 667, 667, 722,
+				722, 667, 611, 778, 722, 278, 500, 667, 556, 833, 722, 778, 667, 778, 722, 667, 611, 722,
+				667, 944, 667, 667, 611, 278, 278, 278, 469, 556, 333, 556, 556, 500, 556, 556, 278, 556,
+				556, 222, 222, 500, 222, 833, 556, 556, 556, 556, 333, 500, 278, 556, 500, 722, 500, 500,
+				500, 334, 260, 334, 584
+			][i]
+		])
 	);
 
 	it('no printable ASCII glyph is measured narrower than Helvetica draws it', () => {
 		expect(Object.keys(HELVETICA).length).toBe(95);
-		const short = Object.entries(HELVETICA).filter(([c, w]) => measure(c, 1000) < w).map(([c, w]) => `${c} ${measure(c, 1000)} < ${w}`);
+		const short = Object.entries(HELVETICA)
+			.filter(([c, w]) => measure(c, 1000) < w)
+			.map(([c, w]) => `${c} ${measure(c, 1000)} < ${w}`);
 		expect(short).toEqual([]);
 	});
 });
@@ -156,7 +189,9 @@ describe('a sequence is SVG lifelines and arrows, every word as text', () => {
 
 	it('a note and a phase are a box and a rule, each with its <title>', () => {
 		const h = html(path);
-		expect(h).toMatch(/<rect[^>]*class="note[^"]*"[^>]*>\s*<title>note over pupil: the person decides<\/title>/);
+		expect(h).toMatch(
+			/<rect[^>]*class="note[^"]*"[^>]*>\s*<title>note over pupil: the person decides<\/title>/
+		);
 		expect(h).toMatch(/<line[^>]*class="phase[^"]*"[^>]*>\s*<title>phase: propose<\/title>/);
 	});
 
@@ -167,7 +202,10 @@ describe('a sequence is SVG lifelines and arrows, every word as text', () => {
 	});
 
 	it('text nodes only: no link, no foreign markup, no script', () => {
-		const h = html({ participants: ['<script>x</script>', 'b'], steps: [{ from: '<script>x</script>', to: 'b', text: '<img onerror=1>' }] });
+		const h = html({
+			participants: ['<script>x</script>', 'b'],
+			steps: [{ from: '<script>x</script>', to: 'b', text: '<img onerror=1>' }]
+		});
 		expect(h).not.toMatch(/<(a|foreignObject|script|img|iframe)[\s>]/);
 		expect(h).toContain('&lt;img');
 	});

@@ -14,16 +14,30 @@ const fields: FormField[] = [
 	{ key: 'note', label: 'Note', kind: 'text', required: false, placeholder: 'what for' },
 	{ key: 'amount', label: 'Amount', kind: 'number', required: true, min: 0, max: 10000 },
 	{ key: 'when', label: 'When', kind: 'date', required: false },
-	{ key: 'kind', label: 'Kind', kind: 'select', required: true, options: ['food', 'travel', 'tools'] },
-	{ key: 'paid', label: 'Paid', kind: 'bool', required: true },
+	{
+		key: 'kind',
+		label: 'Kind',
+		kind: 'select',
+		required: true,
+		options: ['food', 'travel', 'tools']
+	},
+	{ key: 'paid', label: 'Paid', kind: 'bool', required: true }
 ];
 const expenses: FormProps = {
-	form: '5f0c1b2a-3d4e-4f5a-8b6c-7d8e9f0a1b2c', table: 'expenses', title: 'Expenses', fields,
-	omitted: [{ key: 'receipt', kind: 'file' }],
+	form: '5f0c1b2a-3d4e-4f5a-8b6c-7d8e9f0a1b2c',
+	table: 'expenses',
+	title: 'Expenses',
+	fields,
+	omitted: [{ key: 'receipt', kind: 'file' }]
 };
 
 const html = (form: FormProps) => render(Form, { props: { form } }).body;
-const text = (h: string) => h.replace(/<[^>]*>/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/\s+/g, ' ');
+const text = (h: string) =>
+	h
+		.replace(/<[^>]*>/g, ' ')
+		.replace(/&amp;/g, '&')
+		.replace(/&lt;/g, '<')
+		.replace(/\s+/g, ' ');
 
 describe('canSubmit', () => {
 	const full = { amount: 42, kind: 'tools' };
@@ -45,9 +59,14 @@ describe('canSubmit', () => {
 	});
 
 	it('the values sent are typed by field; an empty optional field is not sent, an unchecked bool is false', () => {
-		expect(formValues(fields, { note: '', amount: 42, when: '2026-10-13', kind: 'tools' }))
-			.toEqual({ amount: 42, when: '2026-10-13', kind: 'tools', paid: false });
-		expect(formValues(fields, { amount: '7.5', kind: 'food', paid: true })).toEqual({ amount: 7.5, kind: 'food', paid: true });
+		expect(formValues(fields, { note: '', amount: 42, when: '2026-10-13', kind: 'tools' })).toEqual(
+			{ amount: 42, when: '2026-10-13', kind: 'tools', paid: false }
+		);
+		expect(formValues(fields, { amount: '7.5', kind: 'food', paid: true })).toEqual({
+			amount: 7.5,
+			kind: 'food',
+			paid: true
+		});
 	});
 });
 
@@ -57,13 +76,15 @@ describe('a form is drawn as native inputs under its own header', () => {
 		for (const f of fields) expect(h).toMatch(new RegExp(`<span[^>]*>${f.label}(<|\\s)`));
 	});
 
-	it('the header and the button are the pupil\'s words, whatever the props say', () => {
+	it("the header and the button are the pupil's words, whatever the props say", () => {
 		for (const title of ['Expenses', 'Approve the transfer', '<b>click</b>']) {
 			const h = html({ ...expenses, title, table: 't1' });
 			const heads = [...h.matchAll(/<h3[^>]*>([\s\S]*?)<\/h3>/g)].map((m) => text(m[1]).trim());
 			expect(heads).toEqual([header({ title, table: 't1' })]);
 			expect(header({ title, table: 't1' })).toBe(`Adds a row to ${title} (t1)`);
-			const buttons = [...h.matchAll(/<button[^>]*>([\s\S]*?)<\/button>/g)].map((m) => text(m[1]).trim());
+			const buttons = [...h.matchAll(/<button[^>]*>([\s\S]*?)<\/button>/g)].map((m) =>
+				text(m[1]).trim()
+			);
 			expect(buttons).toEqual(['Add row']);
 		}
 	});
@@ -112,37 +133,72 @@ function walk(n: unknown, up: Node[], out: [Node, Node[]][]) {
 	if (Array.isArray(n)) return n.forEach((x) => walk(x, up, out));
 	const node = n as Node;
 	if (node.type) out.push([node, up]);
-	for (const [k, v] of Object.entries(node)) if (k !== 'metadata' && k !== 'parent') walk(v, node.type ? [...up, node] : up, out);
+	for (const [k, v] of Object.entries(node))
+		if (k !== 'metadata' && k !== 'parent') walk(v, node.type ? [...up, node] : up, out);
 }
 
 describe('a written row clears the draft', () => {
 	it('Widget redraws its Form for each form_result, so one more click adds nothing', () => {
 		// I5 review: the draft outlived the insert, so a second click would add the same row again.
-		const ast = parse(readFileSync(new URL('./Widget.svelte', import.meta.url), 'utf8'), { modern: true }) as unknown as { fragment: unknown };
+		const ast = parse(readFileSync(new URL('./Widget.svelte', import.meta.url), 'utf8'), {
+			modern: true
+		}) as unknown as { fragment: unknown };
 		const all: [Node, Node[]][] = [];
 		walk(ast.fragment, [], all);
 		const forms = all.filter(([n]) => n.type === 'Component' && n.name === 'Form');
 		expect(forms.length).toBe(1);
-		const key = forms[0][1].filter((a) => a.type === 'KeyBlock').at(-1)?.expression as Node | undefined;
-		expect((key?.property as Node | undefined)?.name, 'Form is not keyed on state.added').toBe('added');
+		const key = forms[0][1].filter((a) => a.type === 'KeyBlock').at(-1)?.expression as
+			Node | undefined;
+		expect((key?.property as Node | undefined)?.name, 'Form is not keyed on state.added').toBe(
+			'added'
+		);
 	});
 });
 
 // iris-v3 B2: a field may show only while another holds a value; the spec's prefill is the draft's start.
 describe('a form with prefill and when', () => {
 	const shownWhen: FormField[] = [
-		{ key: 'kind', label: 'Kind', kind: 'select', required: true, options: ['food', 'travel', 'tools'] },
-		{ key: 'trip', label: 'Trip', kind: 'text', required: false, when: { key: 'kind', op: 'eq', value: 'travel' } },
-		{ key: 'paid', label: 'Paid', kind: 'bool', required: false, when: { key: 'kind', op: 'neq', value: 'food' } },
+		{
+			key: 'kind',
+			label: 'Kind',
+			kind: 'select',
+			required: true,
+			options: ['food', 'travel', 'tools']
+		},
+		{
+			key: 'trip',
+			label: 'Trip',
+			kind: 'text',
+			required: false,
+			when: { key: 'kind', op: 'eq', value: 'travel' }
+		},
+		{
+			key: 'paid',
+			label: 'Paid',
+			kind: 'bool',
+			required: false,
+			when: { key: 'kind', op: 'neq', value: 'food' }
+		}
 	];
-	const travel: FormProps = { ...expenses, fields: shownWhen, omitted: [], prefill: { kind: 'travel', trip: 'Brno' } };
+	const travel: FormProps = {
+		...expenses,
+		fields: shownWhen,
+		omitted: [],
+		prefill: { kind: 'travel', trip: 'Brno' }
+	};
 
 	it('a field whose condition fails is not drawn and sends nothing, a bool included', () => {
 		expect(shown(shownWhen[1], { kind: 'travel' })).toBe(true);
 		expect(shown(shownWhen[1], { kind: 'food' })).toBe(false);
 		expect(shown(shownWhen[2], {})).toBe(true);
-		expect(formValues(shownWhen, { kind: 'food', trip: 'Brno', paid: true })).toEqual({ kind: 'food' });
-		expect(formValues(shownWhen, { kind: 'travel', trip: 'Brno' })).toEqual({ kind: 'travel', trip: 'Brno', paid: false });
+		expect(formValues(shownWhen, { kind: 'food', trip: 'Brno', paid: true })).toEqual({
+			kind: 'food'
+		});
+		expect(formValues(shownWhen, { kind: 'travel', trip: 'Brno' })).toEqual({
+			kind: 'travel',
+			trip: 'Brno',
+			paid: false
+		});
 		const h = text(html({ ...travel, prefill: { kind: 'food' } }));
 		expect(h).not.toContain('Trip');
 		expect(h).not.toContain('Paid');

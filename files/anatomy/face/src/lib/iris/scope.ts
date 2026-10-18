@@ -14,7 +14,11 @@ export function forCommand(text: string): Scope | null | undefined {
 
 /** Serve's wall lives on one connection: a new link says `want` again and no widget reads before its
  * answer; the answer (working_for) re-runs every widget, so no row read under another scope stays. */
-export function rewall(want: Scope | null, l: Layout, ev: 'connected' | 'working_for'): { w: Widgets | null; send: ToThalamus[] } {
+export function rewall(
+	want: Scope | null,
+	l: Layout,
+	ev: 'connected' | 'working_for'
+): { w: Widgets | null; send: ToThalamus[] } {
 	if (ev === 'connected' && want) return { w: null, send: [{ t: 'working_for', scope: want }] };
 	return restore(l);
 }

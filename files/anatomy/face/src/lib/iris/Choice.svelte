@@ -9,7 +9,12 @@
 	import { answer, initial, reply, toggle } from './choice';
 	import type { ChoiceProps, ToThalamus } from './wire';
 
-	let { choice, session, answered = null, onreply }: {
+	let {
+		choice,
+		session,
+		answered = null,
+		onreply
+	}: {
 		choice: ChoiceProps;
 		session: string;
 		answered?: string[] | null;
@@ -46,7 +51,9 @@
 		</label>
 	{/each}
 	{#if sent !== null}<p class="muted">odpověď: {sent.join(', ')}</p>{/if}
-	<button type="button" disabled={sent !== null || busy || !picked.length} onclick={send}>Odpovědět</button>
+	<button type="button" disabled={sent !== null || busy || !picked.length} onclick={send}
+		>Odpovědět</button
+	>
 </fieldset>
 
 <style>

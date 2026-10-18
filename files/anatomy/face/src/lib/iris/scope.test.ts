@@ -15,10 +15,24 @@ describe('/for says whom the person works for', () => {
 	});
 
 	it('the waiting card says the scope it was asked under', () => {
-		const waiting = { approval: 'a', component: { kind: 'markdown' as const, props: { text: 'x' } } };
-		const card = render(ApprovalCard, { props: { waiting, of: 1, whole: true, scope: 'ACME s.r.o.', onseen: () => {}, ondecide: () => {} } }).body;
+		const waiting = {
+			approval: 'a',
+			component: { kind: 'markdown' as const, props: { text: 'x' } }
+		};
+		const card = render(ApprovalCard, {
+			props: {
+				waiting,
+				of: 1,
+				whole: true,
+				scope: 'ACME s.r.o.',
+				onseen: () => {},
+				ondecide: () => {}
+			}
+		}).body;
 		expect(card).toContain('asked for ACME s.r.o.');
-		const none = render(ApprovalCard, { props: { waiting, of: 1, whole: true, onseen: () => {}, ondecide: () => {} } }).body;
+		const none = render(ApprovalCard, {
+			props: { waiting, of: 1, whole: true, onseen: () => {}, ondecide: () => {} }
+		}).body;
 		expect(none).not.toContain('asked for');
 	});
 });

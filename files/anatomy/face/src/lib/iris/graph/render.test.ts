@@ -11,18 +11,18 @@ const organs: GraphProps = {
 	nodes: [
 		{ id: 'bone', label: 'Bone', note: 'FastAPI bridge', tone: 'ok' },
 		{ id: 'wing', label: 'Wing' },
-		{ id: 'keap', label: 'KEAP' },
+		{ id: 'keap', label: 'KEAP' }
 	],
 	edges: [
 		{ from: 'bone', to: 'wing', label: 'events' },
-		{ from: 'wing', to: 'keap', dashed: true },
-	],
+		{ from: 'wing', to: 'keap', dashed: true }
+	]
 };
 
 /** 60 nodes, 120 edges, deterministic but tangled: every node links two others ahead and one behind. */
 const big: GraphProps = {
 	nodes: Array.from({ length: 60 }, (_, i) => ({ id: `n${i}`, label: `node number ${i}` })),
-	edges: Array.from({ length: 120 }, (_, i) => ({ from: `n${i % 60}`, to: `n${(i * 7 + 3) % 60}` })),
+	edges: Array.from({ length: 120 }, (_, i) => ({ from: `n${i % 60}`, to: `n${(i * 7 + 3) % 60}` }))
 };
 
 const html = (graph: GraphProps) => render(Graph, { props: { graph } }).body;
@@ -38,7 +38,8 @@ describe('the graph layout', () => {
 		expect(g.nodes).toHaveLength(60);
 		for (const [i, a] of g.nodes.entries())
 			for (const b of g.nodes.slice(i + 1)) {
-				const apart = a.x + NODE_W <= b.x || b.x + NODE_W <= a.x || a.y + NODE_H <= b.y || b.y + NODE_H <= a.y;
+				const apart =
+					a.x + NODE_W <= b.x || b.x + NODE_W <= a.x || a.y + NODE_H <= b.y || b.y + NODE_H <= a.y;
 				expect(apart, `${a.id} and ${b.id} overlap`).toBe(true);
 			}
 		for (const n of g.nodes) {
@@ -51,7 +52,12 @@ describe('the graph layout', () => {
 	it('a cycle still lays out, every edge a path between finite points', () => {
 		const cycle: GraphProps = {
 			nodes: ['a', 'b', 'c'].map((id) => ({ id, label: id.toUpperCase() })),
-			edges: [{ from: 'a', to: 'b' }, { from: 'b', to: 'c' }, { from: 'c', to: 'a' }, { from: 'a', to: 'a' }],
+			edges: [
+				{ from: 'a', to: 'b' },
+				{ from: 'b', to: 'c' },
+				{ from: 'c', to: 'a' },
+				{ from: 'a', to: 'a' }
+			]
 		};
 		const g = layoutGraph(cycle);
 		expect(g.nodes.map((n) => n.id).sort()).toEqual(['a', 'b', 'c']);
@@ -104,7 +110,10 @@ describe('the graph as markup', () => {
 	});
 
 	it('draws no link, no foreign markup, no script', () => {
-		const h = html({ nodes: [{ id: 'x', label: '<script>x</script>', note: '<img onerror=1>' }], edges: [] });
+		const h = html({
+			nodes: [{ id: 'x', label: '<script>x</script>', note: '<img onerror=1>' }],
+			edges: []
+		});
 		expect(h).not.toMatch(/<(a|foreignObject|script|img|image)[\s>]/);
 		expect(h).toContain('&lt;img');
 	});

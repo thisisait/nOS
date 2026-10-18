@@ -4,7 +4,11 @@
 	import type { ModelOption, ToThalamus } from './wire';
 
 	// refused: what serve left out and why, said in the select's title rather than dropped.
-	let { options, refused = [], onpick }: { options: ModelOption[]; refused?: string[]; onpick: (m: ToThalamus) => void } = $props();
+	let {
+		options,
+		refused = [],
+		onpick
+	}: { options: ModelOption[]; refused?: string[]; onpick: (m: ToThalamus) => void } = $props();
 	const current = $derived(options.find((o) => o.current));
 </script>
 

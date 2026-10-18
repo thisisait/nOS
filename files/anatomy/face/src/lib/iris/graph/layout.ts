@@ -7,11 +7,29 @@ import type { Component } from '../wire';
 
 export type GraphProps = Extract<Component, { kind: 'graph' }>['props'];
 export type GEdge = GraphProps['edges'][number];
-export type PlacedNode = { id: string; text: string; tip: string; tone?: string; x: number; y: number };
-export type PlacedEdge = { i: number; from: string; to: string; d: string; dashed: boolean; tip: string; label?: { t: string; x: number; y: number } };
+export type PlacedNode = {
+	id: string;
+	text: string;
+	tip: string;
+	tone?: string;
+	x: number;
+	y: number;
+};
+export type PlacedEdge = {
+	i: number;
+	from: string;
+	to: string;
+	d: string;
+	dashed: boolean;
+	tip: string;
+	label?: { t: string; x: number; y: number };
+};
 
-export const NODE_W = 150, NODE_H = 24;
-const PADX = 4, BEND = 28, EDGE_LABEL = 22;
+export const NODE_W = 150,
+	NODE_H = 24;
+const PADX = 4,
+	BEND = 28,
+	EDGE_LABEL = 22;
 
 const clip = (s: string, n: number) => (s.length <= n ? s : s.slice(0, n - 1) + '…');
 const r1 = (n: number) => Math.round(n * 10) / 10;
@@ -38,7 +56,12 @@ export function layoutGraph(g: GraphProps) {
 			mid = [(x1 + x2) / 2, (y1 + y2) / 2 - 3];
 		} else {
 			// Back, sideways or a loop: bottom of one box to the bottom of the other, bent below both.
-			const [x1, y1, x2, y2] = [a.x + NODE_W / 2 + (a === b ? 20 : 0), a.y + NODE_H, b.x + NODE_W / 2 - (a === b ? 20 : 0), b.y + NODE_H];
+			const [x1, y1, x2, y2] = [
+				a.x + NODE_W / 2 + (a === b ? 20 : 0),
+				a.y + NODE_H,
+				b.x + NODE_W / 2 - (a === b ? 20 : 0),
+				b.y + NODE_H
+			];
 			const low = Math.max(y1, y2) + BEND;
 			d = `M${x1} ${y1} C${x1} ${low}, ${x2} ${low}, ${x2} ${y2}`;
 			mid = [(x1 + x2) / 2, low - 3];

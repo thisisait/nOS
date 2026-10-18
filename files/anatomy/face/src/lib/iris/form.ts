@@ -5,7 +5,8 @@ import type { FormField, Lens } from './wire';
 export type Draft = Record<string, string | number | boolean | null | undefined>;
 
 /** The pupil's words, never the props': the title and table only fill the blanks. */
-export const header = (f: { title: string; table: string }) => `Adds a row to ${f.title} (${f.table})`;
+export const header = (f: { title: string; table: string }) =>
+	`Adds a row to ${f.title} (${f.table})`;
 
 const missing = (v: Draft[string]) => v === undefined || v === null || v === '';
 
@@ -18,7 +19,10 @@ export const canSubmit = (fields: FormField[], draft: Draft, inFlight: boolean) 
 	!inFlight && fields.every((f) => !f.required || f.kind === 'bool' || !missing(draft[f.key]));
 
 /** The values a submit carries: typed by field, an empty optional field left out, a bool always sent, a hidden field never. */
-export function formValues(fields: FormField[], draft: Draft): Record<string, string | number | boolean> {
+export function formValues(
+	fields: FormField[],
+	draft: Draft
+): Record<string, string | number | boolean> {
 	const out: Record<string, string | number | boolean> = {};
 	for (const f of fields.filter((x) => shown(x, draft))) {
 		const v = draft[f.key];
@@ -36,7 +40,8 @@ export function lensPrefill(lens: Lens[] = [], fields: FormField[]): Draft {
 		if (!f || c.op !== 'eq' || c.value === '') continue;
 		if (f.kind === 'select' && !f.options?.includes(c.value)) continue;
 		if (f.kind === 'number' && !Number.isFinite(Number(c.value))) continue;
-		out[f.key] = f.kind === 'number' ? Number(c.value) : f.kind === 'bool' ? c.value === 'true' : c.value;
+		out[f.key] =
+			f.kind === 'number' ? Number(c.value) : f.kind === 'bool' ? c.value === 'true' : c.value;
 	}
 	return out;
 }

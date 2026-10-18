@@ -39,9 +39,34 @@
 			<circle cx="50" cy="50" r="26" fill="url(#eye-core)" filter="url(#eye-glow)" />
 			<circle cx="50" cy="50" r="15" fill="url(#eye-core)" />
 		</g>
-		<circle class="swirl" cx="50" cy="50" r="22" fill="none" stroke-width="0.8" stroke-dasharray="3 5" />
-		<circle class="segment" cx="50" cy="50" r="31" fill="none" stroke-width="2" stroke-linecap="round" stroke-dasharray="24 171" />
-		<ellipse cx="38" cy="33" rx="13" ry="7" fill="#fff" opacity="0.08" transform="rotate(-30 38 33)" />
+		<circle
+			class="swirl"
+			cx="50"
+			cy="50"
+			r="22"
+			fill="none"
+			stroke-width="0.8"
+			stroke-dasharray="3 5"
+		/>
+		<circle
+			class="segment"
+			cx="50"
+			cy="50"
+			r="31"
+			fill="none"
+			stroke-width="2"
+			stroke-linecap="round"
+			stroke-dasharray="24 171"
+		/>
+		<ellipse
+			cx="38"
+			cy="33"
+			rx="13"
+			ry="7"
+			fill="#fff"
+			opacity="0.08"
+			transform="rotate(-30 38 33)"
+		/>
 	</svg>
 	<p class="label">{label(view)}</p>
 </div>
@@ -77,7 +102,9 @@
 	.core {
 		opacity: var(--lvl);
 		transform: scale(var(--size));
-		transition: opacity 300ms, transform 300ms;
+		transition:
+			opacity 300ms,
+			transform 300ms;
 	}
 	.swirl,
 	.segment {

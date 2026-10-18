@@ -10,8 +10,18 @@
 	import type { FormProps } from './wire';
 
 	type Submit = { form: string; widget: string; values: Record<string, string | number | boolean> };
-	let { form, widget = '', inFlight = false, prefill = {}, onsubmit }: {
-		form: FormProps; widget?: string; inFlight?: boolean; prefill?: Draft; onsubmit?: (m: Submit) => void;
+	let {
+		form,
+		widget = '',
+		inFlight = false,
+		prefill = {},
+		onsubmit
+	}: {
+		form: FormProps;
+		widget?: string;
+		inFlight?: boolean;
+		prefill?: Draft;
+		onsubmit?: (m: Submit) => void;
 	} = $props();
 
 	// A form is drawn once per answer: the prefill is where the draft starts, never re-read.
@@ -28,25 +38,41 @@
 	<h3>{header(form)}</h3>
 	{#each form.fields.filter((x) => shown(x, draft)) as f (f.key)}
 		<label class="field">
-			<span>{f.label}{#if f.required}<span class="muted"> (required)</span>{/if}</span>
+			<span
+				>{f.label}{#if f.required}<span class="muted"> (required)</span>{/if}</span
+			>
 			{#if f.kind === 'select'}
 				<select bind:value={draft[f.key]} required={f.required}>
 					<option value="" disabled selected>choose one</option>
 					{#each f.options ?? [] as o}<option value={o}>{o}</option>{/each}
 				</select>
 			{:else if f.kind === 'bool'}
-				<input type="checkbox" bind:checked={draft[f.key]} />
+				<input type="checkbox" bind:checked={() => !!draft[f.key], (v) => (draft[f.key] = v)} />
 			{:else if f.kind === 'number'}
-				<input type="number" bind:value={draft[f.key]} required={f.required} min={f.min} max={f.max} placeholder={f.placeholder} />
+				<input
+					type="number"
+					bind:value={draft[f.key]}
+					required={f.required}
+					min={f.min}
+					max={f.max}
+					placeholder={f.placeholder}
+				/>
 			{:else if f.kind === 'date'}
 				<input type="date" bind:value={draft[f.key]} required={f.required} />
 			{:else}
-				<input type="text" bind:value={draft[f.key]} required={f.required} placeholder={f.placeholder} />
+				<input
+					type="text"
+					bind:value={draft[f.key]}
+					required={f.required}
+					placeholder={f.placeholder}
+				/>
 			{/if}
 		</label>
 	{/each}
 	{#if form.omitted.length}
-		<p class="muted">not editable here: {form.omitted.map((o) => `${o.key} (${o.kind})`).join(', ')}</p>
+		<p class="muted">
+			not editable here: {form.omitted.map((o) => `${o.key} (${o.kind})`).join(', ')}
+		</p>
 	{/if}
 	<button type="submit" disabled={!ready}>Add row</button>
 </form>

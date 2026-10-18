@@ -23,7 +23,11 @@ describe('the eye reducer', () => {
 	it('follows the wire: thinking, tool:<name>, writing, idle', () => {
 		expect(run(act('thinking')).state).toBe('thinking');
 		const t = run(act({ tool: { name: 'query_rows' } }));
-		expect([t.state, t.tool, label(look(t, 0))]).toEqual(['tool', 'query_rows', 'tool: query_rows']);
+		expect([t.state, t.tool, label(look(t, 0))]).toEqual([
+			'tool',
+			'query_rows',
+			'tool: query_rows'
+		]);
 		expect(run(act('writing')).state).toBe('writing');
 		expect(run(act('thinking'), act('idle')).state).toBe('idle');
 	});
@@ -48,7 +52,9 @@ describe('the eye reducer', () => {
 		const s = run(act('thinking'), wire({ t: 'text', session: S, text: 'hi' }), act('idle'));
 		expect(s.state).toBe('said');
 		expect(settle(s).state).toBe('idle');
-		expect(run(wire({ t: 'text', session: S, text: 'hi' }), act('thinking')).state).toBe('thinking');
+		expect(run(wire({ t: 'text', session: S, text: 'hi' }), act('thinking')).state).toBe(
+			'thinking'
+		);
 	});
 
 	it('a stale timer settles nothing', () => {
@@ -60,7 +66,12 @@ describe('the eye reducer', () => {
 	});
 
 	it('waiting wins over everything until pending is 0', () => {
-		for (const x of [run(), run(act('thinking')), run(act('writing')), run(wire({ t: 'refused', reason: 'x' }))])
+		for (const x of [
+			run(),
+			run(act('thinking')),
+			run(act('writing')),
+			run(wire({ t: 'refused', reason: 'x' }))
+		])
 			expect(look(x, 1)).toMatchObject({ state: 'waiting' });
 		expect(look(run(act('thinking')), 0).state).toBe('thinking');
 	});
@@ -86,7 +97,9 @@ describe('the eye reducer', () => {
 		expect(label(look(l, 0))).toContain('local');
 		expect(step(l, { e: 'typing', text: '' }).state).toBe('idle');
 		// No activity yet after send: still listening, not a guessed "thinking".
-		expect(step(l, wire({ t: 'session', session: S, actor: 'user:pazny', model_uri: 'm' })).state).toBe('listening');
+		expect(
+			step(l, wire({ t: 'session', session: S, actor: 'user:pazny', model_uri: 'm' })).state
+		).toBe('listening');
 		expect(step(l, act('thinking')).state).toBe('thinking');
 		// Typing never overrides what the wire says.
 		expect(step(run(act('thinking')), { e: 'typing', text: 'x' }).state).toBe('thinking');
@@ -95,9 +108,15 @@ describe('the eye reducer', () => {
 
 describe('the eye drawn', () => {
 	const views: View[] = [
-		{ state: 'idle', tool: null }, { state: 'listening', tool: null }, { state: 'thinking', tool: null },
-		{ state: 'tool', tool: 'query_rows' }, { state: 'writing', tool: null }, { state: 'waiting', tool: null },
-		{ state: 'said', tool: null }, { state: 'refused', tool: null }, { state: 'disconnected', tool: null }
+		{ state: 'idle', tool: null },
+		{ state: 'listening', tool: null },
+		{ state: 'thinking', tool: null },
+		{ state: 'tool', tool: 'query_rows' },
+		{ state: 'writing', tool: null },
+		{ state: 'waiting', tool: null },
+		{ state: 'said', tool: null },
+		{ state: 'refused', tool: null },
+		{ state: 'disconnected', tool: null }
 	];
 
 	for (const v of views)
@@ -115,7 +134,8 @@ describe('the eye drawn', () => {
 
 	it('reduced motion stops every keyframe; colour and the label still say the state', () => {
 		const src = readFileSync(new URL('./Eye.svelte', import.meta.url), 'utf8');
-		const reduced = src.match(/@media \(prefers-reduced-motion: reduce\) \{([\s\S]*?)\n\t\}/)?.[1] ?? '';
+		const reduced =
+			src.match(/@media \(prefers-reduced-motion: reduce\) \{([\s\S]*?)\n\t\}/)?.[1] ?? '';
 		expect(reduced).toMatch(/animation: none/);
 		expect(src).not.toMatch(/<canvas|getContext\(|@rive-app|<img/); // code, not the comment's prose
 	});

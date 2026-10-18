@@ -15,10 +15,21 @@
 	import Timeline from './Timeline.svelte';
 	import { inherit, MARK, shownIn, tally, treeDeltas, VIEWS, type Delta, type View } from './delta';
 	import { isMoney, number, shownValue, signed } from './fmt';
-	import { cell, shown, type Component, type SchemaColumn, type TreeNode, type Value } from './wire';
+	import {
+		cell,
+		shown,
+		type Component,
+		type SchemaColumn,
+		type TreeNode,
+		type Value
+	} from './wire';
 	/** A new column as both shells say it (shell.rs column_said): kind, required, options, where a rowRef points. */
-	const columnSaid = (c: SchemaColumn) => c.kind + (c.required ? ', required' : '') + (c.options ? ` of ${c.options.join(', ')}` : '')
-		+ (c.ref_table ? ` → ${c.ref_title ?? c.ref_table} (${c.ref_table})` : '') + (c.ref_display ? `, shown by ${c.ref_display}` : '');
+	const columnSaid = (c: SchemaColumn) =>
+		c.kind +
+		(c.required ? ', required' : '') +
+		(c.options ? ` of ${c.options.join(', ')}` : '') +
+		(c.ref_table ? ` → ${c.ref_title ?? c.ref_table} (${c.ref_table})` : '') +
+		(c.ref_display ? `, shown by ${c.ref_display}` : '');
 
 	// view: Před / Změny / Po of a component that marks a delta (delta.ts); the switch sets it.
 	let { component, view = $bindable('changes') }: { component: Component; view?: View } = $props();
@@ -29,19 +40,30 @@
 </script>
 
 <!-- The mark is text (+ − ~) and its word for a screen reader; the colour is only on top. -->
-{#snippet mark(d: Delta | undefined)}{#if d}<span class="mark" data-delta={d}>{MARK[d]}</span><span class="sr">{d}</span>{' '}{/if}{/snippet}
+{#snippet mark(d: Delta | undefined)}{#if d}<span class="mark" data-delta={d}>{MARK[d]}</span><span
+			class="sr">{d}</span
+		>{' '}{/if}{/snippet}
 {#snippet deltaBar(ds: (Delta | undefined)[])}
 	{#if ds.some(Boolean)}
 		<div class="delta-bar">
 			<span class="mono">{tally(ds)}</span>
 			<fieldset class="views">
 				<legend class="sr">pohled</legend>
-				{#each VIEWS as [v, label]}<label><input type="radio" name={switchName} bind:group={view} value={v} />{label}</label>{/each}
+				{#each VIEWS as [v, label]}<label
+						><input type="radio" name={switchName} bind:group={view} value={v} />{label}</label
+					>{/each}
 			</fieldset>
 		</div>
 	{/if}
 {/snippet}
-{#snippet value(v: Value | undefined, key: string)}{#if v !== null && typeof v === 'object'}<pre>{JSON.stringify(v, null, 1)}</pre>{:else}{shownValue(v, key)}{/if}{/snippet}
+{#snippet value(
+	v: Value | undefined,
+	key: string
+)}{#if v !== null && typeof v === 'object'}<pre>{JSON.stringify(
+				v,
+				null,
+				1
+			)}</pre>{:else}{shownValue(v, key)}{/if}{/snippet}
 
 <section class="component" data-kind={component.kind}>
 	{#if component.kind === 'table_results'}
@@ -49,58 +71,90 @@
 		<h3>
 			<!-- A count (limit 0) is the count; an empty grid of every column says nothing more. -->
 			{t.name} — {#if t.rows.length}{t.rows.length}{' of '}{/if}{t.matched} matched ({t.total} rows)
-			{#if t.projected}<Badge tone="info">semantic</Badge>{:else}<Badge tone="warn">substring match, not semantic</Badge>{/if}
+			{#if t.projected}<Badge tone="info">semantic</Badge>{:else}<Badge tone="warn"
+					>substring match, not semantic</Badge
+				>{/if}
 		</h3>
 		<p class="muted query">{t.query}</p>
 		{@const long = t.columns.filter((c) => t.rows.some((r) => LONG(cell(r.cells[c]))))}
 		{@const short = t.columns.filter((c) => !long.includes(c))}
 		{#if t.rows.length}
-		<div class="scroll">
-			<table>
-				<thead><tr>{#each short as c}<th>{c}</th>{/each}</tr></thead>
-				<tbody>
-					{#each t.rows as r}
-						<tr>{#each short as c}<td>{shownValue(r.cells[c], c)}</td>{/each}</tr>
-						<!-- A fold only for long text; an id already on screen (a group's value) needs none. -->
-						{#if long.length || !short.some((c) => cell(r.cells[c]) === r.__id)}
-						<tr class="more">
-							<td colspan={Math.max(short.length, 1)}>
-								<details>
-									<summary class="muted mono">{r.__id}{#each long as c}{' · '}{c}{/each}</summary>
-									{#each long as c}<div class="field"><b>{c}</b><div>{cell(r.cells[c])}</div></div>{/each}
-								</details>
-							</td>
-						</tr>
-						{/if}
-					{/each}
-				</tbody>
-			</table>
-		</div>
+			<div class="scroll">
+				<table>
+					<thead
+						><tr
+							>{#each short as c}<th>{c}</th>{/each}</tr
+						></thead
+					>
+					<tbody>
+						{#each t.rows as r}
+							<tr
+								>{#each short as c}<td>{shownValue(r.cells[c], c)}</td>{/each}</tr
+							>
+							<!-- A fold only for long text; an id already on screen (a group's value) needs none. -->
+							{#if long.length || !short.some((c) => cell(r.cells[c]) === r.__id)}
+								<tr class="more">
+									<td colspan={Math.max(short.length, 1)}>
+										<details>
+											<summary class="muted mono"
+												>{r.__id}{#each long as c}{' · '}{c}{/each}</summary
+											>
+											{#each long as c}<div class="field">
+													<b>{c}</b>
+													<div>{cell(r.cells[c])}</div>
+												</div>{/each}
+										</details>
+									</td>
+								</tr>
+							{/if}
+						{/each}
+					</tbody>
+				</table>
+			</div>
 		{/if}
 	{:else if component.kind === 'row_diff_approval'}
 		{@const d = component.props}
-		<h3>{d.row_id === undefined ? `${d.op} a new row in ${d.title} (${d.table})` : `${d.op} ${d.title} (${d.table}) / ${d.row_id}`} — nothing is written unless you approve</h3>
+		<h3>
+			{d.row_id === undefined
+				? `${d.op} a new row in ${d.title} (${d.table})`
+				: `${d.op} ${d.title} (${d.table}) / ${d.row_id}`} — nothing is written unless you approve
+		</h3>
 		{#if d.warning}<p><strong class="bad">! {d.warning}</strong></p>{/if}
-		{#if d.read_from?.length}<p><Badge tone="warn">contains text from {d.read_from.join(', ')}</Badge></p>{/if}
-		{#if d.op === 'delete'}<p class="bad">approve deletes the whole row: every value below is gone</p>{/if}
+		{#if d.read_from?.length}<p>
+				<Badge tone="warn">contains text from {d.read_from.join(', ')}</Badge>
+			</p>{/if}
+		{#if d.op === 'delete'}<p class="bad">
+				approve deletes the whole row: every value below is gone
+			</p>{/if}
 		<ul class="diff">
 			{#each d.cells as ch}
 				{#if d.op === 'insert_many' && d.row_id !== undefined}
 					<li><b>{ch.key}</b>: {shown(ch.new)} <span class="muted">(unchanged)</span></li>
 				{:else if d.op === 'delete'}
-					<li><b>{ch.key}</b>: <span class="old">{shown(ch.old)}</span> → <span class="bad">(deleted)</span></li>
+					<li>
+						<b>{ch.key}</b>: <span class="old">{shown(ch.old)}</span> →
+						<span class="bad">(deleted)</span>
+					</li>
 				{:else}
-					<li><b>{ch.key}</b>: <span class="old">{shown(ch.old)}</span> → <span class="new">{shown(ch.new)}</span></li>
+					<li>
+						<b>{ch.key}</b>: <span class="old">{shown(ch.old)}</span> →
+						<span class="new">{shown(ch.new)}</span>
+					</li>
 				{/if}
 			{/each}
 		</ul>
 		{#if d.lines}
 			{@const l = d.lines}
 			{#each l.rows as row, i}
-				<p class="muted">+ line {i + 1} of {l.rows.length} in {l.title} ({l.table}), its {l.ref_key} → the row above</p>
+				<p class="muted">
+					+ line {i + 1} of {l.rows.length} in {l.title} ({l.table}), its {l.ref_key} → the row above
+				</p>
 				<ul class="diff">
 					{#each row as ch}
-						<li><b>{ch.key}</b>: <span class="old">{shown(ch.old)}</span> → <span class="new">{shown(ch.new)}</span></li>
+						<li>
+							<b>{ch.key}</b>: <span class="old">{shown(ch.old)}</span> →
+							<span class="new">{shown(ch.new)}</span>
+						</li>
 					{/each}
 				</ul>
 			{/each}
@@ -131,7 +185,10 @@
 		<h3>inbox — {i.items.length} waiting</h3>
 		<ul>
 			{#each i.items as x}
-				<li><Badge>{x.source}</Badge> {x.title} <span class="muted">{x.created_at} ({x.id})</span></li>
+				<li>
+					<Badge>{x.source}</Badge>
+					{x.title} <span class="muted">{x.created_at} ({x.id})</span>
+				</li>
 			{/each}
 		</ul>
 		{#each i.refused as r}<StatusNote kind="unwired" block={false}>{r}</StatusNote>{/each}
@@ -142,21 +199,31 @@
 			{#each a.items as x}
 				<li>
 					<Badge tone={severityTone(x.severity)}>{x.severity.toUpperCase()}</Badge>
-					<span class="muted">{x.kind} · {x.age}</span> {x.what}
-					<div class="muted">{x.where}{#if x.note} · {x.note}{/if}</div>
+					<span class="muted">{x.kind} · {x.age}</span>
+					{x.what}
+					<div class="muted">
+						{x.where}{#if x.note}
+							· {x.note}{/if}
+					</div>
 				</li>
 			{/each}
 		</ul>
 		{#each a.unknown as u}
-			<StatusNote kind="unwired" block={false}>source unreadable, so its state is UNKNOWN not empty: {u}</StatusNote>
+			<StatusNote kind="unwired" block={false}
+				>source unreadable, so its state is UNKNOWN not empty: {u}</StatusNote
+			>
 		{/each}
 	{:else if component.kind === 'red_status'}
 		{@const r = component.props}
 		<h3>{r.red_count === 0 ? 'nothing red' : `${r.red_count} red`}</h3>
-		<ul>{#each r.reds as x}<li class="bad">✗ {x}</li>{/each}</ul>
+		<ul>
+			{#each r.reds as x}<li class="bad">✗ {x}</li>{/each}
+		</ul>
 		{#if r.hold_count > 0}
 			<p>{r.hold_count} on hold (intentional)</p>
-			<ul>{#each r.holds as x}<li>⏸ {x}</li>{/each}</ul>
+			<ul>
+				{#each r.holds as x}<li>⏸ {x}</li>{/each}
+			</ul>
 		{/if}
 	{:else if component.kind === 'markdown'}
 		<Markdown text={component.props.text} />
@@ -165,8 +232,16 @@
 		{#if t.title}<h3>{t.title}</h3>{/if}
 		<div class="scroll">
 			<table>
-				<thead><tr>{#each t.columns as c}<th>{c}</th>{/each}</tr></thead>
-				<tbody>{#each t.rows as r}<tr>{#each r as v, i}<td>{shownValue(v, t.columns[i] ?? '')}</td>{/each}</tr>{/each}</tbody>
+				<thead
+					><tr
+						>{#each t.columns as c}<th>{c}</th>{/each}</tr
+					></thead
+				>
+				<tbody
+					>{#each t.rows as r}<tr
+							>{#each r as v, i}<td>{shownValue(v, t.columns[i] ?? '')}</td>{/each}</tr
+						>{/each}</tbody
+				>
 			</table>
 		</div>
 	{:else if component.kind === 'list'}
@@ -174,11 +249,20 @@
 		{#if l.title}<h3>{l.title}</h3>{/if}
 		{@render deltaBar(l.items.map((x) => x.delta))}
 		<!-- Each item keeps its number in the whole list (shell.rs), so Před and Po do not renumber. -->
-		{@const items = l.items.map((x, i) => ({ ...x, n: i + 1 })).filter((x) => shownIn(x.delta, view))}
+		{@const items = l.items
+			.map((x, i) => ({ ...x, n: i + 1 }))
+			.filter((x) => shownIn(x.delta, view))}
 		{#snippet item(x: (typeof items)[number])}
-			<li data-delta={x.delta} value={l.ordered ? x.n : undefined}>{@render mark(x.delta)}{#if x.tone}<Badge tone={x.tone}>{x.tone}</Badge>{' '}{/if}{x.text}{#if x.detail}<span class="muted"> — {x.detail}</span>{/if}</li>
+			<li data-delta={x.delta} value={l.ordered ? x.n : undefined}>
+				{@render mark(x.delta)}{#if x.tone}<Badge tone={x.tone}>{x.tone}</Badge
+					>{' '}{/if}{x.text}{#if x.detail}<span class="muted"> — {x.detail}</span>{/if}
+			</li>
 		{/snippet}
-		{#if l.ordered}<ol>{#each items as x}{@render item(x)}{/each}</ol>{:else}<ul>{#each items as x}{@render item(x)}{/each}</ul>{/if}
+		{#if l.ordered}<ol>
+				{#each items as x}{@render item(x)}{/each}
+			</ol>{:else}<ul>
+				{#each items as x}{@render item(x)}{/each}
+			</ul>{/if}
 	{:else if component.kind === 'record'}
 		{@const r = component.props}
 		{#if r.title}<h3>{r.title}</h3>{/if}
@@ -189,9 +273,11 @@
 				<dt data-delta={f.delta}>{@render mark(f.delta)}{f.key}</dt>
 				<dd>
 					{#if view === 'before' && f.delta === 'changed'}
-						{#if was}{@render value(f.was, f.key)}{:else}<span class="muted">(dřív neuvedeno)</span>{/if}
+						{#if was}{@render value(f.was, f.key)}{:else}<span class="muted">(dřív neuvedeno)</span
+							>{/if}
 					{:else if view === 'changes' && was}
-						<span class="old">{@render value(f.was, f.key)}</span> → <span class="new">{@render value(f.value, f.key)}</span>
+						<span class="old">{@render value(f.was, f.key)}</span> →
+						<span class="new">{@render value(f.value, f.key)}</span>
 					{:else}{@render value(f.value, f.key)}{/if}
 				</dd>
 			{/each}
@@ -200,9 +286,15 @@
 		<!-- serve's number, one text node; the change is an arrow, a sign and a word, never colour only. -->
 		{@const k = component.props}
 		<h3>{k.title}</h3>
-		<p class="kpi-value">{k.unit ? `${number(k.value)} ${k.unit}` : number(k.value, isMoney(k.title))}</p>
+		<p class="kpi-value">
+			{k.unit ? `${number(k.value)} ${k.unit}` : number(k.value, isMoney(k.title))}
+		</p>
 		{#if k.delta !== undefined}
-			<p class="kpi-delta">{signed(k.delta)}<span class="sr">{k.delta > 0 ? ' up' : k.delta < 0 ? ' down' : ' unchanged'}</span>{#if k.delta_label}{' '}{k.delta_label}{/if}</p>
+			<p class="kpi-delta">
+				{signed(k.delta)}<span class="sr"
+					>{k.delta > 0 ? ' up' : k.delta < 0 ? ' down' : ' unchanged'}</span
+				>{#if k.delta_label}{' '}{k.delta_label}{/if}
+			</p>
 		{/if}
 		{#if k.source}<p class="muted">{k.source}</p>{/if}
 	{:else if component.kind === 'chart'}
@@ -219,7 +311,9 @@
 					<span class="label">{@render mark(d)}{n.label}</span>
 					{#if n.note}<span class="note">{n.note}</span>{/if}
 					{#if n.children?.length}
-						<div class="kids">{#each n.children as c}{@render orgNode(c, d)}{/each}</div>
+						<div class="kids">
+							{#each n.children as c}{@render orgNode(c, d)}{/each}
+						</div>
 					{/if}
 				</div>
 			{/if}
@@ -255,7 +349,9 @@
 		<Form form={component.props} />
 	{:else}
 		<!-- Unreachable past the bridge's decoder; said aloud if it ever is. -->
-		<StatusNote kind="error" title="refused">no renderer for component kind {(component as { kind: string }).kind}</StatusNote>
+		<StatusNote kind="error" title="refused"
+			>no renderer for component kind {(component as { kind: string }).kind}</StatusNote
+		>
 	{/if}
 </section>
 

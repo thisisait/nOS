@@ -16,7 +16,8 @@ export function ticks(lo: number, hi: number, count = 5): number[] {
 	if (!(hi > lo)) return [lo];
 	const step = niceStep(hi - lo, count);
 	const out: number[] = [];
-	for (let i = Math.ceil(lo / step - 1e-9); i <= Math.floor(hi / step + 1e-9); i++) out.push(clean(i * step));
+	for (let i = Math.ceil(lo / step - 1e-9); i <= Math.floor(hi / step + 1e-9); i++)
+		out.push(clean(i * step));
 	return out;
 }
 
@@ -32,7 +33,9 @@ export function band(n: number, r0: number, r1: number) {
 
 export type Tick = { v: number; label: string };
 
-const HOUR = 3600e3, DAY = 24 * HOUR, MONTH = 30.44 * DAY;
+const HOUR = 3600e3,
+	DAY = 24 * HOUR,
+	MONTH = 30.44 * DAY;
 const iso = (v: number) => new Date(v).toISOString();
 
 /** UTC ticks in [lo, hi] (epoch ms), stepped by hours, days, months or years, each labelled in its unit. */
@@ -41,7 +44,8 @@ export function timeTicks(lo: number, hi: number, count = 5): Tick[] {
 	const target = (hi - lo) / Math.max(count, 1);
 	const fixed = (step: number, label: (s: string) => string) => {
 		const out: Tick[] = [];
-		for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) out.push({ v, label: label(iso(v)) });
+		for (let v = Math.ceil(lo / step) * step; v <= hi; v += step)
+			out.push({ v, label: label(iso(v)) });
 		return out;
 	};
 	const hours = [1, 2, 3, 6, 12].find((h) => h * HOUR >= target);
@@ -56,7 +60,11 @@ export function timeTicks(lo: number, hi: number, count = 5): Tick[] {
 	if (Date.UTC(Math.floor(m / 12), m % 12, 1) < lo) m++;
 	m = Math.ceil(m / every) * every;
 	const out: Tick[] = [];
-	for (let v = Date.UTC(Math.floor(m / 12), m % 12, 1); v <= hi; m += every, v = Date.UTC(Math.floor(m / 12), m % 12, 1))
+	for (
+		let v = Date.UTC(Math.floor(m / 12), m % 12, 1);
+		v <= hi;
+		m += every, v = Date.UTC(Math.floor(m / 12), m % 12, 1)
+	)
 		out.push({ v, label: months ? iso(v).slice(0, 7) : iso(v).slice(0, 4) });
 	return out;
 }

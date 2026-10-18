@@ -12,7 +12,10 @@ import type { ToShell } from './wire';
 
 const FIXTURE = new URL('../../../../contracts/thalamus-shell.fixture.json', import.meta.url);
 const fx = JSON.parse(readFileSync(FIXTURE, 'utf8')) as { to_shell: { msg: ToShell }[] };
-const req = fx.to_shell.map((c) => c.msg).find((m) => m.t === 'approval_request') as Extract<ToShell, { t: 'approval_request' }>;
+const req = fx.to_shell.map((c) => c.msg).find((m) => m.t === 'approval_request') as Extract<
+	ToShell,
+	{ t: 'approval_request' }
+>;
 const two = asked(asked(empty(), req), { ...req, approval: 'second' });
 
 describe('the approval queue', () => {
@@ -24,7 +27,12 @@ describe('the approval queue', () => {
 
 	it('approve after the end was in view sends one decision for the oldest', () => {
 		const r = decide(seen(two, req.approval), req.approval, 'approve');
-		expect(r.send).toEqual({ t: 'approval_decision', approval: req.approval, decision: 'approve', note: null });
+		expect(r.send).toEqual({
+			t: 'approval_decision',
+			approval: req.approval,
+			decision: 'approve',
+			note: null
+		});
 		expect(r.q.pending.map((w) => w.approval)).toEqual(['second']);
 	});
 
@@ -55,7 +63,10 @@ describe('the approval queue', () => {
 
 	it('a closed link leaves every pending one not decided, and the queue empty', () => {
 		const r = closed(seen(two, req.approval));
-		expect(r.notes).toEqual([`not decided, nothing written: approval ${req.approval}`, 'not decided, nothing written: approval second']);
+		expect(r.notes).toEqual([
+			`not decided, nothing written: approval ${req.approval}`,
+			'not decided, nothing written: approval second'
+		]);
 		expect(r.q.pending).toEqual([]);
 		expect(decide(r.q, req.approval, 'approve').send).toBeNull();
 	});
@@ -63,7 +74,9 @@ describe('the approval queue', () => {
 
 describe('the approval card', () => {
 	const draw = (whole: boolean) =>
-		render(ApprovalCard, { props: { waiting: two.pending[0], of: 2, whole, ondecide: () => {}, onseen: () => {} } }).body;
+		render(ApprovalCard, {
+			props: { waiting: two.pending[0], of: 2, whole, ondecide: () => {}, onseen: () => {} }
+		}).body;
 
 	it('says 1 of N and keeps Approve disabled until the end was in view', () => {
 		const html = draw(false);
@@ -80,7 +93,9 @@ describe('the diff list', () => {
 	it('wraps every value inside the card', () => {
 		const src = readFileSync(new URL('./Component.svelte', import.meta.url), 'utf8');
 		const css = compile(src, { filename: 'Component.svelte', css: 'external' }).css?.code ?? '';
-		const rule = [...css.matchAll(/([^{}]+)\{([^}]*)\}/g)].find(([, sel]) => /\.diff[^,]*\bli\b/.test(sel));
+		const rule = [...css.matchAll(/([^{}]+)\{([^}]*)\}/g)].find(([, sel]) =>
+			/\.diff[^,]*\bli\b/.test(sel)
+		);
 		expect(rule?.[2]).toMatch(/overflow-wrap:\s*anywhere/);
 		expect(rule?.[2]).toMatch(/white-space:\s*pre-wrap/);
 	});

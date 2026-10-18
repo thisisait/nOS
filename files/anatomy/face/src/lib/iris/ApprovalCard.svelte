@@ -8,7 +8,14 @@
 	import type { Decision, Waiting } from './approvals';
 
 	// scope: whom the person works for; the bridge refuses a switch while a card waits, so it is the card's.
-	let { waiting, of, whole, scope = null, onseen, ondecide }: {
+	let {
+		waiting,
+		of,
+		whole,
+		scope = null,
+		onseen,
+		ondecide
+	}: {
 		waiting: Waiting;
 		scope?: string | null;
 		of: number;
@@ -21,27 +28,49 @@
 	$effect(() => {
 		const id = waiting.approval;
 		if (!end) return;
-		const io = new IntersectionObserver((es) => es.some((e) => e.isIntersecting) && onseen(id), { threshold: 1 });
+		const io = new IntersectionObserver((es) => es.some((e) => e.isIntersecting) && onseen(id), {
+			threshold: 1
+		});
 		io.observe(end);
 		return () => io.disconnect();
 	});
 </script>
 
-<section class="card" data-approval={waiting.approval}>
+<section class="waiting" data-approval={waiting.approval}>
 	<div class="edit">
-		<p class="head">approval {waiting.approval}{of > 1 ? ` (1 of ${of})` : ''}{scope ? ` · asked for ${scope}` : ''}</p>
+		<p class="head">
+			approval {waiting.approval}{of > 1 ? ` (1 of ${of})` : ''}{scope
+				? ` · asked for ${scope}`
+				: ''}
+		</p>
 		<ComponentView component={waiting.component} />
 		<div class="end" bind:this={end} aria-hidden="true"></div>
 	</div>
 	<div class="ask">
 		{#if waiting.component.kind === 'row_diff_approval' && waiting.component.props.op === 'delete'}
-			<span class="bad">{whole ? 'approve deleting this row?' : 'scroll to the end to approve deleting this row, or reject it'}</span>
+			<span class="bad"
+				>{whole
+					? 'approve deleting this row?'
+					: 'scroll to the end to approve deleting this row, or reject it'}</span
+			>
 		{:else if waiting.component.kind === 'column_add_approval'}
-			<span>{whole ? 'approve adding these columns?' : 'scroll to the last column to approve adding these columns, or reject it'}</span>
+			<span
+				>{whole
+					? 'approve adding these columns?'
+					: 'scroll to the last column to approve adding these columns, or reject it'}</span
+			>
 		{:else if waiting.component.kind === 'table_schema_approval'}
-			<span>{whole ? 'approve creating this table?' : 'scroll to the last column to approve creating this table, or reject it'}</span>
+			<span
+				>{whole
+					? 'approve creating this table?'
+					: 'scroll to the last column to approve creating this table, or reject it'}</span
+			>
 		{:else}
-			<span>{whole ? 'approve this edit?' : 'scroll to the end of the edit to approve it, or reject it'}</span>
+			<span
+				>{whole
+					? 'approve this edit?'
+					: 'scroll to the end of the edit to approve it, or reject it'}</span
+			>
 		{/if}
 		<button disabled={!whole} onclick={() => ondecide(waiting.approval, 'approve')}>approve</button>
 		<button onclick={() => ondecide(waiting.approval, 'reject')}>reject</button>
@@ -49,7 +78,7 @@
 </section>
 
 <style>
-	.card {
+	.waiting {
 		margin: 0 16px;
 		border: 1px solid var(--warn-ink);
 		border-radius: 12px;

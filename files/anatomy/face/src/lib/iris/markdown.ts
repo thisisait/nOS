@@ -18,7 +18,8 @@ export type Block =
 	| { t: 'hr' };
 
 // A label holds no "[": else every unclosed "[" re-reads the rest (quadratic).
-const INLINE = /`([^`\n]+)`|\*\*(.+?)\*\*|\*([^*\s](?:[^*]*[^*\s])?)\*|!\[([^[\]\n]*)\]\(([^)\s]+)\)|\[([^[\]\n]+)\]\(([^)\s]+)\)/g;
+const INLINE =
+	/`([^`\n]+)`|\*\*(.+?)\*\*|\*([^*\s](?:[^*]*[^*\s])?)\*|!\[([^[\]\n]*)\]\(([^)\s]+)\)|\[([^[\]\n]+)\]\(([^)\s]+)\)/g;
 
 export function inline(s: string): Inline[] {
 	const out: Inline[] = [];
@@ -75,7 +76,8 @@ export function parse(text: string): Block[] {
 			if (ul) {
 				const item = inline(ul[2]);
 				// Two spaces under an item is the second level; a deeper indent stays there.
-				if (ul[1].length >= 2 && last?.t === 'ul' && last.items.length) last.items[last.items.length - 1].sub.push(item);
+				if (ul[1].length >= 2 && last?.t === 'ul' && last.items.length)
+					last.items[last.items.length - 1].sub.push(item);
 				else if (last?.t === 'ul') last.items.push({ inl: item, sub: [] });
 				else out.push({ t: 'ul', items: [{ inl: item, sub: [] }] });
 			} else {

@@ -13,17 +13,32 @@ import type { ChoiceProps, ToShell } from './wire';
 const S = '0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b';
 const C = '3c9e1d2f-4a5b-4c6d-8e7f-9a0b1c2d3e4f';
 const one: ChoiceProps = {
-	id: C, question: 'Which table should I chart first?', multi: false, suggested: ['todos'],
-	options: [{ label: 'todos', note: 'the open work' }, { label: 'expenses' }, { label: '<b>both</b>' }],
+	id: C,
+	question: 'Which table should I chart first?',
+	multi: false,
+	suggested: ['todos'],
+	options: [
+		{ label: 'todos', note: 'the open work' },
+		{ label: 'expenses' },
+		{ label: '<b>both</b>' }
+	]
 };
 const many: ChoiceProps = { ...one, multi: true, suggested: ['todos', 'expenses'] };
-const html = (choice: ChoiceProps, onreply?: (m: unknown) => void) => render(Choice, { props: { choice, session: S, onreply } }).body;
-const text = (h: string) => h.replace(/<[^>]*>/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/\s+/g, ' ');
+const html = (choice: ChoiceProps, onreply?: () => Promise<boolean>) =>
+	render(Choice, { props: { choice, session: S, onreply } }).body;
+const text = (h: string) =>
+	h
+		.replace(/<[^>]*>/g, ' ')
+		.replace(/&lt;/g, '<')
+		.replace(/&gt;/g, '>')
+		.replace(/&amp;/g, '&')
+		.replace(/\s+/g, ' ');
 
 describe('a choice is drawn as native inputs, every label as text', () => {
 	it('the question, every label and note reach the page as text', () => {
 		const h = html(one);
-		for (const s of [one.question, 'todos', 'the open work', 'expenses', '<b>both</b>']) expect(text(h)).toContain(s);
+		for (const s of [one.question, 'todos', 'the open work', 'expenses', '<b>both</b>'])
+			expect(text(h)).toContain(s);
 		expect(h).not.toContain('<b>both</b>');
 	});
 
@@ -43,8 +58,13 @@ describe('a choice is drawn as native inputs, every label as text', () => {
 
 	it('drawing it sends nothing', () => {
 		let sent = 0;
-		html(one, () => sent++);
-		render(Message, { props: { msg: { t: 'render', session: S, component: { kind: 'choice', props: one } }, onchoose: () => sent++ } });
+		html(one, async () => !!sent++);
+		render(Message, {
+			props: {
+				msg: { t: 'render', session: S, component: { kind: 'choice', props: one } },
+				onchoose: async () => !!sent++
+			}
+		});
 		expect(sent).toBe(0);
 	});
 });
@@ -63,8 +83,18 @@ describe('the reply', () => {
 	});
 
 	it('sends exactly the picked labels, in the order offered', () => {
-		expect(reply(S, one, ['expenses'], false)).toEqual({ t: 'choice_reply', session: S, choice: C, picked: ['expenses'] });
-		expect(reply(S, many, ['<b>both</b>', 'todos'], false)).toEqual({ t: 'choice_reply', session: S, choice: C, picked: ['todos', '<b>both</b>'] });
+		expect(reply(S, one, ['expenses'], false)).toEqual({
+			t: 'choice_reply',
+			session: S,
+			choice: C,
+			picked: ['expenses']
+		});
+		expect(reply(S, many, ['<b>both</b>', 'todos'], false)).toEqual({
+			t: 'choice_reply',
+			session: S,
+			choice: C,
+			picked: ['todos', '<b>both</b>']
+		});
 	});
 
 	it('sends nothing twice, nothing empty, nothing not offered, never two on a single', () => {
@@ -79,7 +109,11 @@ describe('the reply', () => {
 		if (m?.t !== 'choice_reply') throw new Error('no reply');
 		expect(await answer(m, async () => true)).toEqual(['expenses']);
 		expect(await answer(m, async () => false)).toBeNull();
-		expect(await answer(m, async () => { throw new Error('an approval is waiting: decide it first'); })).toBeNull();
+		expect(
+			await answer(m, async () => {
+				throw new Error('an approval is waiting: decide it first');
+			})
+		).toBeNull();
 		expect(await answer(m)).toBeNull();
 	});
 
@@ -107,20 +141,28 @@ function walk(n: unknown, up: Node[], out: [Node, Node[]][]) {
 	if (Array.isArray(n)) return n.forEach((x) => walk(x, up, out));
 	const node = n as Node;
 	if (node.type) out.push([node, up]);
-	for (const [k, v] of Object.entries(node)) if (k !== 'metadata' && k !== 'parent') walk(v, node.type ? [...up, node] : up, out);
+	for (const [k, v] of Object.entries(node))
+		if (k !== 'metadata' && k !== 'parent') walk(v, node.type ? [...up, node] : up, out);
 }
 const nodes = (file: string) => {
 	const all: [Node, Node[]][] = [];
 	walk(parse(readFileSync(new URL(file, import.meta.url), 'utf8'), { modern: true }), [], all);
 	return all;
 };
-const declares = (name: string) => (a: Node) => a.type === 'VariableDeclarator' && (a.id as Node).name === name;
-const isProps = (a: Node) => a.type === 'VariableDeclarator' && ((a.init as Node)?.callee as Node)?.name === '$props';
-const uses = (all: [Node, Node[]][], name: string) => all.filter(([n, up]) => n.type === 'Identifier' && n.name === name && up.at(-1)?.id !== n);
+const declares = (name: string) => (a: Node) =>
+	a.type === 'VariableDeclarator' && (a.id as Node).name === name;
+const isProps = (a: Node) =>
+	a.type === 'VariableDeclarator' && ((a.init as Node)?.callee as Node)?.name === '$props';
+const uses = (all: [Node, Node[]][], name: string) =>
+	all.filter(([n, up]) => n.type === 'Identifier' && n.name === name && up.at(-1)?.id !== n);
 
 describe('nothing is sent without the click', () => {
 	it.each(['Choice.svelte', 'Message.svelte'])('%s runs no effect and no mount hook', (f) => {
-		const hooks = nodes(f).filter(([n]) => n.type === 'Identifier' && ['$effect', 'onMount', 'beforeUpdate', 'afterUpdate'].includes(n.name ?? ''));
+		const hooks = nodes(f).filter(
+			([n]) =>
+				n.type === 'Identifier' &&
+				['$effect', 'onMount', 'beforeUpdate', 'afterUpdate'].includes(n.name ?? '')
+		);
 		expect(hooks.map(([n]) => n.name)).toEqual([]);
 	});
 
@@ -130,19 +172,29 @@ describe('nothing is sent without the click', () => {
 		expect(sends.length).toBe(1);
 		for (const [, up] of sends) {
 			const at = up.findIndex((a) => a.type === 'Attribute' && a.name === 'onclick');
-			expect(at > 0 && up[at - 1].type === 'RegularElement' && up[at - 1].name === 'button', 'send outside a button onclick').toBe(true);
+			expect(
+				at > 0 && up[at - 1].type === 'RegularElement' && up[at - 1].name === 'button',
+				'send outside a button onclick'
+			).toBe(true);
 		}
 		const replies = uses(all, 'onreply');
 		expect(replies.some(([, up]) => up.some(declares('send')))).toBe(true);
-		for (const [, up] of replies) expect(up.some(declares('send')) || up.some(isProps), 'onreply outside send').toBe(true);
+		for (const [, up] of replies)
+			expect(up.some(declares('send')) || up.some(isProps), 'onreply outside send').toBe(true);
 	});
 
 	it('Message: onchoose only reaches the Choice card as its onreply', () => {
 		const all = uses(nodes('Message.svelte'), 'onchoose');
-		expect(all.some(([, up]) => up.some((a) => a.type === 'Component' && a.name === 'Choice'))).toBe(true);
+		expect(
+			all.some(([, up]) => up.some((a) => a.type === 'Component' && a.name === 'Choice'))
+		).toBe(true);
 		for (const [, up] of all) {
 			const at = up.findIndex((a) => a.type === 'Attribute' && a.name === 'onreply');
-			expect(up.some(isProps) || (at > 0 && up[at - 1].type === 'Component' && up[at - 1].name === 'Choice'), 'onchoose outside Choice').toBe(true);
+			expect(
+				up.some(isProps) ||
+					(at > 0 && up[at - 1].type === 'Component' && up[at - 1].name === 'Choice'),
+				'onchoose outside Choice'
+			).toBe(true);
 		}
 	});
 });
