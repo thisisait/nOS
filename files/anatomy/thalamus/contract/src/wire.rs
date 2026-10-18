@@ -5,6 +5,7 @@
 use crate::renderers::{Component, When};
 use crate::uid;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "t", rename_all = "snake_case", deny_unknown_fields)]
@@ -31,6 +32,92 @@ pub enum ToThalamus {
     WorkspaceLoad,
     /// The person's whole workspace document, replacing the one held: a JSON object (need_doc).
     WorkspaceSave { doc: serde_json::Value },
+    /// The shell asks for the person's catalogue, to mark their input; serve answers `catalogue`, again after working_for.
+    Catalogue,
+    /// What the face lets Iris do on its screen (face/src/lib/limbs/types.ts Limb); replaces any earlier list.
+    Limbs { limbs: Vec<Limb> },
+    /// The face's answer to an `act`: ok and what it returned, or why not.
+    Acted {
+        act: String,
+        ok: bool,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        result: Option<serde_json::Value>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        reason: Option<String>,
+    },
+}
+
+/// One (app, action) the face declares; `writes` puts it behind an action_approval card.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Limb {
+    pub app: String,
+    pub action: String,
+    pub params: BTreeMap<String, ParamSpec>,
+    pub writes: bool,
+    pub says: String,
+}
+
+/// A limb param: its type, an enum's values, and whether it must be given (types.ts ParamSpec).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ParamSpec {
+    #[serde(rename = "type")]
+    pub kind: ParamKind,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub values: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub required: Option<bool>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ParamKind {
+    String,
+    Number,
+    Boolean,
+    Enum,
+}
+
+/// Why `params` do not pass a limb's spec (an unknown name, a required one missing, a misfit), or None:
+/// the rule face/src/lib/limbs/dispatch.ts badParam applies on the other side.
+pub fn check_params(spec: &BTreeMap<String, ParamSpec>, params: &serde_json::Map<String, serde_json::Value>) -> Option<String> {
+    if let Some(k) = params.keys().find(|k| !spec.contains_key(*k)) {
+        return Some(format!("unknown param {k}"));
+    }
+    spec.iter().find_map(|(k, s)| {
+        let fits = |v: &serde_json::Value| match s.kind {
+            ParamKind::String => v.is_string(),
+            ParamKind::Number => v.is_number(),
+            ParamKind::Boolean => v.is_boolean(),
+            ParamKind::Enum => v.as_str().is_some_and(|x| s.values.iter().flatten().any(|o| o == x)),
+        };
+        match params.get(k) {
+            None if s.required == Some(true) => Some(format!("missing param {k}")),
+            Some(v) if !fits(v) => Some(format!("bad param {k}")),
+            _ => None,
+        }
+    })
+}
+
+/// One table of the person's catalogue: what their input is marked against (face/src/lib/iris/marks.ts).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CatalogueTable {
+    pub id: String,
+    pub title: String,
+    pub columns: Vec<CatalogueColumn>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CatalogueColumn {
+    pub key: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+    pub kind: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub options: Option<Vec<String>>,
 }
 
 /// One model the person may pick: who processes the turns, whether they leave the EU, and
@@ -93,6 +180,10 @@ pub enum ToShell {
     Replay { session: String, log: Vec<ToShell>, open: Vec<String> },
     /// The person's workspace document; None when the thalamus holds none.
     Workspace { doc: Option<serde_json::Value> },
+    /// The tables the person may read under the scope, to mark their input (asked by `catalogue`).
+    Catalogue { session: String, tables: Vec<CatalogueTable> },
+    /// Iris takes a declared limb on the face's screen; the face answers `acted` with this `act`.
+    Act { session: String, act: String, app: String, action: String, params: serde_json::Map<String, serde_json::Value> },
 }
 
 /// A workspace document's cap, serialized: it rides one line of at most 1 MiB.
@@ -254,6 +345,76 @@ fn need_doc(doc: &serde_json::Value) -> Result<(), String> {
     }
 }
 
+/// A limb's app, action or param name: [a-z0-9_-]{1,64}.
+fn need_name(what: &str, s: &str) -> Result<(), String> {
+    let ok = (1..=64).contains(&s.len()) && s.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_' || b == b'-');
+    if ok { Ok(()) } else { Err(format!("{what} is not [a-z0-9_-]{{1,64}}: {s:?}")) }
+}
+
+/// An act's params are flat: at most 16 strings, numbers and bools, as a limb's spec types them.
+pub fn check_flat(params: &serde_json::Map<String, serde_json::Value>) -> Result<(), String> {
+    if params.len() > 16 {
+        return Err("an act takes at most 16 params".into());
+    }
+    match params.iter().find(|(_, v)| !(v.is_string() || v.is_number() || v.is_boolean())) {
+        Some((k, _)) => Err(format!("param {k:?} is not a string, number or bool")),
+        None => params.keys().try_for_each(|k| need_name("a param", k)),
+    }
+}
+
+fn need_limbs(limbs: &[Limb]) -> Result<(), String> {
+    if limbs.len() > 64 {
+        return Err(format!("a face declares at most 64 limbs, not {}", limbs.len()));
+    }
+    for (i, l) in limbs.iter().enumerate() {
+        need_name("an app", &l.app)?;
+        need_name("an action", &l.action)?;
+        let at = format!("{}.{}", l.app, l.action);
+        if limbs[..i].iter().any(|x| x.app == l.app && x.action == l.action) {
+            return Err(format!("{at} is declared twice"));
+        }
+        if l.says.trim().is_empty() || l.says.chars().count() > 200 {
+            return Err(format!("{at} says what it does in 1-200 chars"));
+        }
+        if l.params.len() > 16 {
+            return Err(format!("{at} takes at most 16 params"));
+        }
+        for (k, p) in &l.params {
+            need_name("a param", k)?;
+            match (p.kind, &p.values) {
+                (ParamKind::Enum, Some(v)) if (1..=50).contains(&v.len()) && v.iter().all(|x| (1..=60).contains(&x.chars().count())) => {}
+                (ParamKind::Enum, _) => return Err(format!("{at} param {k}: an enum has 1-50 values of 1-60 chars")),
+                (_, Some(_)) => return Err(format!("{at} param {k}: only an enum has values")),
+                (_, None) => {}
+            }
+        }
+    }
+    Ok(())
+}
+
+fn need_catalogue(tables: &[CatalogueTable]) -> Result<(), String> {
+    let name = |what: &str, s: &str| if s.trim().is_empty() || s.chars().count() > 200 { Err(format!("{what} is 1-200 chars")) } else { Ok(()) };
+    if tables.len() > 64 {
+        return Err("a catalogue holds at most 64 tables".into());
+    }
+    tables.iter().try_for_each(|t| {
+        name("a catalogue table id", &t.id)?;
+        name("a catalogue table title", &t.title)?;
+        if t.columns.len() > 120 {
+            return Err(format!("table {} has at most 120 columns", t.id));
+        }
+        t.columns.iter().try_for_each(|c| {
+            name("a catalogue column key", &c.key)?;
+            name("a catalogue column kind", &c.kind)?;
+            c.label.as_deref().map_or(Ok(()), |l| name("a catalogue column label", l))?;
+            match &c.options {
+                Some(o) if o.len() > 200 || o.iter().any(|x| x.chars().count() > 200) => Err(format!("column {} has at most 200 options of 200 chars", c.key)),
+                _ => Ok(()),
+            }
+        })
+    })
+}
+
 /// The model has no form: one is drawn only inside the widget message the person asked for.
 fn not_a_form(c: &Component) -> Result<(), String> {
     match c {
@@ -308,6 +469,9 @@ fn check_shell(m: &ToShell) -> Result<(), String> {
             need_uuid("session", session)?;
             component.check()?;
             not_a_form(component)?;
+            if matches!(component, Component::ActionApproval(_)) {
+                return Err("an action is asked only as an approval, never drawn as a render".into());
+            }
             if matches!(component, Component::Choice(c) if c.id.is_none()) {
                 return Err("a choice the thalamus sends carries the id it minted".into());
             }
@@ -368,6 +532,17 @@ fn check_shell(m: &ToShell) -> Result<(), String> {
             })
         }
         ToShell::Workspace { doc } => doc.as_ref().map_or(Ok(()), need_doc),
+        ToShell::Catalogue { session, tables } => {
+            need_uuid("session", session)?;
+            need_catalogue(tables)
+        }
+        ToShell::Act { session, act, app, action, params } => {
+            need_uuid("session", session)?;
+            need_uuid("act", act)?;
+            need_name("an app", app)?;
+            need_name("an action", action)?;
+            check_flat(params)
+        }
         ToShell::Widget { session, widget, component } => {
             need_uuid("session", session)?;
             need_token(widget)?;
@@ -415,6 +590,13 @@ pub fn decode_to_thalamus(line: &str) -> Result<ToThalamus, String> {
         ToThalamus::WorkingFor { scope } => need_scope(scope)?,
         ToThalamus::ModelPick { backend, model } => need_model(backend, model)?,
         ToThalamus::WorkspaceSave { doc } => need_doc(doc)?,
+        ToThalamus::Limbs { limbs } => need_limbs(limbs)?,
+        ToThalamus::Acted { act, reason, .. } => {
+            need_uuid("act", act)?;
+            if reason.as_ref().is_some_and(|r| r.chars().count() > 2000) {
+                return Err("an acted reason is at most 2000 chars".into());
+            }
+        }
         _ => {}
     }
     Ok(m)

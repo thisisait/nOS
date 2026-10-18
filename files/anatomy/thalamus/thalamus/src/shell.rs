@@ -242,6 +242,12 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
                 out.push(Line::from(format!("  {}: {pts}", s.name)));
             }
         }
+        // A limb that writes on the face's screen: the limb, its own line, every param.
+        Component::ActionApproval(a) => {
+            out.push(head(format!("{}.{} on the face — nothing is done unless you approve", a.app, a.action)));
+            out.push(Line::from(format!("  {}", a.says)));
+            out.extend(a.params.iter().map(|(k, v)| Line::from(format!("  {k}: {}", shown(v)))));
+        }
         // The number serve computed, its change in words, and what it totalled.
         Component::Kpi(k) => {
             let unit = k.unit.as_deref().map(|u| format!(" {u}")).unwrap_or_default();
@@ -439,8 +445,10 @@ impl App {
                     }
                 }
             }
-            // The workspace is the pupil's.
-            ToShell::Workspace { .. } => {}
+            // The workspace is the pupil's, and so are the marks a catalogue draws.
+            ToShell::Workspace { .. } | ToShell::Catalogue { .. } => {}
+            // The terminal declares no limbs, so serve sends it no act: one that arrives is said, never done.
+            ToShell::Act { app, action, .. } => self.lines.push(warn(format!("refused: an act {app}.{action}, but this shell has no limbs"))),
         }
     }
 

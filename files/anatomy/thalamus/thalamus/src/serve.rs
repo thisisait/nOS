@@ -862,6 +862,9 @@ impl Server {
                     });
                     send(&mut out, &ToShell::Workspace { doc });
                 }
+                Ok(ToThalamus::Catalogue | ToThalamus::Limbs { .. } | ToThalamus::Acted { .. }) => {
+                    refuse(&mut out, "this thalamus does not serve catalogue or limbs yet");
+                }
                 Ok(ToThalamus::WorkspaceSave { doc }) => {
                     if let Err(why) = store::write(&store::path(&self.data, &who.uid(), "workspace"), &doc) {
                         refuse(&mut out, &format!("the workspace was not saved: {why}"));

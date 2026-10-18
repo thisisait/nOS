@@ -29,6 +29,7 @@ pub enum Component {
     Choice(Choice),
     Dashboard(Dashboard),
     Kpi(Kpi),
+    ActionApproval(ActionApproval),
 }
 
 /// Model text as markdown; every consumer draws it as text nodes, never as HTML.
@@ -408,6 +409,13 @@ impl Component {
                 most("dashboard dropped widgets", d.dropped.len(), 8)?;
                 d.dropped.iter().try_for_each(|x| cap("a dropped title", &x.title, NAME_MAX).and_then(|_| cap("a dropped why", &x.why, 500)))
             }
+            Component::ActionApproval(a) => {
+                if a.app.is_empty() || a.action.is_empty() || a.app.len() > 64 || a.action.len() > 64 {
+                    return Err("an action card names its app and action (1-64 chars)".into());
+                }
+                cap("an action's line", &a.says, 200)?;
+                crate::wire::check_flat(&a.params)
+            }
             Component::Kpi(k) => {
                 if k.title.trim().is_empty() {
                     return Err("a kpi has no title".into());
@@ -786,6 +794,16 @@ pub struct Omitted {
     pub key: String,
     /// The KEAP column kind, as KEAP names it.
     pub kind: String,
+}
+
+/// A declared limb that writes, asked before the act is sent (face_act, v8): the limb, its line, every param.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ActionApproval {
+    pub app: String,
+    pub action: String,
+    pub params: serde_json::Map<String, Value>,
+    pub says: String,
 }
 
 /// One number serve computed from a table (show kpi with a source, or a kpi widget); never the model's.
