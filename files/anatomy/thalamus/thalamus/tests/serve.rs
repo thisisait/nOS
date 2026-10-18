@@ -5975,7 +5975,7 @@ fn a_second_tab_takes_the_persons_session_over() {
         other => panic!("the older tab was not told, got {other:?}"),
     }
     assert!(next(&mut r1).is_none(), "the older tab stays open");
-    (&s2).write_all(encode(&ToThalamus::Resume).as_bytes()).unwrap();
+    (&s2).write_all(encode(&ToThalamus::Resume { workspace: None }).as_bytes()).unwrap();
     match next(&mut r2) {
         Some(ToShell::Session { session, .. }) => assert_eq!(session, first, "the newer tab did not take the session over"),
         other => panic!("expected Session, got {other:?}"),

@@ -27,7 +27,17 @@ pub enum ToThalamus {
     ModelPick { backend: String, model: String },
     /// Opens this connection's session as the person's last one its connection closed, then `replay`;
     /// a fresh one when there is none. Asked, never imposed: a bare first message opens a fresh session.
-    Resume,
+    /// With `workspace` (v9): that workspace tab's own session, switched to from the open one.
+    Resume {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        workspace: Option<String>,
+    },
+    /// The person's /clear (v9): the tab's session ends and a fresh one opens for it.
+    Clear,
+    /// The person's /branch (v9): `workspace`, a tab the shell just added, opens a session from this one's conversation.
+    Branch { workspace: String },
+    /// The person's Stop (v9): the running turn of `session` ends before its next model or tool call.
+    Stop { session: String },
     /// The person's workspace document as the thalamus holds it; serve answers `workspace`.
     WorkspaceLoad,
     /// The person's whole workspace document, replacing the one held: a JSON object (need_doc).
@@ -184,6 +194,8 @@ pub enum ToShell {
     Catalogue { session: String, tables: Vec<CatalogueTable> },
     /// Iris takes a declared limb on the face's screen; the face answers `acted` with this `act`.
     Act { session: String, act: String, app: String, action: String, params: serde_json::Map<String, serde_json::Value> },
+    /// Whether the session's local model is in memory (Ollama /api/ps, v9); said when it changes, never for a remote one.
+    ModelState { session: String, loaded: bool },
 }
 
 /// A workspace document's cap, serialized: it rides one line of at most 1 MiB.
@@ -317,6 +329,11 @@ fn need_uuid(field: &str, s: &str) -> Result<(), String> {
 fn need_token(s: &str) -> Result<(), String> {
     let ok = (1..=64).contains(&s.len()) && s.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-');
     if ok { Ok(()) } else { Err(format!("widget is not [A-Za-z0-9_-]{{1,64}}: {s:?}")) }
+}
+
+/// A workspace tab's id as the shell minted it ([A-Za-z0-9_-]{1,64}): it names a file under people/<uid>/.
+fn need_tab(s: &str) -> Result<(), String> {
+    need_token(s).map_err(|_| format!("workspace is not [A-Za-z0-9_-]{{1,64}}: {s:?}"))
 }
 
 fn need_scope(s: &Scope) -> Result<(), String> {
@@ -457,7 +474,7 @@ fn check_shell(m: &ToShell) -> Result<(), String> {
             }
         }
         ToShell::Text { session, .. } | ToShell::Activity { session, .. } | ToShell::TableChanged { session, .. }
-        | ToShell::Said { session, .. } => {
+        | ToShell::Said { session, .. } | ToShell::ModelState { session, .. } => {
             need_uuid("session", session)
         }
         ToShell::FormResult { session, widget, form, .. } => {
@@ -567,7 +584,8 @@ pub fn decode_to_shell(line: &str) -> ToShell {
 pub fn decode_to_thalamus(line: &str) -> Result<ToThalamus, String> {
     let m: ToThalamus = serde_json::from_str(line).map_err(|e| format!("undecodable message: {e}"))?;
     match &m {
-        ToThalamus::Turn { session: Some(s), .. } => need_uuid("session", s)?,
+        ToThalamus::Turn { session: Some(s), .. } | ToThalamus::Stop { session: s } => need_uuid("session", s)?,
+        ToThalamus::Resume { workspace: Some(w) } | ToThalamus::Branch { workspace: w } => need_tab(w)?,
         ToThalamus::ApprovalDecision { approval, .. } => need_uuid("approval", approval)?,
         ToThalamus::Widget { widget, .. } => need_token(widget)?,
         ToThalamus::FormSubmit { form, widget, values } => {

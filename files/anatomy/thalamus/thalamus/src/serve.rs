@@ -293,6 +293,8 @@ struct Open {
     again: HashMap<String, (Value, Component)>,
     /// An action card waiting, to the {app, action, params} its approve sends as an act.
     acting: HashMap<String, Value>,
+    /// The workspace tab whose conversation this is (v9 resume{workspace}); None: the person's one legacy chat.
+    tab: Option<String>,
 }
 
 /// One connection's lines, read on their own thread so a tool may wait for the face's `acted` mid-turn;
@@ -323,8 +325,24 @@ impl Face {
         Face { rx, held: RefCell::default(), limbs: vec![], catalogue: false }
     }
 
-    fn line(&self) -> Option<String> {
-        self.held.borrow_mut().pop_front().or_else(|| self.rx.recv().ok())
+    /// The next line, or a Tick when none came for `tick` (the model-state poll), or the End.
+    fn line(&self, tick: Duration) -> Next {
+        if let Some(l) = self.held.borrow_mut().pop_front() {
+            return Next::Line(l);
+        }
+        match self.rx.recv_timeout(tick) {
+            Ok(l) => Next::Line(l),
+            Err(mpsc::RecvTimeoutError::Timeout) => Next::Tick,
+            Err(mpsc::RecvTimeoutError::Disconnected) => Next::End,
+        }
+    }
+
+    /// Whether the person sent Stop for `session` while a turn runs (v9); every other line waits in `held`, in order.
+    fn stopped(&self, session: &str) -> bool {
+        let mut held = self.held.borrow_mut();
+        held.extend(self.rx.try_iter());
+        let at = held.iter().position(|l| matches!(decode_to_thalamus(l), Ok(ToThalamus::Stop { session: s }) if s == session));
+        at.and_then(|i| held.remove(i)).is_some()
     }
 
     /// The face's answer to `act` within `secs`: (ok, result, reason); anything else that arrives waits its turn.
@@ -371,6 +389,28 @@ impl Face {
         (!each.is_empty()).then(|| format!("The person's face screen declares these limbs; call face_act {{app, action, params}} with one of \
 them only when the person asks for it, and say in a line what you did: {}.", each.join("; ")))
     }
+}
+
+enum Next {
+    Line(String),
+    Tick,
+    End,
+}
+
+/// How often an idle connection asks whether its local model is in memory (model_state, v9).
+const MODEL_STATE_EVERY: Duration = Duration::from_secs(30);
+/// What a call the person stopped is answered with, and the Err a stopped model request returns.
+const STOPPED: &str = "stopped by the person";
+/// What the model hears with an identical call that failed already in this turn (it is not run again).
+const REPEATED: &str = "this exact call failed already in this turn and was not run again: change its arguments, try another way, or answer in text";
+
+/// How a connection's session opens: fresh, the person's last one closed, or one named session (a workspace tab's).
+enum How {
+    Fresh,
+    Last,
+    Uuid(String),
+    /// Fresh, starting from this session's conversation (/branch).
+    Branch(String),
 }
 
 const FACE_ACT: &str = "Act on the person's face screen with one limb it declared (the system prompt lists them): open, focus, \
@@ -854,13 +894,28 @@ impl Server {
     pub(crate) fn converse(&self, mut who: Person, input: impl BufRead + Send + 'static, mut out: impl Write, peer: &dyn Fn() -> Value) {
         let mut open: Option<Open> = None;
         let mut face = Face::new(input);
-        while let Some(line) = face.line() {
+        // The model state last said: (session, loaded).
+        let mut state: Option<(String, bool)> = None;
+        loop {
+            let line = match face.line(MODEL_STATE_EVERY) {
+                Next::End => break,
+                Next::Tick => {
+                    if let Some(o) = &open {
+                        self.model_state(&mut out, o, &mut state);
+                    }
+                    continue;
+                }
+                Next::Line(l) => l,
+            };
             if !line.ends_with('\n') {
                 refuse(&mut out, "line exceeds 1 MiB or is unterminated");
                 break;
             }
             let peer = peer();
-            match decode_to_thalamus(&line) {
+            let decoded = decode_to_thalamus(&line);
+            // A turn's end may have loaded or unloaded the model; a new session has not heard its state yet.
+            let boundary = matches!(decoded, Ok(ToThalamus::Turn { .. } | ToThalamus::ChoiceReply { .. } | ToThalamus::ApprovalDecision { .. }));
+            match decoded {
                 Err(why) => refuse(&mut out, &why),
                 Ok(ToThalamus::Turn { session, text }) => {
                     if session != open.as_ref().map(|o| o.session.clone()) {
@@ -932,10 +987,15 @@ impl Server {
                     }
                     _ => refuse(&mut out, "no open approval with that id"),
                 },
-                Ok(ToThalamus::Resume) if open.is_some() => refuse(&mut out, "a session is open on this connection already"),
-                Ok(ToThalamus::Resume) => {
-                    self.begin(&mut who, &mut out, &mut open, true);
+                Ok(ToThalamus::Resume { workspace: None }) if open.is_some() => refuse(&mut out, "a session is open on this connection already"),
+                Ok(ToThalamus::Resume { workspace: None }) => {
+                    self.begin(&mut who, &mut out, &mut open, How::Last, None);
                 }
+                Ok(ToThalamus::Resume { workspace: Some(tab) }) => self.switch(&mut who, &mut out, &mut open, &tab),
+                Ok(ToThalamus::Clear) => self.clear(&mut who, &mut out, &mut open),
+                Ok(ToThalamus::Branch { workspace }) => self.branch(&mut who, &mut out, &mut open, &workspace),
+                // A Stop that arrives between turns has nothing to stop (the turn it meant just ended).
+                Ok(ToThalamus::Stop { .. }) => {}
                 // The person's, by the peer's identity; no session is opened for it.
                 Ok(ToThalamus::WorkspaceLoad) => {
                     let doc = store::read(&store::path(&self.data, &who.uid(), "workspace")).unwrap_or_else(|why| {
@@ -960,6 +1020,11 @@ impl Server {
                     }
                 }
             }
+            if let Some(o) = &open {
+                if boundary || state.as_ref().map(|s| &s.0) != Some(&o.session) {
+                    self.model_state(&mut out, o, &mut state);
+                }
+            }
         }
         if let Some(o) = open {
             let _ = self.ledger.lock().map(|l| l.end(&o.session, "connection_closed", (Some(o.tokens.0), Some(o.tokens.1))));
@@ -969,15 +1034,20 @@ impl Server {
 
     /// The connection's session, opened on its first Turn or Control; None was refused.
     fn ensure<'a>(&self, who: &mut Person, out: &mut dyn Write, open: &'a mut Option<Open>) -> Option<&'a mut Open> {
-        self.begin(who, out, open, false)
+        self.begin(who, out, open, How::Fresh, None)
     }
 
-    /// Opens the connection's session if none is: with `resume`, the person's last one, replayed.
-    fn begin<'a>(&self, who: &mut Person, out: &mut dyn Write, open: &'a mut Option<Open>, resume: bool) -> Option<&'a mut Open> {
+    /// Opens the connection's session if none is, for workspace `tab` (None: the legacy one chat); a
+    /// resumed one is replayed.
+    fn begin<'a>(&self, who: &mut Person, out: &mut dyn Write, open: &'a mut Option<Open>, how: How, tab: Option<&str>) -> Option<&'a mut Open> {
         if open.is_none() {
-            match self.open(who, out, resume) {
+            match self.open(who, out, how) {
                 Ok((mut o, resumed)) => {
-                    KEPT.set(Some((store::path(&self.data, &who.uid(), "conversation"), o.session.clone())));
+                    o.tab = tab.map(str::to_string);
+                    KEPT.set(Some((self.chat_file(who, tab), o.session.clone())));
+                    if let Some(t) = tab {
+                        self.map_tab(who, t, Some(&o.session));
+                    }
                     if resumed {
                         self.resume(who, out, &mut o);
                     }
@@ -989,8 +1059,128 @@ impl Server {
         open.as_mut()
     }
 
+    /// The conversation file of a workspace tab, or the person's one legacy chat (tab None).
+    fn chat_file(&self, who: &Person, tab: Option<&str>) -> PathBuf {
+        store::path(&self.data, &who.uid(), &tab.map_or("conversation".to_string(), |t| format!("conversation-{t}")))
+    }
+
+    /// people/<uid>/sessions.json: each workspace tab's session (v9), so a tab resumes its own conversation.
+    fn tabs(&self, who: &Person) -> Map<String, Value> {
+        let held = store::read(&store::path(&self.data, &who.uid(), "sessions")).unwrap_or_else(|why| {
+            self.say(format!("tabs of {}: {why}", who.username));
+            None
+        });
+        held.and_then(|v| v.as_object().cloned()).unwrap_or_default()
+    }
+
+    fn map_tab(&self, who: &Person, tab: &str, session: Option<&str>) {
+        let mut m = self.tabs(who);
+        if m.get(tab).and_then(Value::as_str) == session {
+            return;
+        }
+        match session {
+            Some(s) => m.insert(tab.to_string(), json!(s)),
+            None => m.remove(tab),
+        };
+        if let Err(why) = store::write(&store::path(&self.data, &who.uid(), "sessions"), &Value::Object(m)) {
+            self.say(format!("the tabs of {} were not kept: {why}", who.username));
+        }
+    }
+
+    /// Ends the open session for a switch, a clear or a branch (stop_reason `why`); refused while an
+    /// approval or a choice waits, so nothing is decided for the person and no card is orphaned.
+    fn leave(&self, out: &mut dyn Write, open: &mut Option<Open>, why: &str) -> Option<Open> {
+        let o = open.as_ref()?;
+        if !o.pending.is_empty() || !o.choices.is_empty() {
+            refuse(out, "answer or reject the card first: an approval or a choice waits in this session");
+            return None;
+        }
+        let o = open.take()?;
+        let _ = self.ledger.lock().map(|l| l.end(&o.session, why, (Some(o.tokens.0), Some(o.tokens.1))));
+        KEPT.set(None);
+        Some(o)
+    }
+
+    /// resume {workspace}: that tab's own session (resumed, or fresh when it has none); the open one ends
+    /// `switched` and comes back with its own tab.
+    fn switch(&self, who: &mut Person, out: &mut dyn Write, open: &mut Option<Open>, tab: &str) {
+        if open.as_ref().is_some_and(|o| o.tab.as_deref() == Some(tab)) {
+            return;
+        }
+        if open.is_some() && self.leave(out, open, "switched").is_none() {
+            return;
+        }
+        let how = self.tabs(who).get(tab).and_then(Value::as_str).map_or(How::Fresh, |s| How::Uuid(s.to_string()));
+        self.begin(who, out, open, how, Some(tab));
+    }
+
+    /// /clear: the tab's session ends `cleared` (never resumed; the ledger keeps it) and its chat file goes;
+    /// a fresh session opens for the same tab.
+    fn clear(&self, who: &mut Person, out: &mut dyn Write, open: &mut Option<Open>) {
+        if open.is_none() {
+            return refuse(out, "no session is open to clear");
+        }
+        let Some(o) = self.leave(out, open, "cleared") else { return };
+        let tab = o.tab.as_deref();
+        if let Some(t) = tab {
+            self.map_tab(who, t, None);
+        }
+        match std::fs::remove_file(self.chat_file(who, tab)) {
+            Err(e) if e.kind() != std::io::ErrorKind::NotFound => self.say(format!("the cleared chat of {} stays on disk: {e}", o.session)),
+            _ => {}
+        }
+        self.begin(who, out, open, How::Fresh, tab);
+    }
+
+    /// /branch: workspace `tab` (just added by the shell) opens a session that starts from this one's
+    /// conversation: the model hears it, the chat is copied, the ledger says branched_from. The old one
+    /// ends `switched` and stays its tab's.
+    fn branch(&self, who: &mut Person, out: &mut dyn Write, open: &mut Option<Open>, tab: &str) {
+        match open.as_ref() {
+            None => return refuse(out, "no session is open to branch"),
+            Some(o) if o.tab.as_deref() == Some(tab) => return refuse(out, "a branch opens on another tab"),
+            Some(_) => {}
+        }
+        let Some(old) = self.leave(out, open, "switched") else { return };
+        let Some(o) = self.begin(who, out, open, How::Branch(old.session.clone()), Some(tab)) else { return };
+        // The new session's own system prompt, then everything the old one heard.
+        o.messages.extend(old.messages.into_iter().skip(1));
+        let mut log = conversation(&self.chat_file(who, old.tab.as_deref()), &old.session);
+        for m in log.iter_mut().filter(|m| m.get("session").is_some()) {
+            m["session"] = json!(o.session);
+        }
+        if let Err(why) = store::write(&self.chat_file(who, Some(tab)), &json!({"session": o.session, "log": log})) {
+            self.say(format!("the branch {} starts with no chat: {why}", o.session));
+        }
+    }
+
+    /// Whether the session's local model is in memory, from Ollama's GET <origin>/api/ps (base_url is
+    /// <origin>/v1). None when it cannot be told: a remote binding, another base_url shape, no answer.
+    fn loaded(&self, o: &Open) -> Option<bool> {
+        let m = o.model.as_ref().ok().filter(|m| m.local)?;
+        let origin = m.base_url.trim_end_matches('/').strip_suffix("/v1")?;
+        let mut r = agent(2).get(&format!("{origin}/api/ps")).call().ok()?;
+        if r.status().as_u16() != 200 {
+            return None;
+        }
+        let v: Value = r.body_mut().read_json().ok()?;
+        let id = m.model_id.as_str();
+        let named = |n: &str| n == id || n.strip_suffix(":latest") == Some(id);
+        Some(v["models"].as_array()?.iter().any(|x| ["name", "model"].iter().any(|k| x[*k].as_str().is_some_and(named))))
+    }
+
+    /// model_state when it is known and not what this session last heard.
+    fn model_state(&self, out: &mut dyn Write, o: &Open, last: &mut Option<(String, bool)>) {
+        let Some(loaded) = self.loaded(o) else { return };
+        let now = (o.session.clone(), loaded);
+        if last.as_ref() != Some(&now) {
+            *last = Some(now);
+            send(out, &ToShell::ModelState { session: o.session.clone(), loaded });
+        }
+    }
+
     /// The connection's session and whether it was resumed (asked by `resume`).
-    fn open(&self, who: &Person, out: &mut dyn Write, resume: bool) -> Result<(Open, bool), String> {
+    fn open(&self, who: &Person, out: &mut dyn Write, how: How) -> Result<(Open, bool), String> {
         // The imprint the binding calls for: the short render fits a local model's window.
         let imprint = self.binding.clone().and_then(|m| self.imprint(&m).map(|t| (m, t)));
         if let (Ok(_), Err(why)) = (&self.binding, &imprint) {
@@ -1000,7 +1190,11 @@ impl Server {
         let model_uri = self.binding.as_ref().map_or("unbound".to_string(), |m| format!("{}-{}", m.name, m.model_id));
         let ledger = self.ledger.lock().map_err(|_| "ledger poisoned".to_string())?;
         // The person's last session, if its connection closed it; a resumed one runs on the host's model again.
-        let resumed = if resume { ledger.resume(&actor, "iris").map_err(|e| format!("ledger: {e}"))? } else { None };
+        let resumed = match &how {
+            How::Fresh | How::Branch(_) => None,
+            How::Last => ledger.resume(&actor, "iris").map_err(|e| format!("ledger: {e}"))?,
+            How::Uuid(u) => ledger.reopen(&actor, "iris", u).map_err(|e| format!("ledger: {e}"))?,
+        };
         let (session, tokens) = match &resumed {
             Some((uuid, was, tokens)) => {
                 if *was != model_uri {
@@ -1014,6 +1208,14 @@ impl Server {
                 let session = mint_uuid().map_err(|e| format!("no session id: {e}"))?;
                 let s = Session { uuid: &session, agent_name: "iris", agent_version: 1, actor: &actor, model_uri: &model_uri };
                 ledger.start(&s).map_err(|e| format!("ledger: {e}"))?;
+                if let How::Branch(from) = &how {
+                    // Copied into the ledger before the shell hears of it, so a later resume of the branch hears them too.
+                    let e = |e: rusqlite::Error| format!("ledger: {e}");
+                    ledger.record(&session, Kind::SessionStart, None, &json!({"model_uri": model_uri, "branched_from": from})).map_err(e)?;
+                    for (role, text) in ledger.messages(from, MAX_HEARD).map_err(e)? {
+                        ledger.record(&session, Kind::Message, None, &json!({"role": role, "text": text, "copied": true})).map_err(e)?;
+                    }
+                }
                 (session, (0, 0))
             }
         };
@@ -1039,7 +1241,8 @@ what it does, how to verify, and the doc path. You never edit config.yml or run 
 it, so never say it is done. For what waits for the operator's approval call approvals_awaiting; \
 for what waits in the person's own inbox call inbox; \
 for what the person or KEAP already knows or noted call search_memory. No tool reads e-mail, calendar or chat: \
-say so, with no number. When no tool can see what is asked, say so; never guess it. Say what you found in a line, and never \
+say so, with no number. When no tool can see what is asked, say so; never guess it. A tool error names what to change; never repeat a call that \
+failed with the same arguments. Say what you found in a line, and never \
 repeat in text what a tool or show already drew. Shape -> component: count per value -> chart with show `source` (op count); \
 many rows -> query_rows table; one thing -> record; steps -> list; history -> timeline; hierarchy -> tree; links between things -> graph; who sends what to whom -> sequence; \
 what an action would change -> mark delta added|removed|changed on tree nodes, list items or record fields (was: the old value). \
@@ -1052,14 +1255,14 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             Err(why) => (Err(why), iris.clone()),
         };
         Ok((Open { session, model, iris, messages: vec![json!({"role": "system", "content": system})], moved: None, tokens,
-                  pending: HashMap::new(), shown: HashMap::new(), tables_seen: HashMap::new(), dates: HashMap::new(), names: HashMap::new(), read_free: vec![], forms: HashMap::new(), choices: HashMap::new(), last_group: None, again: HashMap::new(), acting: HashMap::new() },
+                  pending: HashMap::new(), shown: HashMap::new(), tables_seen: HashMap::new(), dates: HashMap::new(), names: HashMap::new(), read_free: vec![], forms: HashMap::new(), choices: HashMap::new(), last_group: None, again: HashMap::new(), acting: HashMap::new(), tab: None },
             resumed.is_some()))
     }
 
     /// A resumed session as it was left: its chat replayed (the conversation file), the model hearing
     /// its last messages, the scope last set, and its open approvals and choices waiting again (the ledger).
     fn resume(&self, who: &mut Person, out: &mut dyn Write, o: &mut Open) {
-        let log: Vec<ToShell> = conversation(&store::path(&self.data, &who.uid(), "conversation"), &o.session)
+        let log: Vec<ToShell> = conversation(&self.chat_file(who, o.tab.as_deref()), &o.session)
             .into_iter().filter_map(|v| serde_json::from_value(v).ok()).collect();
         let held = self.ledger.lock().map_err(|_| "ledger poisoned".to_string()).and_then(|l| {
             let e = |e: rusqlite::Error| e.to_string();
@@ -1772,7 +1975,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                     "json_schema": {"name": "cortex_plan", "schema": cortex_plan::ast_schema()}}),
                 Engine::Free => {}
             }
-            let answer = match self.chat(model, o, body) {
+            let answer = match self.chat(model, o, body, None) {
                 Ok(m) => m,
                 // Ollama MLX answers 501 to any format: the same request, unconstrained.
                 Err(why) if engine == Engine::JsonSchema => {
@@ -1780,7 +1983,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                     downgrade = Some(why);
                     engine = Engine::Free;
                     msgs[0] = json!({"role": "system", "content": cortex_plan::primer(engine, &catalogue)});
-                    match self.chat(model, o, json!({"model": model.model_id, "messages": msgs})) {
+                    match self.chat(model, o, json!({"model": model.model_id, "messages": msgs}), None) {
                         Ok(m) => m,
                         Err(why) => return refused(o, why, "infra", json!({})),
                     }
@@ -1944,10 +2147,17 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
         };
         let mut calls = 0;
         let tools = face.tools();
+        // This turn's failed calls, "name args" to why: one the model asks again after it heard the error is not
+        // run again (live 2026-10-18: 8 alike). Alike calls in one message were asked before it heard; they run.
+        let (mut failed, mut repeats) = (HashMap::<String, String>::new(), 0);
         loop {
+            if face.stopped(&o.session) {
+                return self.end_turn(out, o, &[], STOPPED, "Stopped.".into());
+            }
             activity(out, o, Phase::Thinking);
-            let msg = match first.take().map(Ok).unwrap_or_else(|| self.complete(&model, o, &tools, face.said())) {
+            let msg = match first.take().map(Ok).unwrap_or_else(|| self.complete(&model, o, &tools, face.said(), face)) {
                 Ok(m) => m,
+                Err(why) if why == STOPPED => return self.end_turn(out, o, &[], STOPPED, "Stopped.".into()),
                 Err(why) => return refuse(out, &why),
             };
             o.messages.push(msg.clone());
@@ -1967,17 +2177,15 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                 // The provider hears it as the call it was meant to be; a tool message needs one.
                 *o.messages.last_mut().expect("just pushed") = json!({"role": "assistant", "content": null, "tool_calls": asked});
             }
+            let mut heard = HashMap::new();
             for (i, call) in asked.iter().enumerate() {
+                if face.stopped(&o.session) {
+                    return self.end_turn(out, o, &asked[i..], STOPPED, "Stopped.".into());
+                }
                 calls += 1;
                 if calls > MAX_TOOL_CALLS {
-                    // An unanswered call is a shape providers reject (Runner.php compactForSynthesis).
-                    for c in &asked[i..] {
-                        o.messages.push(json!({"role": "tool", "tool_call_id": c.get("id").cloned().unwrap_or(Value::Null),
-                                               "content": json!({"error": "stopped: tool-call cap"}).to_string()}));
-                    }
-                    let text = format!("Stopped: more than {MAX_TOOL_CALLS} tool calls in one turn.");
-                    let _ = self.record(o, Kind::Message, None, json!({"role": "thalamus", "text": text}));
-                    return send(out, &ToShell::Text { session: o.session.clone(), text });
+                    return self.end_turn(out, o, &asked[i..], "stopped: tool-call cap",
+                                         format!("Stopped: more than {MAX_TOOL_CALLS} tool calls in one turn."));
                 }
                 let name = call.pointer("/function/name").and_then(Value::as_str).unwrap_or("");
                 let mut args: Value = call.pointer("/function/arguments").and_then(Value::as_str)
@@ -1988,6 +2196,18 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                     used["text_tool_call"] = json!(true);
                 }
                 let _ = self.record(o, Kind::ToolUse, Some(name), used);
+                let key = format!("{name} {args}");
+                if let Some(why) = failed.get(&key).cloned() {
+                    repeats += 1;
+                    let _ = self.record(o, Kind::ToolResult, Some(name), json!({"error": why, "repeated": true}));
+                    o.messages.push(json!({"role": "tool", "tool_call_id": call.get("id").cloned().unwrap_or(Value::Null),
+                                           "content": json!({"error": why, "repeated": true, "hint": REPEATED}).to_string()}));
+                    if repeats >= 2 {
+                        return self.end_turn(out, o, &asked[i + 1..], "stopped: a failed call repeated",
+                                             format!("Iris stopped: {name} failed the same way again. {why}"));
+                    }
+                    continue;
+                }
                 activity(out, o, Phase::Tool { name: name.to_string() });
                 let result = match name {
                     "query_rows" => self.query_rows(who, &args).map(|(t, answer, notes)| {
@@ -2175,20 +2395,33 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                 let for_model = result.unwrap_or_else(|why| {
                     let _ = self.record(o, Kind::ToolResult, Some(name), json!({"error": why}));
                     // A render that draws nothing is said, or the person sees only the tool's name;
-                    // the model still hears it and may retry.
+                    // the model still hears it and may retry with other arguments.
                     if name == "offer_dashboard" || name == "show" {
                         refuse(out, &format!("{name}: {why}"));
                     }
+                    heard.insert(key, why.clone());
                     json!({"error": why})
                 });
                 o.messages.push(json!({"role": "tool", "tool_call_id": call.get("id").cloned().unwrap_or(Value::Null),
                                        "content": head_first(&for_model)}));
             }
+            failed.extend(heard);
         }
     }
 
+    /// Ends the turn before its calls `rest` ran: each is answered `why` (an unanswered call is a shape
+    /// providers reject, Runner.php compactForSynthesis), and `text` is said and kept as the thalamus's.
+    fn end_turn(&self, out: &mut dyn Write, o: &mut Open, rest: &[Value], why: &str, text: String) {
+        for c in rest {
+            o.messages.push(json!({"role": "tool", "tool_call_id": c.get("id").cloned().unwrap_or(Value::Null),
+                                   "content": json!({"error": why}).to_string()}));
+        }
+        let _ = self.record(o, Kind::Message, None, json!({"role": "thalamus", "text": text}));
+        send(out, &ToShell::Text { session: o.session.clone(), text });
+    }
+
     /// One chat-completions call; the model gets the conversation, never a KEAP header.
-    fn complete(&self, model: &Binding, o: &mut Open, tools: &Value, limbs: Option<String>) -> Result<Value, String> {
+    fn complete(&self, model: &Binding, o: &mut Open, tools: &Value, limbs: Option<String>, face: &Face) -> Result<Value, String> {
         let mut body = json!({"model": model.model_id, "messages": o.messages, "tools": tools});
         // The limbs are the connection's, so they are said per request and never kept in o.messages.
         if let Some(line) = limbs {
@@ -2201,47 +2434,73 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
             let head = &mut body["messages"][0]["content"];
             *head = json!(format!("{}\n\n{line}", head.as_str().unwrap_or_default()));
         }
-        let msg = self.chat(model, o, body)?;
+        let msg = self.chat(model, o, body, Some(face))?;
         o.moved = None;
         Ok(msg)
     }
 
     /// One chat-completions request as `body` says, the binding's sampling added; the message it answered.
-    fn chat(&self, model: &Binding, o: &mut Open, mut body: Value) -> Result<Value, String> {
-        let url = format!("{}/chat/completions", model.base_url.trim_end_matches('/'));
-        let a = agent(300);
-        let req = || {
-            let rb = a.post(&url);
-            if model.auth_token.is_empty() { rb } else { rb.header("Authorization", &format!("Bearer {}", model.auth_token)) }
+    /// With `face`, a Stop the person sends meanwhile returns Err(STOPPED) within 200 ms.
+    fn chat(&self, model: &Binding, o: &mut Open, body: Value, face: Option<&Face>) -> Result<Value, String> {
+        let v = match face {
+            None => post_chat(model, body)?,
+            // ponytail: ureq cannot abort, so the request finishes alone on its thread (its 300 s timeout bounds
+            // it) and Ollama generates to the end; closing the socket would cancel that, if it ever matters.
+            Some(f) => {
+                let (tx, rx) = mpsc::channel();
+                let m = model.clone();
+                std::thread::spawn(move || tx.send(post_chat(&m, body)));
+                loop {
+                    match rx.recv_timeout(Duration::from_millis(200)) {
+                        Ok(r) => break r?,
+                        Err(mpsc::RecvTimeoutError::Timeout) if f.stopped(&o.session) => return Err(STOPPED.into()),
+                        Err(mpsc::RecvTimeoutError::Timeout) => {}
+                        Err(mpsc::RecvTimeoutError::Disconnected) => return Err("the model request ended without an answer".into()),
+                    }
+                }
+            }
         };
-        // Ollama maps "none" to think:false; a cloud row is left alone, it may refuse an unknown field.
-        if model.local {
-            body["reasoning_effort"] = json!("none");
-            if let Some(t) = model.temperature {
-                body["temperature"] = json!(t);
-            }
-        }
-        // A 429 is a rate limit, not an answer (local bench, mistral-eu: 13/34 cases): wait its
-        // Retry-After (capped) or 1 s, 2 s, then try again; a third 429 is refused as before.
-        let mut r = req().send_json(&body).map_err(|e| format!("model unreachable: {e}"))?;
-        for wait in [1u64, 2] {
-            if r.status().as_u16() != 429 {
-                break;
-            }
-            let after = r.headers().get("retry-after").and_then(|v| v.to_str().ok()?.trim().parse::<u64>().ok());
-            std::thread::sleep(std::time::Duration::from_secs(after.unwrap_or(wait).min(20)));
-            r = req().send_json(&body).map_err(|e| format!("model unreachable: {e}"))?;
-        }
-        let status = r.status().as_u16();
-        let v: Value = r.body_mut().read_json().map_err(|e| format!("model answered {status} with no JSON: {e}"))?;
-        if status != 200 {
-            return Err(format!("model answered {status}"));
-        }
         o.tokens.0 += v.pointer("/usage/prompt_tokens").and_then(Value::as_i64).unwrap_or(0);
         o.tokens.1 += v.pointer("/usage/completion_tokens").and_then(Value::as_i64).unwrap_or(0);
         v.pointer("/choices/0/message").cloned().ok_or_else(|| "model answered without a message".into())
     }
+}
 
+/// The HTTP of one chat-completions request: its whole 200 answer, or why not.
+fn post_chat(model: &Binding, mut body: Value) -> Result<Value, String> {
+    let url = format!("{}/chat/completions", model.base_url.trim_end_matches('/'));
+    let a = agent(300);
+    let req = || {
+        let rb = a.post(&url);
+        if model.auth_token.is_empty() { rb } else { rb.header("Authorization", &format!("Bearer {}", model.auth_token)) }
+    };
+    // Ollama maps "none" to think:false; a cloud row is left alone, it may refuse an unknown field.
+    if model.local {
+        body["reasoning_effort"] = json!("none");
+        if let Some(t) = model.temperature {
+            body["temperature"] = json!(t);
+        }
+    }
+    // A 429 is a rate limit, not an answer (local bench, mistral-eu: 13/34 cases): wait its
+    // Retry-After (capped) or 1 s, 2 s, then try again; a third 429 is refused as before.
+    let mut r = req().send_json(&body).map_err(|e| format!("model unreachable: {e}"))?;
+    for wait in [1u64, 2] {
+        if r.status().as_u16() != 429 {
+            break;
+        }
+        let after = r.headers().get("retry-after").and_then(|v| v.to_str().ok()?.trim().parse::<u64>().ok());
+        std::thread::sleep(std::time::Duration::from_secs(after.unwrap_or(wait).min(20)));
+        r = req().send_json(&body).map_err(|e| format!("model unreachable: {e}"))?;
+    }
+    let status = r.status().as_u16();
+    let v: Value = r.body_mut().read_json().map_err(|e| format!("model answered {status} with no JSON: {e}"))?;
+    if status != 200 {
+        return Err(format!("model answered {status}"));
+    }
+    Ok(v)
+}
+
+impl Server {
     /// GET /api/tables/:id (title, columns) then every row as the person, filtered, sorted and cut
     /// here: the whole table or an Err, so `total` is exact. Also returns the columns for the model.
     /// The table, then for the model its columns, its groups or its total, and notes the model hears beside it.
@@ -3166,7 +3425,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
         // The check a pin met before the person could place it (wire.rs check_spec).
         let ran = check_spec(spec).and_then(|_| match spec {
             WidgetSpec::Rows(a) => self.widget_rows(who, a),
-            WidgetSpec::Chart(c) => self.widget_chart(who, c).map(|c| (Component::Chart(c), json!({"ok": true}))),
+            WidgetSpec::Chart(c) => self.widget_chart(who, c).map(|(c, _)| (Component::Chart(c), json!({"ok": true}))),
             WidgetSpec::Kpi(k) => self.widget_kpi(who, k).map(|k| (Component::Kpi(k), json!({"ok": true}))),
             WidgetSpec::Form(_) if o.forms.len() >= MAX_FORMS =>
                 Err(format!("this session holds {MAX_FORMS} forms; remove one first")),
@@ -3196,12 +3455,18 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
     }
 
     /// One series over the query's rows, aggregated here (aggregate()); x's column kind picks the axis.
-    fn widget_chart(&self, who: &Person, c: &ChartSpec) -> Result<Chart, String> {
+    /// Beside the chart: why it has no points, with numbers, so a model can change its call (live 2026-10-18).
+    fn widget_chart(&self, who: &Person, c: &ChartSpec) -> Result<(Chart, String), String> {
         let args = chart_args(c);
         let m = self.matched(who, &args, true)?;
         let (op, y) = (text(&json!(c.op)), m.agg.1);
         let axis = axis_of(&m.schema, &c.x);
         let (points, cut) = aggregate(&m.hits, &c.x, axis, y, c.op);
+        let empty = match (m.hits.len(), axis) {
+            (0, _) => format!("the query ({}) matched 0 of the {} rows of {}", m.query, m.total, m.name),
+            (n, Axis::Time) => format!("{n} rows matched, but none has a date in `{}`", c.x),
+            (n, _) => format!("{n} rows matched, but none has a number in `{}`", c.x),
+        };
         let name = y.map_or(op.clone(), |y| format!("{op} of {y}"));
         let title = format!("{name} by {}{}", c.x, if cut && axis == Axis::Time { " (last 60 days)" } else { "" });
         let chart = match c.chart {
@@ -3211,7 +3476,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
         };
         let chart = Chart { title: Some(title), chart, x: axis, series: vec![Series { name, points }] };
         Component::Chart(chart.clone()).check_allow_empty()?;
-        Ok(chart)
+        Ok((chart, empty))
     }
 
     /// One total over the query's rows (query_rows' one_total), titled and said as what it summed.
@@ -3264,10 +3529,11 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
         self.record(o, Kind::ToolUse, tool, json!({"table": spec.query.table, "kind": spec.chart, "op": spec.op}))
             .map_err(|why| format!("not recorded, so not drawn: {why}"))?;
         let pin = WidgetSpec::Chart(spec.clone());
-        let drawn = check_spec(&pin).and_then(|_| self.widget_chart(who, &spec)).and_then(|mut chart| {
+        let drawn = check_spec(&pin).and_then(|_| self.widget_chart(who, &spec)).and_then(|(mut chart, empty)| {
             chart.title = title.or(chart.title);
+            let none = chart.series.iter().all(|s| s.points.is_empty());
             let c = Component::Chart(chart);
-            c.check().map_err(|e| format!("the source drew nothing to show ({e})"))?;
+            c.check().map_err(|e| if none { format!("the source drew nothing to show: {empty}") } else { format!("the source drew nothing to show ({e})") })?;
             Ok(c)
         });
         let _ = self.record(o, Kind::ToolResult, tool, match &drawn {

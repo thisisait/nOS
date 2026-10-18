@@ -446,7 +446,7 @@ impl App {
                 }
             }
             // The workspace is the pupil's, and so are the marks a catalogue draws.
-            ToShell::Workspace { .. } | ToShell::Catalogue { .. } => {}
+            ToShell::Workspace { .. } | ToShell::Catalogue { .. } | ToShell::ModelState { .. } => {}
             // The terminal declares no limbs, so serve sends it no act: one that arrives is said, never done.
             ToShell::Act { app, action, .. } => self.lines.push(warn(format!("refused: an act {app}.{action}, but this shell has no limbs"))),
         }

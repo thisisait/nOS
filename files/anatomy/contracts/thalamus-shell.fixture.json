@@ -1,5 +1,5 @@
 {
-  "contract_version": 8,
+  "contract_version": 9,
   "to_thalamus": [
     {"case": "first turn opens a session", "msg": {"t": "turn", "session": null, "text": "find rows about backups in the roadmap"}},
     {"case": "turn in a session", "msg": {"t": "turn", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "text": "set its status to done"}},
@@ -21,6 +21,10 @@
     {"case": "the person asks which models Iris may use", "msg": {"t": "model_options"}},
     {"case": "the person picks a model for this session", "msg": {"t": "model_pick", "backend": "ollama", "model": "qwen3:4b"}},
     {"case": "the pupil resumes the person's last session", "msg": {"t": "resume"}},
+    {"case": "the shell resumes a workspace tab's own session", "msg": {"t": "resume", "workspace": "ws1"}},
+    {"case": "the person clears the tab's conversation", "msg": {"t": "clear"}},
+    {"case": "the person branches into a new tab", "msg": {"t": "branch", "workspace": "ws2"}},
+    {"case": "the person stops the running turn", "msg": {"t": "stop", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b"}},
     {"case": "the pupil asks for the person's workspace", "msg": {"t": "workspace_load"}},
     {"case": "the pupil saves the person's workspace", "msg": {"t": "workspace_save", "doc": {"version": 2, "active": "ws1", "chat": {"x": 24, "y": 24, "w": 420, "h": 560, "open": true}, "workspaces": [{"id": "ws1", "name": "Workspace", "widgets": []}]}}},
     {"case": "the shell asks for the person's catalogue", "msg": {"t": "catalogue"}},
@@ -104,7 +108,8 @@
     {"case": "the thalamus holds no workspace yet", "msg": {"t": "workspace", "doc": null}},
     {"case": "the person's catalogue", "msg": {"t": "catalogue", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "tables": [{"id": "invoices", "title": "Faktury", "columns": [{"key": "customer", "label": "Zákazník", "kind": "select", "options": ["Acme", "Beta"]}, {"key": "due_date", "label": "Splatnost", "kind": "date"}, {"key": "total", "kind": "number"}]}]}},
     {"case": "Iris acts in the face", "msg": {"t": "act", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "act": "5e4d3c2b-1a09-4f8e-9d7c-6b5a4f3e2d1c", "app": "desktop", "action": "open_app", "params": {"slug": "tables"}}},
-    {"case": "an action awaits approval", "msg": {"t": "approval_request", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "approval": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d", "component": {"kind": "action_approval", "props": {"app": "files", "action": "rename", "params": {"path": "/notes/a.md", "to": "b.md"}, "says": "Rename a file"}}}}
+    {"case": "an action awaits approval", "msg": {"t": "approval_request", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "approval": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d", "component": {"kind": "action_approval", "props": {"app": "files", "action": "rename", "params": {"path": "/notes/a.md", "to": "b.md"}, "says": "Rename a file"}}}},
+    {"case": "the local model is in memory", "msg": {"t": "model_state", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "loaded": true}}
   ],
   "refused": [
     {"case": "unknown component kind is shown, not dropped", "line": "{\"t\":\"render\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"component\":{\"kind\":\"pie_chart\",\"props\":{}}}"},
@@ -263,6 +268,8 @@
     {"case": "one limb declared twice", "line": "{\"t\":\"limbs\",\"limbs\":[{\"app\":\"desktop\",\"action\":\"open_app\",\"params\":{\"slug\":{\"type\":\"string\",\"required\":true}},\"writes\":false,\"says\":\"Open a face app, or bring its window to the front\"},{\"app\":\"desktop\",\"action\":\"open_app\",\"params\":{\"slug\":{\"type\":\"string\",\"required\":true}},\"writes\":false,\"says\":\"Open a face app, or bring its window to the front\"}]}"},
     {"case": "a limb whose app is not a name", "line": "{\"t\":\"limbs\",\"limbs\":[{\"app\":\"Desk Top\",\"action\":\"open_app\",\"params\":{\"slug\":{\"type\":\"string\",\"required\":true}},\"writes\":false,\"says\":\"Open a face app, or bring its window to the front\"}]}"},
     {"case": "an acted whose act is not a uuid", "line": "{\"t\":\"acted\",\"act\":\"a1\",\"ok\":true}"},
-    {"case": "an acted naming the session", "line": "{\"t\":\"acted\",\"act\":\"5e4d3c2b-1a09-4f8e-9d7c-6b5a4f3e2d1c\",\"ok\":true,\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\"}"}
+    {"case": "an acted naming the session", "line": "{\"t\":\"acted\",\"act\":\"5e4d3c2b-1a09-4f8e-9d7c-6b5a4f3e2d1c\",\"ok\":true,\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\"}"},
+    {"case": "a branch whose workspace names a path", "line": "{\"t\":\"branch\",\"workspace\":\"../ws\"}"},
+    {"case": "a stop whose session is not a uuid", "line": "{\"t\":\"stop\",\"session\":\"latest\"}"}
   ]
 }

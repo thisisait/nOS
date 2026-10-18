@@ -267,15 +267,27 @@ impl Ledger {
     /// runs again and a second agent_session_start says so. Only a closed one is taken, so two live
     /// connections never share a session. (uuid, model_uri, tokens so far), or None.
     pub fn resume(&self, actor: &str, agent: &str) -> rusqlite::Result<Option<(String, String, (i64, i64))>> {
-        let last: Option<(String, String, i64, i64)> = self.db.query_row(
-            "SELECT uuid, model_uri, COALESCE(tokens_input, 0), COALESCE(tokens_output, 0) FROM sessions
+        let last: Option<String> = self.db.query_row(
+            "SELECT uuid FROM sessions
              WHERE id = (SELECT max(id) FROM sessions WHERE actor_id = ?1 AND agent_name = ?2) AND stop_reason = 'connection_closed'",
-            params![actor, agent], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+            params![actor, agent], |r| r.get(0),
         ).optional()?;
-        let Some((uuid, model_uri, tin, tout)) = last else { return Ok(None) };
+        last.map_or(Ok(None), |uuid| self.reopen(actor, agent, &uuid))
+    }
+
+    /// resume() of one named session of this actor (a workspace tab's, v9): closed by its connection or
+    /// switched away from; a cleared one never comes back. (uuid, model_uri, tokens so far), or None.
+    pub fn reopen(&self, actor: &str, agent: &str, uuid: &str) -> rusqlite::Result<Option<(String, String, (i64, i64))>> {
+        let row: Option<(String, i64, i64)> = self.db.query_row(
+            "SELECT model_uri, COALESCE(tokens_input, 0), COALESCE(tokens_output, 0) FROM sessions
+             WHERE uuid = ?1 AND actor_id = ?2 AND agent_name = ?3 AND stop_reason IN ('connection_closed', 'switched')",
+            params![uuid, actor, agent], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        ).optional()?;
+        let Some((model_uri, tin, tout)) = row else { return Ok(None) };
+        let uuid = uuid.to_string();
         let tx = self.db.unchecked_transaction()?;
         let n = tx.execute("UPDATE sessions SET status = 'running', ended_at = NULL, stop_reason = NULL
-                            WHERE uuid = ?1 AND stop_reason = 'connection_closed'", params![uuid])?;
+                            WHERE uuid = ?1 AND stop_reason IN ('connection_closed', 'switched')", params![uuid])?;
         if n == 0 {
             return Ok(None);
         }
