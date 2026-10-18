@@ -134,6 +134,11 @@ const activeSpace = (l: Layout) => l.workspaces.find((s) => s.id === l.active) ?
 const below = (s: Space) => Math.max(0, ...s.items.map((i) => i.y + i.h + SNAP));
 const W = 592,
 	H = 376; // a v2 widget of 6 x 8 units
+/** A world point: the centre of the person's view. */
+export type Point = { x: number; y: number };
+/** A w x h box centred on `c`, snapped; with no `c`, below the others. */
+const spot = (s: Space, w: number, h: number, c?: Point): Box =>
+	place(c ? { x: snap(c.x - w / 2), y: snap(c.y - h / 2), w, h } : { x: 0, y: below(s), w, h });
 
 /** The lens on a spec as it is sent: each set condition joins a rows, chart or kpi where, after its own; a form is untouched. */
 export function lensed(spec: WidgetSpec, lens: Lens[] = []): WidgetSpec {
@@ -205,27 +210,26 @@ const withItem = (l: Layout, here: Space, item: Item): Layout => ({
 	workspaces: l.workspaces.map((s) => (s === here ? { ...s, items: [...s.items, item] } : s))
 });
 
-// ponytail: new items land below the others, not at the view's centre; place at the view if people ask.
-/** A heading or a frame on the active board, below the others; l itself when the board is full. */
-export function addItem(l: Layout, id: string, kind: 'heading' | 'frame'): Layout {
+/** A heading or a frame on the active board, centred on `c` (else below the others); l itself when the board is full. */
+export function addItem(l: Layout, id: string, kind: 'heading' | 'frame', c?: Point): Layout {
 	const here = activeSpace(l);
 	if (here.items.length >= MAX_ITEMS) return l;
-	const y = below(here);
 	return withItem(
 		l,
 		here,
 		kind === 'heading'
-			? { id, kind, text: 'Heading', ...place({ x: 0, y, w: 400, h: 48 }) }
-			: { id, kind, title: 'Frame', ...place({ x: 0, y, w: 800, h: 480 }) }
+			? { id, kind, text: 'Heading', ...spot(here, 400, 48, c) }
+			: { id, kind, title: 'Frame', ...spot(here, 800, 480, c) }
 	);
 }
 
-/** A new widget on the active board, below the others; it runs once, as a click. */
+/** A new widget on the active board, centred on `c` (else below the others); it runs once, as a click. */
 export function addWidget(
 	l: Layout,
 	id: string,
 	title: string,
-	spec: WidgetSpec
+	spec: WidgetSpec,
+	c?: Point
 ): { layout: Layout; send: ToThalamus | null } {
 	const here = activeSpace(l);
 	if (widgetsOf(here).length >= MAX_WIDGETS || here.items.length >= MAX_ITEMS)
@@ -235,7 +239,7 @@ export function addWidget(
 		kind: 'widget',
 		title: title.slice(0, 120),
 		spec,
-		...place({ x: 0, y: below(here), w: W, h: H })
+		...spot(here, W, H, c)
 	};
 	return {
 		layout: withItem(l, here, box),
@@ -249,9 +253,10 @@ export function placed(
 	w: Widgets,
 	id: string,
 	title: string,
-	spec: WidgetSpec
+	spec: WidgetSpec,
+	c?: Point
 ): { layout: Layout; w: Widgets; send: ToThalamus | null } {
-	const r = addWidget(l, id, title, spec);
+	const r = addWidget(l, id, title, spec, c);
 	if (!r.send) return { layout: l, w, send: null };
 	return {
 		layout: r.layout,
@@ -267,23 +272,24 @@ export function pin(
 	w: Widgets,
 	id: string,
 	m: ToShell,
-	tab?: string
+	tab?: string,
+	c?: Point
 ): { layout: Layout; w: Widgets; send: ToThalamus | null } {
 	if (m.t !== 'render' || !m.pin) return { layout: l, w, send: null };
 	const p = m.component.props as { title?: string; name?: string };
 	// msg lives in $state: a Proxy, which structuredClone refuses. JSON is all a spec is.
 	const spec = JSON.parse(JSON.stringify(m.pin)) as WidgetSpec;
 	const title = p.title || p.name || tableOf(spec);
-	if (tab === undefined) return placed(l, w, id, title, spec);
-	const fresh = addSpace(l, tab, title, l.active);
+	if (tab === undefined) return placed(l, w, id, title, spec, c);
+	const fresh = addSpace(l, tab, title, l.active, c);
 	return fresh === l ? { layout: l, w, send: null } : placed(fresh, w, id, title, spec);
 }
 
 export const removeItem = (l: Layout, id: string): Layout =>
 	mapItems(l, (is) => is.filter((i) => i.id !== id));
 
-/** A new active workspace: a root, or given `parent` a board inside it, with its card there. l when there is no room. */
-export function addSpace(l: Layout, id: string, name: string, parent?: string): Layout {
+/** A new active workspace: a root, or given `parent` a board inside it, with its card there (centred on `c`). l when there is no room. */
+export function addSpace(l: Layout, id: string, name: string, parent?: string, c?: Point): Layout {
 	if (l.workspaces.length >= MAX_SPACES) return l;
 	const up = l.workspaces.find((s) => s.id === parent);
 	const space: Space = { id, name: name.slice(0, 40), items: [] };
@@ -293,7 +299,7 @@ export function addSpace(l: Layout, id: string, name: string, parent?: string): 
 		id: `b-${id}`.slice(0, 64),
 		kind: 'board',
 		board: id,
-		...place({ x: 0, y: below(up), w: 240, h: 96 })
+		...spot(up, 240, 96, c)
 	};
 	const shown = withItem(l, up, card);
 	return { ...shown, active: id, workspaces: [...shown.workspaces, { ...space, parent: up.id }] };

@@ -1,7 +1,7 @@
 <!--
   One board: an infinite canvas (Svelte Flow, MIT) of widgets, headings, frames and boards in world px
   (workspace-layout.yml v3); a board card opens its child by double-click or Enter. Wheel or pinch zooms, dragging the background pans, −/100%/+/fit sit
-  bottom left; a focused item moves by arrows and resizes by shift+arrows. Svelte Flow's own CSS
+  bottom left (keys - 0 + f); Tab walks the items top-left first; a focused item moves by arrows and resizes by shift+arrows. Svelte Flow's own CSS
   carries colour literals, so it is not imported: the few structural rules it needs are below.
   A board with a lens has a bar over it: one native input per condition; a change re-runs the board.
 -->
@@ -94,11 +94,11 @@
 			: i.kind === 'heading'
 				? i.text
 				: i.title;
-	// Frames first and lowest, so they draw behind; the raised widget over the rest.
+	// Reading order (top-left first), so Tab walks it; zIndex draws frames behind, the raised widget over the rest.
 	const toNodes = (items: Item[], raised: string, was: Node[]): Node[] => {
 		const sel = new Set(was.filter((n) => n.selected).map((n) => n.id));
 		return [...items]
-			.sort((a, b) => Number(a.kind !== 'frame') - Number(b.kind !== 'frame'))
+			.sort((a, b) => a.y - b.y || a.x - b.x)
 			.map((i) => ({
 				id: i.id,
 				type: 'item',
@@ -133,6 +133,7 @@
 	const key = (e: KeyboardEvent) => {
 		const t = e.target as HTMLElement;
 		if (t.closest('input, textarea, select, [contenteditable]')) return;
+		if (!e.ctrlKey && !e.metaKey && !e.altKey && bar?.zoomKey(e.key)) return e.preventDefault();
 		const id = t.closest<HTMLElement>('.svelte-flow__node')?.dataset.id;
 		const i = id && at(id);
 		if (i && i.kind === 'board' && e.key === 'Enter' && !t.closest('button')) {
@@ -146,6 +147,13 @@
 		onplace(i.id, g);
 	};
 	const moveEnd = (_: unknown, v: Viewport) => onview(v);
+	let bar: ZoomBar | undefined = $state();
+	let canvas: HTMLElement;
+	/** The centre of the view in world px: where a new item lands. */
+	export function centre() {
+		const r = canvas.getBoundingClientRect();
+		return bar?.toWorld(r.left + r.width / 2, r.top + r.height / 2);
+	}
 </script>
 
 {#if space.lens?.length}
@@ -171,6 +179,7 @@
 	class="canvas"
 	role="region"
 	tabindex="-1"
+	bind:this={canvas}
 	aria-label="board {space.name}"
 	onkeydowncapture={key}
 >
@@ -193,7 +202,7 @@
 			onnodedragstop={dropped}
 			onmoveend={moveEnd}
 		>
-			<ZoomBar />
+			<ZoomBar bind:this={bar} />
 		</SvelteFlow>
 	{/key}
 </div>

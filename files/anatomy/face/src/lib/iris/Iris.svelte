@@ -262,8 +262,10 @@
 		sendAll([r.send]);
 	}
 
+	let canvas: WorkspaceView | undefined = $state();
+	const mid = () => canvas?.centre();
 	const added = (title: string, spec: WidgetSpec) =>
-		place(ws.placed(layout, widgets, newId(), title, spec));
+		place(ws.placed(layout, widgets, newId(), title, spec, mid()));
 
 	const FULL = `no room for another board here (at most ${ws.MAX_SPACES}, ${ws.MAX_DEPTH} deep, ${ws.MAX_ITEMS} items a board)`;
 	const roomy = () => ws.addSpace(layout, 'probe', '', layout.active) !== layout;
@@ -271,7 +273,9 @@
 	// The person's click on "Sem" or "Nová plocha" under a pin; the model has no message that adds a widget.
 	function pinned(m: ToShell, fresh: boolean) {
 		if (fresh && !roomy()) return void (layoutNote = `${FULL}: pin here`);
-		place(ws.pin(layout, widgets, newId(), m, fresh ? `ws${Date.now().toString(36)}` : undefined));
+		place(
+			ws.pin(layout, widgets, newId(), m, fresh ? `ws${Date.now().toString(36)}` : undefined, mid())
+		);
 	}
 
 	// The person's click on "Place here" or "Place on a new board"; the model has no message that places or runs one.
@@ -313,14 +317,14 @@
 	}
 
 	function addItem(kind: 'heading' | 'frame') {
-		const next = ws.addItem(layout, newId(), kind);
+		const next = ws.addItem(layout, newId(), kind, mid());
 		if (next === layout) layoutNote = `a workspace holds at most ${ws.MAX_ITEMS} items`;
 		layout = next;
 	}
 
 	// "+ board": a card here that opens a new child; this board stays shown.
 	function addBoard() {
-		const next = ws.addSpace(layout, `ws${Date.now().toString(36)}`, 'Board', layout.active);
+		const next = ws.addSpace(layout, `ws${Date.now().toString(36)}`, 'Board', layout.active, mid());
 		if (next === layout) layoutNote = FULL;
 		else layout = { ...next, active: layout.active };
 	}
@@ -590,6 +594,7 @@
 	{#if layoutNote}<StatusNote kind="error" block={false}>{layoutNote}</StatusNote>{/if}
 	{#if adding}<AddWidget onadd={added} oncancel={() => (adding = false)} />{/if}
 	<WorkspaceView
+		bind:this={canvas}
 		{space}
 		spaces={layout.workspaces}
 		onopen={(id) => showTab(id)}

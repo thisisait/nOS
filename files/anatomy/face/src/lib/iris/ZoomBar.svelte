@@ -1,9 +1,24 @@
-<!-- The canvas zoom: −, the zoom as a percentage (a click is 100%), +, and fit to the items. -->
+<!-- The canvas zoom: −, the zoom as a percentage (a click is 100%), +, and fit to the items; the keys - 0 + f too (Workspace.svelte). -->
 <script lang="ts">
 	import { Panel, useSvelteFlow, useViewport } from '@xyflow/svelte';
 
 	const flow = useSvelteFlow();
 	const view = useViewport();
+	const KEYS: Record<string, () => unknown> = {
+		'+': () => flow.zoomIn(),
+		'=': () => flow.zoomIn(),
+		'-': () => flow.zoomOut(),
+		'0': () => flow.setZoom(1),
+		f: () => flow.fitView({ padding: 0.1 })
+	};
+	/** + / - / 0 / f zoom in, out, to 100% and to fit; false for any other key. */
+	export function zoomKey(key: string): boolean {
+		const f = KEYS[key];
+		if (f) f();
+		return !!f;
+	}
+	/** A client point (the canvas's centre) in world px. */
+	export const toWorld = (x: number, y: number) => flow.screenToFlowPosition({ x, y });
 </script>
 
 <Panel position="bottom-left">
