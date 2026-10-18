@@ -1,6 +1,13 @@
 // Each widget's latest answer by the pupil's own token (wire.rs ToShell::Widget). A widget's
 // answer never joins the chat log; a refusal that names a widget is shown on that widget.
-import type { Component, ToShell, ToThalamus, Value, WidgetSpec } from './wire';
+import {
+	cell,
+	type Component,
+	type ToShell,
+	type ToThalamus,
+	type Value,
+	type WidgetSpec
+} from './wire';
 
 /** `spec` is what the widget re-runs (workspace.ts); `due`: restored, not run yet; `inFlight` locks a form's submit. */
 export type WidgetState = {
@@ -85,4 +92,37 @@ export function onTableChanged(
 		else out[token] = { ...s, stale: true };
 	}
 	return { w: out, send };
+}
+
+/** A grouped query_rows render as a bar chart of its own rows, pinned as serve pins a sourced show chart; null when not grouped. */
+export function groupChart(m: ToShell): Extract<ToShell, { t: 'render' }> | null {
+	if (m.t !== 'render' || m.component.kind !== 'table_results' || !m.pin || !('rows' in m.pin))
+		return null;
+	const a = m.pin.rows,
+		p = m.component.props,
+		x = a.group_by;
+	if (typeof x !== 'string' || !x) return null;
+	const op = a.op === 'sum' || a.op === 'avg' ? a.op : 'count';
+	const points = p.rows
+		.map((r): [string, number] => [cell(r.cells[x]) || r.__id, Number(r.cells[op])])
+		.filter(([, n]) => Number.isFinite(n));
+	if (!points.length) return null;
+	const query: { table: string; q?: string; where?: Value[] } = { table: p.table };
+	if (typeof a.q === 'string') query.q = a.q;
+	if (Array.isArray(a.where)) query.where = a.where;
+	const y = op !== 'count' && typeof a.y === 'string' ? a.y : undefined;
+	return {
+		t: 'render',
+		session: m.session,
+		component: {
+			kind: 'chart',
+			props: {
+				title: p.query,
+				chart: 'bar',
+				x: 'category',
+				series: [{ name: y ? `${op} of ${y}` : 'count', points }]
+			}
+		},
+		pin: { chart: { query, chart: 'bar', x, ...(y ? { y } : {}), op } }
+	};
 }

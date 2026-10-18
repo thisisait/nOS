@@ -7,6 +7,7 @@
 	import Markdown from './Markdown.svelte';
 	import Message from './Message.svelte';
 	import { phaseName, type DashboardProps, type ToShell, type ToThalamus } from './wire';
+	import { groupChart } from './widgets';
 
 	// onpin: the person clicked "Sem" (the active tab) or "Nový tab" under a render serve gave a pin (genui I6).
 	// onchoose: the person answered a choice with "Odpovědět"; drawing one sends nothing.
@@ -22,7 +23,35 @@
 		onchoose?: (m: Extract<ToThalamus, { t: 'choice_reply' }>) => Promise<boolean>;
 		onplace?: (d: DashboardProps, here: boolean) => boolean;
 	} = $props();
+
+	// "Graf": a grouped result drawn as a bar chart of its own rows, no model asked (live 2026-10-18).
+	const grouped = $derived(groupChart(msg));
+	let charted = $state(false);
 </script>
+
+{#snippet pins(m: ToShell)}
+	<div class="pin" role="group" aria-label="Připnout na plochu">
+		<svg aria-hidden="true" viewBox="0 0 16 16" width="12" height="12"
+			><path
+				d="M10 1l5 5-2 1-3 3 1 4-1 1-4-4-4 4-1-1 4-4-4-4 1-1 4 1 3-3z"
+				fill="currentColor"
+			/></svg
+		>
+		pin
+		<button
+			type="button"
+			aria-label="Připnout sem"
+			title="Připnout na tento tab"
+			onclick={() => onpin?.(m, false)}>Sem</button
+		>
+		<button
+			type="button"
+			aria-label="Připnout na nový tab"
+			title="Připnout na nový tab"
+			onclick={() => onpin?.(m, true)}>Nový tab</button
+		>
+	</div>
+{/snippet}
 
 <div class="msg" data-t={msg.t}>
 	{#if msg.t === 'session'}
@@ -37,27 +66,20 @@
 	{:else if msg.t === 'render'}
 		<ComponentView component={msg.component} />
 		{#if msg.pin}
-			<div class="pin" role="group" aria-label="Připnout na plochu">
-				<svg aria-hidden="true" viewBox="0 0 16 16" width="12" height="12"
-					><path
-						d="M10 1l5 5-2 1-3 3 1 4-1 1-4-4-4 4-1-1 4-4-4-4 1-1 4 1 3-3z"
-						fill="currentColor"
-					/></svg
-				>
-				pin
+			{@render pins(msg)}
+			{#if grouped && !charted}
 				<button
 					type="button"
-					aria-label="Připnout sem"
-					title="Připnout na tento tab"
-					onclick={() => onpin?.(msg, false)}>Sem</button
+					class="pin"
+					aria-label="Nakreslit graf"
+					title="Sloupcový graf z těchto skupin"
+					onclick={() => (charted = true)}>Graf</button
 				>
-				<button
-					type="button"
-					aria-label="Připnout na nový tab"
-					title="Připnout na nový tab"
-					onclick={() => onpin?.(msg, true)}>Nový tab</button
-				>
-			</div>
+			{/if}
+			{#if grouped && charted}
+				<ComponentView component={grouped.component} />
+				{@render pins(grouped)}
+			{/if}
 		{:else if msg.component.kind === 'chart'}
 			<p class="muted">jen náhled — Iris neuvedla zdroj čísel</p>
 		{/if}
@@ -158,7 +180,12 @@
 		padding: 0 2px;
 		cursor: pointer;
 	}
-	.pin button:hover {
+	button.pin {
+		font-family: inherit;
+		cursor: pointer;
+	}
+	.pin button:hover,
+	button.pin:hover {
 		color: var(--accent);
 	}
 	.said {
