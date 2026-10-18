@@ -53,7 +53,11 @@ describe('limbs · desktop', () => {
 	it('an undeclared action answers ok:false and changes nothing', async () => {
 		await dispatch(act('open_app', { slug: 'tables' }));
 		const before = get(windows);
-		for (const a of [act('nuke', {}), act('open_app', { slug: 'x' }, 'tables'), act('toString', {})]) {
+		for (const a of [
+			act('nuke', {}),
+			act('open_app', { slug: 'x' }, 'tables'),
+			act('toString', {})
+		]) {
 			const r = await dispatch(a);
 			expect(r.ok).toBe(false);
 			expect(r.reason).toBeTruthy();
@@ -62,12 +66,7 @@ describe('limbs · desktop', () => {
 	});
 
 	it('a bad param answers ok:false and changes nothing', async () => {
-		const bad = [
-			{ slug: 7 },
-			{},
-			{ slug: 'tables', extra: 1 },
-			{ mode: 'diagonal' }
-		];
+		const bad = [{ slug: 7 }, {}, { slug: 'tables', extra: 1 }, { mode: 'diagonal' }];
 		for (const p of bad) {
 			const r = await dispatch(act('mode' in p ? 'arrange' : 'open_app', p));
 			expect(r.ok, JSON.stringify(p)).toBe(false);

@@ -34,6 +34,7 @@ import type { Component } from 'svelte';
 import { openWindow } from '$lib/stores/desktop';
 import { APP_FORMS } from '$lib/contracts';
 import type { AppBuild, AppForm, HubApp } from '$lib/contracts';
+import type { LimbDecl } from '$lib/limbs/types';
 
 /** A lazily-loaded native component (the default export of a `.svelte` file). */
 export type NativeComponentLoader = () => Promise<{ default: Component }>;
@@ -58,6 +59,8 @@ export interface FaceApp {
 	apiScopes?: string[];
 	/** The user-state namespace this app owns (`app.<name>`; F1 recipe). */
 	stateNamespace?: string;
+	/** Actions Iris may take in this app (`$lib/limbs`); writes sit behind a card. */
+	limbs?: LimbDecl[];
 }
 
 const registry = new Map<string, FaceApp>();
