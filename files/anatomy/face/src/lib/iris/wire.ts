@@ -278,6 +278,7 @@ export type ToThalamus =
 	| { t: 'working_for'; scope: Scope }
 	| { t: 'model_options' }
 	| { t: 'model_pick'; backend: string; model: string }
+	| { t: 'resume' }
 	| { t: 'workspace_load' }
 	| { t: 'workspace_save'; doc: { [k: string]: unknown } };
 
