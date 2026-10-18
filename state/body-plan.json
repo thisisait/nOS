@@ -17,7 +17,7 @@
     "law": 52,
     "reflex": 43,
     "heartbeat": 1,
-    "internal": 74,
+    "internal": 75,
     "edges": 434
   },
   "nodes": {
@@ -1030,6 +1030,10 @@
       "kind": "faceapp"
     },
     "faceapp:files": {
+      "level": "internal",
+      "kind": "faceapp"
+    },
+    "faceapp:iris": {
       "level": "internal",
       "kind": "faceapp"
     },

@@ -251,6 +251,19 @@ export function registerBuiltinNativeApps(): void {
 		apiScopes: ['tables'],
 		stateNamespace: 'app.books'
 	});
+	// Iris: the conversation onto the thalamus, the pupil's components on the BFF's optic
+	// nerve (bff/iris). The layout is cached in app.iris; the thalamus holds the person's copy.
+	registerNativeApp({
+		slug: 'iris',
+		title: 'Iris',
+		icon: '👁',
+		form: 'view',
+		build: 'F3',
+		component: () => import('./IrisApp.svelte'),
+		defaultSize: { w: 1100, h: 720 },
+		apiScopes: ['iris'],
+		stateNamespace: 'app.iris'
+	});
 	// The first WIDGET. Small by contract — it is mounted by <WidgetLayer />
 	// on the desktop, never opened as a window (launchNative refuses it).
 	registerNativeApp({
