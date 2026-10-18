@@ -5,6 +5,7 @@
 	import ComponentView from './Component.svelte';
 	import DashboardCard from './DashboardCard.svelte';
 	import Markdown from './Markdown.svelte';
+	import Message from './Message.svelte';
 	import { phaseName, type DashboardProps, type ToShell, type ToThalamus } from './wire';
 
 	// onpin: the person clicked "Sem" (the active tab) or "Nový tab" under a render serve gave a pin (genui I6).
@@ -67,6 +68,14 @@
 		</ul>
 	{:else if msg.t === 'table_changed'}
 		<p class="muted">table {msg.table} changed (row {msg.row})</p>
+	{:else if msg.t === 'said'}
+		<p class="said">{msg.text}</p>
+	{:else if msg.t === 'replay'}
+		<!-- App unpacks a replay into its log (resume.ts); drawn here for any other host of a message. -->
+		<p class="muted">resumed session {msg.session}: {msg.log.map((m) => m.t).join(', ') || 'nothing said yet'}</p>
+		{#each msg.log as m}<Message msg={m} />{/each}
+	{:else if msg.t === 'workspace'}
+		<p class="muted">{msg.doc ? 'the workspace the thalamus holds' : 'the thalamus holds no workspace yet'}</p>
 	{/if}
 </div>
 
@@ -98,6 +107,11 @@
 	}
 	.pin button:hover {
 		color: var(--accent);
+	}
+	.said {
+		align-self: flex-end;
+		margin: 0;
+		white-space: pre-wrap;
 	}
 	.scope {
 		margin: 0;

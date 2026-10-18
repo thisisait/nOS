@@ -781,6 +781,7 @@ impl Server {
                     }
                     _ => refuse(&mut out, "no open approval with that id"),
                 },
+                Ok(ToThalamus::WorkspaceLoad | ToThalamus::WorkspaceSave { .. }) => refuse(&mut out, "this thalamus holds no workspace yet"),
             }
         }
         if let Some(o) = open {

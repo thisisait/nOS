@@ -79,7 +79,10 @@ export type ToShell =
 	| { t: 'form_result'; session: string; widget: string; form: string; row: string }
 	| { t: 'table_changed'; session: string; table: string; row: string }
 	| { t: 'working_for'; session: string; scope: Scope; name: string }
-	| { t: 'model_options'; session: string; options: ModelOption[]; refused: string[] };
+	| { t: 'model_options'; session: string; options: ModelOption[]; refused: string[] }
+	| { t: 'said'; session: string; text: string }
+	| { t: 'replay'; session: string; log: ToShell[]; open: string[] }
+	| { t: 'workspace'; doc: { [k: string]: Value } | null };
 
 /** One model the person may pick for the session (wire.rs ModelOption); `warning` below the recommended size. */
 export type ModelOption = {
@@ -108,7 +111,9 @@ export type ToThalamus =
 	| { t: 'choice_reply'; session: string; choice: string; picked: string[] }
 	| { t: 'working_for'; scope: Scope }
 	| { t: 'model_options' }
-	| { t: 'model_pick'; backend: string; model: string };
+	| { t: 'model_pick'; backend: string; model: string }
+	| { t: 'workspace_load' }
+	| { t: 'workspace_save'; doc: { [k: string]: unknown } };
 
 /** What a widget re-runs, as the person and without the model (wire.rs WidgetSpec): exactly one key. */
 export type WidgetSpec =

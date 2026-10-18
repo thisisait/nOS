@@ -24,6 +24,10 @@ pub enum ToThalamus {
     ModelOptions,
     /// The person's pick for this session: serve judges it again and rebinds from the next turn.
     ModelPick { backend: String, model: String },
+    /// The person's workspace document as the thalamus holds it; serve answers `workspace`.
+    WorkspaceLoad,
+    /// The person's whole workspace document, replacing the one held: a JSON object (need_doc).
+    WorkspaceSave { doc: serde_json::Value },
 }
 
 /// One model the person may pick: who processes the turns, whether they leave the EU, and
@@ -80,7 +84,18 @@ pub enum ToShell {
     WorkingFor { session: String, scope: Scope, name: String },
     /// What the session may bind (`current` is its binding); `refused` says each one left out and why.
     ModelOptions { session: String, options: Vec<ModelOption>, refused: Vec<String> },
+    /// The person's own turn, as a replay redraws it.
+    Said { session: String, text: String },
+    /// A resumed session's chat, oldest first; `open` names its approvals and choices still waiting.
+    Replay { session: String, log: Vec<ToShell>, open: Vec<String> },
+    /// The person's workspace document; None when the thalamus holds none.
+    Workspace { doc: Option<serde_json::Value> },
 }
+
+/// A workspace document's cap, serialized: it rides one line of at most 1 MiB.
+pub const MAX_WORKSPACE: usize = 512 << 10;
+/// The most lines a replay redraws.
+pub const MAX_REPLAY: usize = 200;
 
 /// What a widget re-runs: exactly one of rows (query_rows' arguments), a chart, a form, a kpi.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -226,6 +241,16 @@ fn need_model(backend: &str, model: &str) -> Result<(), String> {
     if model.trim().is_empty() || model.chars().count() > 200 { Err("a model is named by 1-200 chars".into()) } else { Ok(()) }
 }
 
+/// A workspace document is a JSON object of at most MAX_WORKSPACE bytes; its shape is the shell's.
+fn need_doc(doc: &serde_json::Value) -> Result<(), String> {
+    let n = doc.to_string().len();
+    match doc {
+        serde_json::Value::Object(_) if n <= MAX_WORKSPACE => Ok(()),
+        serde_json::Value::Object(_) => Err(format!("a workspace is at most {MAX_WORKSPACE} bytes, not {n}")),
+        _ => Err("a workspace is a JSON object".into()),
+    }
+}
+
 /// The model has no form: one is drawn only inside the widget message the person asked for.
 fn not_a_form(c: &Component) -> Result<(), String> {
     match c {
@@ -267,7 +292,8 @@ fn check_shell(m: &ToShell) -> Result<(), String> {
                 _ => Err(format!("actor is not user:<canonical uid>: {actor:?}")),
             }
         }
-        ToShell::Text { session, .. } | ToShell::Activity { session, .. } | ToShell::TableChanged { session, .. } => {
+        ToShell::Text { session, .. } | ToShell::Activity { session, .. } | ToShell::TableChanged { session, .. }
+        | ToShell::Said { session, .. } => {
             need_uuid("session", session)
         }
         ToShell::FormResult { session, widget, form, .. } => {
@@ -319,6 +345,26 @@ fn check_shell(m: &ToShell) -> Result<(), String> {
                 if o.processor.trim().is_empty() { Err(format!("{} {} names no processor", o.backend, o.model)) } else { Ok(()) }
             })
         }
+        ToShell::Replay { session, log, open } => {
+            need_uuid("session", session)?;
+            if log.len() > MAX_REPLAY || open.len() > 64 {
+                return Err(format!("a replay holds at most {MAX_REPLAY} lines and 64 open ids"));
+            }
+            open.iter().try_for_each(|id| need_uuid("open", id))?;
+            log.iter().try_for_each(|m| {
+                let of = match m {
+                    ToShell::Said { session, .. } | ToShell::Text { session, .. } | ToShell::Render { session, .. }
+                    | ToShell::ApprovalRequest { session, .. } => Some(session),
+                    ToShell::Refused { widget: None, .. } => None,
+                    _ => return Err("a replay holds said, text, render, approval_request and refused only".to_string()),
+                };
+                if of.is_some_and(|s| s != session) {
+                    return Err("a replayed line is of another session".into());
+                }
+                check_shell(m)
+            })
+        }
+        ToShell::Workspace { doc } => doc.as_ref().map_or(Ok(()), need_doc),
         ToShell::Widget { session, widget, component } => {
             need_uuid("session", session)?;
             need_token(widget)?;
@@ -365,6 +411,7 @@ pub fn decode_to_thalamus(line: &str) -> Result<ToThalamus, String> {
         }
         ToThalamus::WorkingFor { scope } => need_scope(scope)?,
         ToThalamus::ModelPick { backend, model } => need_model(backend, model)?,
+        ToThalamus::WorkspaceSave { doc } => need_doc(doc)?,
         _ => {}
     }
     Ok(m)
@@ -375,4 +422,27 @@ pub fn encode<T: Serialize>(m: &T) -> String {
     let mut s = serde_json::to_string(m).expect("wire types always serialize");
     s.push('\n');
     s
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_workspace_over_its_cap_is_refused_both_ways() {
+        let big = serde_json::json!({"pad": "x".repeat(MAX_WORKSPACE)});
+        let save = encode(&ToThalamus::WorkspaceSave { doc: big.clone() });
+        assert!(decode_to_thalamus(&save).unwrap_err().contains("at most"));
+        assert!(matches!(decode_to_shell(&encode(&ToShell::Workspace { doc: Some(big) })), ToShell::Refused { .. }));
+        assert!(decode_to_thalamus(&encode(&ToThalamus::WorkspaceSave { doc: serde_json::json!({"version": 2}) })).is_ok());
+    }
+
+    #[test]
+    fn a_replay_over_its_cap_is_refused() {
+        let s = "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b".to_string();
+        let line = |n: usize| encode(&ToShell::Replay { session: s.clone(),
+            log: (0..n).map(|i| ToShell::Said { session: s.clone(), text: i.to_string() }).collect(), open: vec![] });
+        assert!(matches!(decode_to_shell(&line(MAX_REPLAY)), ToShell::Replay { .. }));
+        assert!(matches!(decode_to_shell(&line(MAX_REPLAY + 1)), ToShell::Refused { .. }));
+    }
 }

@@ -426,6 +426,21 @@ impl App {
             }
             // The pupil's eye shows it; the terminal's scrollback stays the conversation.
             ToShell::Activity { .. } => {}
+            ToShell::Said { text, .. } => self.lines.push(Line::styled(format!("you: {text}"), Style::new().fg(Color::Cyan))),
+            ToShell::Replay { log, open, .. } => {
+                self.lines.push(head(format!("resumed: {} lines of this session", log.len())));
+                for m in log {
+                    match m {
+                        // A decided card or an answered choice is history: drawn, never asked again.
+                        ToShell::ApprovalRequest { approval, component, .. } if !open.contains(&approval) => self.lines.extend(component_lines(&component)),
+                        ToShell::Render { component: c @ Component::Choice(_), .. }
+                            if !matches!(&c, Component::Choice(ch) if ch.id.as_ref().is_some_and(|i| open.contains(i))) => self.lines.extend(component_lines(&c)),
+                        m => self.apply(m),
+                    }
+                }
+            }
+            // The workspace is the pupil's.
+            ToShell::Workspace { .. } => {}
         }
     }
 

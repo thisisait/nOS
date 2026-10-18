@@ -2,11 +2,6 @@ update nOS Roadmap (roadmap) / backup-restic-fork — nothing is written unless 
 u approve
   status: "open" -> "done"
   note: (empty) -> "landed"
-form Expenses (table expenses): fill it in the pupil
-  Amount (number, required)
-  When (date, prefilled 2026-10-20)
-  Kind (select, required, options food|travel|tools, prefilled travel)
-  Paid (bool, shown when kind != food)
   not editable here: receipt (file)
 widget w4: row e3 added
 Travel spend: 12450.5 Kč
@@ -36,5 +31,10 @@ d_params_b): it runs, badly
   3. mistral-eu mistral-large-latest — Mistral AI SAS, in the EU
   not offered: ollama qwen3:1.7b: 'qwen3:1.7b' has 1.7B parameters, below the 3B
  minimum (llm_cell_min_params_b)
+you: find rows about backups in the roadmap
+resumed: 3 lines of this session
+you: set its status to done
+iris: Two rows match.
+refused: an approval is waiting: decide it first
 approve this edit (1 of 8)? y / n
 Enter send · F2 /inbox · F3 /approvals · F4 /red · Ctrl-C quit
