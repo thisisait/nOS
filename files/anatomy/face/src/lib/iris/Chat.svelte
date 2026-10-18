@@ -27,7 +27,6 @@
 	let drag: { x: number; y: number; cx: number; cy: number } | null = null;
 
 	const down = (e: PointerEvent) => {
-		if ((e.target as HTMLElement).closest('button')) return;
 		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
 		drag = { x: chat.x, y: chat.y, cx: e.clientX, cy: e.clientY };
 		ontop();
@@ -79,19 +78,17 @@
 		style="left: {chat.x}px; top: {chat.y}px; width: {chat.w}px; height: {chat.h}px"
 		onpointerdowncapture={ontop}
 	>
-		<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-		<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-		<header
-			class="handle"
-			role="group"
-			tabindex="0"
-			aria-label="move the chat (arrow keys)"
-			onpointerdown={down}
-			onpointermove={moved}
-			onpointerup={up}
-			onpointercancel={up}
-			onkeydown={key}
-		>
+		<!-- Only the grip drags, like a widget's: a drag from the whole header ate the model select's click. -->
+		<header class="head">
+			<button
+				class="grip"
+				aria-label="move the chat (arrow keys)"
+				onpointerdown={down}
+				onpointermove={moved}
+				onpointerup={up}
+				onpointercancel={up}
+				onkeydown={key}>⠿</button
+			>
 			{@render head()}
 			<button
 				class="ghost"
@@ -123,17 +120,22 @@
 	.chat.top {
 		z-index: 40;
 	}
-	.handle {
+	.head {
 		display: flex;
 		align-items: center;
 		gap: 8px;
-		padding: 10px 12px 6px 16px;
+		padding: 10px 12px 6px 8px;
 		font-weight: 600;
+	}
+	.grip {
+		border: 0;
+		background: none;
+		color: var(--muted);
 		cursor: grab;
 		user-select: none;
 		touch-action: none;
 	}
-	.handle:focus-visible {
+	.grip:focus-visible {
 		outline: 2px solid var(--accent);
 		outline-offset: -2px;
 	}
