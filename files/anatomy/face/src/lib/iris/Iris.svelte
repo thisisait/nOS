@@ -315,10 +315,14 @@
 
 	// A new link resumes the person's session first, so serve's wall is set again before any widget reads.
 	async function linked() {
+		// The first failure stops the rest: after a refused hello every later ask fails the same way (live 2026-10-18).
 		const say = (msg: ToThalamus, what: string) =>
-			transport?.send(msg).catch((e) => push({ note: `${what}: ${e}` }));
-		await say({ t: 'resume' }, 'the session was not resumed');
-		await say({ t: 'workspace_load' }, 'the layout was not asked of the thalamus');
+			transport?.send(msg).then(
+				() => true,
+				(e) => (push({ note: `${what}: ${e}` }), false)
+			);
+		if (!(await say({ t: 'resume' }, 'the session was not resumed'))) return;
+		if (!(await say({ t: 'workspace_load' }, 'the layout was not asked of the thalamus'))) return;
 		await say({ t: 'model_options' }, 'the models were not asked');
 		await say({ t: 'catalogue' }, 'the catalogue was not asked, so nothing is marked');
 		if (limbs) await say({ t: 'limbs', limbs: limbs() }, 'the limbs were not declared');

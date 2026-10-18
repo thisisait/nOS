@@ -94,7 +94,8 @@ impl Relay {
         if uid::canonical(username, "", "") != id {
             return Err(format!("username {:?} does not fold to {id}", username.chars().take(80).collect::<String>()));
         }
-        let who = serve::person_by_uid(id, &self.srv.map).ok_or_else(|| format!("{id} is not in the identity map"))?;
+        let who = serve::person_by_uid(id, &self.srv.map).ok_or_else(|| format!("{id} is not in the identity map: Iris speaks only with a person it names; \
+                                    sign in to the face as one (akadmin is the break-glass admin, not a person)"))?;
         Ok((who, id.to_string(), tab.to_string(), groups))
     }
 
