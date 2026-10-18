@@ -1,0 +1,10 @@
+files.rename on the face — nothing is done unless you approve
+  Rename a file
+  path: "/notes/a.md"
+  to: "b.md"
+
+
+
+
+
+

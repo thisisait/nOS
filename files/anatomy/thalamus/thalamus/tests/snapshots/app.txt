@@ -2,7 +2,6 @@ update nOS Roadmap (roadmap) / backup-restic-fork — nothing is written unless 
 u approve
   status: "open" -> "done"
   note: (empty) -> "landed"
-  not editable here: receipt (file)
 widget w4: row e3 added
 Travel spend: 12450.5 Kč
   down 320 vs last month
@@ -36,5 +35,6 @@ resumed: 3 lines of this session
 you: set its status to done
 iris: Two rows match.
 refused: an approval is waiting: decide it first
-approve this edit (1 of 8)? y / n
+refused: an act desktop.open_app, but this shell has no limbs
+approve this edit (1 of 9)? y / n
 Enter send · F2 /inbox · F3 /approvals · F4 /red · Ctrl-C quit
