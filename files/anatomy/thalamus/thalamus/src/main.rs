@@ -18,6 +18,11 @@ fn serve_main(args: &[String]) -> Result<(), String> {
     if secret.is_empty() {
         return Err("KEAP_PROXY_SHARED_SECRET is unset or empty".into());
     }
+    // The face's door (src/relay.rs), read once and removed the same way; empty = no listener.
+    let relay_secret = std::env::var("THALAMUS_RELAY_SECRET").unwrap_or_default();
+    std::env::remove_var("THALAMUS_RELAY_SECRET");
+    // The role's thalamus_relay_port; no second spelling of it here.
+    let relay_port = std::env::var("THALAMUS_RELAY_PORT").ok().and_then(|p| p.parse::<u16>().ok()).filter(|p| *p != 0);
     // The role derives it from nos_data_root; no default, so a bare `serve` cannot write elsewhere.
     let data = match args {
         [flag, dir] if flag == "--data-dir" && !dir.is_empty() => PathBuf::from(dir),
@@ -92,7 +97,24 @@ fn serve_main(args: &[String]) -> Result<(), String> {
         cortex,
         data,
     };
-    serve::run(listener, Arc::new(srv));
+    let srv = Arc::new(srv);
+    // One line tools/thalamus-status.py reads: bound iff the secret is set. A failed bind keeps the socket serving.
+    let port = relay_port.unwrap_or_default();
+    let bound = match relay_port {
+        Some(p) => thalamus::relay::bind(&relay_secret, p),
+        None if relay_secret.is_empty() => Ok(None),
+        None => Err(std::io::Error::other("THALAMUS_RELAY_PORT is unset or not a port")),
+    };
+    match bound {
+        Ok(Some(l)) => {
+            eprintln!("thalamus: relay bound 127.0.0.1:{port}");
+            let door = Arc::new(thalamus::relay::Relay::new(srv.clone(), relay_secret));
+            std::thread::spawn(move || thalamus::relay::run(l, door));
+        }
+        Ok(None) => eprintln!("thalamus: relay closed (no THALAMUS_RELAY_SECRET)"),
+        Err(e) => eprintln!("thalamus: relay FAILED 127.0.0.1:{port}: {e}"),
+    }
+    serve::run(listener, srv);
     Ok(())
 }
 

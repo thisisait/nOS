@@ -177,7 +177,16 @@ fn peer_login(s: &UnixStream) -> Option<String> {
 /// The receptor's loader rules: unknown, unreadable or malformed is None.
 pub fn person(login: &str, map: &Path) -> Option<Person> {
     let doc: Value = serde_json::from_str(&std::fs::read_to_string(map).ok()?).ok()?;
-    let entry = doc.get("logins")?.get(login)?;
+    entry(doc.get("logins")?.get(login)?)
+}
+
+/// The relay's door (relay.rs): no login, so the entry whose username folds to `uid`; same loader rules.
+pub fn person_by_uid(uid: &str, map: &Path) -> Option<Person> {
+    let doc: Value = serde_json::from_str(&std::fs::read_to_string(map).ok()?).ok()?;
+    doc.get("logins")?.as_object()?.values().filter_map(entry).find(|p| p.uid() == uid)
+}
+
+fn entry(entry: &Value) -> Option<Person> {
     let ok = |v: &Value| v.as_str().filter(|s| !s.is_empty() && !s.contains(['\r', '\n', ','])).map(str::to_string);
     let username = ok(entry.get("username")?)?;
     let groups = entry.get("groups")?.as_array()?.iter().map(ok).collect::<Option<Vec<_>>>()?;
@@ -318,7 +327,7 @@ enum Answer {
     Total,
 }
 
-fn send(out: &mut UnixStream, m: &ToShell) {
+fn send(out: &mut dyn Write, m: &ToShell) {
     keep(m);
     let _ = out.write_all(encode(m).as_bytes());
 }
@@ -370,14 +379,14 @@ fn keep(m: &ToShell) {
 }
 
 /// What this session is doing now; the pupil's eye shows it.
-fn activity(out: &mut UnixStream, o: &Open, phase: Phase) {
+fn activity(out: &mut dyn Write, o: &Open, phase: Phase) {
     send(out, &ToShell::Activity { session: o.session.clone(), phase });
 }
 
 /// A write landed in `table` (already in the ledger): this connection's widgets may re-run, under
 /// every name a spec may give it. ponytail: this connection only; other shells of the person learn
 /// on their next run (roadmap thalamus-table-changed-broadcast).
-fn changed(out: &mut UnixStream, o: &Open, table: &str, row: &str) {
+fn changed(out: &mut dyn Write, o: &Open, table: &str, row: &str) {
     for table in table_names(table) {
         send(out, &ToShell::TableChanged { session: o.session.clone(), table, row: row.to_string() });
     }
@@ -415,7 +424,7 @@ fn text_call(text: &str, n: usize) -> Option<Value> {
     Some(json!({"id": format!("text-{n}"), "type": "function", "function": {"name": name, "arguments": args}}))
 }
 
-fn refuse(out: &mut UnixStream, why: &str) {
+fn refuse(out: &mut dyn Write, why: &str) {
     send(out, &ToShell::Refused { reason: why.to_string(), widget: None });
 }
 
@@ -736,7 +745,7 @@ else one total over every matched row"},
 }
 
 impl Server {
-    fn say(&self, line: String) {
+    pub(crate) fn say(&self, line: String) {
         if let Ok(mut l) = self.log.lock() {
             let _ = writeln!(l, "{line}");
         }
@@ -745,14 +754,19 @@ impl Server {
     fn connection(&self, mut out: UnixStream) {
         let login = peer_login(&out);
         let who = login.as_deref().and_then(|l| person(l, &self.map));
-        let Some(mut who) = who.filter(|p| !p.uid().is_empty()) else {
+        let Some(who) = who.filter(|p| !p.uid().is_empty()) else {
             let l = login.unwrap_or_else(|| "unknown uid".into());
             self.say(format!("refused {l}: not in the identity map"));
             return refuse(&mut out, &format!("{l} is not in the identity map"));
         };
         self.say(format!("connected {} as {}", login.as_deref().unwrap_or("?"), who.username));
-        let Ok(input) = out.try_clone() else { return };
-        let mut input = BufReader::new(input);
+        let (Ok(input), Ok(probe)) = (out.try_clone(), out.try_clone()) else { return };
+        self.converse(who, BufReader::new(input), out, &|| peer(&probe));
+    }
+
+    /// One door's connection after it named the person: the socket's and the relay's (relay.rs) alike.
+    /// `peer` is what the ledger records per line: the kernel's {pid, exe}, or the relay's {via, tab, uid}.
+    pub(crate) fn converse(&self, mut who: Person, mut input: impl BufRead, mut out: impl Write, peer: &dyn Fn() -> Value) {
         let mut open: Option<Open> = None;
         loop {
             let mut line = String::new();
@@ -764,7 +778,7 @@ impl Server {
                 }
                 Ok(_) => {}
             }
-            let peer = peer(&out);
+            let peer = peer();
             match decode_to_thalamus(&line) {
                 Err(why) => refuse(&mut out, &why),
                 Ok(ToThalamus::Turn { session, text }) => {
@@ -862,12 +876,12 @@ impl Server {
     }
 
     /// The connection's session, opened on its first Turn or Control; None was refused.
-    fn ensure<'a>(&self, who: &mut Person, out: &mut UnixStream, open: &'a mut Option<Open>) -> Option<&'a mut Open> {
+    fn ensure<'a>(&self, who: &mut Person, out: &mut dyn Write, open: &'a mut Option<Open>) -> Option<&'a mut Open> {
         self.begin(who, out, open, false)
     }
 
     /// Opens the connection's session if none is: with `resume`, the person's last one, replayed.
-    fn begin<'a>(&self, who: &mut Person, out: &mut UnixStream, open: &'a mut Option<Open>, resume: bool) -> Option<&'a mut Open> {
+    fn begin<'a>(&self, who: &mut Person, out: &mut dyn Write, open: &'a mut Option<Open>, resume: bool) -> Option<&'a mut Open> {
         if open.is_none() {
             match self.open(who, out, resume) {
                 Ok((mut o, resumed)) => {
@@ -884,7 +898,7 @@ impl Server {
     }
 
     /// The connection's session and whether it was resumed (asked by `resume`).
-    fn open(&self, who: &Person, out: &mut UnixStream, resume: bool) -> Result<(Open, bool), String> {
+    fn open(&self, who: &Person, out: &mut dyn Write, resume: bool) -> Result<(Open, bool), String> {
         // The imprint the binding calls for: the short render fits a local model's window.
         let imprint = self.binding.clone().and_then(|m| self.imprint(&m).map(|t| (m, t)));
         if let (Ok(_), Err(why)) = (&self.binding, &imprint) {
@@ -952,7 +966,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
 
     /// A resumed session as it was left: its chat replayed (the conversation file), the model hearing
     /// its last messages, the scope last set, and its open approvals and choices waiting again (the ledger).
-    fn resume(&self, who: &mut Person, out: &mut UnixStream, o: &mut Open) {
+    fn resume(&self, who: &mut Person, out: &mut dyn Write, o: &mut Open) {
         let log: Vec<ToShell> = conversation(&store::path(&self.data, &who.uid(), "conversation"), &o.session)
             .into_iter().filter_map(|v| serde_json::from_value(v).ok()).collect();
         let held = self.ledger.lock().map_err(|_| "ledger poisoned".to_string()).and_then(|l| {
@@ -1063,13 +1077,13 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         Ok(ids.iter().filter_map(|m| m["id"].as_str().map(str::to_string)).filter(|id| seen.insert(id.clone())).collect())
     }
 
-    fn model_options(&self, out: &mut UnixStream, o: &Open) {
+    fn model_options(&self, out: &mut dyn Write, o: &Open) {
         let (ok, refused) = self.options(o);
         send(out, &ToShell::ModelOptions { session: o.session.clone(), options: ok.into_iter().map(|(m, _)| m).collect(), refused });
     }
 
     /// The person's pick: judged again, recorded, then the session's binding from its next turn.
-    fn model_pick(&self, out: &mut UnixStream, o: &mut Open, backend: &str, model: &str, peer: &Value) {
+    fn model_pick(&self, out: &mut dyn Write, o: &mut Open, backend: &str, model: &str, peer: &Value) {
         let (mut ok, refused) = self.options(o);
         let Some(i) = ok.iter().position(|(m, _)| m.backend == backend && m.model == model) else {
             let named = format!("{backend} {model}: ");
@@ -1113,7 +1127,12 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
 
     /// The decider gate before a submit, a decision or a choice reply: a refused peer is told and
     /// recorded (its {pid, exe}, the reason), and nothing pending is consumed or cancelled.
-    fn may_decide(&self, o: &Open, out: &mut UnixStream, tool: &str, about: &str, peer: &Value, widget: Option<&str>) -> bool {
+    fn may_decide(&self, o: &Open, out: &mut dyn Write, tool: &str, about: &str, peer: &Value, widget: Option<&str>) -> bool {
+        // The relay's authenticated hello is the decider proof (operator 2026-10-18): only relay.rs builds
+        // a peer with `via`; the exe list keeps governing the socket's peers.
+        if peer["via"] == "face" {
+            return true;
+        }
         let Some(why) = decider_refusal(&self.deciders, peer["exe"].as_str()) else { return true };
         let _ = self.record(o, Kind::ToolResult, Some(tool), json!({"refused": why, "for": about, "peer": peer}));
         self.say(format!("refused a {tool} from {peer}: {why}"));
@@ -1133,7 +1152,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
 
     /// Asks the person: the request is in the ledger before the shell sees it, or it is not asked.
     /// `outside` says whose the row is when that is not whom the person works for: its approve asks once more.
-    fn ask(&self, o: &mut Open, out: &mut UnixStream, d: RowDiffApproval, outside: Option<String>) -> Result<Value, String> {
+    fn ask(&self, o: &mut Open, out: &mut dyn Write, d: RowDiffApproval, outside: Option<String>) -> Result<Value, String> {
         let tool = match d.op {
             RowOp::Insert | RowOp::InsertMany => "propose_row_insert",
             RowOp::Update => "propose_row_edit",
@@ -1190,7 +1209,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
     }
 
     /// The request `rec` in the ledger under a minted approval id, then the card to the shell.
-    fn asking(&self, o: &mut Open, out: &mut UnixStream, tool: &'static str, mut rec: Value, component: Component) -> Result<Value, String> {
+    fn asking(&self, o: &mut Open, out: &mut dyn Write, tool: &'static str, mut rec: Value, component: Component) -> Result<Value, String> {
         let approval = mint_uuid().map_err(|e| format!("no approval id: {e}"))?;
         rec["approval"] = json!(approval);
         self.record(o, Kind::ApprovalRequest, Some(tool), rec)?;
@@ -1200,7 +1219,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn decide(&self, who: &Person, out: &mut UnixStream, o: &mut Open, approval: &str, d: Decision, note: Option<String>, peer: &Value) {
+    fn decide(&self, who: &Person, out: &mut dyn Write, o: &mut Open, approval: &str, d: Decision, note: Option<String>, peer: &Value) {
         let tool = Some(o.pending.remove(approval).unwrap_or("propose_row_edit"));
         let said = if d == Decision::Approve { "approve" } else { "reject" };
         let id = match self.record(o, Kind::ApprovalDecision, tool,
@@ -1449,17 +1468,17 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
     /// never `pending`, never the model's messages: request, decision, commit, result, all
     /// under tool form_submit, each naming the peer.
     #[allow(clippy::too_many_arguments)]
-    fn form_submit(&self, who: &Person, out: &mut UnixStream, o: &mut Open, form: &str, widget: &str,
+    fn form_submit(&self, who: &Person, out: &mut dyn Write, o: &mut Open, form: &str, widget: &str,
                    values: &Map<String, Value>, peer: &Value) {
         let tool = Some("form_submit");
-        let refused = |out: &mut UnixStream, reason: String| send(out, &ToShell::Refused { reason, widget: Some(widget.to_string()) });
+        let refused = |out: &mut dyn Write, reason: String| send(out, &ToShell::Refused { reason, widget: Some(widget.to_string()) });
         let f = o.forms.get(widget).filter(|f| f.form == form).cloned();
         let keys: Vec<&String> = values.keys().collect();
         let used = json!({"widget": widget, "form": form, "table": f.as_ref().map(|f| &f.table), "keys": keys});
         if let Err(why) = self.record(o, Kind::ToolUse, tool, used) {
             return refused(out, format!("not recorded, so not written: {why}"));
         }
-        let fail = |o: &Open, out: &mut UnixStream, why: String| {
+        let fail = |o: &Open, out: &mut dyn Write, why: String| {
             let _ = self.record(o, Kind::ToolResult, tool, json!({"error": why, "peer": peer}));
             refused(out, why);
         };
@@ -1496,7 +1515,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
     /// The person's answer to an open choice, checked against the choice serve stored, recorded,
     /// and handed to the model as data; true when the model's next turn should run. It closes the
     /// choice and nothing else: a label never mints an approval, a form, a widget or a write.
-    fn choice_reply(&self, out: &mut UnixStream, o: &mut Open, choice: &str, picked: &[String]) -> bool {
+    fn choice_reply(&self, out: &mut dyn Write, o: &mut Open, choice: &str, picked: &[String]) -> bool {
         let tool = Some("choice_reply");
         if let Err(why) = self.record(o, Kind::ToolUse, tool, json!({"choice": choice, "picked": picked})) {
             refuse(out, &format!("not recorded, so not heard: {why}"));
@@ -1544,7 +1563,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
 
     /// The person says whom they work for (D2): resolved and recorded before it is set, refused while a
     /// card waits (it keeps the scope it was asked under); rows shown before are forgotten.
-    fn working_for(&self, who: &mut Person, out: &mut UnixStream, o: &mut Open, scope: &Scope, peer: &Value) {
+    fn working_for(&self, who: &mut Person, out: &mut dyn Write, o: &mut Open, scope: &Scope, peer: &Value) {
         let set = (|| {
             if !o.pending.is_empty() {
                 return Err("an approval is waiting: decide it first, so its card keeps the scope it was asked under".to_string());
@@ -1585,7 +1604,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
         send(out, &ToShell::WorkingFor { session: o.session.clone(), scope: resolved, name });
     }
 
-    fn turn(&self, who: &Person, out: &mut UnixStream, o: &mut Open, text: &str) {
+    fn turn(&self, who: &Person, out: &mut dyn Write, o: &mut Open, text: &str) {
         if let Err(why) = &o.model {
             return refuse(out, &format!("iris has no model: {why}"));
         }
@@ -1724,12 +1743,12 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
     }
 
     /// The model's turn over the conversation so far, tool calls and all, until it says text.
-    fn think(&self, who: &Person, out: &mut UnixStream, o: &mut Open) {
+    fn think(&self, who: &Person, out: &mut dyn Write, o: &mut Open) {
         self.think_from(who, out, o, None);
     }
 
     /// think(), with `first` (a planned message of tool calls) in place of the first model call.
-    fn think_from(&self, who: &Person, out: &mut UnixStream, o: &mut Open, mut first: Option<Value>) {
+    fn think_from(&self, who: &Person, out: &mut dyn Write, o: &mut Open, mut first: Option<Value>) {
         let model = match o.model.clone() {
             Ok(m) => m,
             Err(why) => return refuse(out, &format!("iris has no model: {why}")),
@@ -2906,7 +2925,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
         Ok((list, v, rec))
     }
 
-    fn control(&self, who: &Person, out: &mut UnixStream, o: &mut Open, view: ControlView) {
+    fn control(&self, who: &Person, out: &mut dyn Write, o: &mut Open, view: ControlView) {
         let tool = match view {
             ControlView::Inbox => "control_inbox",
             ControlView::Approvals => "control_approvals",
@@ -2933,7 +2952,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
 
     /// A widget the person placed, run as them without the model. It never extends `shown`: the
     /// model did not see these rows. The ToolUse names the spec and why it ran, before it runs.
-    fn widget(&self, who: &Person, out: &mut UnixStream, o: &mut Open, widget: &str, spec: &WidgetSpec, trigger: Trigger) {
+    fn widget(&self, who: &Person, out: &mut dyn Write, o: &mut Open, widget: &str, spec: &WidgetSpec, trigger: Trigger) {
         let (tool, mut used) = match spec {
             WidgetSpec::Rows(a) => ("widget_rows", json!({"table": a.get("table"), "kind": "rows"})),
             WidgetSpec::Chart(c) => ("widget_chart", json!({"table": c.query.table, "kind": c.chart, "op": c.op})),
@@ -2942,7 +2961,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
         };
         used["widget"] = json!(widget);
         used["trigger"] = json!(trigger);
-        let refused = |out: &mut UnixStream, reason: String| send(out, &ToShell::Refused { reason, widget: Some(widget.to_string()) });
+        let refused = |out: &mut dyn Write, reason: String| send(out, &ToShell::Refused { reason, widget: Some(widget.to_string()) });
         if let Err(why) = self.record(o, Kind::ToolUse, Some(tool), used) {
             return refused(out, format!("not recorded, so not run: {why}"));
         }

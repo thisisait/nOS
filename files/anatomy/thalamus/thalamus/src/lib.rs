@@ -3,6 +3,7 @@
 pub mod binding;
 pub mod cortex_plan;
 pub mod ledger;
+pub mod relay;
 pub mod septum;
 pub mod serve;
 pub mod shell;
