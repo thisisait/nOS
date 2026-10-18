@@ -20,6 +20,7 @@
     {"case": "the person lifts the wall", "msg": {"t": "working_for", "scope": "all"}},
     {"case": "the person asks which models Iris may use", "msg": {"t": "model_options"}},
     {"case": "the person picks a model for this session", "msg": {"t": "model_pick", "backend": "ollama", "model": "qwen3:4b"}},
+    {"case": "the pupil resumes the person's last session", "msg": {"t": "resume"}},
     {"case": "the pupil asks for the person's workspace", "msg": {"t": "workspace_load"}},
     {"case": "the pupil saves the person's workspace", "msg": {"t": "workspace_save", "doc": {"version": 2, "active": "ws1", "chat": {"x": 24, "y": 24, "w": 420, "h": 560, "open": true}, "workspaces": [{"id": "ws1", "name": "Workspace", "widgets": []}]}}}
   ],

@@ -5585,11 +5585,12 @@ fn remap(rig: &Rig, username: &str) {
     std::fs::write(&rig.srv.map, map.to_string()).unwrap();
 }
 
-/// A new connection whose first message (model_options: no model call in the rig) opens its session;
-/// what came before the options answer.
+/// A new connection that asks to resume, then for the model options (no model call in the rig);
+/// what came before the options answer. A connection that does not ask starts fresh.
 fn reopen(rig: &Rig) -> (UnixStream, BufReader<UnixStream>, Vec<ToShell>) {
     let s = connect(&rig.sock);
     let mut r = BufReader::new(s.try_clone().unwrap());
+    (&s).write_all(b"{\"t\":\"resume\"}\n").unwrap();
     (&s).write_all(encode(&ToThalamus::ModelOptions).as_bytes()).unwrap();
     let mut got = vec![];
     while let Some(m) = next(&mut r) {

@@ -2,7 +2,7 @@
 # Protocol: ssot/doctrine/cross-repo-contracts.md §1 (spec + fixture + gates
 # over the same bytes). Both sides link one Rust crate (nos-contract), so the
 # gate is the crate decoding the fixture; one copy only, both sides cite this.
-contract_version: 7   # 7: workspace_load, workspace_save, workspace, said, replay; 6: dashboard, kpi, working_for, model_options, model_pick; 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice, delta, sequence; 5: row_diff_approval op/title/read_from
+contract_version: 7   # 7: resume, workspace_load, workspace_save, workspace, said, replay; 6: dashboard, kpi, working_for, model_options, model_pick; 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice, delta, sequence; 5: row_diff_approval op/title/read_from
 fixture: files/anatomy/contracts/thalamus-shell.fixture.json
 
 producer:
@@ -24,7 +24,7 @@ gates:
 wire:
   framing: "newline-delimited JSON, one message per line, UTF-8"
   tag: "every message is an object whose `t` names its variant (snake_case)"
-  to_thalamus: [turn, approval_decision, control, widget, form_submit, choice_reply, working_for, model_options, model_pick, workspace_load, workspace_save]
+  to_thalamus: [turn, approval_decision, control, widget, form_submit, choice_reply, working_for, model_options, model_pick, resume, workspace_load, workspace_save]
   to_shell: [session, text, render, approval_request, refused, activity, widget, form_result, table_changed, working_for, model_options, said, replay, workspace]
   widget: >-
     A widget is a spec the person placed; the pupil re-runs it over `widget {widget, spec, trigger}`
@@ -102,10 +102,12 @@ wire:
     answers nothing, or `refused`. Neither opens a session. The pupil keeps its own file as an offline cache
     and moves it up once, when the thalamus holds none.
   replay: >-
-    A connection's first session resumes the person's last one closed by its connection (connection_closed):
-    the same `session` uuid, then `replay {session, log, open}`: that session's chat oldest first (said, text,
+    `resume`, asked before anything else on a connection, opens the person's last session closed by its
+    connection (connection_closed) again: the same `session` uuid (a second agent_session_start says
+    resumed), then `replay {session, log, open}`: that session's chat oldest first (said, text,
     render, approval_request, refused; at most 200 lines), and `open` the approvals and choices still
     waiting, each decided or answered once, as before. `said {session, text}` is the person's own turn.
+    With none to resume it opens a fresh one, with no replay; any other first message opens a fresh one too.
     Another person resumes and reads none of it.
   phase: [thinking, tool, writing, idle]   # activity.phase; tool is {tool: {name}}
   decision: [approve, reject]
