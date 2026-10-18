@@ -281,7 +281,10 @@ echo "[run-agent] ceilings: tokens=${NOS_AGENT_SESSION_TOKEN_CEILING:-<default>}
 # and reported `runner emitted no JSON summary` for every single one.
 # shellcheck source=../files/anatomy/scripts/agent-run-lock.sh
 source "$REPO_ROOT/files/anatomy/scripts/agent-run-lock.sh"
-nos_agent_lock_acquire "${NOS_AGENT_NAME:-agentkit}" 300 agentkit || exit 2
+_lock_rc=0
+nos_agent_lock_acquire "${NOS_AGENT_NAME:-agentkit}" 300 agentkit || _lock_rc=$?
+if [ "$_lock_rc" -eq 3 ]; then exit 3; fi   # loops paused: a hold, not a refusal
+if [ "$_lock_rc" -ne 0 ]; then exit 2; fi
 
 SUMMARY_FILE="$(mktemp -t nos-agent-summary.XXXXXX)"
 trap 'nos_agent_lock_release; rm -f "$SUMMARY_FILE"' EXIT

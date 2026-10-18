@@ -59,6 +59,19 @@ def _now_iso() -> str:
 
 # ── daemon ──────────────────────────────────────────────────────────────
 
+
+def paused_hold(job_id: str) -> "sp_runner.RunResult | None":
+    """Exit 3 for a loop:* job while `nos loops pause` holds the estate.
+
+    Agents meet the pause in agent-run-lock.sh; loop runners take no lock, so
+    without this they ran (and failed) under a pause. Same sentinel, same code.
+    """
+    sentinel = os.environ.get("NOS_LOOPS_PAUSED_FILE") or os.path.expanduser("~/.nos/loops-paused")
+    if not job_id.startswith("loop:") or not os.path.isfile(sentinel):
+        return None
+    return sp_runner.RunResult(exit_code=3, duration_s=0.0, stdout_tail="", timed_out=False,
+                               stderr_tail=f"PAUSED: SERE loops paused ({sentinel}) — {job_id} held")
+
 class PulseDaemon:
     """Event-loop free single-threaded daemon with bounded thread-pool for runs."""
 
@@ -240,7 +253,7 @@ class PulseDaemon:
             span_id = otel.new_span_id()
             env.setdefault("TRACEPARENT", otel.traceparent(run_id, span_id))
             start_nanos = time.time_ns()
-            result = sp_runner.execute(command, args, timeout_s=timeout_s, env=env)
+            result = paused_hold(job_id) or sp_runner.execute(command, args, timeout_s=timeout_s, env=env)
             otel.export_run(job_id=job_id, run_id=run_id, span_id=span_id,
                             start_nanos=start_nanos, end_nanos=time.time_ns(),
                             exit_code=result.exit_code, command=command)
