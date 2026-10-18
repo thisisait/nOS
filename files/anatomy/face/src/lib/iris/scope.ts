@@ -12,6 +12,12 @@ export function forCommand(text: string): Scope | null | undefined {
 	return who === 'all' || who === 'personal' ? who : { client: who };
 }
 
+/** `/clear` or `/branch` alone (contract 9): a fresh conversation for this tab, or a new tab that starts from it. */
+export function tabCommand(text: string): 'clear' | 'branch' | undefined {
+	const t = text.trim();
+	return t === '/clear' || t === '/branch' ? (t.slice(1) as 'clear' | 'branch') : undefined;
+}
+
 /** Serve's wall lives on one connection: a new link says `want` again and no widget reads before its
  * answer; the answer (working_for) re-runs every widget, so no row read under another scope stays. */
 export function rewall(

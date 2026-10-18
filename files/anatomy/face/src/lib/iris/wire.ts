@@ -241,7 +241,8 @@ export type ToShell =
 	| { t: 'replay'; session: string; log: ToShell[]; open: string[] }
 	| { t: 'workspace'; doc: { [k: string]: Value } | null }
 	| { t: 'catalogue'; session: string; tables: Catalogue['tables'] }
-	| ({ t: 'act'; session: string } & Act);
+	| ({ t: 'act'; session: string } & Act)
+	| { t: 'model_state'; session: string; loaded: boolean };
 
 /** One model the person may pick for the session (wire.rs ModelOption); `warning` below the recommended size. */
 export type ModelOption = {
@@ -286,7 +287,10 @@ export type ToThalamus =
 	| { t: 'working_for'; scope: Scope }
 	| { t: 'model_options' }
 	| { t: 'model_pick'; backend: string; model: string }
-	| { t: 'resume' }
+	| { t: 'resume'; workspace?: string }
+	| { t: 'clear' }
+	| { t: 'branch'; workspace: string }
+	| { t: 'stop'; session: string }
 	| { t: 'workspace_load' }
 	| { t: 'workspace_save'; doc: { [k: string]: unknown } }
 	| { t: 'catalogue' }

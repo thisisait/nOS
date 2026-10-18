@@ -21,7 +21,7 @@
 	import { asked, closed, composerOpen, decide, empty, seen, type Decision } from './approvals';
 	import { mark, type Catalogue } from './marks';
 	import { adopt, replayed, type Entry } from './resume';
-	import { forCommand, rewall } from './scope';
+	import { forCommand, rewall, tabCommand } from './scope';
 	import type {
 		DashboardProps,
 		Link,
@@ -136,14 +136,43 @@
 		const said = forCommand(text);
 		if (said === null)
 			return void push({ note: 'not sent: /for <client>, /for personal or /for all' });
-		const msg: ToThalamus = said ? { t: 'working_for', scope: said } : { t: 'turn', session, text };
+		const tab = tabCommand(text);
+		if (tab === 'branch' && layout.workspaces.length >= ws.MAX_SPACES)
+			return void push({ note: `not branched: at most ${ws.MAX_SPACES} tabs, close one first` });
+		// /branch: the new tab first, then serve opens its session from this one's conversation.
+		const fresh = tab === 'branch' ? `ws${Date.now().toString(36)}` : null;
+		const msg: ToThalamus = said
+			? { t: 'working_for', scope: said }
+			: tab === 'clear'
+				? { t: 'clear' }
+				: fresh
+					? { t: 'branch', workspace: fresh }
+					: { t: 'turn', session, text };
 		try {
+			if (fresh) layout = ws.addSpace(layout, fresh, `${space.name} (branch)`);
 			await transport?.send(msg);
 			draft = '';
 			push({ me: text });
 		} catch (e) {
 			push({ msg: { t: 'refused', reason: `not sent: ${e}` } });
 		}
+	}
+
+	// The person's Stop: serve ends the running turn before its next model or tool call (contract 9).
+	const busy = $derived(['thinking', 'tool', 'writing'].includes(ey.state));
+	function stop() {
+		if (session)
+			transport
+				?.send({ t: 'stop', session })
+				.catch((e) => push({ note: `not stopped: ${e}` }));
+	}
+
+	// Each workspace tab is its own conversation: showing another one resumes that tab's session.
+	function follow(prev: string) {
+		if (layout.active === prev || link.state !== 'connected') return;
+		transport
+			?.send({ t: 'resume', workspace: layout.active })
+			.catch((e) => push({ note: `this tab's conversation was not resumed: ${e}` }));
 	}
 
 	// The decided edit joins the scrollback with the answer, as shell.rs:181-182 does.
@@ -209,10 +238,12 @@
 	const setChat = (c: ws.Chat) => (layout = { ...layout, chat: ws.clampChat(c, viewport()) });
 
 	function showTab(tab: string) {
+		const prev = layout.active;
 		const r = ws.show(layout, widgets, tab);
 		layout = r.layout;
 		widgets = r.w;
 		sendAll(r.send);
+		follow(prev);
 	}
 
 	const newId = () => `w${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -278,7 +309,15 @@
 
 	function newTab() {
 		const n = layout.workspaces.length + 1;
+		const prev = layout.active;
 		layout = ws.addSpace(layout, `ws${Date.now().toString(36)}`, `Workspace ${n}`);
+		follow(prev);
+	}
+
+	function closeTab() {
+		const prev = layout.active;
+		layout = ws.removeSpace(layout, layout.active);
+		follow(prev);
 	}
 
 	async function loadLayout() {
@@ -307,7 +346,10 @@
 			layoutNote = `the thalamus's layout was refused (${e}); this one is kept`;
 			return;
 		}
+		const prev = layout.active;
 		layout = { ...r.layout, chat: ws.clampChat(r.layout.chat, viewport()) };
+		// The thalamus's copy may show another tab than this cache did: that tab's conversation, then.
+		follow(prev);
 		const w = rewall(want, layout, 'working_for');
 		widgets = w.w ?? widgets;
 		sendAll(w.send);
@@ -321,7 +363,7 @@
 				() => true,
 				(e) => (push({ note: `${what}: ${e}` }), false)
 			);
-		if (!(await say({ t: 'resume' }, 'the session was not resumed'))) return;
+		if (!(await say({ t: 'resume', workspace: layout.active }, 'the session was not resumed'))) return;
 		if (!(await say({ t: 'workspace_load' }, 'the layout was not asked of the thalamus'))) return;
 		await say({ t: 'model_options' }, 'the models were not asked');
 		await say({ t: 'catalogue' }, 'the catalogue was not asked, so nothing is marked');
@@ -360,7 +402,14 @@
 		const off = [
 			transport.onShell((payload) => {
 				see({ e: 'wire', msg: payload });
-				if (payload.t === 'session') session = payload.session;
+				// Another session (a tab, /clear, /branch) is another chat; a resumed or branched one replays its own.
+				if (payload.t === 'session') {
+					if (session && payload.session !== session) log = [];
+					session = payload.session;
+				}
+				// Cast until eye.ts takes the model input (being added beside this change, contract 9).
+				if (payload.t === 'model_state')
+					return void see({ e: 'model', loaded: payload.loaded } as unknown as Input);
 				// A resumed session's chat replaces this window's: it is the whole of it, cards still open included.
 				if (payload.t === 'replay') {
 					const r = replayed(payload);
@@ -468,7 +517,7 @@
 		{#if layout.workspaces.length > 1}
 			<button
 				class="ghost"
-				onclick={() => (layout = ws.removeSpace(layout, layout.active))}
+				onclick={closeTab}
 				aria-label="close this workspace">close tab</button
 			>
 		{/if}
@@ -559,6 +608,7 @@
 				}}
 			></textarea>
 		</div>
+		{#if busy && session}<button type="button" onclick={stop}>stop</button>{/if}
 		<button type="submit" disabled={!open || !draft.trim()}>send</button>
 	</form>
 </Chat>
