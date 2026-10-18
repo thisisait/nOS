@@ -2153,6 +2153,8 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
         // This turn's failed calls, "name args" to why: one the model asks again after it heard the error is not
         // run again (live 2026-10-18: 8 alike). Alike calls in one message were asked before it heard; they run.
         let (mut failed, mut repeats) = (HashMap::<String, String>::new(), 0);
+        // Live 2026-10-18: every show refused, then "Graf je hotový". The person hears that nothing was drawn.
+        let (mut drew, mut unshown) = (false, None::<String>);
         loop {
             if face.stopped(&o.session) {
                 return self.end_turn(out, o, &[], STOPPED, "Stopped.".into());
@@ -2174,7 +2176,11 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                 // The ledger above keeps what was said; the person sees a link no tool returned marked (operator 2026-10-15).
                 let known: String = o.messages.iter().filter(|m| m["role"] == "tool").filter_map(|m| m["content"].as_str()).collect();
                 let text = mark_links(&text, &known).replace(['⟦', '⟧'], "");
-                return send(out, &ToShell::Text { session: o.session.clone(), text });
+                send(out, &ToShell::Text { session: o.session.clone(), text });
+                if let (false, Some(why)) = (drew, unshown) {
+                    refuse(out, &format!("nothing was drawn in this turn: {why}"));
+                }
+                return;
             };
             if from_text {
                 // The provider hears it as the call it was meant to be; a tool message needs one.
@@ -2197,6 +2203,10 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                 let mut used = json!({"args": args});
                 if from_text {
                     used["text_tool_call"] = json!(true);
+                }
+                let shown = (name == "show").then(|| normalized(&args, o.last_group.as_ref().map(|g| &g.0)));
+                if shown.as_ref().is_some_and(|s| s.1) {
+                    used["normalised"] = json!(true);
                 }
                 let _ = self.record(o, Kind::ToolUse, Some(name), used);
                 let key = format!("{name} {args}");
@@ -2300,7 +2310,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                             self.ask(o, out, RowDiffApproval { read_from: o.read_free.clone(), ..d }, outside)
                         })
                     }
-                    "show" => show(&args).and_then(|(c, source)| match source.or_else(|| inferred_source(&c, o.last_group.as_ref())) {
+                    "show" => show(&shown.as_ref().expect("name is show").0).and_then(|(c, source)| match source.or_else(|| inferred_source(&c, o.last_group.as_ref())) {
                         None => Ok((c, None)),
                         Some(src) => self.sourced(who, o, c, src),
                     }).and_then(|(c, pin)| opened(o, c).map(|c| (c, pin))).map(|(c, pin)| {
@@ -2317,6 +2327,11 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                                 "status": "asked; the person's answer comes back as a [thalamus] message"}),
                             (None, _) => json!({"shown": kind}),
                         };
+                        let mut v = v;
+                        if shown.as_ref().is_some_and(|s| s.1) {
+                            let props = serde_json::to_value(&c).map(|c| c["props"].clone()).unwrap_or_default();
+                            v["normalised"] = json!(format!("drawn, but show does not take the shape you wrote; next time write props as {props}"));
+                        }
                         let _ = self.record(o, Kind::ToolResult, Some(name), v.clone());
                         send(out, &ToShell::Render { session: o.session.clone(), component: c, pin });
                         v
@@ -2385,6 +2400,12 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                     "face_act" => self.face_act(out, o, face, &args),
                     _ => Err(format!("unknown tool {name:?}")),
                 };
+                if name == "show" || name == "offer_dashboard" {
+                    match &result {
+                        Ok(_) => drew = true,
+                        Err(why) => unshown = Some(format!("{name}: {why}")),
+                    }
+                }
                 if result.is_ok() && FREE_TEXT.contains(&name) && !o.read_free.iter().any(|t| t == name) {
                     o.read_free.push(name.to_string());
                 }
@@ -4001,8 +4022,15 @@ fn data_notice(tool: &str) -> Option<&'static str> {
 /// flattened, a kind's bare name ("pie-chart"), or a `source` alone. Read them as the one shape; the checks
 /// below and Component::check() judge the result exactly as before.
 pub fn normalize_show(args: &Value) -> Value {
+    normalized(args, None).0
+}
+
+/// normalize_show, and whether a chart was read from a shape show does not take (forgive_chart, or `x` naming
+/// the column the turn just grouped by: `grouped` is that query's source, and the chart is drawn from it).
+pub fn normalized(args: &Value, grouped: Option<&Value>) -> (Value, bool) {
+    let mut forgiven = false;
     let mut out = args.clone();
-    let Some(o) = out.as_object_mut() else { return out };
+    let Some(o) = out.as_object_mut() else { return (out, false) };
     let chart_word = |w: &str| -> Option<&'static str> {
         let w = w.to_lowercase();
         if w.contains("pie") { Some("pie") } else if w.contains("line") { Some("line") }
@@ -4051,6 +4079,20 @@ pub fn normalize_show(args: &Value) -> Value {
         }
         if matches!(c.get("kind").and_then(Value::as_str), Some("chart" | "kpi" | "choice")) && !c.get("props").is_some_and(Value::is_object) {
             c.insert("props".into(), json!({}));
+        }
+    }
+    if comp["kind"] == "chart" {
+        if let Some(p) = comp.get_mut("props").and_then(Value::as_object_mut) {
+            forgiven = forgive_chart(p, o.contains_key("source"));
+            // Live 2026-10-18: {x: "direction", y: "qty"} right after query_rows grouped by direction, sum of qty.
+            if let Some(g) = grouped.filter(|_| !o.contains_key("source") && !p.contains_key("series")) {
+                let x = p.get("x").and_then(Value::as_str).filter(|x| !x.is_empty());
+                if x.is_some() && x == g["x"].as_str() && p.get("y").is_none_or(|y| y.as_str() == g["y"].as_str()) {
+                    p.remove("y");
+                    o.insert("source".into(), g.clone());
+                    forgiven = true;
+                }
+            }
         }
     }
     // Bench v2: a choice's options as plain strings, and one suggested label as a string.
@@ -4145,7 +4187,71 @@ pub fn normalize_show(args: &Value) -> Value {
     if !comp.is_null() {
         o.insert("component".into(), comp);
     }
-    out
+    (out, forgiven)
+}
+
+/// Live 2026-10-18 (qwen3.5:9b): a chart's points in the shapes a small model writes - `x` (or labels,
+/// categories) beside `y` (or values, data) numbers, data [{label|x|name, value|y}] or [[x, n]],
+/// series[{name, data}] - read as series[{name, points}]; an unsourced category chart with no `chart` is a bar.
+/// Only a shape that pairs every label with exactly one number; anything else is left for check() to refuse.
+fn forgive_chart(p: &mut Map<String, Value>, sourced: bool) -> bool {
+    let num = |v: &Value| v.as_f64().or_else(|| v.as_str()?.trim().parse().ok());
+    let label = |v: &Value| match v { Value::String(s) => Some(s.clone()), Value::Number(n) => Some(n.to_string()), _ => None };
+    let pair = |r: &Value| -> Option<Value> {
+        if let Some([x, y]) = r.as_array().map(Vec::as_slice) {
+            return Some(json!([label(x)?, num(y)?]));
+        }
+        let r = r.as_object()?;
+        let x = ["label", "x", "name", "category"].iter().find_map(|k| r.get(*k)).and_then(label)?;
+        let y = ["value", "y", "count"].iter().find_map(|k| r.get(*k)).and_then(num)?;
+        Some(json!([x, y]))
+    };
+    let labels: Vec<&str> = ["x", "labels", "categories"].into_iter().filter(|k| p.get(*k).is_some_and(Value::is_array)).collect();
+    let xs = match labels.as_slice() {
+        [] => None,
+        [k] => p.get(*k).and_then(Value::as_array).cloned(),
+        _ => return false,
+    };
+    let points = |d: &Value| -> Option<Vec<Value>> {
+        let d = d.as_array().filter(|d| !d.is_empty())?;
+        match &xs {
+            Some(xs) if d.iter().all(|v| num(v).is_some()) => (xs.len() == d.len())
+                .then(|| xs.iter().zip(d).map(|(x, y)| Some(json!([label(x)?, num(y)?]))).collect())?,
+            _ => d.iter().map(pair).collect(),
+        }
+    };
+    let title = p.get("title").and_then(Value::as_str).unwrap_or("values").to_string();
+    let mut drop = labels.clone();
+    let series = match p.get("series").and_then(Value::as_array) {
+        Some(s) if s.iter().any(|s| s.get("data").is_some() && s.get("points").is_none()) => {
+            let one = s.len() == 1;
+            s.iter().map(|s| {
+                let name = s.get("name").and_then(label).or_else(|| one.then(|| title.clone()))?;
+                Some(json!({"name": name, "points": points(s.get("data")?)?}))
+            }).collect::<Option<Vec<_>>>()
+        }
+        Some(_) => None,
+        None => {
+            let ys: Vec<&str> = ["y", "values", "data"].into_iter().filter(|k| p.contains_key(*k)).collect();
+            let [y] = ys.as_slice() else { return false };
+            drop.push(y);
+            points(&p[*y]).map(|pts| vec![json!({"name": title, "points": pts})])
+        }
+    };
+    let mut forgiven = false;
+    if let Some(series) = series {
+        for k in drop {
+            p.remove(k);
+        }
+        p.insert("series".into(), json!(series));
+        p.entry("x").or_insert(json!("category"));
+        forgiven = true;
+    }
+    if !sourced && !p.contains_key("chart") && p.contains_key("series") && p.get("x").is_none_or(|x| x == "category") {
+        p.insert("chart".into(), json!("bar"));
+        forgiven = true;
+    }
+    forgiven
 }
 
 /// The grouped query just run is a chart's source when the chart plots exactly its counts, label for label.
@@ -4164,8 +4270,8 @@ fn inferred_source(c: &Component, last: Option<&(Value, Vec<(String, f64)>)>) ->
     same.then(|| src.clone())
 }
 
+/// `args` as normalized() left them.
 fn show(args: &Value) -> Result<(Component, Option<Value>), String> {
-    let args = &normalize_show(args);
     if let Some(k) = args.as_object().and_then(|a| a.keys().find(|k| *k != "component" && *k != "source")) {
         return Err(format!("show has no parameter `{k}`; it takes `component` and, for a chart, `source`; expected shape: {}",
                            expected_shape("")));
