@@ -1,7 +1,7 @@
 /**
  * Face limbs — a limb is a tool that acts (glossary). These are the wire
- * shapes of contract 7 (`Limbs`, `Act`, `Acted`); the contract bump mirrors
- * them 1:1, so change them only together with `contract/src/wire.rs`.
+ * shapes of contract 8 (`limbs`, `act`, `acted`; wire.rs Limb, ParamSpec),
+ * so change them only together with `contract/src/wire.rs`.
  */
 export type ParamSpec =
 	| { type: 'string' | 'number' | 'boolean'; required?: boolean }

@@ -107,6 +107,24 @@
 			resumed session {msg.session}: {msg.log.map((m) => m.t).join(', ') || 'nothing said yet'}
 		</p>
 		{#each msg.log as m}<Message msg={m} />{/each}
+	{:else if msg.t === 'catalogue'}
+		<!-- App keeps it for the composer's marks; said here for any other host of a message. -->
+		<ul class="muted">
+			{#each msg.tables as t}<li>
+					{t.title} ({t.id}): {#each t.columns as c, i}{i ? ', ' : ''}{c.key}{c.label
+							? ` (${c.label})`
+							: ''}
+						{c.kind}{c.options ? ` of ${c.options.join(', ')}` : ''}{/each}
+				</li>{/each}
+		</ul>
+	{:else if msg.t === 'act'}
+		<!-- App hands it to the face's limbs; said here for any other host of a message. -->
+		<p class="muted">
+			act {msg.act}: {msg.app}.{msg.action}
+			{Object.entries(msg.params)
+				.map(([k, v]) => `${k} ${v}`)
+				.join(', ')}
+		</p>
 	{:else if msg.t === 'workspace'}
 		<p class="muted">
 			{msg.doc ? 'the workspace the thalamus holds' : 'the thalamus holds no workspace yet'}

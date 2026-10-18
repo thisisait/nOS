@@ -1,7 +1,9 @@
 // The wire as the webview sees it: already decoded by the Rust bridge with
 // nos_contract::wire::decode_to_shell, so every message here is checked.
 // Spec: files/anatomy/contracts/thalamus-shell.yml.
+import type { Act, Acted, Limb } from '$lib/limbs/types';
 import type { Delta } from './delta';
+import type { Catalogue } from './marks';
 
 export type Value = null | boolean | number | string | Value[] | { [k: string]: Value };
 
@@ -122,7 +124,11 @@ export type Component =
 	| { kind: 'form'; props: FormProps }
 	| { kind: 'choice'; props: ChoiceProps }
 	| { kind: 'dashboard'; props: DashboardProps }
-	| { kind: 'kpi'; props: KpiProps };
+	| { kind: 'kpi'; props: KpiProps }
+	| {
+			kind: 'action_approval';
+			props: { app: string; action: string; params: Record<string, Value>; says: string };
+	  };
 
 /** One number serve computed from a table (renderers.rs Kpi); never the model's. */
 export type KpiProps = {
@@ -233,7 +239,9 @@ export type ToShell =
 	| { t: 'model_options'; session: string; options: ModelOption[]; refused: string[] }
 	| { t: 'said'; session: string; text: string }
 	| { t: 'replay'; session: string; log: ToShell[]; open: string[] }
-	| { t: 'workspace'; doc: { [k: string]: Value } | null };
+	| { t: 'workspace'; doc: { [k: string]: Value } | null }
+	| { t: 'catalogue'; session: string; tables: Catalogue['tables'] }
+	| ({ t: 'act'; session: string } & Act);
 
 /** One model the person may pick for the session (wire.rs ModelOption); `warning` below the recommended size. */
 export type ModelOption = {
@@ -280,7 +288,10 @@ export type ToThalamus =
 	| { t: 'model_pick'; backend: string; model: string }
 	| { t: 'resume' }
 	| { t: 'workspace_load' }
-	| { t: 'workspace_save'; doc: { [k: string]: unknown } };
+	| { t: 'workspace_save'; doc: { [k: string]: unknown } }
+	| { t: 'catalogue' }
+	| { t: 'limbs'; limbs: Limb[] }
+	| ({ t: 'acted' } & Acted);
 
 /** What a widget re-runs, as the person and without the model (wire.rs WidgetSpec): exactly one key. */
 export type WidgetSpec =

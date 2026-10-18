@@ -3,6 +3,8 @@
   the thalamus. It holds no socket and no secret: everything goes through `transport`
   (transport.ts), which the pupil backs with its Rust bridge and the face with its BFF.
   null is no bridge at all (the pupil's page opened outside the app), and that is said.
+  `limbs` and `act` are the face's (contract 8): what Iris may do on its screen, and doing it.
+  The pupil hands neither, so it declares no limbs and answers every act no.
 -->
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
@@ -15,7 +17,9 @@
 	import { SETTLE_MS, eye, look, step, type Input } from './eye';
 	import Message from './Message.svelte';
 	import ModelPicker from './ModelPicker.svelte';
+	import type { Act, Acted, Limb } from '$lib/limbs/types';
 	import { asked, closed, composerOpen, decide, empty, seen, type Decision } from './approvals';
+	import { mark, type Catalogue } from './marks';
 	import { adopt, replayed, type Entry } from './resume';
 	import { forCommand, rewall } from './scope';
 	import type {
@@ -32,7 +36,15 @@
 	import * as ws from './workspace';
 	import type { Transport } from './transport';
 
-	let { transport }: { transport: Transport | null } = $props();
+	let {
+		transport,
+		limbs,
+		act
+	}: {
+		transport: Transport | null;
+		limbs?: () => Limb[];
+		act?: (a: Act) => Promise<Acted>;
+	} = $props();
 
 	let log: Entry[] = $state([]);
 	// The thalamus answered `workspace` on this link: from then on a save goes to it too.
@@ -60,6 +72,19 @@
 	let models: ModelOption[] = $state([]);
 	let notOffered: string[] = $state([]);
 	let draft = $state('');
+	// The person's catalogue as serve last sent it; the composer marks the draft against it (marks.ts).
+	let catalogue: Catalogue = $state({ tables: [] });
+	const pieces = $derived.by(() => {
+		const out: { text: string; kind?: string }[] = [];
+		let at = 0;
+		for (const s of mark(draft, catalogue)) {
+			if (s.start > at) out.push({ text: draft.slice(at, s.start) });
+			out.push({ text: draft.slice(s.start, s.end), kind: s.kind });
+			at = s.end;
+		}
+		if (at < draft.length) out.push({ text: draft.slice(at) });
+		return out;
+	});
 	let column: HTMLElement | undefined = $state();
 	let ey = $state(eye());
 	const see = (i: Input) => (ey = step(ey, i));
@@ -295,9 +320,25 @@
 		await say({ t: 'resume' }, 'the session was not resumed');
 		await say({ t: 'workspace_load' }, 'the layout was not asked of the thalamus');
 		await say({ t: 'model_options' }, 'the models were not asked');
+		await say({ t: 'catalogue' }, 'the catalogue was not asked, so nothing is marked');
+		if (limbs) await say({ t: 'limbs', limbs: limbs() }, 'the limbs were not declared');
 		const r = rewall(want, layout, 'connected');
 		widgets = r.w ?? widgets;
 		sendAll(r.send);
+	}
+
+	// An act runs only through the face's dispatch (limbs/dispatch.ts); every outcome is answered, a throw too.
+	async function acting(m: Extract<ToShell, { t: 'act' }>) {
+		const one: Act = { act: m.act, app: m.app, action: m.action, params: m.params };
+		let r: Acted;
+		try {
+			r = act ? await act(one) : { act: m.act, ok: false, reason: 'this shell has no limbs' };
+		} catch (e) {
+			r = { act: m.act, ok: false, reason: String(e) };
+		}
+		transport
+			?.send({ t: 'acted', ...r })
+			.catch((e) => push({ note: `the act was not answered: ${e}` }));
 	}
 
 	onMount(() => {
@@ -331,6 +372,8 @@
 				}
 				if (payload.t === 'said') return void push({ me: payload.text });
 				if (payload.t === 'workspace') return void workspaceHeld(payload.doc);
+				if (payload.t === 'catalogue') return void (catalogue = { tables: payload.tables });
+				if (payload.t === 'act') return void acting(payload);
 				if (payload.t === 'model_options') {
 					models = payload.options;
 					notOffered = payload.refused;
@@ -385,6 +428,7 @@
 				held = false;
 				scope = null;
 				models = [];
+				catalogue = { tables: [] };
 				const r = closed(q);
 				q = r.q;
 				// The session is gone, and its choices with it.
@@ -491,19 +535,26 @@
 			send();
 		}}
 	>
-		<textarea
-			bind:value={draft}
-			rows="2"
-			placeholder={q.pending.length ? 'decide the approval first' : 'Ask Iris…'}
-			disabled={!open}
-			oninput={(e) => see({ e: 'typing', text: e.currentTarget.value })}
-			onkeydown={(e) => {
-				if (e.key === 'Enter' && !e.shiftKey) {
-					e.preventDefault();
-					send();
-				}
-			}}
-		></textarea>
+		<div class="field">
+			<!-- The marks sit behind the transparent textarea, which keeps the focus, the text and a11y. -->
+			<div class="marks" aria-hidden="true">
+				{#each pieces as p}{#if p.kind}<mark data-kind={p.kind}>{p.text}</mark
+						>{:else}{p.text}{/if}{/each}&#8203;
+			</div>
+			<textarea
+				bind:value={draft}
+				rows="2"
+				placeholder={q.pending.length ? 'decide the approval first' : 'Ask Iris…'}
+				disabled={!open}
+				oninput={(e) => see({ e: 'typing', text: e.currentTarget.value })}
+				onkeydown={(e) => {
+					if (e.key === 'Enter' && !e.shiftKey) {
+						e.preventDefault();
+						send();
+					}
+				}}
+			></textarea>
+		</div>
 		<button type="submit" disabled={!open || !draft.trim()}>send</button>
 	</form>
 </Chat>
@@ -564,13 +615,46 @@
 		border-radius: 16px;
 		background: var(--glass);
 	}
-	textarea {
+	.field {
 		flex: 1;
+		display: grid;
+	}
+	.field > * {
+		grid-area: 1 / 1;
+		margin: 0;
+		padding: 2px;
+		font: inherit;
+		line-height: 1.4;
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+	}
+	.marks {
+		color: transparent;
+		pointer-events: none;
+		overflow: hidden;
+	}
+	mark {
+		color: transparent;
+		border-radius: 4px;
+		background: var(--info-soft);
+	}
+	mark[data-kind='option'] {
+		background: var(--ok-soft);
+	}
+	mark[data-kind='date'],
+	mark[data-kind='period'] {
+		background: var(--warn-soft);
+	}
+	mark[data-kind='number'],
+	mark[data-kind='operator'] {
+		background: none;
+		box-shadow: inset 0 -2px var(--muted);
+	}
+	textarea {
 		resize: none;
 		border: 0;
 		background: transparent;
 		color: inherit;
-		font: inherit;
 		outline: none;
 	}
 	button {

@@ -53,6 +53,12 @@
 					? 'approve deleting this row?'
 					: 'scroll to the end to approve deleting this row, or reject it'}</span
 			>
+		{:else if waiting.component.kind === 'action_approval'}
+			<span
+				>{whole
+					? 'approve this action?'
+					: 'scroll to the last param to approve this action, or reject it'}</span
+			>
 		{:else if waiting.component.kind === 'column_add_approval'}
 			<span
 				>{whole

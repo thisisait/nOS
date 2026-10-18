@@ -168,6 +168,15 @@
 				<li><b>{c.key}</b> ({c.label}): {columnSaid(c)}</li>
 			{/each}
 		</ul>
+	{:else if component.kind === 'action_approval'}
+		{@const a = component.props}
+		<h3>{a.app}.{a.action} on the face — nothing is done unless you approve</h3>
+		<p>{a.says}</p>
+		<ul class="diff">
+			{#each Object.entries(a.params) as [k, v]}
+				<li><b>{k}</b>: {shown(v)}</li>
+			{/each}
+		</ul>
 	{:else if component.kind === 'column_add_approval'}
 		{@const t = component.props}
 		<h3>add columns to {t.title} ({t.table}) — nothing is added unless you approve</h3>
