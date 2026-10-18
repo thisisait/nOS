@@ -38,8 +38,8 @@ import type { LimbDecl } from '$lib/limbs/types';
 import { request } from '$lib/limbs/request';
 import { requestAnatomy, type AnatomyView } from '$lib/anatomy/focus';
 import { listTables, loadTable } from '$lib/api/tables';
-import { vfsList } from '$lib/api/vfs';
-import { basename, parentPath } from './paths';
+import { vfsList, vfsMove } from '$lib/api/vfs';
+import { basename, joinPath, parentPath } from './paths';
 
 /** A lazily-loaded native component (the default export of a `.svelte` file). */
 export type NativeComponentLoader = () => Promise<{ default: Component }>;
@@ -180,6 +180,17 @@ function fail(reason: string): never {
 	throw new Error(reason);
 }
 
+/** A path a limb may touch: relative to the person's root, never `..` (Bone re-checks realpath). */
+function mine(p: unknown): string {
+	const s = String(p);
+	if (s.startsWith('/') || s.startsWith('\\') || s.split('/').includes('..'))
+		fail(`${s} is outside your files`);
+	return s
+		.split('/')
+		.filter((x) => x && x !== '.')
+		.join('/');
+}
+
 /** An app limb's run: bring the window forward, then leave the app a request. */
 function show(slug: string, action: string, params: Record<string, unknown>): true {
 	if (!openApp(slug)) fail(`cannot open ${slug}`);
@@ -224,6 +235,27 @@ export function registerBuiltinNativeApps(): void {
 					const there = await vfsList(parentPath(path as string));
 					if (!name || !there.some((e) => e.name === name)) fail(`no such file ${path}`);
 					return show('files', 'reveal', { path });
+				}
+			},
+			{
+				action: 'move',
+				params: {
+					path: { type: 'string', required: true },
+					to: { type: 'string', required: true }
+				},
+				writes: true,
+				says: 'Move a file or folder into another folder; never overwrites',
+				run: async (p) => {
+					const [path, to] = [mine(p.path), mine(p.to)];
+					const name = basename(path);
+					const here = await vfsList(parentPath(path));
+					if (!name || !here.some((e) => e.name === name)) fail(`no such file ${path}`);
+					if (to === path || to.startsWith(`${path}/`)) fail(`cannot move ${path} into itself`);
+					const there = await vfsList(to).catch(() => fail(`no such folder ${to}`));
+					const dst = joinPath(to, name);
+					if (there.some((e) => e.name === name)) fail(`${dst} already exists`);
+					await vfsMove(path, dst);
+					return show('files', 'reveal', { path: dst });
 				}
 			}
 		]
