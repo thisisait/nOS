@@ -171,6 +171,19 @@ mod tests {
         assert!(p.admit(&decision("a")).is_ok(), "a submit is not the card's decision: the approval still waits");
     }
 
+    /// A resumed session's open card waits as if just asked; a decided one in the same replay is history.
+    #[test]
+    fn a_replay_holds_its_open_cards_and_not_the_decided_ones() {
+        let c = serde_json::json!({ "kind": "red_status", "props": { "red_count": 0, "reds": [], "hold_count": 0, "holds": [] } });
+        let card = |id: &str| serde_json::json!({ "t": "approval_request", "session": "s", "approval": id, "component": c });
+        let mut p = Pending::default();
+        p.saw(&serde_json::from_value(serde_json::json!({ "t": "replay", "session": "s", "log": [card("a"), card("b")], "open": ["b"] })).unwrap());
+        assert!(p.admit(&ToThalamus::Turn { session: None, text: "hi".into() }).is_err(), "a turn went out while a resumed card waits");
+        assert!(p.admit(&decision("a")).is_err(), "a decided card was decided again");
+        assert!(p.admit(&decision("b")).is_ok());
+        assert!(p.admit(&decision("b")).is_err(), "decided twice");
+    }
+
     /// A reply runs the model's next turn, so it waits on an approval as a turn does.
     #[test]
     fn pending_refuses_a_choice_reply_while_one_waits() {

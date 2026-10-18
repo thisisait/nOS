@@ -5576,3 +5576,178 @@ fn an_inferred_chart_needs_no_axis_and_its_empty_group_matches() {
     assert_eq!(charts.len(), 1, "drawn: {got:?}; heard: {}", tool_result(&rig, 2));
     assert_eq!(charts[0]["pin"]["chart"]["x"], "status", "the counts pin: {}", charts[0]);
 }
+
+// ── iris-workspace-survives-restart: the session, its chat and the workspace are the person's ──
+
+/// The rig's map now names this login as `username`: the next connection is that person.
+fn remap(rig: &Rig, username: &str) {
+    let map = serde_json::json!({"logins": {me(): {"username": username, "groups": ["nos-users"]}}});
+    std::fs::write(&rig.srv.map, map.to_string()).unwrap();
+}
+
+/// A new connection whose first message (model_options: no model call in the rig) opens its session;
+/// what came before the options answer.
+fn reopen(rig: &Rig) -> (UnixStream, BufReader<UnixStream>, Vec<ToShell>) {
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    (&s).write_all(encode(&ToThalamus::ModelOptions).as_bytes()).unwrap();
+    let mut got = vec![];
+    while let Some(m) = next(&mut r) {
+        if matches!(m, ToShell::ModelOptions { .. }) {
+            break;
+        }
+        got.push(m);
+    }
+    (s, r, got)
+}
+
+fn replay_of(got: &[ToShell]) -> Option<(Vec<ToShell>, Vec<String>)> {
+    got.iter().find_map(|m| match m { ToShell::Replay { log, open, .. } => Some((log.clone(), open.clone())), _ => None })
+}
+
+fn sessions(rig: &Rig) -> Vec<(String, String)> {
+    let db = rusqlite::Connection::open(&rig.ledger).unwrap();
+    let mut q = db.prepare("SELECT uuid, actor_id FROM sessions ORDER BY id").unwrap();
+    q.query_map([], |r| Ok((r.get(0)?, r.get(1)?))).unwrap().map(Result::unwrap).collect()
+}
+
+/// The connection is gone and serve has closed its side.
+fn gone(s: UnixStream, r: BufReader<UnixStream>) {
+    drop((s, r));
+    std::thread::sleep(std::time::Duration::from_millis(300));
+}
+
+#[test]
+fn a_person_who_reconnects_resumes_their_session_and_its_chat() {
+    let rig = rig_n("resume", mapped(), shown_then(&[]), vec![query(r#"{"table": "todos", "q": "alpha"}"#), answer("Found one.")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let session = session_of(&turn(&s, &mut r, None, "find alpha"));
+    gone(s, r);
+
+    let (s, mut r, got) = reopen(&rig);
+    assert!(matches!(got.first(), Some(ToShell::Session { session: s2, actor, .. }) if *s2 == session && actor == "user:alice-smith"),
+            "the same person resumes the same session: {got:?}");
+    let (log, open) = replay_of(&got).expect("a resumed session replays its chat");
+    let said: Vec<&str> = log.iter().map(|m| match m {
+        ToShell::Said { .. } => "said", ToShell::Render { .. } => "render", ToShell::Text { .. } => "text", _ => "other" }).collect();
+    assert_eq!(said, ["said", "render", "text"], "{log:?}");
+    assert!(matches!(&log[0], ToShell::Said { text, .. } if text == "find alpha"));
+    assert!(matches!(&log[2], ToShell::Text { text, .. } if text == "Found one."));
+    assert!(open.is_empty(), "nothing waits: {open:?}");
+    assert_eq!(sessions(&rig).len(), 1, "nothing was filed under a new session");
+    // The model hears the conversation it resumed, not a blank one.
+    turn(&s, &mut r, Some(session.clone()), "and the next?");
+    let last = rig.model.lock().unwrap().last().unwrap().1.clone();
+    assert!(last.contains("find alpha") && last.contains("Found one."), "{last}");
+    assert!(types_of(&rig.ledger, &session).iter().filter(|t| *t == "agent_message").count() >= 3);
+}
+
+#[test]
+fn another_person_never_resumes_or_reads_a_session() {
+    let rig = rig_n("noresume", mapped(), shown_then(&[]), vec![query(r#"{"table": "todos", "q": "alpha"}"#), answer("Found one.")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let alices = session_of(&turn(&s, &mut r, None, "find alpha"));
+    gone(s, r);
+
+    remap(&rig, "Bob Jones");
+    let (s, r, got) = reopen(&rig);
+    match got.first() {
+        Some(ToShell::Session { session, actor, .. }) => assert!(*session != alices && actor == "user:bob-jones", "{got:?}"),
+        other => panic!("expected Bob's session, got {other:?}"),
+    }
+    assert!(replay_of(&got).is_none(), "a fresh session replays nothing: {got:?}");
+    let said = format!("{got:?}");
+    assert!(!said.contains("find alpha") && !said.contains("Found one."), "Bob read Alice's chat: {said}");
+    gone(s, r);
+
+    remap(&rig, "Alice Smith");
+    let (_s, _r, got) = reopen(&rig);
+    assert!(matches!(got.first(), Some(ToShell::Session { session, .. }) if *session == alices), "Alice keeps hers: {got:?}");
+    assert!(replay_of(&got).is_some_and(|(log, _)| !log.is_empty()));
+}
+
+/// Sends `m` and reads the next message.
+fn said_back(s: &UnixStream, r: &mut BufReader<UnixStream>, m: &ToThalamus) -> Option<ToShell> {
+    let mut w = s;
+    w.write_all(encode(m).as_bytes()).unwrap();
+    next(r)
+}
+
+#[test]
+fn a_workspace_saved_is_loaded_after_reconnect_and_only_by_its_person() {
+    let rig = rig("wsheld", mapped(), ROWS, vec![answer("never")]);
+    let doc = serde_json::json!({"version": 2, "active": "ws1", "chat": {"x": 24, "y": 24, "w": 420, "h": 560, "open": true},
+        "workspaces": [{"id": "ws1", "name": "Plans", "widgets": [{"id": "w1", "title": "Todos", "spec": {"rows": {"table": "todos"}},
+            "x": 0, "y": 0, "w": 6, "h": 8}]}]});
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    assert_eq!(said_back(&s, &mut r, &ToThalamus::WorkspaceLoad), Some(ToShell::Workspace { doc: None }), "nothing is held yet");
+    let mut w = &s;
+    w.write_all(encode(&ToThalamus::WorkspaceSave { doc: doc.clone() }).as_bytes()).unwrap();
+    assert_eq!(said_back(&s, &mut r, &ToThalamus::WorkspaceLoad), Some(ToShell::Workspace { doc: Some(doc.clone()) }));
+    gone(s, r);
+
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    assert_eq!(said_back(&s, &mut r, &ToThalamus::WorkspaceLoad), Some(ToShell::Workspace { doc: Some(doc.clone()) }), "held across connections");
+    gone(s, r);
+    let file = rig.ledger.parent().unwrap().join("people/alice-smith/workspace.json");
+    assert_eq!(std::fs::metadata(&file).unwrap().permissions().mode() & 0o777, 0o600);
+    assert_eq!(std::fs::metadata(file.parent().unwrap()).unwrap().permissions().mode() & 0o777, 0o700);
+    assert!(sessions(&rig).is_empty(), "a workspace opens no session");
+
+    remap(&rig, "Bob Jones");
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    assert_eq!(said_back(&s, &mut r, &ToThalamus::WorkspaceLoad), Some(ToShell::Workspace { doc: None }), "Bob holds his own, empty");
+    gone(s, r);
+
+    // A file that does not decode is set aside and said, never served.
+    std::fs::write(&file, "{not json").unwrap();
+    remap(&rig, "Alice Smith");
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    assert!(matches!(said_back(&s, &mut r, &ToThalamus::WorkspaceLoad), Some(ToShell::Refused { reason, .. }) if reason.contains("broken")));
+    assert_eq!(next(&mut r), Some(ToShell::Workspace { doc: None }));
+    let aside = std::fs::read_dir(file.parent().unwrap()).unwrap().filter(|e| {
+        e.as_ref().unwrap().file_name().to_string_lossy().starts_with("workspace.json.broken-") }).count();
+    assert_eq!(aside, 1, "the broken file is kept aside");
+}
+
+#[test]
+fn an_approval_left_open_survives_reconnect_and_is_decided_once() {
+    let rig = rig_n("resumeask", mapped(), shown_then(&[ROWS, ROWS, POSTED]), edit_turn());
+    let (s, r, session, approval, diff) = propose(&rig);
+    gone(s, r);
+
+    // Another person neither sees the card nor decides it.
+    remap(&rig, "Bob Jones");
+    let (s, mut r, got) = reopen(&rig);
+    assert!(!format!("{got:?}").contains(&approval), "Bob saw Alice's card: {got:?}");
+    decide(&s, &approval, Decision::Approve);
+    assert!(matches!(next(&mut r), Some(ToShell::Refused { .. })), "Bob decided Alice's card");
+    gone(s, r);
+    assert!(posts(&rig).is_empty());
+
+    remap(&rig, "Alice Smith");
+    let (s, mut r, got) = reopen(&rig);
+    assert!(matches!(got.first(), Some(ToShell::Session { session: s2, .. }) if *s2 == session));
+    let (log, open) = replay_of(&got).expect("the resumed session replays");
+    assert_eq!(open, [approval.clone()], "the open card is said open");
+    assert!(log.iter().any(|m| matches!(m, ToShell::ApprovalRequest { approval: a, component: Component::RowDiffApproval(d), .. }
+        if *a == approval && *d == diff)), "the card is replayed as it was asked: {log:?}");
+    decide(&s, &approval, Decision::Approve);
+    assert!(matches!(next(&mut r), Some(ToShell::TableChanged { .. })));
+    assert!(matches!(next(&mut r), Some(ToShell::Text { .. })), "the person hears the write landed");
+    decide(&s, &approval, Decision::Approve);
+    assert!(matches!(next(&mut r), Some(ToShell::Refused { .. })), "a second decision is refused");
+    assert_eq!(posts(&rig).len(), 1, "written exactly once");
+    gone(s, r);
+
+    let (_s, _r, got) = reopen(&rig);
+    let (log, open) = replay_of(&got).unwrap();
+    assert!(open.is_empty(), "a decided card is not open again: {open:?}");
+    assert!(log.iter().any(|m| matches!(m, ToShell::Said { text, .. } if text == "approve")), "the decision is in the chat: {log:?}");
+}
