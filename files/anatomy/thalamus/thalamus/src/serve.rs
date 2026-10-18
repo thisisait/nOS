@@ -7,16 +7,17 @@ use crate::binding::{self, Binding, Pick};
 use crate::cortex_plan::{self, Cortex, Engine};
 use crate::ledger::{Kind, Ledger, RowOp, Session};
 use crate::septum::Septum;
-use nos_contract::renderers::{is_date, ApprovalsList, Axis, CellChange, Chart, ChartKind, Choice, Component, Dashboard, DashboardWidget, Kpi,
+use nos_contract::renderers::{is_date, ActionApproval, ApprovalsList, Axis, CellChange, Chart, ChartKind, Choice, Component, Dashboard, DashboardWidget, Kpi,
                                Dropped, FieldKind, Form, FormField, InboxItem, InboxList, Lens, LensOp, Lines, List, ListItem, Omitted, Parent, RedStatus,
                                Row, RowDiffApproval, SchemaColumn, ColumnAddApproval, ColumnKind, ExistingColumn, Series, Table, TableResults, TableSchemaApproval, Visibility};
-use nos_contract::wire::{check_spec, decode_to_thalamus, encode, ChartSpec, ControlView, Decision, FormSpec, KpiSpec, Op, Phase, Scope, ModelOption, ToShell, ToThalamus, Trigger,
-                         WidgetChart, WidgetSpec, MAX_REPLAY};
+use nos_contract::wire::{check_params, check_spec, decode_to_thalamus, encode, CatalogueColumn, CatalogueTable, ChartSpec, ControlView, Decision, FormSpec,
+                         KpiSpec, Limb, Op, ParamKind, Phase, Scope, ModelOption, ToShell, ToThalamus, Trigger, WidgetChart, WidgetSpec, MAX_REPLAY};
 use nos_contract::uid;
 use crate::store;
 use serde_json::{json, Map, Value};
 use std::cmp::Ordering;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::cell::RefCell;
+use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::os::unix::fs::{FileTypeExt, PermissionsExt};
 use std::os::unix::io::AsRawFd;
@@ -24,8 +25,8 @@ use std::os::unix::net::{UnixListener, UnixStream};
 use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
-use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::sync::{mpsc, Arc, Mutex};
+use std::time::{Duration, Instant};
 
 /// The map the receptor renders (roles/pazny.receptor); the thalamus renders none.
 pub const IDENTITY_MAP: &str = ".nos/identity-map.yml";
@@ -290,7 +291,91 @@ struct Open {
     last_group: Option<(Value, Vec<(String, f64)>)>,
     /// A card for a row outside whom the person works for, to the record and card its approve asks next (D2 §4.3).
     again: HashMap<String, (Value, Component)>,
+    /// An action card waiting, to the {app, action, params} its approve sends as an act.
+    acting: HashMap<String, Value>,
 }
+
+/// One connection's lines, read on their own thread so a tool may wait for the face's `acted` mid-turn;
+/// what arrives meanwhile is held for the loop. And what the shell declared: its limbs, its catalogue ask.
+struct Face {
+    rx: mpsc::Receiver<String>,
+    held: RefCell<VecDeque<String>>,
+    limbs: Vec<Limb>,
+    catalogue: bool,
+}
+
+impl Face {
+    /// The reader stops at the end, an error, or a line over MAX_LINE (handed on unterminated, then it stops).
+    fn new(mut input: impl BufRead + Send + 'static) -> Face {
+        let (tx, rx) = mpsc::channel();
+        std::thread::spawn(move || loop {
+            let mut line = String::new();
+            match input.by_ref().take(MAX_LINE).read_line(&mut line) {
+                Ok(0) | Err(_) => break,
+                Ok(_) => {
+                    let last = !line.ends_with('\n');
+                    if tx.send(line).is_err() || last {
+                        break;
+                    }
+                }
+            }
+        });
+        Face { rx, held: RefCell::default(), limbs: vec![], catalogue: false }
+    }
+
+    fn line(&self) -> Option<String> {
+        self.held.borrow_mut().pop_front().or_else(|| self.rx.recv().ok())
+    }
+
+    /// The face's answer to `act` within `secs`: (ok, result, reason); anything else that arrives waits its turn.
+    fn acted(&self, act: &str, secs: u64) -> Result<(bool, Option<Value>, Option<String>), String> {
+        let until = Instant::now() + Duration::from_secs(secs);
+        loop {
+            let line = self.rx.recv_timeout(until.saturating_duration_since(Instant::now())).map_err(|e| match e {
+                mpsc::RecvTimeoutError::Timeout => format!("no answer from the face in {secs}s"),
+                mpsc::RecvTimeoutError::Disconnected => "the face closed before it answered".to_string(),
+            })?;
+            match decode_to_thalamus(&line) {
+                Ok(ToThalamus::Acted { act: a, ok, result, reason }) if a == act => return Ok((ok, result, reason)),
+                _ => self.held.borrow_mut().push_back(line),
+            }
+        }
+    }
+
+    /// The tool list this session's model is offered: face_act only when the face declared limbs.
+    fn tools(&self) -> Value {
+        let mut t = tools();
+        if let (false, Some(a)) = (self.limbs.is_empty(), t.as_array_mut()) {
+            a.push(json!({"type": "function", "function": {"name": "face_act", "description": FACE_ACT,
+                "parameters": {"type": "object", "additionalProperties": false, "required": ["app", "action"], "properties": {
+                    "app": {"type": "string"}, "action": {"type": "string"},
+                    "params": {"type": "object", "description": "the limb's params by name"}}}}}));
+        }
+        t
+    }
+
+    /// The system prompt's line on the limbs, said at request time; none without limbs.
+    fn said(&self) -> Option<String> {
+        let each: Vec<String> = self.limbs.iter().map(|l| {
+            let ps: Vec<String> = l.params.iter().map(|(k, p)| {
+                let ty = match p.kind {
+                    ParamKind::String => "string".to_string(),
+                    ParamKind::Number => "number".to_string(),
+                    ParamKind::Boolean => "bool".to_string(),
+                    ParamKind::Enum => p.values.as_deref().unwrap_or_default().join("|"),
+                };
+                format!("{k}{}: {ty}", if p.required == Some(true) { "" } else { "?" })
+            }).collect();
+            format!("{}.{} {{{}}}{}: {}", l.app, l.action, ps.join(", "), if l.writes { " (asks the person first)" } else { "" }, l.says)
+        }).collect();
+        (!each.is_empty()).then(|| format!("The person's face screen declares these limbs; call face_act {{app, action, params}} with one of \
+them only when the person asks for it, and say in a line what you did: {}.", each.join("; ")))
+    }
+}
+
+const FACE_ACT: &str = "Act on the person's face screen with one limb it declared (the system prompt lists them): open, focus, \
+close or arrange windows. The window moving is what the person sees. A limb that writes asks the person with a card first; \
+an undeclared app.action or a param off its spec is refused.";
 
 /// A table's rows as serve reads them: (row id, values).
 type Rows = Vec<(String, Map<String, Value>)>;
@@ -338,7 +423,7 @@ thread_local! {
 }
 
 /// The tools that ask an approval of the person, as `pending` names them.
-const ASKING: [&str; 5] = ["propose_row_edit", "propose_row_insert", "propose_row_delete", "propose_table_create", "propose_column_add"];
+const ASKING: [&str; 6] = ["propose_row_edit", "propose_row_insert", "propose_row_delete", "propose_table_create", "propose_column_add", "face_act"];
 /// The conversation file's byte cap: a replay of it rides one line of at most 1 MiB.
 const REPLAY_BYTES: usize = 768 << 10;
 /// How many of a resumed session's messages its model hears again.
@@ -409,13 +494,13 @@ fn shown_values(v: Map<String, Value>) -> Map<String, Value> {
 /// A content message that is exactly one call of a declared tool, as MLX models write it (operator 2026-10-18):
 /// bare or in the only fence; {name|tool, arguments|parameters} or {type: function, function: {..}}.
 /// An array, an undeclared name or anything else stays text.
-fn text_call(text: &str, n: usize) -> Option<Value> {
+fn text_call(text: &str, n: usize, tools: &Value) -> Option<Value> {
     let parts: Vec<&str> = text.trim().split("```").collect();
     let body = if parts.len() == 3 { parts[1].trim().trim_start_matches("json") } else { text };
     let v: Value = serde_json::from_str(body.trim()).ok()?;
     let f = v.get("function").filter(|_| v["type"] == "function").unwrap_or(&v);
     let name = f.get("name").or_else(|| f.get("tool")).and_then(Value::as_str)?;
-    tools().as_array()?.iter().any(|t| t["function"]["name"] == name).then_some(())?;
+    tools.as_array()?.iter().any(|t| t["function"]["name"] == name).then_some(())?;
     let args = match f.get("arguments").or_else(|| f.get("parameters")).cloned().unwrap_or(json!({})) {
         Value::String(a) => a,
         a @ Value::Object(_) => a.to_string(),
@@ -766,17 +851,13 @@ impl Server {
 
     /// One door's connection after it named the person: the socket's and the relay's (relay.rs) alike.
     /// `peer` is what the ledger records per line: the kernel's {pid, exe}, or the relay's {via, tab, uid}.
-    pub(crate) fn converse(&self, mut who: Person, mut input: impl BufRead, mut out: impl Write, peer: &dyn Fn() -> Value) {
+    pub(crate) fn converse(&self, mut who: Person, input: impl BufRead + Send + 'static, mut out: impl Write, peer: &dyn Fn() -> Value) {
         let mut open: Option<Open> = None;
-        loop {
-            let mut line = String::new();
-            match input.by_ref().take(MAX_LINE).read_line(&mut line) {
-                Ok(0) | Err(_) => break,
-                Ok(_) if !line.ends_with('\n') => {
-                    refuse(&mut out, "line exceeds 1 MiB or is unterminated");
-                    break;
-                }
-                Ok(_) => {}
+        let mut face = Face::new(input);
+        while let Some(line) = face.line() {
+            if !line.ends_with('\n') {
+                refuse(&mut out, "line exceeds 1 MiB or is unterminated");
+                break;
             }
             let peer = peer();
             match decode_to_thalamus(&line) {
@@ -788,7 +869,7 @@ impl Server {
                     }
                     if let Some(o) = self.ensure(&mut who, &mut out, &mut open) {
                         keep(&ToShell::Said { session: o.session.clone(), text: text.clone() });
-                        self.turn(&who, &mut out, o, &text);
+                        self.turn(&who, &mut out, o, &text, &face);
                         // However the turn ended (text, cap, refusal), it is over.
                         activity(&mut out, o, Phase::Idle);
                     }
@@ -800,7 +881,9 @@ impl Server {
                 }
                 Ok(ToThalamus::WorkingFor { scope }) => {
                     if let Some(o) = self.ensure(&mut who, &mut out, &mut open) {
-                        self.working_for(&mut who, &mut out, o, &scope, &peer);
+                        if self.working_for(&mut who, &mut out, o, &scope, &peer) && face.catalogue {
+                            self.catalogue_to(&who, &mut out, o);
+                        }
                     }
                 }
                 Ok(ToThalamus::ModelOptions) => {
@@ -831,7 +914,7 @@ impl Server {
                         }
                         if self.choice_reply(&mut out, o, &choice, &picked) {
                             keep(&ToShell::Said { session: o.session.clone(), text: picked.join(", ") });
-                            self.think(&who, &mut out, o);
+                            self.think(&who, &mut out, o, &face);
                         }
                         activity(&mut out, o, Phase::Idle);
                     }
@@ -844,7 +927,7 @@ impl Server {
                         }
                         let said = if decision == Decision::Approve { "approve" } else { "reject" };
                         keep(&ToShell::Said { session: o.session.clone(), text: said.into() });
-                        self.decide(&who, &mut out, o, &approval, decision, note, &peer);
+                        self.decide(&who, &mut out, o, &approval, decision, note, &peer, &face);
                         activity(&mut out, o, Phase::Idle);
                     }
                     _ => refuse(&mut out, "no open approval with that id"),
@@ -862,9 +945,15 @@ impl Server {
                     });
                     send(&mut out, &ToShell::Workspace { doc });
                 }
-                Ok(ToThalamus::Catalogue | ToThalamus::Limbs { .. } | ToThalamus::Acted { .. }) => {
-                    refuse(&mut out, "this thalamus does not serve catalogue or limbs yet");
+                Ok(ToThalamus::Catalogue) => {
+                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open) {
+                        face.catalogue = true;
+                        self.catalogue_to(&who, &mut out, o);
+                    }
                 }
+                // The face's own declaration, never opening a session; the next model request offers them.
+                Ok(ToThalamus::Limbs { limbs }) => face.limbs = limbs,
+                Ok(ToThalamus::Acted { act, .. }) => refuse(&mut out, &format!("no act {act} waits for an answer")),
                 Ok(ToThalamus::WorkspaceSave { doc }) => {
                     if let Err(why) = store::write(&store::path(&self.data, &who.uid(), "workspace"), &doc) {
                         refuse(&mut out, &format!("the workspace was not saved: {why}"));
@@ -963,7 +1052,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             Err(why) => (Err(why), iris.clone()),
         };
         Ok((Open { session, model, iris, messages: vec![json!({"role": "system", "content": system})], moved: None, tokens,
-                  pending: HashMap::new(), shown: HashMap::new(), tables_seen: HashMap::new(), dates: HashMap::new(), names: HashMap::new(), read_free: vec![], forms: HashMap::new(), choices: HashMap::new(), last_group: None, again: HashMap::new() },
+                  pending: HashMap::new(), shown: HashMap::new(), tables_seen: HashMap::new(), dates: HashMap::new(), names: HashMap::new(), read_free: vec![], forms: HashMap::new(), choices: HashMap::new(), last_group: None, again: HashMap::new(), acting: HashMap::new() },
             resumed.is_some()))
     }
 
@@ -1000,6 +1089,9 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                 next.as_object_mut().map(|r| (r.remove("approval"), r.remove("again_title")));
                 next["title"] = json!(t);
                 o.again.insert(id.clone(), (next, Component::RowDiffApproval(RowDiffApproval { title: t.to_string(), ..d.clone() })));
+            }
+            if *tool == "face_act" {
+                o.acting.insert(id.clone(), rec);
             }
             o.pending.insert(id.clone(), tool);
             open.push(id);
@@ -1222,8 +1314,9 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn decide(&self, who: &Person, out: &mut dyn Write, o: &mut Open, approval: &str, d: Decision, note: Option<String>, peer: &Value) {
+    fn decide(&self, who: &Person, out: &mut dyn Write, o: &mut Open, approval: &str, d: Decision, note: Option<String>, peer: &Value, face: &Face) {
         let tool = Some(o.pending.remove(approval).unwrap_or("propose_row_edit"));
+        let acting = o.acting.remove(approval);
         let said = if d == Decision::Approve { "approve" } else { "reject" };
         let id = match self.record(o, Kind::ApprovalDecision, tool,
                                    json!({"approval": approval, "decision": said, "note": note, "peer": peer})) {
@@ -1248,6 +1341,24 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         let (text, result, heard) = match d {
             Decision::Reject => ("Rejected: nothing was written.".to_string(), json!({"approval": approval, "written": false}),
                                  format!("rejected: {}", note.as_deref().unwrap_or("no note"))),
+            Decision::Approve if tool == Some("face_act") => {
+                let rec = acting.unwrap_or_default();
+                let (app, action) = (text(&rec["app"]), text(&rec["action"]));
+                let params = rec["params"].as_object().cloned().unwrap_or_default();
+                match self.act(out, o, face, &app, &action, params) {
+                    Ok(mut v) => {
+                        let done = v["ok"] == true;
+                        let why = text(&v["reason"]);
+                        v["approval"] = json!(approval);
+                        if done {
+                            (format!("Approved: {app}.{action} done."), v, format!("approved, {app}.{action} done"))
+                        } else {
+                            (format!("Approved, but the face did not do it: {why}"), v, format!("approved, but {app}.{action} failed: {why}"))
+                        }
+                    }
+                    Err(why) => (format!("Approved, but {why}"), json!({"approval": approval, "error": why}), format!("approved, but {why}")),
+                }
+            }
             Decision::Approve if tool == Some("propose_table_create") => match self.create_table(who, id) {
                 Ok((table, t)) => {
                     // Known to the session at once: an insert, a form or a query takes it with no query first.
@@ -1566,7 +1677,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
 
     /// The person says whom they work for (D2): resolved and recorded before it is set, refused while a
     /// card waits (it keeps the scope it was asked under); rows shown before are forgotten.
-    fn working_for(&self, who: &mut Person, out: &mut dyn Write, o: &mut Open, scope: &Scope, peer: &Value) {
+    fn working_for(&self, who: &mut Person, out: &mut dyn Write, o: &mut Open, scope: &Scope, peer: &Value) -> bool {
         let set = (|| {
             if !o.pending.is_empty() {
                 return Err("an approval is waiting: decide it first, so its card keeps the scope it was asked under".to_string());
@@ -1584,13 +1695,15 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             Ok(s) => s,
             Err(why) => {
                 let _ = self.record(o, Kind::ToolResult, Some("working_for"), json!({"scope": scope, "error": why, "peer": peer}));
-                return refuse(out, &why);
+                refuse(out, &why);
+                return false;
             }
         };
         let resolved = septum.as_ref().map_or(Scope::All, |s| s.client.as_ref().map_or(Scope::Personal, |c| Scope::Client(c.0.clone())));
         let name = septum.as_ref().map_or("everything".to_string(), Septum::name);
         if let Err(why) = self.record(o, Kind::ToolResult, Some("working_for"), json!({"scope": resolved, "name": name, "peer": peer})) {
-            return refuse(out, &format!("not recorded, so not set: {why}"));
+            refuse(out, &format!("not recorded, so not set: {why}"));
+            return false;
         }
         let heard = match &septum {
             None => "the person lifted the wall: every table and row they may read is shown".to_string(),
@@ -1605,9 +1718,10 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
         o.last_group = None;
         o.messages.push(json!({"role": "user", "content": format!("[thalamus] {heard}; query again before any proposal")}));
         send(out, &ToShell::WorkingFor { session: o.session.clone(), scope: resolved, name });
+        true
     }
 
-    fn turn(&self, who: &Person, out: &mut dyn Write, o: &mut Open, text: &str) {
+    fn turn(&self, who: &Person, out: &mut dyn Write, o: &mut Open, text: &str, face: &Face) {
         if let Err(why) = &o.model {
             return refuse(out, &format!("iris has no model: {why}"));
         }
@@ -1622,7 +1736,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
             }
             _ => None,
         };
-        self.think_from(who, out, o, planned);
+        self.think_from(who, out, o, planned, face);
     }
 
     /// The cortex plan as one assistant message of mapped tool calls; None after the model heard why not.
@@ -1733,40 +1847,113 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
         None
     }
 
+    /// Each table this scope shows (the septum hides the rest), its columns as KEAP holds them; at most 12.
+    fn catalogue_tables(&self, who: &Person) -> Result<Vec<CatalogueTable>, String> {
+        // ponytail: 12 tables, one schema read each, every turn; cache per session if the primer gets slow.
+        // The wire caps a name at 200 chars: KEAP's longer ones are cut, never refused whole.
+        let clip = |s: &str| s.chars().take(200).collect::<String>();
+        Ok(self.tables(who)?.into_iter().filter(|(id, _)| self.hidden(who, id).is_none()).take(12).map(|(id, title)| {
+            let columns = self.table_info_any(who, &id).map(|(_, i)| i.pointer("/data/schema/columns").and_then(Value::as_array).into_iter().flatten()
+                .filter_map(|c| Some(CatalogueColumn {
+                    key: clip(c["key"].as_str().filter(|k| !k.trim().is_empty())?),
+                    label: c["label"].as_str().filter(|l| !l.trim().is_empty()).map(clip),
+                    kind: clip(c["kind"].as_str().filter(|k| !k.trim().is_empty()).unwrap_or("text")),
+                    options: c["options"].as_array().map(|o| o.iter().filter_map(Value::as_str).take(200).map(clip).collect()),
+                })).take(120).collect())
+                .unwrap_or_default();
+            let title = if title.trim().is_empty() { id.clone() } else { title };
+            CatalogueTable { id: clip(&id), title: clip(&title), columns }
+        }).collect())
+    }
+
     /// The plan call's table lines: each table this scope shows, its id, title and column key:kind.
     fn catalogue(&self, who: &Person) -> Result<String, String> {
-        // ponytail: 12 tables, one schema read each, every turn; cache per session if the primer gets slow.
-        let lines = self.tables(who)?.into_iter().filter(|(id, _)| self.hidden(who, id).is_none()).take(12).map(|(id, title)| {
-            let cols = self.table_info_any(who, &id).map(|(_, i)| i.pointer("/data/schema/columns").and_then(Value::as_array).into_iter().flatten()
-                .filter_map(|c| Some(format!("{}:{}", c["key"].as_str()?, c["kind"].as_str().unwrap_or("text")))).collect::<Vec<_>>().join(", "))
-                .unwrap_or_default();
-            format!("- {id} \"{title}\": {cols}")
-        }).collect::<Vec<_>>();
-        Ok(lines.join("\n"))
+        Ok(self.catalogue_tables(who)?.iter().map(|t| {
+            let cols: Vec<String> = t.columns.iter().map(|c| format!("{}:{}", c.key, c.kind)).collect();
+            format!("- {} \"{}\": {}", t.id, t.title, cols.join(", "))
+        }).collect::<Vec<_>>().join("\n"))
+    }
+
+    /// The person's catalogue to the shell, for its marks; one it cannot read is said, never sent empty.
+    fn catalogue_to(&self, who: &Person, out: &mut dyn Write, o: &Open) {
+        match self.catalogue_tables(who) {
+            Ok(tables) => send(out, &ToShell::Catalogue { session: o.session.clone(), tables }),
+            Err(why) => refuse(out, &format!("the catalogue is unreadable ({why}), so nothing is marked")),
+        }
+    }
+
+    /// One face_act: the limb must be declared and its params pass the spec. A limb that writes asks a card
+    /// (decide() acts on approve); any other is acted now and its answer recorded as the tool's result.
+    fn face_act(&self, out: &mut dyn Write, o: &mut Open, face: &Face, args: &Value) -> Result<Value, String> {
+        if face.limbs.is_empty() {
+            return Err("face_act is not offered: this shell declared no limbs".into());
+        }
+        let (app, action) = (text(&args["app"]), text(&args["action"]));
+        let params = match args.get("params") {
+            None | Some(Value::Null) => Map::new(),
+            Some(Value::Object(m)) => m.clone(),
+            Some(_) => return Err("params is an object of the limb's params by name".into()),
+        };
+        let Some(limb) = face.limbs.iter().find(|l| l.app == app && l.action == action) else {
+            let known: Vec<String> = face.limbs.iter().map(|l| format!("{}.{}", l.app, l.action)).collect();
+            return Err(format!("{app}.{action} is not a limb this face declared; it declares {}", known.join(", ")));
+        };
+        if let Some(why) = check_params(&limb.params, &params) {
+            return Err(format!("{app}.{action}: {why}"));
+        }
+        if limb.writes {
+            if !o.pending.is_empty() {
+                return Err("an approval is already waiting".into());
+            }
+            let card = ActionApproval { app, action, params, says: limb.says.clone() };
+            let rec = serde_json::to_value(&card).map_err(|e| format!("unrecordable card: {e}"))?;
+            let v = self.asking(o, out, "face_act", rec.clone(), Component::ActionApproval(card))?;
+            o.acting.insert(text(&v["approval"]), rec);
+            return Ok(v);
+        }
+        let rec = self.act(out, o, face, &app, &action, params)?;
+        let _ = self.record(o, Kind::ToolResult, Some("face_act"), rec.clone());
+        Ok(rec)
+    }
+
+    /// Sends one act and waits for the face's answer within the reader timeout: {act, ok, result?, reason?}.
+    fn act(&self, out: &mut dyn Write, o: &Open, face: &Face, app: &str, action: &str, params: Map<String, Value>) -> Result<Value, String> {
+        let act = mint_uuid().map_err(|e| format!("no act id: {e}"))?;
+        send(out, &ToShell::Act { session: o.session.clone(), act: act.clone(), app: app.into(), action: action.into(), params });
+        let (ok, result, reason) = face.acted(&act, self.reader_secs).map_err(|why| format!("{app}.{action}: {why}"))?;
+        let mut v = json!({"act": act, "ok": ok});
+        if let Some(r) = result {
+            v["result"] = r;
+        }
+        if let Some(r) = reason {
+            v["reason"] = json!(r);
+        }
+        Ok(v)
     }
 
     /// The model's turn over the conversation so far, tool calls and all, until it says text.
-    fn think(&self, who: &Person, out: &mut dyn Write, o: &mut Open) {
-        self.think_from(who, out, o, None);
+    fn think(&self, who: &Person, out: &mut dyn Write, o: &mut Open, face: &Face) {
+        self.think_from(who, out, o, None, face);
     }
 
     /// think(), with `first` (a planned message of tool calls) in place of the first model call.
-    fn think_from(&self, who: &Person, out: &mut dyn Write, o: &mut Open, mut first: Option<Value>) {
+    fn think_from(&self, who: &Person, out: &mut dyn Write, o: &mut Open, mut first: Option<Value>, face: &Face) {
         let model = match o.model.clone() {
             Ok(m) => m,
             Err(why) => return refuse(out, &format!("iris has no model: {why}")),
         };
         let mut calls = 0;
+        let tools = face.tools();
         loop {
             activity(out, o, Phase::Thinking);
-            let msg = match first.take().map(Ok).unwrap_or_else(|| self.complete(&model, o)) {
+            let msg = match first.take().map(Ok).unwrap_or_else(|| self.complete(&model, o, &tools, face.said())) {
                 Ok(m) => m,
                 Err(why) => return refuse(out, &why),
             };
             o.messages.push(msg.clone());
             let real = msg.get("tool_calls").and_then(Value::as_array).filter(|a| !a.is_empty()).cloned();
             let from_text = real.is_none();
-            let Some(asked) = real.or_else(|| text_call(msg["content"].as_str()?, o.messages.len()).map(|c| vec![c])) else {
+            let Some(asked) = real.or_else(|| text_call(msg["content"].as_str()?, o.messages.len(), &tools).map(|c| vec![c])) else {
                 let text = msg.get("content").and_then(Value::as_str).unwrap_or("").to_string();
                 let _ = self.record(o, Kind::Message, None, json!({"role": "iris", "text": text}));
                 // Live 2026-10-13: a blank answer drew nothing, so the person could not tell it ended.
@@ -1972,6 +2159,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                         send(out, &ToShell::Render { session: o.session.clone(), component: Component::Dashboard(d), pin: None });
                         v
                     }),
+                    "face_act" => self.face_act(out, o, face, &args),
                     _ => Err(format!("unknown tool {name:?}")),
                 };
                 if result.is_ok() && FREE_TEXT.contains(&name) && !o.read_free.iter().any(|t| t == name) {
@@ -2000,8 +2188,13 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
     }
 
     /// One chat-completions call; the model gets the conversation, never a KEAP header.
-    fn complete(&self, model: &Binding, o: &mut Open) -> Result<Value, String> {
-        let mut body = json!({"model": model.model_id, "messages": o.messages, "tools": tools()});
+    fn complete(&self, model: &Binding, o: &mut Open, tools: &Value, limbs: Option<String>) -> Result<Value, String> {
+        let mut body = json!({"model": model.model_id, "messages": o.messages, "tools": tools});
+        // The limbs are the connection's, so they are said per request and never kept in o.messages.
+        if let Some(line) = limbs {
+            let head = &mut body["messages"][0]["content"];
+            *head = json!(format!("{}\n\n{line}", head.as_str().unwrap_or_default()));
+        }
         // A rebind is said until a request is answered; o.messages never keeps it.
         if let Some(from) = &o.moved {
             let line = format!("This session moved from {from} to {}-{} (person); earlier turns were answered by {from}.", model.name, model.model_id);
