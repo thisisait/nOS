@@ -33,8 +33,14 @@ pub struct Pending(std::collections::VecDeque<String>);
 
 impl Pending {
     pub fn saw(&mut self, m: &ToShell) {
-        if let ToShell::ApprovalRequest { approval, .. } = m {
-            self.0.push_back(approval.clone());
+        match m {
+            ToShell::ApprovalRequest { approval, .. } => self.0.push_back(approval.clone()),
+            // A resumed session's open cards wait as if just asked, oldest first; a decided one is history.
+            ToShell::Replay { log, open, .. } => log.iter().for_each(|l| match l {
+                ToShell::ApprovalRequest { approval, .. } if open.contains(approval) => self.0.push_back(approval.clone()),
+                _ => {}
+            }),
+            _ => {}
         }
     }
 

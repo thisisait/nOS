@@ -16,6 +16,7 @@
 	import Message from './Message.svelte';
 	import ModelPicker from './ModelPicker.svelte';
 	import { asked, closed, composerOpen, decide, empty, seen, type Decision } from './approvals';
+	import { adopt, replayed, type Entry } from './resume';
 	import { forCommand, rewall } from './scope';
 	import type { DashboardProps, Link, ModelOption, Scope, ToShell, ToThalamus, WidgetSpec } from './wire';
 	import { route, submit, type Widgets } from './widgets';
@@ -28,8 +29,9 @@
 	};
 	const tauri = (globalThis as { __TAURI__?: Tauri }).__TAURI__;
 
-	type Entry = { me: string } | { msg: ToShell } | { note: string };
 	let log: Entry[] = $state([]);
+	// The thalamus answered `workspace` on this link: from then on a save goes to it too.
+	let held = false;
 	// Each widget's latest answer by token; the layout says where it sits and what it re-runs.
 	let widgets: Widgets = $state({});
 	let layout: ws.Layout = $state(ws.empty());
@@ -65,12 +67,15 @@
 		const t = setTimeout(() => see({ e: 'settle', seq }), SETTLE_MS[state]);
 		return () => clearTimeout(t);
 	});
-	// Saved a moment after the last change; the bridge checks it against workspace-layout.yml.
+	// Saved a moment after the last change; the bridge checks it against workspace-layout.yml. The local
+	// file is the offline cache; the thalamus's copy is the person's once it answered on this link.
 	$effect(() => {
 		const snap = $state.snapshot(layout);
 		if (!loaded || !tauri) return;
 		const t = setTimeout(() => {
 			tauri.core.invoke('save_layout', { layout: snap }).catch((e) => (layoutNote = `layout not saved: ${e}`));
+			if (held && link.state === 'connected')
+				tauri.core.invoke('send', { msg: { t: 'workspace_save', doc: snap } }).catch((e) => (layoutNote = `layout not saved to the thalamus: ${e}`));
 		}, 300);
 		return () => clearTimeout(t);
 	});
@@ -239,6 +244,35 @@
 		loaded = true;
 	}
 
+	// The thalamus's workspace, checked and cached by the bridge before it is shown; one it refuses leaves this one.
+	async function workspaceHeld(doc: object | null) {
+		const r = adopt($state.snapshot(layout), doc);
+		held = true;
+		if (r.send) tauri?.core.invoke('send', { msg: r.send }).catch((e) => (layoutNote = `the layout was not moved to the thalamus: ${e}`));
+		if (!r.layout || JSON.stringify(r.layout) === JSON.stringify($state.snapshot(layout))) return;
+		try {
+			await tauri?.core.invoke('save_layout', { layout: r.layout });
+		} catch (e) {
+			layoutNote = `the thalamus's layout was refused (${e}); this one is kept`;
+			return;
+		}
+		layout = { ...r.layout, chat: ws.clampChat(r.layout.chat, viewport()) };
+		const w = rewall(want, layout, 'working_for');
+		widgets = w.w ?? widgets;
+		sendAll(w.send);
+	}
+
+	// A new link resumes the person's session first, so serve's wall is set again before any widget reads.
+	async function linked() {
+		const say = (msg: ToThalamus, what: string) => tauri?.core.invoke('send', { msg }).catch((e) => push({ note: `${what}: ${e}` }));
+		await say({ t: 'resume' }, 'the session was not resumed');
+		await say({ t: 'workspace_load' }, 'the layout was not asked of the thalamus');
+		await say({ t: 'model_options' }, 'the models were not asked');
+		const r = rewall(want, layout, 'connected');
+		widgets = r.w ?? widgets;
+		sendAll(r.send);
+	}
+
 	onMount(() => {
 		const tickAge = setInterval(() => (now = Date.now()), 1000);
 		const onResize = () => setChat(layout.chat);
@@ -252,6 +286,21 @@
 			tauri.event.listen<ToShell>('to_shell', ({ payload }) => {
 				see({ e: 'wire', msg: payload });
 				if (payload.t === 'session') session = payload.session;
+				// A resumed session's chat replaces this window's: it is the whole of it, cards still open included.
+				if (payload.t === 'replay') {
+					const r = replayed(payload);
+					log = r.log;
+					q = r.q;
+					asking = r.asking;
+					if (q.pending.length) {
+						const a = ws.approvalArrived(layout);
+						setChat(a.layout.chat);
+						top = a.top;
+					}
+					return;
+				}
+				if (payload.t === 'said') return void push({ me: payload.text });
+				if (payload.t === 'workspace') return void workspaceHeld(payload.doc);
 				if (payload.t === 'model_options') {
 					models = payload.options;
 					notOffered = payload.refused;
@@ -297,14 +346,9 @@
 				link = payload;
 				see({ e: 'link', state: payload.state });
 				// Connected: the active tab's widgets run as restore; the others when their tab is shown.
-				if (payload.state === 'connected') {
-					tauri.core.invoke('send', { msg: { t: 'model_options' } }).catch((e) => push({ note: `the models were not asked: ${e}` }));
-					const r = rewall(want, layout, 'connected');
-					widgets = r.w ?? widgets;
-					sendAll(r.send);
-					return;
-				}
-				// No link, no wall: the chip waits for serve to say it again; a new session opens on the host's model.
+				if (payload.state === 'connected') return void linked();
+				// No link, no wall: the chip waits for serve to say it again; a resumed session runs on the host's model.
+				held = false;
 				scope = null;
 				models = [];
 				const r = closed(q);
