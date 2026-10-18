@@ -41,6 +41,24 @@ def test_no_at_html_anywhere_in_shell():
     assert offenders == [], f"{{@html}} used in: {offenders}"
 
 
+# The pupil gate's set (test_pupil_webview_is_closed.py RAW_HTML): Iris's components draw here too.
+RAW_HTML = re.compile(r"\{@html|innerHTML|outerHTML|insertAdjacentHTML|document\.write|DOMParser")
+
+
+def test_the_raw_html_scan_catches_a_planted_sink():
+    for planted in ("el.innerHTML = s", "n.outerHTML = s", "el.insertAdjacentHTML('beforeend', s)",
+                    "document.write(s)", "new DOMParser()"):
+        assert RAW_HTML.search(_strip_comments(planted)), planted
+    assert not RAW_HTML.search(_strip_comments("// never innerHTML\n/* no DOMParser */ <!-- no {@html} -->"))
+
+
+def test_no_raw_html_sink_anywhere_in_shell():
+    """{@html} is not the only way a string becomes markup: every DOM sink is forbidden too."""
+    offenders = [f"{p.relative_to(REPO)}: {m}" for p in _shell_files()
+                 for m in RAW_HTML.findall(_strip_comments(p.read_text(encoding="utf-8")))]
+    assert offenders == [], f"raw-HTML sink in the face: {offenders}"
+
+
 # ── Identity / edge-trust ────────────────────────────────────────────────────
 
 def test_bff_hook_enforces_edge_token_timing_safe():
