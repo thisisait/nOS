@@ -1,7 +1,8 @@
 /**
  * Limb dispatch: an Act runs only through a declared (app, action) pair whose
- * params pass the spec. Writes are refused here — the card (approval through
- * the thalamus) comes later. Every failure is an Acted{ok:false}, never a throw.
+ * params pass the spec. A writes:true Act arrives only after the person approved
+ * the card — the thalamus holds that ledger and is the only Act sender (the BFF
+ * stream). Every failure is an Acted{ok:false}, never a throw.
  */
 import { faceApps } from '$lib/apps/native/registry';
 import { DESKTOP, desktopLimbs } from './desktop';
@@ -46,7 +47,6 @@ export async function dispatch(act: Act): Promise<Acted> {
 	const params = act.params ?? {};
 	const bad = badParam(limb.params, params);
 	if (bad) return no(bad);
-	if (limb.writes) return no('needs approval');
 	if (!limb.run) return no('no handler');
 	try {
 		return { act: act.act, ok: true, result: await limb.run(params) };
