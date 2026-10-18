@@ -18,6 +18,7 @@ const fx = JSON.parse(readFileSync(FIXTURE, 'utf8')) as {
 };
 // Each kind's props, as wire.ts types them: a prop the fixture renames is named here, not drawn as nothing.
 const PROPS: Record<string, string[]> = {
+	action_approval: ['action', 'app', 'params', 'says'],
 	table_results: ['columns', 'matched', 'name', 'projected', 'query', 'rows', 'table', 'total'],
 	row_diff_approval: ['cells', 'lines', 'op', 'read_from', 'row_id', 'table', 'title', 'warning'],
 	table_schema_approval: ['columns', 'description', 'title', 'visibility'],
