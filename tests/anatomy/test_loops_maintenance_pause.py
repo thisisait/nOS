@@ -27,6 +27,8 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 LOCK = REPO / "files/anatomy/scripts/agent-run-lock.sh"
 PULSE = REPO / "files/anatomy/scripts/pulse-run-agent.sh"
 SCAN = REPO / "files/vuln-scan/scan-runner.sh"
+RUN_AGENT = REPO / "tools/run-agent.sh"
+DAEMON = REPO / "files/anatomy/pulse"
 RED = REPO / "tools/red-status.py"
 NOS = REPO / "tools/nos"
 
@@ -89,8 +91,12 @@ def test_the_paused_run_no_ops_as_paused(tmp_path):
 
 
 def test_both_runners_carry_the_paused_hold(tmp_path):
-    """Both claude spawners must map the lock's 3 to an intentional skip."""
-    for path in (PULSE, SCAN):
+    """Every agent spawner must map the lock's 3 to an intentional skip.
+
+    run-agent.sh (the AgentKit path) wrote `|| exit 2`, so a paused librarian
+    read as a lock refusal: 9 red runs a night on a paused client (2026-10-18).
+    """
+    for path in (PULSE, SCAN, RUN_AGENT):
         body = path.read_text(encoding="utf-8")
         block = body[body.find("nos_agent_lock_acquire"):]
         block = block[:900]
@@ -99,6 +105,24 @@ def test_both_runners_carry_the_paused_hold(tmp_path):
             "a lock refusal (2) — a pause would read as breakage")
         # And the refusal path must still exit 2 (the surviving contract).
         assert "exit 2" in block, f"{path.name} lost the lock-refusal exit 2"
+
+
+def test_pulse_holds_a_loop_job_while_paused(tmp_path, monkeypatch):
+    """Loop runners (tools/loops/*.py, loop-review.py) never take the agent lock,
+    so the sentinel did not reach them: vision-bench, pipeline-exercise and review
+    ran and failed all night on a paused client (2026-10-18). Pulse holds them."""
+    sys.path.insert(0, str(DAEMON))
+    try:
+        from pulse import daemon
+    finally:
+        sys.path.remove(str(DAEMON))
+    sentinel = tmp_path / "loops-paused"
+    monkeypatch.setenv("NOS_LOOPS_PAUSED_FILE", str(sentinel))
+    assert daemon.paused_hold("loop:vision-bench") is None, "no sentinel: the loop runs"
+    sentinel.write_text("since: 2026-10-18T00:00:00Z\n", encoding="utf-8")
+    held = daemon.paused_hold("loop:vision-bench")
+    assert held is not None and held.exit_code == 3, "a paused loop job must be a hold (3)"
+    assert daemon.paused_hold("backup:nightly") is None, "the pause holds loops, not every job"
 
 
 def test_header_documents_return_three():
