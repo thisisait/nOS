@@ -1,5 +1,5 @@
 {
-  "contract_version": 7,
+  "contract_version": 8,
   "to_thalamus": [
     {"case": "first turn opens a session", "msg": {"t": "turn", "session": null, "text": "find rows about backups in the roadmap"}},
     {"case": "turn in a session", "msg": {"t": "turn", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "text": "set its status to done"}},
@@ -22,7 +22,11 @@
     {"case": "the person picks a model for this session", "msg": {"t": "model_pick", "backend": "ollama", "model": "qwen3:4b"}},
     {"case": "the pupil resumes the person's last session", "msg": {"t": "resume"}},
     {"case": "the pupil asks for the person's workspace", "msg": {"t": "workspace_load"}},
-    {"case": "the pupil saves the person's workspace", "msg": {"t": "workspace_save", "doc": {"version": 2, "active": "ws1", "chat": {"x": 24, "y": 24, "w": 420, "h": 560, "open": true}, "workspaces": [{"id": "ws1", "name": "Workspace", "widgets": []}]}}}
+    {"case": "the pupil saves the person's workspace", "msg": {"t": "workspace_save", "doc": {"version": 2, "active": "ws1", "chat": {"x": 24, "y": 24, "w": 420, "h": 560, "open": true}, "workspaces": [{"id": "ws1", "name": "Workspace", "widgets": []}]}}},
+    {"case": "the shell asks for the person's catalogue", "msg": {"t": "catalogue"}},
+    {"case": "the face declares its limbs", "msg": {"t": "limbs", "limbs": [{"app": "desktop", "action": "open_app", "params": {"slug": {"type": "string", "required": true}}, "writes": false, "says": "Open a face app, or bring its window to the front"}, {"app": "desktop", "action": "arrange", "params": {"mode": {"type": "enum", "values": ["half-v", "thirds", "2x2", "none"], "required": true}}, "writes": false, "says": "Tile the front windows (half-v, thirds, 2x2) or stop tiling (none)"}, {"app": "files", "action": "rename", "params": {"path": {"type": "string", "required": true}, "to": {"type": "string", "required": true}, "overwrite": {"type": "boolean"}}, "writes": true, "says": "Rename a file"}]}},
+    {"case": "the face did the act", "msg": {"t": "acted", "act": "5e4d3c2b-1a09-4f8e-9d7c-6b5a4f3e2d1c", "ok": true, "result": true}},
+    {"case": "the face could not do the act", "msg": {"t": "acted", "act": "5e4d3c2b-1a09-4f8e-9d7c-6b5a4f3e2d1c", "ok": false, "reason": "no window for tables"}}
   ],
   "to_shell": [
     {"case": "session opened", "msg": {"t": "session", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "actor": "user:pazny", "model_uri": "ollama://qwen3:8b"}},
@@ -97,7 +101,10 @@
     {"case": "the models Iris may use here", "msg": {"t": "model_options", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "options": [{"backend": "ollama", "model": "qwen3:14b", "processor": "This host (on-device, Ollama)", "transfers_outside_eu": false, "current": true}, {"backend": "ollama", "model": "qwen3:4b", "processor": "This host (on-device, Ollama)", "transfers_outside_eu": false, "warning": "'qwen3:4b' has 4B parameters, below the 8B recommended (llm_cell_recommended_params_b): it runs, badly", "current": false}, {"backend": "mistral-eu", "model": "mistral-large-latest", "processor": "Mistral AI SAS", "transfers_outside_eu": false, "current": false}], "refused": ["ollama qwen3:1.7b: 'qwen3:1.7b' has 1.7B parameters, below the 3B minimum (llm_cell_min_params_b)"]}},
     {"case": "the person's turn, replayed", "msg": {"t": "said", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "text": "find rows about backups in the roadmap"}},
     {"case": "a resumed session's chat", "msg": {"t": "replay", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "log": [{"t": "said", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "text": "set its status to done"}, {"t": "text", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "text": "Two rows match."}, {"t": "refused", "reason": "an approval is waiting: decide it first"}], "open": []}},
-    {"case": "the thalamus holds no workspace yet", "msg": {"t": "workspace", "doc": null}}
+    {"case": "the thalamus holds no workspace yet", "msg": {"t": "workspace", "doc": null}},
+    {"case": "the person's catalogue", "msg": {"t": "catalogue", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "tables": [{"id": "invoices", "title": "Faktury", "columns": [{"key": "customer", "label": "Zákazník", "kind": "select", "options": ["Acme", "Beta"]}, {"key": "due_date", "label": "Splatnost", "kind": "date"}, {"key": "total", "kind": "number"}]}]}},
+    {"case": "Iris acts in the face", "msg": {"t": "act", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "act": "5e4d3c2b-1a09-4f8e-9d7c-6b5a4f3e2d1c", "app": "desktop", "action": "open_app", "params": {"slug": "tables"}}},
+    {"case": "an action awaits approval", "msg": {"t": "approval_request", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "approval": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d", "component": {"kind": "action_approval", "props": {"app": "files", "action": "rename", "params": {"path": "/notes/a.md", "to": "b.md"}, "says": "Rename a file"}}}}
   ],
   "refused": [
     {"case": "unknown component kind is shown, not dropped", "line": "{\"t\":\"render\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"component\":{\"kind\":\"pie_chart\",\"props\":{}}}"},
@@ -212,7 +219,15 @@
     {"case": "a replayed line of another session", "line": "{\"t\":\"replay\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"log\":[{\"t\":\"text\",\"session\":\"7d1c2b3a-4e5f-4a6b-9c8d-1e2f3a4b5c6d\",\"text\":\"x\"}],\"open\":[]}"},
     {"case": "a replay whose open id is not a uuid", "line": "{\"t\":\"replay\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"log\":[],\"open\":[\"a1\"]}"},
     {"case": "a workspace that is not an object", "line": "{\"t\":\"workspace\",\"doc\":[1,2]}"},
-    {"case": "a said line whose session is not a uuid", "line": "{\"t\":\"said\",\"session\":\"s1\",\"text\":\"hi\"}"}
+    {"case": "a said line whose session is not a uuid", "line": "{\"t\":\"said\",\"session\":\"s1\",\"text\":\"hi\"}"},
+    {"case": "a catalogue whose session is not a uuid", "line": "{\"t\":\"catalogue\",\"session\":\"s1\",\"tables\":[]}"},
+    {"case": "a catalogue table with rows", "line": "{\"t\":\"catalogue\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"tables\":[{\"id\":\"x\",\"title\":\"X\",\"columns\":[],\"rows\":[]}]}"},
+    {"case": "a catalogue column of no key", "line": "{\"t\":\"catalogue\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"tables\":[{\"id\":\"x\",\"title\":\"X\",\"columns\":[{\"key\":\"\",\"kind\":\"text\"}]}]}"},
+    {"case": "an act whose id is not a uuid", "line": "{\"t\":\"act\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"act\":\"a1\",\"app\":\"desktop\",\"action\":\"open_app\",\"params\":{}}"},
+    {"case": "an act naming the actor", "line": "{\"t\":\"act\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"act\":\"5e4d3c2b-1a09-4f8e-9d7c-6b5a4f3e2d1c\",\"app\":\"desktop\",\"action\":\"open_app\",\"params\":{},\"actor\":\"user:pazny\"}"},
+    {"case": "an act with a nested param", "line": "{\"t\":\"act\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"act\":\"5e4d3c2b-1a09-4f8e-9d7c-6b5a4f3e2d1c\",\"app\":\"desktop\",\"action\":\"open_app\",\"params\":{\"slug\":{\"x\":1}}}"},
+    {"case": "an action card drawn as a render", "line": "{\"t\":\"render\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"component\":{\"kind\":\"action_approval\",\"props\":{\"app\":\"files\",\"action\":\"rename\",\"params\":{\"path\":\"/notes/a.md\",\"to\":\"b.md\"},\"says\":\"Rename a file\"}}}"},
+    {"case": "an action card of no app", "line": "{\"t\":\"approval_request\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"approval\":\"9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d\",\"component\":{\"kind\":\"action_approval\",\"props\":{\"app\":\"\",\"action\":\"rename\",\"params\":{},\"says\":\"Rename a file\"}}}"}
   ],
   "refused_to_thalamus": [
     {"case": "the shell names the actor", "line": "{\"t\":\"turn\",\"session\":null,\"text\":\"hi\",\"actor\":\"user:akadmin\"}"},
@@ -241,6 +256,13 @@
     {"case": "a pick whose backend is not a row name", "line": "{\"t\":\"model_pick\",\"backend\":\"../ollama\",\"model\":\"qwen3:4b\"}"},
     {"case": "the shell names who chose", "line": "{\"t\":\"model_pick\",\"backend\":\"ollama\",\"model\":\"qwen3:4b\",\"chosen_by\":\"operator\"}"},
     {"case": "a workspace save that is not an object", "line": "{\"t\":\"workspace_save\",\"doc\":\"ws1\"}"},
-    {"case": "a workspace save naming whose it is", "line": "{\"t\":\"workspace_save\",\"doc\":{},\"uid\":\"bob\"}"}
+    {"case": "a workspace save naming whose it is", "line": "{\"t\":\"workspace_save\",\"doc\":{},\"uid\":\"bob\"}"},
+    {"case": "a limb of an undeclared param type", "line": "{\"t\":\"limbs\",\"limbs\":[{\"app\":\"desktop\",\"action\":\"open_app\",\"params\":{\"slug\":{\"type\":\"date\"}},\"writes\":false,\"says\":\"x\"}]}"},
+    {"case": "an enum limb param with no values", "line": "{\"t\":\"limbs\",\"limbs\":[{\"app\":\"desktop\",\"action\":\"arrange\",\"params\":{\"mode\":{\"type\":\"enum\",\"values\":[]}},\"writes\":false,\"says\":\"x\"}]}"},
+    {"case": "values on a param that is not an enum", "line": "{\"t\":\"limbs\",\"limbs\":[{\"app\":\"desktop\",\"action\":\"open_app\",\"params\":{\"slug\":{\"type\":\"string\",\"values\":[\"a\"]}},\"writes\":false,\"says\":\"x\"}]}"},
+    {"case": "one limb declared twice", "line": "{\"t\":\"limbs\",\"limbs\":[{\"app\":\"desktop\",\"action\":\"open_app\",\"params\":{\"slug\":{\"type\":\"string\",\"required\":true}},\"writes\":false,\"says\":\"Open a face app, or bring its window to the front\"},{\"app\":\"desktop\",\"action\":\"open_app\",\"params\":{\"slug\":{\"type\":\"string\",\"required\":true}},\"writes\":false,\"says\":\"Open a face app, or bring its window to the front\"}]}"},
+    {"case": "a limb whose app is not a name", "line": "{\"t\":\"limbs\",\"limbs\":[{\"app\":\"Desk Top\",\"action\":\"open_app\",\"params\":{\"slug\":{\"type\":\"string\",\"required\":true}},\"writes\":false,\"says\":\"Open a face app, or bring its window to the front\"}]}"},
+    {"case": "an acted whose act is not a uuid", "line": "{\"t\":\"acted\",\"act\":\"a1\",\"ok\":true}"},
+    {"case": "an acted naming the session", "line": "{\"t\":\"acted\",\"act\":\"5e4d3c2b-1a09-4f8e-9d7c-6b5a4f3e2d1c\",\"ok\":true,\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\"}"}
   ]
 }

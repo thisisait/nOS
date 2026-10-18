@@ -2,7 +2,7 @@
 # Protocol: ssot/doctrine/cross-repo-contracts.md §1 (spec + fixture + gates
 # over the same bytes). Both sides link one Rust crate (nos-contract), so the
 # gate is the crate decoding the fixture; one copy only, both sides cite this.
-contract_version: 7   # 7: resume, workspace_load, workspace_save, workspace, said, replay; 6: dashboard, kpi, working_for, model_options, model_pick; 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice, delta, sequence; 5: row_diff_approval op/title/read_from
+contract_version: 8   # 8: catalogue (both ways), limbs, act, acted, action_approval; 7: resume, workspace_load, workspace_save, workspace, said, replay; 6: dashboard, kpi, working_for, model_options, model_pick; 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice, delta, sequence; 5: row_diff_approval op/title/read_from
 fixture: files/anatomy/contracts/thalamus-shell.fixture.json
 
 producer:
@@ -24,8 +24,8 @@ gates:
 wire:
   framing: "newline-delimited JSON, one message per line, UTF-8"
   tag: "every message is an object whose `t` names its variant (snake_case)"
-  to_thalamus: [turn, approval_decision, control, widget, form_submit, choice_reply, working_for, model_options, model_pick, resume, workspace_load, workspace_save]
-  to_shell: [session, text, render, approval_request, refused, activity, widget, form_result, table_changed, working_for, model_options, said, replay, workspace]
+  to_thalamus: [turn, approval_decision, control, widget, form_submit, choice_reply, working_for, model_options, model_pick, resume, workspace_load, workspace_save, catalogue, limbs, acted]
+  to_shell: [session, text, render, approval_request, refused, activity, widget, form_result, table_changed, working_for, model_options, said, replay, workspace, catalogue, act]
   widget: >-
     A widget is a spec the person placed; the pupil re-runs it over `widget {widget, spec, trigger}`
     and the thalamus answers as that person, without the model, with `widget {session, widget,
@@ -109,6 +109,26 @@ wire:
     waiting, each decided or answered once, as before. `said {session, text}` is the person's own turn.
     With none to resume it opens a fresh one, with no replay; any other first message opens a fresh one too.
     Another person resumes and reads none of it.
+  catalogue: >-
+    `catalogue` is the shell asking for the person's catalogue, so it can mark their input as they type
+    (row iris-input-highlighting); serve answers `catalogue {session, tables[{id, title, columns[{key,
+    label?, kind, options?}]}]}`: the tables the person may read under the scope, as the cortex plan
+    sees them (a table the septum hides is not in it; at most 12 tables), each column's label and a
+    select's options as KEAP holds them. Asked once, it is sent again after every working_for. It is
+    data for the shell's marks, never a turn: no model reads it from the shell. Caps: 64 tables, 120
+    columns each, 200 options a column; an id, key or kind is 1-200 chars.
+  limbs: >-
+    `limbs {limbs[{app, action, params{name: {type string|number|boolean|enum, values? (enum only, 1-50),
+    required?}}, writes, says}]}` is the face saying what Iris may do on its screen (row face-limbs): app and
+    action [a-z0-9_-]{1,64}, each (app, action) once, at most 64 limbs and 16 params each, says 1-200 chars.
+    Stored per connection, never opening a session; a later limbs replaces it. Only a connection that
+    declared limbs offers the model the tool face_act {app, action, params}: the pair must be declared and
+    the params pass its spec (no unknown name, required present, a value of its type or one of its values),
+    else the call is refused and recorded. writes false: serve sends `act {session, act, app, action,
+    params}` (act a uuid serve minted, params strings, numbers or bools) and waits for the face's `acted
+    {act, ok, result?, reason?}` (no answer in the reader timeout is a tool error the model hears); writes
+    true: an action_approval card first, and only an approve sends the act. Every call is a tool_use and
+    tool_result under face_act, capped by the turn's tool-call cap. The terminal declares none.
   phase: [thinking, tool, writing, idle]   # activity.phase; tool is {tool: {name}}
   decision: [approve, reject]
   control_view: [inbox, approvals, red_status]
@@ -212,6 +232,10 @@ components:
       big text node in the shell locale (unit after it, CZK when no unit and the title names money) and delta
       as an arrow and a sign (↑ +320, ↓ −3.5) with its word for a screen reader; the terminal says
       "<title>: <value> <unit>", "up|down <|delta|> <label>" and "from <source>"
+    action_approval: >-
+      an act Iris asks to take on the face's screen that writes (face_act on a limb declared writes, v8), asked only
+      as an approval: {app, action, params{name: value}, says}; app and action name the declared limb, says is its
+      one line. Both shells show the limb, what it says and every param; only an approve sends the act
     # Rendered only (wire.rs: never in an approval, never as a widget's answer); nothing runs at offer.
     dashboard: >-
       a tab of widgets Iris offers (offer_dashboard): {name, lens[{column, op eq|neq|lt|gt|contains, value,
