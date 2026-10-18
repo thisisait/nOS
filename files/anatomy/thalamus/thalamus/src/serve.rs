@@ -602,8 +602,8 @@ const KINDS_SAID: &str = "text, number, date, select, bool, rowRef";
 /// Tools whose result carries free text someone else wrote; a card asked after one says so.
 const FREE_TEXT: [&str; 4] = ["search_memory", "inbox", "approvals_awaiting", "nos_guide"];
 
-const LIST_TABLES: &str = "The DataTables the person can read in KEAP: each id and title. Renders a table to \
-the person. Call it before query_rows when the person names a table you do not have the id of.";
+const LIST_TABLES: &str = "The DataTables the person can read in KEAP: each id, title, rowCount and the day it \
+was last updated. Renders a table to the person. Call it before query_rows when the person names a table you do not have the id of.";
 
 const RED_STATUS: &str = "What is red on the estate right now, and what is on hold on purpose, from \
 tools/red-status.py run as the operator. Renders red_status to the person. Tier 1 only. If it cannot be read, \
@@ -3292,29 +3292,40 @@ impl Server {
     /// GET /api/tables as the person: what they may read, never the owner's view of anyone else's.
     /// Every table KEAP lists for the person, as (id, title), the septum aside.
     fn tables(&self, who: &Person) -> Result<Vec<(String, String)>, String> {
-        let v = self.keap(who, &format!("{}/api/tables", self.keap_url.trim_end_matches('/')), None)?;
-        let all = v.get("data").and_then(Value::as_array).ok_or("KEAP answered no table list")?;
-        Ok(all.iter().take(100).filter_map(|t| {
+        Ok(self.table_list(who)?.iter().filter_map(|t| {
             let id = t.get("id").and_then(Value::as_str)?;
             Some((id.to_string(), t.get("title").and_then(Value::as_str).unwrap_or(id).to_string()))
         }).collect())
     }
 
+    /// GET /api/tables as KEAP answers it: the first 100 entries that carry an id.
+    fn table_list(&self, who: &Person) -> Result<Vec<Value>, String> {
+        let v = self.keap(who, &format!("{}/api/tables", self.keap_url.trim_end_matches('/')), None)?;
+        let all = v.get("data").and_then(Value::as_array).ok_or("KEAP answered no table list")?;
+        Ok(all.iter().take(100).filter(|t| t.get("id").and_then(Value::as_str).is_some()).cloned().collect())
+    }
+
     /// list_tables: the tables shown in this scope, then the hidden ones by title and why, never by id.
+    /// A hidden table keeps its count and date to itself, as it keeps its id.
     fn list_tables(&self, who: &Person) -> Result<(Table, Value), String> {
         let (mut rows, mut hidden) = (Vec::new(), Vec::new());
-        for (id, t) in self.tables(who)? {
+        for t in self.table_list(who)? {
+            let id = t["id"].as_str().unwrap_or_default().to_string();
+            let title = t.get("title").and_then(Value::as_str).unwrap_or(&id).to_string();
             match self.hidden(who, &id) {
-                Some(why) => hidden.push((t, why)),
-                None => rows.push((id, t)),
+                Some(why) => hidden.push((title, why)),
+                // ponytail: KEAP's updatedAt unit is not pinned here; above 1e11 it is read as ms.
+                None => rows.push(json!({"id": id, "title": title, "rowCount": t["rowCount"],
+                    "updated": t["updatedAt"].as_f64().and_then(|u| day(&json!(if u > 1e11 { u / 1000.0 } else { u })))})),
             }
         }
         let title = who.working_for.as_ref().map_or("DataTables".to_string(), |s| format!("DataTables {}", s.said()));
-        let mut cells: Vec<Vec<Value>> = rows.iter().map(|(id, t)| vec![json!(t), json!(id)]).collect();
-        cells.extend(hidden.iter().map(|(t, why)| vec![json!(t), json!(format!("(hidden) {why}"))]));
-        let table = Table { title: Some(title), columns: vec!["title".into(), "id".into()], rows: cells };
-        Ok((table, json!({"tables": rows.iter().map(|(id, t)| json!({"id": id, "title": t})).collect::<Vec<_>>(),
-                          "hidden": hidden.iter().map(|(t, why)| json!({"title": t, "why": why})).collect::<Vec<_>>()})))
+        let mut cells: Vec<Vec<Value>> = rows.iter()
+            .map(|r| vec![r["title"].clone(), r["rowCount"].clone(), r["updated"].clone(), r["id"].clone()]).collect();
+        cells.extend(hidden.iter().map(|(t, why)| vec![json!(t), Value::Null, Value::Null, json!(format!("(hidden) {why}"))]));
+        let columns = ["title", "rows", "updated", "id"].map(String::from).to_vec();
+        let table = Table { title: Some(title), columns, rows: cells };
+        Ok((table, json!({"tables": rows, "hidden": hidden.iter().map(|(t, why)| json!({"title": t, "why": why})).collect::<Vec<_>>()})))
     }
 
     /// red-status.py as the operator: the F4 control and Iris's red_status tool read it the same way.

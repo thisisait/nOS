@@ -1114,7 +1114,7 @@
   },
   {
     "function": {
-      "description": "The DataTables the person can read in KEAP: each id and title. Renders a table to the person. Call it before query_rows when the person names a table you do not have the id of.",
+      "description": "The DataTables the person can read in KEAP: each id, title, rowCount and the day it was last updated. Renders a table to the person. Call it before query_rows when the person names a table you do not have the id of.",
       "name": "list_tables",
       "parameters": {
         "additionalProperties": false,
