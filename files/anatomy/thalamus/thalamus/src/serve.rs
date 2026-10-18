@@ -11,8 +11,9 @@ use nos_contract::renderers::{is_date, ApprovalsList, Axis, CellChange, Chart, C
                                Dropped, FieldKind, Form, FormField, InboxItem, InboxList, Lens, LensOp, Lines, List, ListItem, Omitted, Parent, RedStatus,
                                Row, RowDiffApproval, SchemaColumn, ColumnAddApproval, ColumnKind, ExistingColumn, Series, Table, TableResults, TableSchemaApproval, Visibility};
 use nos_contract::wire::{check_spec, decode_to_thalamus, encode, ChartSpec, ControlView, Decision, FormSpec, KpiSpec, Op, Phase, Scope, ModelOption, ToShell, ToThalamus, Trigger,
-                         WidgetChart, WidgetSpec};
+                         WidgetChart, WidgetSpec, MAX_REPLAY};
 use nos_contract::uid;
+use crate::store;
 use serde_json::{json, Map, Value};
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -55,6 +56,8 @@ pub struct Server {
     pub floors: Option<(f64, f64)>,
     /// NOS_CORTEX_URL with iris_plan: cortex: a turn first asks for one cortex-lang plan (cortex_plan.rs).
     pub cortex: Option<Cortex>,
+    /// --data-dir: the ledger's, and each person's workspace and conversation under people/ (store.rs).
+    pub data: PathBuf,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -316,7 +319,54 @@ enum Answer {
 }
 
 fn send(out: &mut UnixStream, m: &ToShell) {
+    keep(m);
     let _ = out.write_all(encode(m).as_bytes());
+}
+
+thread_local! {
+    /// This connection's conversation file and open session (one connection is one thread, run()).
+    static KEPT: std::cell::RefCell<Option<(PathBuf, String)>> = const { std::cell::RefCell::new(None) };
+}
+
+/// The tools that ask an approval of the person, as `pending` names them.
+const ASKING: [&str; 5] = ["propose_row_edit", "propose_row_insert", "propose_row_delete", "propose_table_create", "propose_column_add"];
+/// The conversation file's byte cap: a replay of it rides one line of at most 1 MiB.
+const REPLAY_BYTES: usize = 768 << 10;
+/// How many of a resumed session's messages its model hears again.
+const MAX_HEARD: usize = 40;
+
+/// The open session's chat as its conversation file holds it; none when the file is another session's.
+fn conversation(path: &Path, session: &str) -> Vec<Value> {
+    match store::read(path) {
+        Ok(Some(v)) if v["session"] == session => v["log"].as_array().cloned().unwrap_or_default(),
+        Ok(_) => vec![],
+        Err(why) => {
+            eprintln!("thalamus: {why}");
+            vec![]
+        }
+    }
+}
+
+/// What the chat shows (said, text, render, approval_request, a refusal of no widget) joins the open
+/// session's conversation file before the shell sees it; the oldest go past MAX_REPLAY or REPLAY_BYTES.
+/// ponytail: the whole file is rewritten per line (<= 768 KiB); an append-only log if that ever shows.
+fn keep(m: &ToShell) {
+    if !matches!(m, ToShell::Said { .. } | ToShell::Text { .. } | ToShell::Render { .. } | ToShell::ApprovalRequest { .. }
+                 | ToShell::Refused { widget: None, .. }) {
+        return;
+    }
+    KEPT.with_borrow(|k| {
+        let Some((path, session)) = k else { return };
+        let mut log = conversation(path, session);
+        log.push(serde_json::to_value(m).unwrap_or_default());
+        let mut bytes: usize = log.iter().map(|v| v.to_string().len()).sum();
+        while log.len() > MAX_REPLAY || (bytes > REPLAY_BYTES && log.len() > 1) {
+            bytes -= log.remove(0).to_string().len();
+        }
+        if let Err(why) = store::write(path, &json!({"session": session, "log": log})) {
+            eprintln!("thalamus: the chat of {session} was not kept: {why}");
+        }
+    });
 }
 
 /// What this session is doing now; the pupil's eye shows it.
@@ -722,34 +772,35 @@ impl Server {
                         refuse(&mut out, "session is not this connection's open session");
                         continue;
                     }
-                    if let Some(o) = self.ensure(&who, &mut out, &mut open) {
+                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open) {
+                        keep(&ToShell::Said { session: o.session.clone(), text: text.clone() });
                         self.turn(&who, &mut out, o, &text);
                         // However the turn ended (text, cap, refusal), it is over.
                         activity(&mut out, o, Phase::Idle);
                     }
                 }
                 Ok(ToThalamus::Control { view }) => {
-                    if let Some(o) = self.ensure(&who, &mut out, &mut open) {
+                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open) {
                         self.control(&who, &mut out, o, view);
                     }
                 }
                 Ok(ToThalamus::WorkingFor { scope }) => {
-                    if let Some(o) = self.ensure(&who, &mut out, &mut open) {
+                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open) {
                         self.working_for(&mut who, &mut out, o, &scope, &peer);
                     }
                 }
                 Ok(ToThalamus::ModelOptions) => {
-                    if let Some(o) = self.ensure(&who, &mut out, &mut open) {
+                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open) {
                         self.model_options(&mut out, o);
                     }
                 }
                 Ok(ToThalamus::ModelPick { backend, model }) => {
-                    if let Some(o) = self.ensure(&who, &mut out, &mut open) {
+                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open) {
                         self.model_pick(&mut out, o, &backend, &model, &peer);
                     }
                 }
                 Ok(ToThalamus::Widget { widget, spec, trigger }) => {
-                    if let Some(o) = self.ensure(&who, &mut out, &mut open) {
+                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open) {
                         self.widget(&who, &mut out, o, &widget, &spec, trigger);
                     }
                 }
@@ -765,6 +816,7 @@ impl Server {
                             continue;
                         }
                         if self.choice_reply(&mut out, o, &choice, &picked) {
+                            keep(&ToShell::Said { session: o.session.clone(), text: picked.join(", ") });
                             self.think(&who, &mut out, o);
                         }
                         activity(&mut out, o, Phase::Idle);
@@ -776,12 +828,31 @@ impl Server {
                         if !self.may_decide(o, &mut out, o.pending[&approval], &approval, &peer, None) {
                             continue;
                         }
+                        let said = if decision == Decision::Approve { "approve" } else { "reject" };
+                        keep(&ToShell::Said { session: o.session.clone(), text: said.into() });
                         self.decide(&who, &mut out, o, &approval, decision, note, &peer);
                         activity(&mut out, o, Phase::Idle);
                     }
                     _ => refuse(&mut out, "no open approval with that id"),
                 },
-                Ok(ToThalamus::WorkspaceLoad | ToThalamus::WorkspaceSave { .. }) => refuse(&mut out, "this thalamus holds no workspace yet"),
+                Ok(ToThalamus::Resume) if open.is_some() => refuse(&mut out, "a session is open on this connection already"),
+                Ok(ToThalamus::Resume) => {
+                    self.begin(&mut who, &mut out, &mut open, true);
+                }
+                // The person's, by the peer's identity; no session is opened for it.
+                Ok(ToThalamus::WorkspaceLoad) => {
+                    let doc = store::read(&store::path(&self.data, &who.uid(), "workspace")).unwrap_or_else(|why| {
+                        self.say(format!("workspace of {}: {why}", who.username));
+                        refuse(&mut out, &why);
+                        None
+                    });
+                    send(&mut out, &ToShell::Workspace { doc });
+                }
+                Ok(ToThalamus::WorkspaceSave { doc }) => {
+                    if let Err(why) = store::write(&store::path(&self.data, &who.uid(), "workspace"), &doc) {
+                        refuse(&mut out, &format!("the workspace was not saved: {why}"));
+                    }
+                }
             }
         }
         if let Some(o) = open {
@@ -791,27 +862,56 @@ impl Server {
     }
 
     /// The connection's session, opened on its first Turn or Control; None was refused.
-    fn ensure<'a>(&self, who: &Person, out: &mut UnixStream, open: &'a mut Option<Open>) -> Option<&'a mut Open> {
+    fn ensure<'a>(&self, who: &mut Person, out: &mut UnixStream, open: &'a mut Option<Open>) -> Option<&'a mut Open> {
+        self.begin(who, out, open, false)
+    }
+
+    /// Opens the connection's session if none is: with `resume`, the person's last one, replayed.
+    fn begin<'a>(&self, who: &mut Person, out: &mut UnixStream, open: &'a mut Option<Open>, resume: bool) -> Option<&'a mut Open> {
         if open.is_none() {
-            match self.open(who, out) {
-                Ok(o) => *open = Some(o),
+            match self.open(who, out, resume) {
+                Ok((mut o, resumed)) => {
+                    KEPT.set(Some((store::path(&self.data, &who.uid(), "conversation"), o.session.clone())));
+                    if resumed {
+                        self.resume(who, out, &mut o);
+                    }
+                    *open = Some(o);
+                }
                 Err(why) => refuse(out, &why),
             }
         }
         open.as_mut()
     }
 
-    fn open(&self, who: &Person, out: &mut UnixStream) -> Result<Open, String> {
+    /// The connection's session and whether it was resumed (asked by `resume`).
+    fn open(&self, who: &Person, out: &mut UnixStream, resume: bool) -> Result<(Open, bool), String> {
         // The imprint the binding calls for: the short render fits a local model's window.
         let imprint = self.binding.clone().and_then(|m| self.imprint(&m).map(|t| (m, t)));
         if let (Ok(_), Err(why)) = (&self.binding, &imprint) {
             self.say(format!("refusing turns: {why}"));
         }
-        let session = mint_uuid().map_err(|e| format!("no session id: {e}"))?;
         let actor = format!("user:{}", who.uid());
         let model_uri = self.binding.as_ref().map_or("unbound".to_string(), |m| format!("{}-{}", m.name, m.model_id));
-        let s = Session { uuid: &session, agent_name: "iris", agent_version: 1, actor: &actor, model_uri: &model_uri };
-        self.ledger.lock().map_err(|_| "ledger poisoned".to_string())?.start(&s).map_err(|e| format!("ledger: {e}"))?;
+        let ledger = self.ledger.lock().map_err(|_| "ledger poisoned".to_string())?;
+        // The person's last session, if its connection closed it; a resumed one runs on the host's model again.
+        let resumed = if resume { ledger.resume(&actor, "iris").map_err(|e| format!("ledger: {e}"))? } else { None };
+        let (session, tokens) = match &resumed {
+            Some((uuid, was, tokens)) => {
+                if *was != model_uri {
+                    let rec = json!({"from_model_uri": was, "to_model_uri": model_uri, "by": "thalamus", "reason": "resumed on the host's model"});
+                    ledger.record(uuid, Kind::SessionRebind, None, &rec).and_then(|_| ledger.rebind(uuid, &model_uri))
+                        .map_err(|e| format!("ledger: {e}"))?;
+                }
+                (uuid.clone(), *tokens)
+            }
+            None => {
+                let session = mint_uuid().map_err(|e| format!("no session id: {e}"))?;
+                let s = Session { uuid: &session, agent_name: "iris", agent_version: 1, actor: &actor, model_uri: &model_uri };
+                ledger.start(&s).map_err(|e| format!("ledger: {e}"))?;
+                (session, (0, 0))
+            }
+        };
+        drop(ledger);
         send(out, &ToShell::Session { session: session.clone(), actor, model_uri });
         let iris = format!("You are Iris. You act for {} and see only what they may see. To read, count or filter \
 rows of a DataTable call query_rows (its total is the exact count); propose_row_edit only for a change the person \
@@ -845,8 +945,66 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             Ok((m, t)) => (Ok(m), format!("{}\n\n{iris}", t.trim_end())),
             Err(why) => (Err(why), iris.clone()),
         };
-        Ok(Open { session, model, iris, messages: vec![json!({"role": "system", "content": system})], moved: None, tokens: (0, 0),
-                  pending: HashMap::new(), shown: HashMap::new(), tables_seen: HashMap::new(), dates: HashMap::new(), names: HashMap::new(), read_free: vec![], forms: HashMap::new(), choices: HashMap::new(), last_group: None, again: HashMap::new() })
+        Ok((Open { session, model, iris, messages: vec![json!({"role": "system", "content": system})], moved: None, tokens,
+                  pending: HashMap::new(), shown: HashMap::new(), tables_seen: HashMap::new(), dates: HashMap::new(), names: HashMap::new(), read_free: vec![], forms: HashMap::new(), choices: HashMap::new(), last_group: None, again: HashMap::new() },
+            resumed.is_some()))
+    }
+
+    /// A resumed session as it was left: its chat replayed (the conversation file), the model hearing
+    /// its last messages, the scope last set, and its open approvals and choices waiting again (the ledger).
+    fn resume(&self, who: &mut Person, out: &mut UnixStream, o: &mut Open) {
+        let log: Vec<ToShell> = conversation(&store::path(&self.data, &who.uid(), "conversation"), &o.session)
+            .into_iter().filter_map(|v| serde_json::from_value(v).ok()).collect();
+        let held = self.ledger.lock().map_err(|_| "ledger poisoned".to_string()).and_then(|l| {
+            let e = |e: rusqlite::Error| e.to_string();
+            Ok((l.open_approvals(&o.session).map_err(e)?, l.answered_choices(&o.session).map_err(e)?,
+                l.last_scope(&o.session).map_err(e)?, l.messages(&o.session, MAX_HEARD).map_err(e)?))
+        });
+        let (asked, answered, scope, heard) = held.unwrap_or_else(|why| {
+            self.say(format!("resumed {} without its ledger: {why}", o.session));
+            Default::default()
+        });
+        for (role, text) in heard {
+            o.messages.push(json!({"role": if role == "person" { "user" } else { "assistant" }, "content": text}));
+        }
+        let card = |id: &str| log.iter().find_map(|m| match m {
+            ToShell::ApprovalRequest { approval, component, .. } if approval == id => Some(component.clone()),
+            _ => None,
+        });
+        let mut open = vec![];
+        for (id, tool, rec) in asked {
+            let (Some(tool), Some(component)) = (ASKING.iter().find(|t| **t == tool), card(&id)) else {
+                self.say(format!("approval {id} of {} stays open but cannot be shown again (tool {tool:?}, no card held)", o.session));
+                continue;
+            };
+            // The second ask an outside row's approve owes (ask()) rides the request as again_title.
+            if let (Some(t), Component::RowDiffApproval(d)) = (rec["again_title"].as_str(), &component) {
+                let mut next = rec.clone();
+                next.as_object_mut().map(|r| (r.remove("approval"), r.remove("again_title")));
+                next["title"] = json!(t);
+                o.again.insert(id.clone(), (next, Component::RowDiffApproval(RowDiffApproval { title: t.to_string(), ..d.clone() })));
+            }
+            o.pending.insert(id.clone(), tool);
+            open.push(id);
+        }
+        // The newest unanswered choices, as many as a session holds.
+        let mut choices: Vec<Choice> = log.iter().rev().filter_map(|m| match m {
+            ToShell::Render { component: Component::Choice(c), .. } if c.id.as_ref().is_some_and(|id| !answered.contains(id)) => Some(c.clone()),
+            _ => None,
+        }).take(MAX_CHOICES).collect();
+        choices.reverse();
+        for c in choices {
+            let id = c.id.clone().unwrap_or_default();
+            open.push(id.clone());
+            o.choices.insert(id, c);
+        }
+        send(out, &ToShell::Replay { session: o.session.clone(), log, open });
+        // After the replay, before anything waits: working_for refuses while a card does.
+        let pending = std::mem::take(&mut o.pending);
+        if let Some(s) = scope.and_then(|v| serde_json::from_value::<Scope>(v).ok()).filter(|s| *s != Scope::All) {
+            self.working_for(who, out, o, &s, &json!({"resumed": true}));
+        }
+        o.pending = pending;
     }
 
     fn imprint(&self, m: &Binding) -> Result<String, String> {
@@ -1010,6 +1168,8 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         let mut next = rec.clone();
         next["title"] = json!(again.title);
         rec["title"] = json!(first.title);
+        // So a resumed session asks it once more too (resume()).
+        rec["again_title"] = json!(again.title);
         let v = self.asking(o, out, tool, rec, Component::RowDiffApproval(first))?;
         o.again.insert(text(&v["approval"]), (next, Component::RowDiffApproval(again)));
         Ok(v)

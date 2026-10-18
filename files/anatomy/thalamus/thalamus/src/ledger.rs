@@ -263,6 +263,69 @@ impl Ledger {
         if n == 0 { Err(rusqlite::Error::QueryReturnedNoRows) } else { Ok(()) }
     }
 
+    /// The person's last session, opened again when its connection closed it (connection_closed): its row
+    /// runs again and a second agent_session_start says so. Only a closed one is taken, so two live
+    /// connections never share a session. (uuid, model_uri, tokens so far), or None.
+    pub fn resume(&self, actor: &str, agent: &str) -> rusqlite::Result<Option<(String, String, (i64, i64))>> {
+        let last: Option<(String, String, i64, i64)> = self.db.query_row(
+            "SELECT uuid, model_uri, COALESCE(tokens_input, 0), COALESCE(tokens_output, 0) FROM sessions
+             WHERE id = (SELECT max(id) FROM sessions WHERE actor_id = ?1 AND agent_name = ?2) AND stop_reason = 'connection_closed'",
+            params![actor, agent], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+        ).optional()?;
+        let Some((uuid, model_uri, tin, tout)) = last else { return Ok(None) };
+        let tx = self.db.unchecked_transaction()?;
+        let n = tx.execute("UPDATE sessions SET status = 'running', ended_at = NULL, stop_reason = NULL
+                            WHERE uuid = ?1 AND stop_reason = 'connection_closed'", params![uuid])?;
+        if n == 0 {
+            return Ok(None);
+        }
+        self.record(&uuid, Kind::SessionStart, None, &serde_json::json!({"model_uri": model_uri, "resumed": true}))?;
+        tx.commit()?;
+        Ok(Some((uuid, model_uri, (tin, tout))))
+    }
+
+    /// The approvals asked in `session` and never decided, oldest first: (approval, tool, request).
+    pub fn open_approvals(&self, session: &str) -> rusqlite::Result<Vec<(String, String, Value)>> {
+        let mut q = self.db.prepare(
+            "SELECT json_extract(r.result_json, '$.approval'), COALESCE(substr(r.task, instr(r.task, '/tool:') + 6), ''), r.result_json
+             FROM events r WHERE r.run_id = ?1 AND r.type = ?2 AND NOT EXISTS (SELECT 1 FROM events d
+               WHERE d.run_id = r.run_id AND d.type = ?3 AND json_extract(d.result_json, '$.approval') = json_extract(r.result_json, '$.approval'))
+             ORDER BY r.id")?;
+        let rows = q.query_map(params![session, Kind::ApprovalRequest.as_str(), Kind::ApprovalDecision.as_str()], |r| {
+            Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?))
+        })?;
+        rows.map(|r| r.map(|(a, t, j)| (a, t, serde_json::from_str(&j).unwrap_or(Value::Null)))).collect()
+    }
+
+    /// The last `n` things the person and Iris said in `session` (agent_message person|iris), oldest first.
+    pub fn messages(&self, session: &str, n: usize) -> rusqlite::Result<Vec<(String, String)>> {
+        let mut q = self.db.prepare(
+            "SELECT role, text FROM (SELECT id, json_extract(result_json, '$.role') AS role, json_extract(result_json, '$.text') AS text
+               FROM events WHERE run_id = ?1 AND type = ?2 AND json_extract(result_json, '$.role') IN ('person', 'iris')
+               AND json_extract(result_json, '$.text') IS NOT NULL ORDER BY id DESC LIMIT ?3) ORDER BY id")?;
+        let rows = q.query_map(params![session, Kind::Message.as_str(), n as i64], |r| Ok((r.get(0)?, r.get(1)?)))?;
+        rows.collect()
+    }
+
+    /// The choices of `session` the person answered (choice_reply's result names the choice).
+    pub fn answered_choices(&self, session: &str) -> rusqlite::Result<Vec<String>> {
+        let mut q = self.db.prepare(
+            "SELECT json_extract(result_json, '$.choice') FROM events WHERE run_id = ?1 AND type = ?2
+               AND task LIKE '%/tool:choice_reply' AND json_extract(result_json, '$.choice') IS NOT NULL")?;
+        let rows = q.query_map(params![session, Kind::ToolResult.as_str()], |r| r.get(0))?;
+        rows.collect()
+    }
+
+    /// The scope the person last set in `session` (working_for's result), None when never.
+    pub fn last_scope(&self, session: &str) -> rusqlite::Result<Option<Value>> {
+        self.db.query_row(
+            "SELECT result_json -> '$.scope' FROM events WHERE run_id = ?1 AND type = ?2
+               AND task LIKE '%/tool:working_for' AND json_extract(result_json, '$.error') IS NULL
+               AND json_extract(result_json, '$.scope') IS NOT NULL ORDER BY id DESC LIMIT 1",
+            params![session, Kind::ToolResult.as_str()], |r| r.get::<_, String>(0),
+        ).optional().map(|s| s.and_then(|s| serde_json::from_str(&s).ok()))
+    }
+
     /// Writes agent_session_end, then closes the session so nothing more lands in it.
     pub fn end(&self, session: &str, stop_reason: &str, tokens: (Option<i64>, Option<i64>)) -> rusqlite::Result<()> {
         let tx = self.db.unchecked_transaction()?;

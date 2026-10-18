@@ -201,6 +201,7 @@ fn rig(name: &str, b: Binding, models: Vec<String>, cortex: Option<String>) -> R
         picks: vec![],
         floors: None,
         cortex: cortex.map(|url| Cortex { url, token: "cx-ro-token".into() }),
+        data: d.clone(),
     };
     let sock = d.join("t.sock");
     let listener = serve::bind(&sock).unwrap();

@@ -24,6 +24,9 @@ pub enum ToThalamus {
     ModelOptions,
     /// The person's pick for this session: serve judges it again and rebinds from the next turn.
     ModelPick { backend: String, model: String },
+    /// Opens this connection's session as the person's last one its connection closed, then `replay`;
+    /// a fresh one when there is none. Asked, never imposed: a bare first message opens a fresh session.
+    Resume,
     /// The person's workspace document as the thalamus holds it; serve answers `workspace`.
     WorkspaceLoad,
     /// The person's whole workspace document, replacing the one held: a JSON object (need_doc).

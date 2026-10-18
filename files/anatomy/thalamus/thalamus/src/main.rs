@@ -90,6 +90,7 @@ fn serve_main(args: &[String]) -> Result<(), String> {
         picks,
         floors,
         cortex,
+        data,
     };
     serve::run(listener, Arc::new(srv));
     Ok(())

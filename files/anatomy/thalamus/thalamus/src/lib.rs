@@ -6,3 +6,4 @@ pub mod ledger;
 pub mod septum;
 pub mod serve;
 pub mod shell;
+pub mod store;
