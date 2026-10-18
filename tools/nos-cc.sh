@@ -213,6 +213,12 @@ tmux send-keys -t "$SESSION:caddy" "tools/nos-pane.py caddy" C-m
 tmux new-window -t "=$SESSION" -n iris -c "$REPO_ROOT"
 tmux send-keys -t "$SESSION:iris" "$HOME/thalamus/bin/thalamus"
 
+# ── trace: what Iris did behind the answer, from the thalamus ledger ─────────
+# Beside iris because the answer there says nothing of the calls that made it
+# (live 2026-10-18). Started, unlike iris: it is a reader, and --follow re-reads.
+tmux new-window -t "=$SESSION" -n trace -c "$REPO_ROOT"
+tmux send-keys -t "$SESSION:trace" "tools/iris-trace.py --follow" C-m
+
 # ── code: what changed, and the ability to go and look ───────────────────────
 # `git log` is a READER too, and it is the one that answers "what did we just
 # do to ourselves" — the question every other pane here raises. The editor is

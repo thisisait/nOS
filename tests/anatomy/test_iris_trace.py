@@ -72,7 +72,7 @@ def test_a_whole_turn_prints_in_order_and_a_missing_ledger_is_unknown(tmp_path: 
     assert all(len(ln) < 260 for ln in out.splitlines()), out
 
     rows = [json.loads(ln) for ln in _run(db, "--json", "--session", "5f0c").stdout.splitlines()]
-    assert [r["kind"] for r in rows][:3] == ["person", "tool_use", "tool_result"], rows
+    assert [r["kind"] for r in rows][:4] == ["session", "person", "tool_use", "tool_result"], rows
     assert _run(db, "--session", "deadbeef").stdout.strip() == "", "another session's turn is not shown"
 
     gone = _run(tmp_path / "nope.db")
