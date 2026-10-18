@@ -926,6 +926,19 @@ def emit_jsonl(path: pathlib.Path, run_id: str, results: list[ProbeResult]) -> N
 # Main
 # ---------------------------------------------------------------------------
 
+def operator_file(name: str) -> pathlib.Path:
+    """A gitignored operator file (config.yml): a worktree has none, so read the
+    main checkout's — the parent of git's common dir — else this checkout's."""
+    import subprocess
+    try:
+        common = subprocess.run(["git", "-C", str(REPO), "rev-parse", "--path-format=absolute", "--git-common-dir"],
+                                capture_output=True, text=True, timeout=10).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        common = ""
+    main = pathlib.Path(common).parent / name if common else None
+    return main if main and main.is_file() else REPO / name
+
+
 def load_vars(host_alias: str | None = None, tenant_domain: str | None = None,
               apps_subdomain: str | None = None, overrides: dict | None = None) -> dict:
     """The resolved variables every estate reader probes against: defaults,
@@ -933,12 +946,13 @@ def load_vars(host_alias: str | None = None, tenant_domain: str | None = None,
     the domain helpers the lite resolver cannot compute. Shared by
     nos-smoke and tools/e2e-plan.py so the two never read two configs."""
     # ── Load Ansible-style variables ───────────────────────────────────────
+    config = operator_file("config.yml")
     vars_dict = merge_config(
         *default_layers(),        # the domain files, then default.config.yml
-        REPO / "config.yml",      # gitignored operator override
+        config,                   # gitignored operator override
     )
     apply_runtime_estate(
-        vars_dict, REPO / "config.yml",
+        vars_dict, config,
         manifest=load_yaml(REPO / "state" / "manifest.yml"),
     )
     # Host-platform fact for catalog `when:` rows, mirroring main.yml's own
