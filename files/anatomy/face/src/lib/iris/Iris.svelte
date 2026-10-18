@@ -162,9 +162,7 @@
 	const busy = $derived(['thinking', 'tool', 'writing'].includes(ey.state));
 	function stop() {
 		if (session)
-			transport
-				?.send({ t: 'stop', session })
-				.catch((e) => push({ note: `not stopped: ${e}` }));
+			transport?.send({ t: 'stop', session }).catch((e) => push({ note: `not stopped: ${e}` }));
 	}
 
 	// Each workspace tab is its own conversation: showing another one resumes that tab's session.
@@ -363,7 +361,8 @@
 				() => true,
 				(e) => (push({ note: `${what}: ${e}` }), false)
 			);
-		if (!(await say({ t: 'resume', workspace: layout.active }, 'the session was not resumed'))) return;
+		if (!(await say({ t: 'resume', workspace: layout.active }, 'the session was not resumed')))
+			return;
 		if (!(await say({ t: 'workspace_load' }, 'the layout was not asked of the thalamus'))) return;
 		await say({ t: 'model_options' }, 'the models were not asked');
 		await say({ t: 'catalogue' }, 'the catalogue was not asked, so nothing is marked');
@@ -407,9 +406,7 @@
 					if (session && payload.session !== session) log = [];
 					session = payload.session;
 				}
-				// Cast until eye.ts takes the model input (being added beside this change, contract 9).
-				if (payload.t === 'model_state')
-					return void see({ e: 'model', loaded: payload.loaded } as unknown as Input);
+				if (payload.t === 'model_state') return void see({ e: 'model', loaded: payload.loaded });
 				// A resumed session's chat replaces this window's: it is the whole of it, cards still open included.
 				if (payload.t === 'replay') {
 					const r = replayed(payload);
@@ -515,11 +512,7 @@
 			aria-label="add a workspace">+ tab</button
 		>
 		{#if layout.workspaces.length > 1}
-			<button
-				class="ghost"
-				onclick={closeTab}
-				aria-label="close this workspace">close tab</button
-			>
+			<button class="ghost" onclick={closeTab} aria-label="close this workspace">close tab</button>
 		{/if}
 		<button onclick={() => (adding = !adding)} aria-expanded={adding}>+ widget</button>
 	</nav>
