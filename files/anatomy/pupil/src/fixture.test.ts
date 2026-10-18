@@ -75,7 +75,7 @@ function owedBy(c: Component): string[] {
 	// An offer owes its name, each lens column and set value, each widget title, what was left out and why, and the button.
 	if (c.kind === 'dashboard')
 		return [c.props.name, ...c.props.lens.flatMap((l) => [l.column, ...(l.value ? [l.value] : [])]),
-			...c.props.widgets.map((w) => w.title), ...c.props.dropped.flatMap((d) => [d.title, d.why]), 'Place on a new tab'];
+			...c.props.widgets.map((w) => w.title), ...c.props.dropped.flatMap((d) => [d.title, d.why]), 'Place here', 'Place on a new tab'];
 	// A KPI owes its number in the shell locale, its unit, the delta as a signed word-free arrow, and where it came from.
 	if (c.kind === 'kpi') {
 		const k = c.props;

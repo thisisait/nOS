@@ -22,15 +22,18 @@ const rows: ToShell = { t: 'render', session: S, component: table, pin: rowsPin 
 const list: ToShell = { t: 'render', session: S, component: { kind: 'list', props: { ordered: false, items: [{ text: 'x' }] } } };
 
 const html = (msg: ToShell) => render(Message, { props: { msg, onpin: () => {} } }).body;
-const BUTTON = 'Připnout na plochu'; // the accessible name; the face of it is an icon and "pin"
+const BUTTON = 'Připnout na plochu'; // the group's accessible name; its face is an icon and "pin"
+const HERE = 'Připnout sem', FRESH = 'Připnout na nový tab';
 const NOTE = 'jen náhled — Iris neuvedla zdroj čísel';
 
-describe('the pin button and the preview note', () => {
-	it('the button is drawn only for a render with a pin', () => {
+describe('the pin buttons and the preview note', () => {
+	it('the buttons are drawn only for a render with a pin', () => {
 		for (const m of [sourced, rows]) {
-			expect(html(m)).toMatch(new RegExp(`<button[^>]*aria-label="${BUTTON}"[^>]*>`));
-			// Operator 2026-10-14: a small button, an icon and the word pin.
-			expect(html(m)).toMatch(/<button[^>]*>\s*<svg[^>]*aria-hidden="true"[\s\S]*<\/svg>\s*pin\s*<\/button>/);
+			expect(html(m)).toContain(`aria-label="${BUTTON}"`);
+			// Operator 2026-10-14: small, an icon and the word pin; 2026-10-18: the person picks the tab.
+			expect(html(m)).toMatch(/<svg[^>]*aria-hidden="true"[\s\S]*<\/svg>\s*pin/);
+			expect(html(m)).toMatch(new RegExp(`<button[^>]*aria-label="${HERE}"[^>]*>\\s*Sem\\s*</button>`));
+			expect(html(m)).toMatch(new RegExp(`<button[^>]*aria-label="${FRESH}"[^>]*>\\s*Nový tab\\s*</button>`));
 		}
 		for (const m of [picture, list]) expect(html(m)).not.toContain(BUTTON);
 	});
@@ -75,6 +78,14 @@ describe('a click places the pin', () => {
 		const r = pin(two, {}, 'w2', m);
 		(m as { pin: { rows: Record<string, unknown> } }).pin.rows.table = 'changed';
 		expect(r.layout.workspaces[1].widgets[0]).toMatchObject({ title: 'Expenses', spec: rowsPin });
+	});
+
+	it('"Nový tab" makes one new active tab holding just that widget', () => {
+		const r = pin(two, {}, 'w5', sourced, 'ws3');
+		expect(r.layout.workspaces.length).toBe(3);
+		expect(r.layout.active).toBe('ws3');
+		expect(r.layout.workspaces[2].widgets.map((x) => [x.id, x.spec])).toEqual([['w5', chartPin]]);
+		expect(r.layout.workspaces.slice(0, 2)).toEqual(two.workspaces);
 	});
 
 	it('a render without a pin places nothing', () => {

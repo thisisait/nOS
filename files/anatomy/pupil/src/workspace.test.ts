@@ -233,4 +233,29 @@ describe('an offered dashboard is placed by the person', () => {
 		const r = placeOffer(full, {}, 'tab9', offer, id);
 		expect([r.layout, r.send]).toEqual([full, []]);
 	});
+
+	// Operator 2026-10-18: nearly every Iris widget landed on a new tab; the person chooses where.
+	it('"Place on a new tab" adds exactly one tab', () => {
+		const l = sample(0);
+		expect(placeOffer(l, {}, 'tab9', offer, id).layout.workspaces.length).toBe(l.workspaces.length + 1);
+	});
+
+	it('"Place here" keeps the tab count and adds every widget to the active tab, below its own, with the lens baked in', () => {
+		n = 0;
+		const l = sample(0);
+		const before = l.workspaces.find((s) => s.id === l.active)!;
+		const r = placeOffer(l, {}, 'tab9', offer, id, true);
+		expect(r.layout.workspaces.length).toBe(l.workspaces.length);
+		expect(r.layout.active).toBe(l.active);
+		const tab = r.layout.workspaces.find((s) => s.id === l.active)!;
+		expect(tab.widgets.slice(0, before.widgets.length), 'its own widgets stay').toEqual(before.widgets);
+		const added = tab.widgets.slice(before.widgets.length);
+		expect(added.map((x) => x.id)).toEqual(['d1', 'd2', 'd3']);
+		const bottom = Math.max(0, ...before.widgets.map((x) => x.y + x.h));
+		expect(added.every((x) => x.y >= bottom), 'below the tab\'s own').toBe(true);
+		expect(added[0].spec).toEqual({ rows: { table: 'bench', where } });
+		expect(inGrid(r.layout)).toBe(true);
+		expect(r.send.map((m) => m.t === 'widget' && m.widget)).toEqual(['d1', 'd2', 'd3']);
+		expect(r.layout.workspaces.filter((s) => s.id !== l.active), 'the other tabs are untouched').toEqual(l.workspaces.filter((s) => s.id !== l.active));
+	});
 });

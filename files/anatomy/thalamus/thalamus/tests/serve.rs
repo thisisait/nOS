@@ -4238,10 +4238,13 @@ fn the_prompt_says_how_to_offer_a_dashboard() {
     let mut r = BufReader::new(s.try_clone().unwrap());
     turn(&s, &mut r, None, "hello");
     let p = system_prompt(&rig);
-    assert!(p.contains("For a dashboard call offer_dashboard"), "{p}");
+    // Operator 2026-10-18: one table came as a dashboard, so on a new tab; one widget is show or query_rows.
+    assert!(p.contains("For a dashboard of 2 or more widgets call offer_dashboard"), "{p}");
     assert!(p.contains("to put a chart you drew on a dashboard, pass the same source"), "{p}");
     let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[0].1).unwrap();
-    assert!(body["tools"].as_array().unwrap().iter().any(|t| t["function"]["name"] == "offer_dashboard"), "the tool is offered");
+    let tool = body["tools"].as_array().unwrap().iter().find(|t| t["function"]["name"] == "offer_dashboard").expect("the tool is offered").clone();
+    let desc = tool["function"]["description"].as_str().unwrap();
+    assert!(desc.contains("2-8 widgets") && !desc.contains("new tab"), "the person picks the tab: {desc}");
 }
 // --- iris-v3 B2: a form spec carries prefill and when; serve checks both as a submit is checked ---
 
