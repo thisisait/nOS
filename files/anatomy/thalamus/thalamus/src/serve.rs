@@ -880,7 +880,9 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         let mut r = agent(10).get(&url).call().map_err(|e| format!("its models are unreadable: {e}"))?;
         let v: Value = r.body_mut().read_json().map_err(|e| format!("its models are unreadable: {e}"))?;
         let ids = v["data"].as_array().ok_or("its models are unreadable: no data list")?;
-        Ok(ids.iter().filter_map(|m| m["id"].as_str().map(str::to_string)).collect())
+        // Ollama can list one tag twice; the picker keys its options by (backend, model).
+        let mut seen = std::collections::HashSet::new();
+        Ok(ids.iter().filter_map(|m| m["id"].as_str().map(str::to_string)).filter(|id| seen.insert(id.clone())).collect())
     }
 
     fn model_options(&self, out: &mut UnixStream, o: &Open) {
