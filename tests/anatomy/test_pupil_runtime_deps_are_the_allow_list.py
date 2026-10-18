@@ -1,12 +1,15 @@
-"""The pupil ships no third-party runtime code, installs nothing that runs, and stays small.
+"""The pupil ships one third-party runtime library, installs nothing that runs, and stays small.
 
 WHY. Everything the pupil draws came from a model, and it runs in a window on the
 operator's Mac. A runtime npm package is code nobody here wrote inside that window, and
 an install script runs on the build host before any gate looks (operator ruling
-2026-10-13: no libraries; scales and shapes are hand-written under src/chart/). So:
-no `dependencies`, every lock entry dev-only from the registry with an integrity hash,
-install scripts only where the toolchain needs them, CI installs with --ignore-scripts,
-and the shipped code imports nothing but svelte and the face's own files.
+2026-10-13: no libraries; scales and shapes are hand-written under src/chart/). One
+exception (operator ruling 2026-10-18): the workspace canvas is Svelte Flow, the MIT
+@xyflow/svelte the face already ships. So: `dependencies` is that one exact pin, every
+other lock entry dev-only, the runtime entries named one by one, all from the registry
+with an integrity hash, install scripts only where the toolchain needs them, CI installs
+with --ignore-scripts, and the shipped code imports nothing but svelte, @xyflow/svelte
+and the face's own files.
 """
 from __future__ import annotations
 
@@ -26,10 +29,26 @@ BORROWED = ("$face/", "$lib/", "$iris/")
 CI = REPO / ".github/workflows/ci.yml"
 #: the toolchain's native binaries; both are devDependencies (lock `dev: true`)
 INSTALL_SCRIPTS_OK = {"esbuild", "fsevents"}
+#: the one runtime dependency (operator 2026-10-18), at the face's pin
+RUNTIME_DEPS = {"@xyflow/svelte"}
+#: every lock entry npm counts as runtime once @xyflow/svelte is one, measured 2026-10-18:
+#: Svelte Flow's own tree, and svelte (its peer) with the compiler deps it drags along
+RUNTIME_LOCK = {
+    "@xyflow/svelte", "@xyflow/system", "@svelte-put/shortcut",
+    "d3-color", "d3-dispatch", "d3-drag", "d3-ease", "d3-interpolate", "d3-selection", "d3-timer",
+    "d3-transition", "d3-zoom",
+    "@types/d3-color", "@types/d3-drag", "@types/d3-interpolate", "@types/d3-selection",
+    "@types/d3-transition", "@types/d3-zoom",
+    "svelte", "@jridgewell/gen-mapping", "@jridgewell/remapping", "@jridgewell/resolve-uri",
+    "@jridgewell/sourcemap-codec", "@jridgewell/trace-mapping", "@sveltejs/acorn-typescript",
+    "@types/estree", "@types/trusted-types", "acorn", "aria-query", "axobject-query", "clsx",
+    "devalue", "esm-env", "esrap", "is-reference", "locate-character", "magic-string", "zimmerframe",
+}
 IMPORT = re.compile(r"""\bfrom\s*(['"])([^'"\n]+)\1|\bimport\s*\(?\s*(['"])([^'"\n]+)\3""")
 #: gzip -9 of dist/assets/*.js measured 26 950 B on dev @ 49904f43 (2026-10-13), plus 60 KiB
-#: for the hand-written chart, timeline, graph, form and workspace code of I5b-I5h.
-JS_GZIP_CEILING = 27_000 + 60 * 1024
+#: for the hand-written chart, timeline, graph, form and workspace code of I5b-I5h; plus 56 KiB for
+#: the canvas: Svelte Flow and its d3 took the bundle from 58 907 B to 114 302 B (2026-10-18).
+JS_GZIP_CEILING = 27_000 + 60 * 1024 + 56 * 1024
 COLOUR = re.compile(r"#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?)\(")
 #: the eye is a drawn object (glass, bezel, glow), not a renderer of model data
 FIXED_COLOUR = {"Eye.svelte"}
@@ -41,7 +60,7 @@ def _lock_strays(lock: dict) -> list[str]:
         if not path:
             continue
         name = path.rsplit("node_modules/", 1)[-1]
-        if p.get("dev") is not True:
+        if p.get("dev") is not True and name not in RUNTIME_LOCK:
             bad.append(f"{name}: not dev-only (a runtime package)")
         if not p.get("integrity") or not p.get("resolved", "").startswith("https://registry.npmjs.org/"):
             bad.append(f"{name}: no integrity, or not from registry.npmjs.org")
@@ -88,12 +107,14 @@ def _bare_imports() -> dict[str, set[str]]:
 
 
 def _not_allowed(spec: str) -> bool:
-    return not (spec.startswith((".", *BORROWED, "svelte/")) or spec == "svelte")
+    return not (spec.startswith((".", *BORROWED, "svelte/")) or spec in {"svelte", *RUNTIME_DEPS})
 
 
-def test_the_pupil_has_no_runtime_dependencies():
+def test_the_pupil_has_no_runtime_dependency_but_svelte_flow():
     pkg = json.loads((PUPIL / "package.json").read_text(encoding="utf-8"))
-    assert pkg.get("dependencies", {}) == {}, f"runtime deps (hand-write it under src/chart/): {pkg['dependencies']}"
+    deps = pkg.get("dependencies", {})
+    assert set(deps) <= RUNTIME_DEPS, f"runtime deps (hand-write it under src/chart/): {deps}"
+    assert all(re.fullmatch(r"\d+\.\d+\.\d+", v) for v in deps.values()), f"a dependency is not an exact pin: {deps}"
     pins = pkg.get("devDependencies", {})
     assert all(re.fullmatch(r"\d+\.\d+\.\d+", v) for v in pins.values()), f"a devDependency is not an exact pin: {pins}"
 
@@ -108,6 +129,9 @@ def test_a_planted_lock_entry_goes_red():
     planted = {"packages": {"": {}, "node_modules/evil": {
         "resolved": "https://registry.npmjs.org/evil/-/evil-1.0.0.tgz", "integrity": "sha512-x", "hasInstallScript": True}}}
     assert _lock_strays(planted) == ["evil: not dev-only (a runtime package)", "evil: has an install script"]
+    xy = {"resolved": "https://registry.npmjs.org/d3-zoom/-/d3-zoom-3.0.0.tgz", "integrity": "sha512-x"}
+    assert _lock_strays({"packages": {"node_modules/d3-zoom": xy, "node_modules/d3-force": xy}}) == [
+        "d3-force: not dev-only (a runtime package)"], "a named runtime entry passes, an unnamed one does not"
 
 
 def test_the_shipped_code_imports_only_svelte_and_the_face():
@@ -122,6 +146,8 @@ def test_a_planted_import_goes_red():
                  "export * from 'left-pad';", "import {\n\ta,\n\tb\n} from 'chart.js';"):
         assert [s for s in _specifiers(text) if _not_allowed(s)], text
     assert not [s for s in _specifiers("import { mount } from 'svelte';\nimport '$face/app.css';") if _not_allowed(s)]
+    assert not _not_allowed("@xyflow/svelte")
+    assert _not_allowed("@xyflow/system") and _not_allowed("@xyflow/svelte/dist/style.css"), "the package, not its parts"
 
 
 def test_ci_installs_the_pupil_without_running_scripts():
