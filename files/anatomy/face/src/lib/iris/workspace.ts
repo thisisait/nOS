@@ -1,5 +1,5 @@
-// The person's workspaces: tabs, each an infinite canvas of widgets, headings and frames in world
-// pixels, and a floating chat (files/anatomy/contracts/workspace-layout.yml v3). Pure reducers; the
+// The person's workspaces: boards nested by `parent`, each an infinite canvas of widgets, headings,
+// frames and boards (cards that open a child) in world pixels, and a floating chat (files/anatomy/contracts/workspace-layout.yml v3). Pure reducers; the
 // Rust bridge checks and stores the layout, the model never sees it.
 import type { DashboardProps, Lens, ToShell, ToThalamus, WidgetSpec } from './wire';
 import { onTableChanged as staleOrSend, tableOf, type WidgetState, type Widgets } from './widgets';
@@ -9,11 +9,13 @@ export type WidgetItem = Box & { id: string; kind: 'widget'; title: string; spec
 export type HeadingItem = Box & { id: string; kind: 'heading'; text: string };
 /** A titled rectangle drawn behind the other items. */
 export type FrameItem = Box & { id: string; kind: 'frame'; title: string };
-export type Item = WidgetItem | HeadingItem | FrameItem;
+/** A card that opens the child workspace `board`. */
+export type BoardItem = Box & { id: string; kind: 'board'; board: string };
+export type Item = WidgetItem | HeadingItem | FrameItem | BoardItem;
 /** Svelte Flow's viewport: the screen px of world 0,0, and the zoom. */
 export type View = { x: number; y: number; zoom: number };
-/** `lens`: the tab's shared filter (a placed dashboard's); it joins a widget's where only when it is sent.
- *  `parent`: reserved for nested boards (checked, not drawn yet); `view`: where the canvas was left. */
+/** `lens`: the board's shared filter (a placed dashboard's); it joins a widget's where only when it is sent.
+ *  `parent`: the board it opens from (none: a root); `view`: where the canvas was left. */
 export type Space = {
 	id: string;
 	name: string;
@@ -26,7 +28,9 @@ export type Chat = { x: number; y: number; w: number; h: number; open: boolean }
 export type Layout = { version: 3; active: string; chat: Chat; workspaces: Space[] };
 type Send = ToThalamus[];
 
-export const MAX_SPACES = 12;
+// 64: as many boards as one board holds cards; a deeper cap is the thalamus's 512 KiB, which workspace.rs checks.
+export const MAX_SPACES = 64;
+export const MAX_DEPTH = 6;
 export const MAX_WIDGETS = 24;
 export const MAX_ITEMS = 64;
 /** The snap of a drag or an arrow, in world px. */
@@ -116,6 +120,16 @@ export function migrate(l: Layout | Old): Layout {
 
 export const widgetsOf = (s: Space): WidgetItem[] =>
 	s.items.filter((i): i is WidgetItem => i.kind === 'widget');
+/** The ids from a root down to `id`: workspaces://a/b/c is its path. */
+export function chain(l: Layout, id: string): string[] {
+	const out: string[] = [];
+	for (let at: string | undefined = id; at && out.length < MAX_DEPTH;) {
+		out.unshift(at);
+		at = l.workspaces.find((s) => s.id === at)?.parent;
+	}
+	return out;
+}
+export const pathOf = (l: Layout, id: string) => `workspaces://${chain(l, id).join('/')}`;
 const activeSpace = (l: Layout) => l.workspaces.find((s) => s.id === l.active) ?? l.workspaces[0];
 const below = (s: Space) => Math.max(0, ...s.items.map((i) => i.y + i.h + SNAP));
 const W = 592,
@@ -174,7 +188,7 @@ export function setText(l: Layout, id: string, text: string): Layout {
 	);
 }
 
-/** Where the person left tab `tab`'s canvas; the same view is the same layout. */
+/** Where the person left board `tab`'s canvas; the same view is the same layout. */
 export function setView(l: Layout, tab: string, v: View): Layout {
 	const view = {
 		x: Math.round(v.x),
@@ -192,7 +206,7 @@ const withItem = (l: Layout, here: Space, item: Item): Layout => ({
 });
 
 // ponytail: new items land below the others, not at the view's centre; place at the view if people ask.
-/** A heading or a frame on the active tab, below the others; l itself when the tab is full. */
+/** A heading or a frame on the active board, below the others; l itself when the board is full. */
 export function addItem(l: Layout, id: string, kind: 'heading' | 'frame'): Layout {
 	const here = activeSpace(l);
 	if (here.items.length >= MAX_ITEMS) return l;
@@ -206,7 +220,7 @@ export function addItem(l: Layout, id: string, kind: 'heading' | 'frame'): Layou
 	);
 }
 
-/** A new widget on the active tab, below the others; it runs once, as a click. */
+/** A new widget on the active board, below the others; it runs once, as a click. */
 export function addWidget(
 	l: Layout,
 	id: string,
@@ -247,7 +261,7 @@ export function placed(
 }
 
 /** The person's click on a render's pin: a widget of a copy of that spec, titled as the render, on the
- *  active tab ("Sem") or, given `tab`, on a new tab of that id ("Nový tab"). Nothing for no pin or no room. */
+ *  active board ("Sem") or, given `tab`, on a new board of that id inside it ("Nová plocha"). Nothing for no pin or no room. */
 export function pin(
 	l: Layout,
 	w: Widgets,
@@ -261,32 +275,46 @@ export function pin(
 	const spec = JSON.parse(JSON.stringify(m.pin)) as WidgetSpec;
 	const title = p.title || p.name || tableOf(spec);
 	if (tab === undefined) return placed(l, w, id, title, spec);
-	const fresh = addSpace(l, tab, title);
+	const fresh = addSpace(l, tab, title, l.active);
 	return fresh === l ? { layout: l, w, send: null } : placed(fresh, w, id, title, spec);
 }
 
 export const removeItem = (l: Layout, id: string): Layout =>
 	mapItems(l, (is) => is.filter((i) => i.id !== id));
 
-export function addSpace(l: Layout, id: string, name: string): Layout {
+/** A new active workspace: a root, or given `parent` a board inside it, with its card there. l when there is no room. */
+export function addSpace(l: Layout, id: string, name: string, parent?: string): Layout {
 	if (l.workspaces.length >= MAX_SPACES) return l;
-	return {
-		...l,
-		active: id,
-		workspaces: [...l.workspaces, { id, name: name.slice(0, 40), items: [] }]
+	const up = l.workspaces.find((s) => s.id === parent);
+	const space: Space = { id, name: name.slice(0, 40), items: [] };
+	if (!up) return { ...l, active: id, workspaces: [...l.workspaces, space] };
+	if (up.items.length >= MAX_ITEMS || chain(l, up.id).length >= MAX_DEPTH) return l;
+	const card: BoardItem = {
+		id: `b-${id}`.slice(0, 64),
+		kind: 'board',
+		board: id,
+		...place({ x: 0, y: below(up), w: 240, h: 96 })
 	};
+	const shown = withItem(l, up, card);
+	return { ...shown, active: id, workspaces: [...shown.workspaces, { ...space, parent: up.id }] };
 }
 
+/** `id` and every board inside it, the card that opened it too; the active one falls back to its parent. */
 export function removeSpace(l: Layout, id: string): Layout {
-	const rest = l.workspaces.filter((s) => s.id !== id);
+	const gone = new Set(l.workspaces.filter((s) => chain(l, s.id).includes(id)).map((s) => s.id));
+	const rest = l.workspaces
+		.filter((s) => !gone.has(s.id))
+		.map((s) => ({ ...s, items: s.items.filter((i) => i.kind !== 'board' || !gone.has(i.board)) }));
 	if (!rest.length) return l;
-	return { ...l, workspaces: rest, active: l.active === id ? rest[0].id : l.active };
+	const up = l.workspaces.find((s) => s.id === id)?.parent;
+	const active = gone.has(l.active) ? (up ?? rest[0].id) : l.active;
+	return { ...l, workspaces: rest, active };
 }
 
 const run = (w: WidgetState): 'restore' | 'table_changed' =>
 	w.stale ? 'table_changed' : 'restore';
 
-/** The widgets on `tab` that are stale or never ran, sent now; the others wait for their tab. */
+/** The widgets on the shown board that are stale or never ran, sent now; the others wait to be shown. */
 function due(l: Layout, w: Widgets): { w: Widgets; send: Send } {
 	const out = { ...w };
 	const send: Send = [];
@@ -300,7 +328,7 @@ function due(l: Layout, w: Widgets): { w: Widgets; send: Send } {
 	return { w: out, send };
 }
 
-/** A saved layout came back: every widget remembers its spec, only the active tab runs. */
+/** A saved layout came back: every widget remembers its spec, only the active board runs. */
 export function restore(l: Layout): { w: Widgets; send: Send } {
 	const w: Widgets = {};
 	for (const s of l.workspaces)
@@ -320,7 +348,7 @@ export function show(
 	return { layout, ...due(layout, w) };
 }
 
-/** A write landed in `table`: the active tab's readers re-run, the rest go stale. */
+/** A write landed in `table`: the active board's readers re-run, the rest go stale. */
 export function onTableChanged(l: Layout, w: Widgets, table: string): { w: Widgets; send: Send } {
 	const here = activeSpace(l);
 	const r = staleOrSend(
@@ -355,8 +383,8 @@ export function setLens(
 	};
 }
 
-/** The person's click on "Place on a new tab": a tab with the offer's lens, two widgets a row; each runs once, as a click.
- *  `here` ("Place here"): the widgets join the active tab below its own, as addWidget places one. */
+/** The person's click on "Place on a new board": a board inside the active one, with the offer's lens, two widgets a
+ *  row; each runs once, as a click. `here` ("Place here"): the widgets join the active board below its own. */
 export function placeOffer(
 	l: Layout,
 	w: Widgets,
@@ -368,7 +396,7 @@ export function placeOffer(
 	const into = activeSpace(l);
 	const room = here
 		? Math.min(MAX_WIDGETS - widgetsOf(into).length, MAX_ITEMS - into.items.length)
-		: l.workspaces.length < MAX_SPACES
+		: addSpace(l, tab, '', l.active) !== l
 			? MAX_WIDGETS
 			: 0;
 	if (room <= 0) return { layout: l, w, send: [] };
@@ -394,11 +422,7 @@ export function placeOffer(
 						s === into ? { ...s, items: [...s.items, ...boxes] } : s
 					)
 				}
-			: {
-					...l,
-					active: tab,
-					workspaces: [...l.workspaces, { id: tab, name: name.slice(0, 40), lens, items: boxes }]
-				},
+			: patch(addSpace(l, tab, name, l.active), tab, { lens, items: boxes }),
 		w: out,
 		send: boxes.map((b) => ({
 			t: 'widget',
@@ -408,6 +432,11 @@ export function placeOffer(
 		}))
 	};
 }
+
+const patch = (l: Layout, id: string, set: Partial<Space>): Layout => ({
+	...l,
+	workspaces: l.workspaces.map((s) => (s.id === id ? { ...s, ...set } : s))
+});
 
 /** An approval waits: the chat opens on top, since its card lives there. */
 export const approvalArrived = (l: Layout): { layout: Layout; top: 'chat' } => ({

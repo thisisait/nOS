@@ -1,6 +1,6 @@
 <!--
   A dashboard Iris offers (renderers.rs Dashboard): its name, lens, widgets and what serve left out,
-  every word a text node. Nothing runs here: "Place here" or "Place on a new tab" hands the offer to `onplace`
+  every word a text node. Nothing runs here: "Place here" or "Place on a new board" hands the offer to `onplace`
   (workspace.ts placeOffer), once; the model never places or runs it.
 -->
 <script lang="ts">
@@ -59,7 +59,7 @@
 			<button
 				type="button"
 				disabled={!onplace}
-				onclick={() => (placed = onplace?.(dashboard, false) ?? false)}>Place on a new tab</button
+				onclick={() => (placed = onplace?.(dashboard, false) ?? false)}>Place on a new board</button
 			>
 		</div>
 	{/if}

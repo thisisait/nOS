@@ -271,7 +271,7 @@ components:
       column's, for the person's lens input (a rowRef's: its parent labels, as a form's; a where names a label
       and serve reads it as that parent's id). serve validated each widget against the live schema as the
       person (no row read but a rowRef's parents) and moved the ones that failed to dropped with why, always present. The pupil draws it
-      with "Place on a new tab": the click makes a tab with that lens and runs each widget once (trigger
+      with "Place on a new board": the click makes a board inside the open one with that lens and runs each widget once (trigger
       click); the lens joins every rows, chart and kpi widget's where at send time, a form takes its eq values
       as prefill; the terminal says it and "place it in the pupil"
 

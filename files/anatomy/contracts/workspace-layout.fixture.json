@@ -359,6 +359,15 @@
         "y": 384,
         "w": 392,
         "h": 280
+       },
+       {
+        "id": "b1",
+        "kind": "board",
+        "board": "q4",
+        "x": 0,
+        "y": 800,
+        "w": 240,
+        "h": 96
        }
       ],
       "view": {
@@ -1000,7 +1009,7 @@
  ],
  "refused": [
   {
-   "case": "a 13th workspace",
+   "case": "a 65th workspace",
    "layout": {
     "version": 3,
     "active": "ws0",
@@ -1018,63 +1027,449 @@
       "items": []
      },
      {
-      "id": "ws1",
-      "name": "W1",
+      "id": "s1",
+      "name": "s",
       "items": []
      },
      {
-      "id": "ws2",
-      "name": "W2",
+      "id": "s2",
+      "name": "s",
       "items": []
      },
      {
-      "id": "ws3",
-      "name": "W3",
+      "id": "s3",
+      "name": "s",
       "items": []
      },
      {
-      "id": "ws4",
-      "name": "W4",
+      "id": "s4",
+      "name": "s",
       "items": []
      },
      {
-      "id": "ws5",
-      "name": "W5",
+      "id": "s5",
+      "name": "s",
       "items": []
      },
      {
-      "id": "ws6",
-      "name": "W6",
+      "id": "s6",
+      "name": "s",
       "items": []
      },
      {
-      "id": "ws7",
-      "name": "W7",
+      "id": "s7",
+      "name": "s",
       "items": []
      },
      {
-      "id": "ws8",
-      "name": "W8",
+      "id": "s8",
+      "name": "s",
       "items": []
      },
      {
-      "id": "ws9",
-      "name": "W9",
+      "id": "s9",
+      "name": "s",
       "items": []
      },
      {
-      "id": "ws10",
-      "name": "W10",
+      "id": "s10",
+      "name": "s",
       "items": []
      },
      {
-      "id": "ws11",
-      "name": "W11",
+      "id": "s11",
+      "name": "s",
       "items": []
      },
      {
-      "id": "ws12",
-      "name": "W12",
+      "id": "s12",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s13",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s14",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s15",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s16",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s17",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s18",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s19",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s20",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s21",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s22",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s23",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s24",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s25",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s26",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s27",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s28",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s29",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s30",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s31",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s32",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s33",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s34",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s35",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s36",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s37",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s38",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s39",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s40",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s41",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s42",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s43",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s44",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s45",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s46",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s47",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s48",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s49",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s50",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s51",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s52",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s53",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s54",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s55",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s56",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s57",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s58",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s59",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s60",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s61",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s62",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s63",
+      "name": "s",
+      "items": []
+     },
+     {
+      "id": "s64",
+      "name": "s",
+      "items": []
+     }
+    ]
+   }
+  },
+  {
+   "case": "a board on a workspace that is not its child",
+   "layout": {
+    "version": 3,
+    "active": "main",
+    "chat": {
+     "x": 880,
+     "y": 80,
+     "w": 380,
+     "h": 560,
+     "open": true
+    },
+    "workspaces": [
+     {
+      "id": "main",
+      "name": "Expenses",
+      "lens": [
+       {
+        "column": "kind",
+        "op": "eq",
+        "value": "",
+        "kind": "select",
+        "options": [
+         "food",
+         "travel",
+         "tools"
+        ]
+       }
+      ],
+      "items": [
+       {
+        "id": "f1",
+        "kind": "frame",
+        "title": "Q4",
+        "x": -16,
+        "y": -64,
+        "w": 1232,
+        "h": 800
+       },
+       {
+        "id": "h1",
+        "kind": "heading",
+        "text": "Expenses, Q4",
+        "x": 0,
+        "y": -56,
+        "w": 400,
+        "h": 48
+       },
+       {
+        "id": "w1",
+        "kind": "widget",
+        "title": "All expenses",
+        "spec": {
+         "rows": {
+          "table": "expenses"
+         }
+        },
+        "x": 0,
+        "y": 0,
+        "w": 592,
+        "h": 376
+       },
+       {
+        "id": "w2",
+        "kind": "widget",
+        "title": "Spend by kind",
+        "spec": {
+         "chart": {
+          "query": {
+           "table": "expenses"
+          },
+          "chart": "bar",
+          "x": "kind",
+          "y": "amount",
+          "op": "sum"
+         }
+        },
+        "x": 600,
+        "y": 0,
+        "w": 592,
+        "h": 376
+       },
+       {
+        "id": "w3",
+        "kind": "widget",
+        "title": "Add an expense",
+        "spec": {
+         "form": {
+          "table": "expenses"
+         }
+        },
+        "x": 0,
+        "y": 384,
+        "w": 392,
+        "h": 280
+       },
+       {
+        "id": "b1",
+        "kind": "board",
+        "board": "other",
+        "x": 0,
+        "y": 800,
+        "w": 240,
+        "h": 96
+       }
+      ],
+      "view": {
+       "x": -120,
+       "y": 40,
+       "zoom": 0.75
+      }
+     },
+     {
+      "id": "q4",
+      "name": "Q4 detail",
+      "parent": "main",
+      "items": []
+     },
+     {
+      "id": "other",
+      "name": "Other",
       "items": []
      }
     ]

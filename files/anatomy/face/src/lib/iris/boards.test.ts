@@ -51,7 +51,7 @@ const card = (name: string) =>
 const key = (el: Element, k: string) =>
 	el.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
 const ran = (sent: { t: string }[]) =>
-	sent.filter((m) => m.t === 'widget').map((m) => (m as { widget: string }).widget);
+	sent.filter((m) => m.t === 'widget').map((m) => (m as unknown as { widget: string }).widget);
 const pinned: ToShell = {
 	t: 'render',
 	session: '0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b',

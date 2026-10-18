@@ -1,9 +1,9 @@
 <!--
-  One workspace: an infinite canvas (Svelte Flow, MIT) of widgets, headings and frames in world px
-  (workspace-layout.yml v3). Wheel or pinch zooms, dragging the background pans, −/100%/+/fit sit
+  One board: an infinite canvas (Svelte Flow, MIT) of widgets, headings, frames and boards in world px
+  (workspace-layout.yml v3); a board card opens its child by double-click or Enter. Wheel or pinch zooms, dragging the background pans, −/100%/+/fit sit
   bottom left; a focused item moves by arrows and resizes by shift+arrows. Svelte Flow's own CSS
   carries colour literals, so it is not imported: the few structural rules it needs are below.
-  A tab with a lens has a bar over it: one native input per condition; a change re-runs the tab.
+  A board with a lens has a bar over it: one native input per condition; a change re-runs the board.
 -->
 <script module lang="ts">
 	import type { Widgets } from './widgets';
@@ -17,6 +17,8 @@
 		readonly lens: Lens[] | undefined;
 		readonly now: number;
 		readonly top: string;
+		readonly spaces: Space[];
+		onopen: (id: string) => void;
 		onplace: (id: string, g: Box) => void;
 		ontop: (id: string) => void;
 		ontext: (id: string, text: string) => void;
@@ -36,6 +38,8 @@
 
 	let {
 		space,
+		spaces,
+		onopen,
 		widgets,
 		now,
 		top,
@@ -70,6 +74,10 @@
 		get top() {
 			return top;
 		},
+		get spaces() {
+			return spaces;
+		},
+		onopen: (id) => onopen(id),
 		onplace: (id, g) => onplace(id, g),
 		ontop: (id) => ontop(id),
 		ontext: (id, t) => ontext(id, t),
@@ -81,7 +89,11 @@
 
 	const nodeTypes = { item: CanvasItem };
 	const label = (i: Item) =>
-		i.kind === 'widget' ? i.title : i.kind === 'heading' ? i.text : i.title;
+		i.kind === 'board'
+			? (spaces.find((s) => s.id === i.board)?.name ?? i.board)
+			: i.kind === 'heading'
+				? i.text
+				: i.title;
 	// Frames first and lowest, so they draw behind; the raised widget over the rest.
 	const toNodes = (items: Item[], raised: string, was: Node[]): Node[] => {
 		const sel = new Set(was.filter((n) => n.selected).map((n) => n.id));
@@ -123,6 +135,10 @@
 		if (t.closest('input, textarea, select, [contenteditable]')) return;
 		const id = t.closest<HTMLElement>('.svelte-flow__node')?.dataset.id;
 		const i = id && at(id);
+		if (i && i.kind === 'board' && e.key === 'Enter' && !t.closest('button')) {
+			e.preventDefault();
+			return onopen(i.board);
+		}
 		const g = i && byKey(i, e.key, e.shiftKey);
 		if (!i || !g) return;
 		e.preventDefault();
@@ -153,10 +169,9 @@
 {/if}
 <div
 	class="canvas"
-	role="tabpanel"
+	role="region"
 	tabindex="-1"
-	id="panel-{space.id}"
-	aria-labelledby="tab-{space.id}"
+	aria-label="board {space.name}"
 	onkeydowncapture={key}
 >
 	{#if !space.items.length}

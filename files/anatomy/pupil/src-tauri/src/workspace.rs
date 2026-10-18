@@ -3,7 +3,7 @@
 //! tests/anatomy/test_workspace_layout_contract.py. No wire message reaches it.
 
 use nos_contract::renderers::{check_lens, Lens};
-use nos_contract::wire::WidgetSpec;
+use nos_contract::wire::{WidgetSpec, MAX_WORKSPACE};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::io::Write;
@@ -35,7 +35,7 @@ pub struct Chat {
 pub struct Workspace {
     pub id: String,
     pub name: String,
-    /// Reserved for nested boards: checked (exists, no cycle, depth <= 6), not drawn yet.
+    /// The board this one opens from (exists, no cycle, depth <= 6); none is a root.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub parent: Option<String>,
     /// The tab's shared filter (a dashboard's lens); the webview merges it at send time.
@@ -61,9 +61,10 @@ pub enum Kind {
     Widget,
     Heading,
     Frame,
+    Board,
 }
 
-/// World px. A widget has a title and a spec, a heading a text, a frame a title.
+/// World px. A widget has a title and a spec, a heading a text, a frame a title, a board its child's id.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Item {
@@ -75,6 +76,8 @@ pub struct Item {
     pub spec: Option<WidgetSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub text: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub board: Option<String>,
     pub x: i64,
     pub y: i64,
     pub w: i64,
@@ -124,6 +127,7 @@ impl From<Old> for Layout {
                     title: Some(w.title),
                     spec: Some(w.spec),
                     text: None,
+                    board: None,
                     x: i64::from(w.x) * 100,
                     y: i64::from(w.y) * 48,
                     w: i64::from(w.w) * 100 - 8,
@@ -155,13 +159,15 @@ fn text_ok(s: &Option<String>) -> bool {
 impl Item {
     fn check(&self) -> Result<(), String> {
         let (title, spec, text) = (self.title.is_some(), self.spec.is_some(), self.text.is_some());
+        let board = self.board.is_some();
         let shaped = match self.kind {
-            Kind::Widget => text_ok(&self.title) && spec && !text,
-            Kind::Heading => text_ok(&self.text) && !title && !spec,
-            Kind::Frame => text_ok(&self.title) && !spec && !text,
+            Kind::Widget => text_ok(&self.title) && spec && !text && !board,
+            Kind::Heading => text_ok(&self.text) && !title && !spec && !board,
+            Kind::Frame => text_ok(&self.title) && !spec && !text && !board,
+            Kind::Board => board && !title && !spec && !text,
         };
         if !shaped {
-            return Err(format!("item {} is not a {:?} (widget: title + spec; heading: text; frame: title; each at most 120 chars)", self.id, self.kind));
+            return Err(format!("item {} is not a {:?} (widget: title + spec; heading: text; frame: title; board: board; text at most 120 chars)", self.id, self.kind));
         }
         if self.x.abs() > 100_000 || self.y.abs() > 100_000 || !(80..=4000).contains(&self.w) || !(32..=4000).contains(&self.h) {
             return Err(format!("item {} at x{} y{} w{} h{} is outside |x|,|y| <= 100000, w 80..4000, h 32..4000", self.id, self.x, self.y, self.w, self.h));
@@ -185,8 +191,8 @@ impl Layout {
         if self.version != 3 {
             return Err(format!("version {} is not 3", self.version));
         }
-        if !(1..=12).contains(&self.workspaces.len()) {
-            return Err(format!("{} workspaces, 1..12 allowed", self.workspaces.len()));
+        if !(1..=64).contains(&self.workspaces.len()) {
+            return Err(format!("{} workspaces, 1..64 allowed", self.workspaces.len()));
         }
         let mut ids = HashSet::new();
         for ws in &self.workspaces {
@@ -230,8 +236,20 @@ impl Layout {
                 at = up;
             }
         }
+        for ws in &self.workspaces {
+            for b in ws.items.iter().filter_map(|i| i.board.as_deref()) {
+                if parent.get(b) != Some(&Some(ws.id.as_str())) {
+                    return Err(format!("workspace {} has a board on {b:?}, which is not its child", ws.id));
+                }
+            }
+        }
         if !self.workspaces.iter().any(|ws| ws.id == self.active) {
             return Err(format!("active {:?} names no workspace", self.active));
+        }
+        // The caps alone do not bound it (a rows spec is free JSON): what the thalamus would refuse is refused here.
+        let size = serde_json::to_vec(self).map_err(|e| e.to_string())?.len();
+        if size > MAX_WORKSPACE {
+            return Err(format!("the layout is {size} bytes, over the thalamus's 512 KiB"));
         }
         Ok(())
     }

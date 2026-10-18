@@ -1,5 +1,5 @@
 <!--
-  Iris: the person's workspaces (tabs, each a canvas of widgets) under one floating chat onto
+  Iris: the person's workspaces (boards nested by path, each a canvas of widgets) under one floating chat onto
   the thalamus. It holds no socket and no secret: everything goes through `transport`
   (transport.ts), which the pupil backs with its Rust bridge and the face with its BFF.
   null is no bridge at all (the pupil's page opened outside the app), and that is said.
@@ -9,7 +9,6 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import StatusNote from '$lib/components/ui/StatusNote.svelte';
-	import Tabs from '$lib/components/ui/Tabs.svelte';
 	import AddWidget from './AddWidget.svelte';
 	import ApprovalCard from './ApprovalCard.svelte';
 	import Chat from './Chat.svelte';
@@ -58,6 +57,8 @@
 	let layoutNote: string | null = $state(null);
 	let top = $state('chat');
 	let adding = $state(false);
+	// The board the person asked to delete, with everything inside it; nothing goes before the answer.
+	let deleting: string | null = $state(null);
 	let now = $state(Date.now());
 	let q = $state(empty());
 	let link: Link = $state({ state: 'closed', reason: 'not connected yet' });
@@ -95,6 +96,9 @@
 	const space = $derived(
 		layout.workspaces.find((s) => s.id === layout.active) ?? layout.workspaces[0]
 	);
+	const nameOf = (id: string) => layout.workspaces.find((s) => s.id === id)?.name ?? id;
+	const crumbs = $derived(ws.chain(layout, space.id));
+	const roots = $derived(layout.workspaces.filter((s) => !s.parent));
 	$effect(() => {
 		const { state, seq } = ey;
 		if (state !== 'said' && state !== 'refused') return;
@@ -137,10 +141,12 @@
 		if (said === null)
 			return void push({ note: 'not sent: /for <client>, /for personal or /for all' });
 		const tab = tabCommand(text);
-		if (tab === 'branch' && layout.workspaces.length >= ws.MAX_SPACES)
-			return void push({ note: `not branched: at most ${ws.MAX_SPACES} tabs, close one first` });
-		// /branch: the new tab first, then serve opens its session from this one's conversation.
+		// /branch: a sibling board first, then serve opens its session from this one's conversation.
 		const fresh = tab === 'branch' ? `ws${Date.now().toString(36)}` : null;
+		const branched = fresh
+			? ws.addSpace(layout, fresh, `${space.name} (branch)`, space.parent)
+			: layout;
+		if (fresh && branched === layout) return void push({ note: `not branched: ${FULL}` });
 		const msg: ToThalamus = said
 			? { t: 'working_for', scope: said }
 			: tab === 'clear'
@@ -149,7 +155,7 @@
 					? { t: 'branch', workspace: fresh }
 					: { t: 'turn', session, text };
 		try {
-			if (fresh) layout = ws.addSpace(layout, fresh, `${space.name} (branch)`);
+			if (fresh) layout = branched;
 			await transport?.send(msg);
 			draft = '';
 			push({ me: text });
@@ -165,12 +171,12 @@
 			transport?.send({ t: 'stop', session }).catch((e) => push({ note: `not stopped: ${e}` }));
 	}
 
-	// Each workspace tab is its own conversation: showing another one resumes that tab's session.
+	// Each board is its own conversation: showing another one resumes that board's session.
 	function follow(prev: string) {
 		if (layout.active === prev || link.state !== 'connected') return;
 		transport
 			?.send({ t: 'resume', workspace: layout.active })
-			.catch((e) => push({ note: `this tab's conversation was not resumed: ${e}` }));
+			.catch((e) => push({ note: `this board's conversation was not resumed: ${e}` }));
 	}
 
 	// The decided edit joins the scrollback with the answer, as shell.rs:181-182 does.
@@ -235,8 +241,7 @@
 	const viewport = () => ({ w: window.innerWidth, h: window.innerHeight });
 	const setChat = (c: ws.Chat) => (layout = { ...layout, chat: ws.clampChat(c, viewport()) });
 
-	function showTab(tab: string) {
-		const prev = layout.active;
+	function showTab(tab: string, prev = layout.active) {
 		const r = ws.show(layout, widgets, tab);
 		layout = r.layout;
 		widgets = r.w;
@@ -260,22 +265,22 @@
 	const added = (title: string, spec: WidgetSpec) =>
 		place(ws.placed(layout, widgets, newId(), title, spec));
 
-	// The person's click on "Sem" or "Nový tab" under a pin; the model has no message that adds a widget.
+	const FULL = `no room for another board here (at most ${ws.MAX_SPACES}, ${ws.MAX_DEPTH} deep, ${ws.MAX_ITEMS} items a board)`;
+	const roomy = () => ws.addSpace(layout, 'probe', '', layout.active) !== layout;
+
+	// The person's click on "Sem" or "Nová plocha" under a pin; the model has no message that adds a widget.
 	function pinned(m: ToShell, fresh: boolean) {
-		if (fresh && layout.workspaces.length >= ws.MAX_SPACES) {
-			layoutNote = `at most ${ws.MAX_SPACES} tabs: close one or pin here`;
-			return;
-		}
+		if (fresh && !roomy()) return void (layoutNote = `${FULL}: pin here`);
 		place(ws.pin(layout, widgets, newId(), m, fresh ? `ws${Date.now().toString(36)}` : undefined));
 	}
 
-	// The person's click on "Place here" or "Place on a new tab"; the model has no message that places or runs one.
+	// The person's click on "Place here" or "Place on a new board"; the model has no message that places or runs one.
 	function placedOffer(d: DashboardProps, here: boolean): boolean {
 		const r = ws.placeOffer(layout, widgets, `ws${Date.now().toString(36)}`, d, newId, here);
 		if (!r.send.length) {
 			layoutNote = here
-				? `a workspace holds at most ${ws.MAX_WIDGETS} widgets: place it on a new tab`
-				: `at most ${ws.MAX_SPACES} tabs: close one to place this dashboard`;
+				? `a workspace holds at most ${ws.MAX_WIDGETS} widgets: place it on a new board`
+				: FULL;
 			return false;
 		}
 		layout = r.layout;
@@ -299,6 +304,8 @@
 	}
 
 	function removed(id: string) {
+		const card = space.items.find((i) => i.id === id);
+		if (card?.kind === 'board') return void (deleting = card.board);
 		layout = ws.removeItem(layout, id);
 		const rest = { ...widgets };
 		delete rest[id];
@@ -311,17 +318,45 @@
 		layout = next;
 	}
 
-	function newTab() {
-		const n = layout.workspaces.length + 1;
+	// "+ board": a card here that opens a new child; this board stays shown.
+	function addBoard() {
+		const next = ws.addSpace(layout, `ws${Date.now().toString(36)}`, 'Board', layout.active);
+		if (next === layout) layoutNote = FULL;
+		else layout = { ...next, active: layout.active };
+	}
+
+	function newRoot() {
 		const prev = layout.active;
-		layout = ws.addSpace(layout, `ws${Date.now().toString(36)}`, `Workspace ${n}`);
+		const next = ws.addSpace(
+			layout,
+			`ws${Date.now().toString(36)}`,
+			`Workspace ${roots.length + 1}`
+		);
+		if (next === layout) return void (layoutNote = FULL);
+		layout = next;
 		follow(prev);
 	}
 
-	function closeTab() {
+	// Yes to the question: the board and its subtree go, their widgets' answers with them.
+	function deleteBoard() {
 		const prev = layout.active;
-		layout = ws.removeSpace(layout, layout.active);
-		follow(prev);
+		const next = deleting ? ws.removeSpace(layout, deleting) : layout;
+		deleting = null;
+		if (next === layout) return void (layoutNote = 'the last workspace stays');
+		const kept = new Set(next.workspaces.flatMap((s) => ws.widgetsOf(s).map((b) => b.id)));
+		widgets = Object.fromEntries(Object.entries(widgets).filter(([k]) => kept.has(k)));
+		layout = next;
+		showTab(next.active, prev);
+	}
+	const inside = (id: string) =>
+		layout.workspaces.filter((s) => s.id !== id && ws.chain(layout, s.id).includes(id)).length;
+
+	// Escape goes up one board, unless the person is typing or a question is open.
+	function escape(e: KeyboardEvent) {
+		const t = e.target as HTMLElement;
+		if (e.key !== 'Escape' || deleting || !t.closest?.('main')) return;
+		if (t.closest('input, textarea, select, [contenteditable]') || !space.parent) return;
+		showTab(space.parent);
 	}
 
 	async function loadLayout() {
@@ -504,30 +539,60 @@
 	});
 </script>
 
+<svelte:window onkeydown={escape} />
 <main>
-	<nav class="bar">
-		<Tabs
-			tabs={layout.workspaces.map((s) => ({ key: s.id, label: s.name }))}
-			bind:active={() => layout.active, (v) => showTab(v)}
-			label="Workspaces"
-		/>
-		<button
-			class="ghost"
-			onclick={newTab}
-			disabled={layout.workspaces.length >= ws.MAX_SPACES}
-			aria-label="add a workspace">+ tab</button
-		>
-		{#if layout.workspaces.length > 1}
-			<button class="ghost" onclick={closeTab} aria-label="close this workspace">close tab</button>
-		{/if}
+	<div class="bar">
+		<nav class="crumbs" aria-label="workspace path" title={ws.pathOf(layout, space.id)}>
+			<details>
+				<summary aria-label="all workspaces">▾</summary>
+				<ul>
+					{#each roots as r (r.id)}
+						<li><button class="ghost" onclick={() => showTab(r.id)}>{r.name}</button></li>
+					{/each}
+					<li>
+						<button
+							class="ghost"
+							onclick={newRoot}
+							disabled={layout.workspaces.length >= ws.MAX_SPACES}>+ new workspace</button
+						>
+					</li>
+				</ul>
+			</details>
+			<ol>
+				{#each crumbs as id, i (id)}
+					<li>
+						{#if i < crumbs.length - 1}
+							<button class="ghost" onclick={() => showTab(id)}>{nameOf(id)}</button>
+						{:else}
+							<span aria-current="page">{nameOf(id)}</span>
+						{/if}
+					</li>
+				{/each}
+			</ol>
+		</nav>
 		<button onclick={() => (adding = !adding)} aria-expanded={adding}>+ widget</button>
 		<button class="ghost" onclick={() => addItem('heading')}>+ heading</button>
 		<button class="ghost" onclick={() => addItem('frame')}>+ frame</button>
-	</nav>
+		<button class="ghost" onclick={addBoard}>+ board</button>
+		{#if space.parent || roots.length > 1}
+			<button class="ghost" onclick={() => (deleting = space.id)}>delete board</button>
+		{/if}
+	</div>
+	{#if deleting}
+		<p class="ask" role="alert">
+			Delete “{nameOf(deleting)}”{inside(deleting)
+				? ` and the ${inside(deleting)} boards inside it`
+				: ''}?
+			<button onclick={deleteBoard}>delete</button>
+			<button class="ghost" onclick={() => (deleting = null)}>keep</button>
+		</p>
+	{/if}
 	{#if layoutNote}<StatusNote kind="error" block={false}>{layoutNote}</StatusNote>{/if}
 	{#if adding}<AddWidget onadd={added} oncancel={() => (adding = false)} />{/if}
 	<WorkspaceView
 		{space}
+		spaces={layout.workspaces}
+		onopen={(id) => showTab(id)}
 		{widgets}
 		{now}
 		{top}
@@ -628,9 +693,51 @@
 		gap: 8px;
 		padding: 10px 16px 0;
 	}
-	.bar :global([role='tablist']) {
+	.crumbs {
 		flex: 1;
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		min-width: 0;
 		overflow-x: auto;
+	}
+	.crumbs ol {
+		display: flex;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+	.crumbs li + li::before {
+		content: '/';
+		margin: 0 4px;
+		color: var(--muted);
+	}
+	.crumbs [aria-current] {
+		font-weight: 600;
+	}
+	.crumbs details {
+		position: relative;
+	}
+	.crumbs summary {
+		cursor: pointer;
+		list-style: none;
+		color: var(--muted);
+	}
+	.crumbs ul {
+		position: absolute;
+		z-index: 10;
+		margin: 4px 0 0;
+		padding: 4px;
+		list-style: none;
+		border: 1px solid var(--glass-brd);
+		border-radius: 10px;
+		background: var(--bg);
+	}
+	.ask {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin: 8px 16px 0;
 	}
 	.dot {
 		width: 8px;

@@ -9,9 +9,9 @@
 	import { phaseName, type DashboardProps, type ToShell, type ToThalamus } from './wire';
 	import { groupChart } from './widgets';
 
-	// onpin: the person clicked "Sem" (the active tab) or "Nový tab" under a render serve gave a pin (genui I6).
+	// onpin: the person clicked "Sem" (the open board) or "Nová plocha" (a new board inside it) under a render serve gave a pin (genui I6).
 	// onchoose: the person answered a choice with "Odpovědět"; drawing one sends nothing.
-	// onplace: the person clicked "Place here" or "Place on a new tab" under an offered dashboard; true when it was placed.
+	// onplace: the person clicked "Place here" or "Place on a new board" under an offered dashboard; true when it was placed.
 	let {
 		msg,
 		onpin,
@@ -41,14 +41,14 @@
 		<button
 			type="button"
 			aria-label="Připnout sem"
-			title="Připnout na tento tab"
+			title="Připnout na tuto plochu"
 			onclick={() => onpin?.(m, false)}>Sem</button
 		>
 		<button
 			type="button"
-			aria-label="Připnout na nový tab"
-			title="Připnout na nový tab"
-			onclick={() => onpin?.(m, true)}>Nový tab</button
+			aria-label="Připnout na novou plochu"
+			title="Připnout na novou plochu"
+			onclick={() => onpin?.(m, true)}>Nová plocha</button
 		>
 	</div>
 {/snippet}

@@ -1,6 +1,6 @@
 <!--
-  One item on the canvas, as a Svelte Flow node: a live widget, an editable heading, or a frame
-  (a titled rectangle behind the others). Every kind has a `.move` grip (the node's drag handle)
+  One item on the canvas, as a Svelte Flow node: a live widget, an editable heading, a frame
+  (a titled rectangle behind the others), or a board card that opens its child on double-click. Every kind has a `.move` grip (the node's drag handle)
   and a resize corner; pointer capture is on the corner only (face-wm-event-gotchas).
 -->
 <script lang="ts">
@@ -46,6 +46,20 @@
 		onsubmit={c.onsubmit}
 		onexport={c.onexport}
 	/>
+{:else if item.kind === 'board'}
+	{@const child = c.spaces.find((s) => s.id === item.board)}
+	{@const n = child?.items.length ?? 0}
+	<!-- A double-click opens it; so does Enter on the focused node (Workspace.svelte). -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<section class="board" ondblclick={() => c.onopen(item.board)}>
+		<header>
+			<button class="grip move" aria-label="move board (arrows move, shift+arrows resize)">⠿</button
+			>
+			<strong>{child?.name ?? item.board}</strong>
+			<button class="grip" aria-label="remove board" onclick={() => c.onremove(item.id)}>×</button>
+		</header>
+		<p>{n} {n === 1 ? 'item' : 'items'}</p>
+	</section>
 {:else}
 	<section class={item.kind}>
 		<header>
@@ -80,6 +94,24 @@
 		width: 100%;
 		height: 100%;
 		box-sizing: border-box;
+	}
+	.board {
+		border: 1px solid var(--glass-brd);
+		border-radius: 12px;
+		background: var(--glass);
+		cursor: zoom-in;
+	}
+	.board strong {
+		flex: 1;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.board p {
+		margin: 0 12px;
+		color: var(--muted);
+		font-size: 11px;
 	}
 	.frame {
 		border: 2px dashed var(--glass-brd);
