@@ -4129,9 +4129,26 @@ fn offer_over(name: &str, keap: (String, Seen), args: serde_json::Value) -> (Rig
     let rig = rig_at(name, mapped(), keap, vec![call("offer_dashboard", &args.to_string()), answer("Offered.")], Some(local()));
     let s = connect(&rig.sock);
     let mut r = BufReader::new(s.try_clone().unwrap());
-    let got = turn(&s, &mut r, None, "make me a dashboard of the sheet");
+    let mut got = turn(&s, &mut r, None, "make me a dashboard of the sheet");
+    // A refused offer is said mid-turn; the turn ends in the model's text after it.
+    if matches!(got.last(), Some(ToShell::Refused { .. })) {
+        got.extend(turn_rest(&mut r));
+    }
     let result = tool_result(&rig, 1);
     (rig, got, result)
+}
+
+/// The rest of a turn, up to its Text.
+fn turn_rest(r: &mut BufReader<UnixStream>) -> Vec<ToShell> {
+    let mut got = Vec::new();
+    while let Some(m) = next(r) {
+        let end = matches!(m, ToShell::Text { .. });
+        got.push(m);
+        if end {
+            break;
+        }
+    }
+    got
 }
 
 fn dashboards(got: &[ToShell]) -> Vec<serde_json::Value> {
@@ -4245,6 +4262,58 @@ fn the_prompt_says_how_to_offer_a_dashboard() {
     let tool = body["tools"].as_array().unwrap().iter().find(|t| t["function"]["name"] == "offer_dashboard").expect("the tool is offered").clone();
     let desc = tool["function"]["description"].as_str().unwrap();
     assert!(desc.contains("2-8 widgets") && !desc.contains("new tab"), "the person picks the tab: {desc}");
+}
+// --- iris-nothing-vanishes-silently: a call written as text runs as a call; a refused render is said ---
+
+#[test]
+fn a_tool_call_written_as_text_draws_the_dashboard() {
+    // Operator 2026-10-18: an MLX model wrote the call as content and the person saw JSON, no dashboard.
+    let args = serde_json::json!({"name": "Sheet board", "widgets": [{"title": "Rows", "rows": "sheet"}]});
+    let fn_shape = serde_json::json!({"type": "function", "function": {"name": "offer_dashboard", "arguments": args.to_string()}});
+    for (name, text) in [
+        ("txtbare", serde_json::json!({"name": "offer_dashboard", "arguments": args}).to_string()),
+        ("txtfence", format!("Here it is:\n```json\n{}\n```", serde_json::json!({"tool": "offer_dashboard", "arguments": args}))),
+        ("txtfn", fn_shape.to_string()),
+    ] {
+        let rows = vec![keap_row("a", serde_json::json!({"status": "open"}))];
+        let rig = rig_at(name, mapped(), fake_table(SHEET, rows).0, vec![answer(&text), answer("Offered.")], Some(local()));
+        let (got, session) = tool_turn(&rig, "make me a dashboard of the sheet");
+        assert_eq!(dashboards(&got).len(), 1, "{name}: {got:?}");
+        assert!(matches!(got.last(), Some(ToShell::Text { text, .. }) if text == "Offered."), "{name}: {got:?}");
+        assert!(tool_result(&rig, 1)["offered"] == "Sheet board", "{name}: the model hears the result");
+        let used = events(&rig.ledger, &session).into_iter().find(|e| e.0 == "agent_tool_use" && e.1.ends_with("/tool:offer_dashboard"));
+        assert_eq!(used.map(|e| e.2["text_tool_call"].clone()), Some(serde_json::json!(true)), "{name}: the ledger marks it");
+    }
+}
+
+#[test]
+fn text_naming_an_undeclared_tool_or_two_calls_stays_text() {
+    let one = serde_json::json!({"name": "drop_all_tables", "arguments": {}}).to_string();
+    let two = serde_json::json!([{"name": "inbox", "arguments": {}}, {"name": "inbox", "arguments": {}}]).to_string();
+    for (name, text) in [("txtghost", one), ("txttwo", two)] {
+        let rig = rig_n(name, mapped(), vec![], vec![answer(&text)]);
+        let (got, _) = tool_turn(&rig, "q");
+        assert!(matches!(got.last(), Some(ToShell::Text { text: t, .. }) if *t == text), "{name}: {got:?}");
+        assert_eq!(rig.model.lock().unwrap().len(), 1, "{name}: nothing ran, so the model was not asked again");
+    }
+}
+
+#[test]
+fn a_write_call_written_as_text_still_asks_the_person() {
+    let text = format!("```json\n{{\"name\": \"propose_row_edit\", \"arguments\": {EDIT}}}\n```");
+    let rig = rig_n("txtwrite", mapped(), shown_then(&[ROWS]), vec![query(r#"{"table": "todos", "q": "alpha"}"#), answer(&text), answer("Proposed.")]);
+    let (_s, _r, _session, _approval, diff) = propose(&rig);
+    assert_eq!(diff.row_id.as_deref(), Some("r1"));
+    assert!(posts(&rig).is_empty(), "a text call wrote before the person decided");
+}
+
+#[test]
+fn a_refused_dashboard_is_said_to_the_person() {
+    let (_, got, result) = offer("dashsaid", serde_json::json!({"name": "x", "widgets": [{"title": "a", "rows": {"table": "sheet", "columns": ["nope"]}}]}));
+    assert!(result["error"].as_str().is_some_and(|e| e.contains("no widget fits")), "{result}");
+    assert!(got.iter().any(|m| matches!(m, ToShell::Refused { reason, widget: None }
+        if reason.contains("offer_dashboard") && reason.contains("no widget fits"))), "{got:?}");
+    assert!(matches!(got.last(), Some(ToShell::Text { .. })), "the turn still ends in the model's text: {got:?}");
 }
 // --- iris-v3 B2: a form spec carries prefill and when; serve checks both as a submit is checked ---
 
