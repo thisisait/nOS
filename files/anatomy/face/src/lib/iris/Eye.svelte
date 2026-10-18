@@ -1,16 +1,17 @@
 <!--
   The eye: one lens — metal bezel, dark glass, a glowing core. The core says the state
-  by hue, size, brightness and rhythm; the label under it says it in words and is the
-  accessible truth (always rendered). Inline SVG + CSS only: no canvas, WebGL or asset.
-  Reduced motion stops every keyframe; colour and size still differ per state.
+  by hue, size, brightness and rhythm; the speech bubble beside it says the mood in words
+  (the accessible truth, always rendered), coloured per mood, with a small moving icon.
+  Inline SVG + CSS only. Reduced motion stops every keyframe; colour and text still differ.
 -->
 <script lang="ts">
-	import { label, type View } from './eye';
+	import { mood, type View } from './eye';
 
 	let { view }: { view: View } = $props();
+	const m = $derived(mood(view));
 </script>
 
-<div class="eye" data-state={view.state} role="status" aria-live="polite">
+<div class="eye" data-state={view.state}>
 	<svg viewBox="0 0 100 100" aria-hidden="true">
 		<defs>
 			<radialGradient id="eye-bezel" cx="40%" cy="35%" r="70%">
@@ -68,7 +69,14 @@
 			transform="rotate(-30 38 33)"
 		/>
 	</svg>
-	<p class="label">{label(view)}</p>
+	<div class="bubble" data-mood={m.key} role="status" aria-live="polite">
+		<!-- Keyed: a new mood remounts the words, so the pop plays on every change. -->
+		{#key m.key + m.text}
+			<span class="say">
+				{#if m.icon}<span class="icon" aria-hidden="true">{m.icon}</span>{/if}{m.text}
+			</span>
+		{/key}
+	</div>
 </div>
 
 <style>
@@ -77,14 +85,15 @@
 		--lvl: 0.55;
 		--size: 0.85;
 		display: flex;
-		flex-direction: column;
 		align-items: center;
-		gap: 4px;
-		padding: 8px 0 0;
+		justify-content: center;
+		gap: 12px;
+		padding: 6px 0 0;
 	}
 	svg {
-		width: 84px;
-		height: 84px;
+		flex: none;
+		width: 64px;
+		height: 64px;
 	}
 	.hot {
 		stop-color: #fff3e8;
@@ -112,10 +121,82 @@
 		opacity: 0;
 		transition: opacity 300ms;
 	}
-	.label {
-		margin: 0;
-		font-size: 11px;
+	/* The comic bubble: an opaque mix of a token over the canvas, so the tail (a rotated
+	   square of the same colour) does not show a seam where it overlaps the box. */
+	.bubble {
+		--tone: var(--muted);
+		position: relative;
+		min-width: 0;
+		padding: 5px 10px;
+		border-radius: 12px;
+		background: color-mix(in srgb, var(--tone) 26%, var(--bg));
+		color: var(--fg);
+		font-size: 12px;
+		line-height: 1.3;
+		transition: background-color 300ms;
+	}
+	.bubble::before {
+		content: '';
+		position: absolute;
+		left: -4px;
+		top: 50%;
+		width: 9px;
+		height: 9px;
+		background: inherit;
+		transform: translateY(-50%) rotate(45deg);
+		border-radius: 1px;
+	}
+	.say {
+		position: relative;
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		overflow-wrap: anywhere;
+		animation: pop 260ms ease-out;
+	}
+	.icon {
+		display: inline-block;
+	}
+	/* Neutral at rest, blue while the model works in its head, cyan when it reaches out
+	   with a tool, amber when it is the person's turn, red on a refusal. */
+	[data-mood='ready'],
+	[data-mood='listening'] {
+		--tone: var(--fg);
+	}
+	[data-mood='thinking'],
+	[data-mood='writing'],
+	[data-mood='said'] {
+		--tone: var(--info);
+	}
+	[data-mood='working'] {
+		--tone: var(--ok);
+	}
+	[data-mood='waiting'] {
+		--tone: var(--warn);
+	}
+	[data-mood='refused'] {
+		--tone: var(--bad);
+	}
+	[data-mood='offline'] {
+		--tone: var(--glass-brd);
 		color: var(--muted);
+	}
+	[data-mood='thinking'] .icon {
+		animation: think 1s ease-in-out infinite;
+	}
+	[data-mood='working'] .icon {
+		transform-origin: 20% 80%;
+		animation: swing 0.7s ease-in-out infinite;
+	}
+	[data-mood='asleep'] .icon {
+		animation: drift 2.6s ease-in-out infinite;
+	}
+	[data-mood='ready'] .icon {
+		transform-origin: 50% 90%;
+		animation: nod 900ms ease-out 1;
+	}
+	[data-mood='waiting'] .icon {
+		animation: think 1.6s ease-in-out infinite;
 	}
 
 	[data-state='idle'] .core {
@@ -125,16 +206,23 @@
 		--lvl: 0.85;
 		--size: 0.95;
 	}
+	/* Thinking is the state people miss: a deep fast throb, the swirl spinning one way
+	   and the segment the other, so the lens is never still while the model works. */
 	[data-state='thinking'] {
-		--lvl: 0.9;
-		--size: 0.95;
+		--lvl: 1;
+		--size: 1;
 	}
 	[data-state='thinking'] .core {
-		animation: pulse 1.2s ease-in-out infinite;
+		animation: throb 0.9s ease-in-out infinite;
 	}
 	[data-state='thinking'] .swirl {
-		opacity: 0.6;
-		animation: spin 3s linear infinite;
+		opacity: 1;
+		stroke-width: 1.6;
+		animation: spin 1.4s linear infinite;
+	}
+	[data-state='thinking'] .segment {
+		opacity: 0.8;
+		animation: spin 2.2s linear infinite reverse;
 	}
 	[data-state='tool'] {
 		--lvl: 0.85;
@@ -177,10 +265,6 @@
 		--lvl: 0.18;
 		--size: 0.7;
 	}
-	[data-state='waiting'] .label,
-	[data-state='refused'] .label {
-		color: var(--fg);
-	}
 
 	@keyframes breathe {
 		50% {
@@ -192,6 +276,48 @@
 		50% {
 			opacity: calc(var(--lvl) * 0.65);
 			transform: scale(calc(var(--size) * 0.9));
+		}
+	}
+	@keyframes throb {
+		50% {
+			opacity: calc(var(--lvl) * 0.3);
+			transform: scale(calc(var(--size) * 0.72));
+		}
+	}
+	@keyframes pop {
+		from {
+			opacity: 0;
+			transform: scale(0.8);
+		}
+	}
+	@keyframes think {
+		50% {
+			transform: scale(1.25);
+		}
+	}
+	@keyframes swing {
+		0%,
+		100% {
+			transform: rotate(20deg);
+		}
+		50% {
+			transform: rotate(-35deg);
+		}
+	}
+	@keyframes drift {
+		0%,
+		100% {
+			opacity: 1;
+			transform: translate(0, 0);
+		}
+		50% {
+			opacity: 0.45;
+			transform: translate(2px, -3px);
+		}
+	}
+	@keyframes nod {
+		40% {
+			transform: rotate(-12deg);
 		}
 	}
 	@keyframes flash {
@@ -222,7 +348,10 @@
 		.core,
 		.swirl,
 		.segment,
-		.hue {
+		.hue,
+		.bubble,
+		.say,
+		.icon {
 			animation: none;
 			transition: none;
 		}
