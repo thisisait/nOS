@@ -2543,16 +2543,23 @@
 
     # 2026-10-10, second Mac over SSH: the Docker credential helper reads the
     # login keychain, which SSH cannot unlock; the build died ~50 min in.
+    # `always`: stack-up's compose up is `always`, so `--tags pulse` built iiab
+    # past this check (client Mac, 2026-10-18). Only a keychain credsStore reads it.
     - name: "[Core] Is the login keychain unlocked (SSH session)?"
       ansible.builtin.command: security show-keychain-info {{ ansible_env.HOME }}/Library/Keychains/login.keychain-db
       register: _nos_keychain
       changed_when: false
       failed_when: false
+      check_mode: false
       when:
         - ansible_os_family == 'Darwin'
         - lookup('env', 'SSH_CONNECTION') | length > 0
+        - lookup('env', 'CI') | length == 0
         - nos_docker_ready | default(true) | bool
-      tags: ['iiab', 'docker', 'stacks', 'core', 'infra', 'observability']
+        - >-
+          ((lookup('file', ansible_env.HOME ~ '/.docker/config.json', errors='ignore') or '{}')
+          | from_json).get('credsStore', '') in ['desktop', 'osxkeychain']
+      tags: ['always', 'iiab', 'docker', 'stacks', 'core', 'infra', 'observability']
 
     - name: "[Core] Refuse a locked login keychain over SSH"
       ansible.builtin.fail:
@@ -2568,7 +2575,7 @@
       when:
         - _nos_keychain.rc is defined
         - _nos_keychain.rc != 0
-      tags: ['iiab', 'docker', 'stacks', 'core', 'infra', 'observability']
+      tags: ['always', 'iiab', 'docker', 'stacks', 'core', 'infra', 'observability']
 
     - name: "[Models] Drop resident local models before services come up"
       ansible.builtin.import_tasks: tasks/models-unload.yml
