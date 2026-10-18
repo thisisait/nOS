@@ -5975,3 +5975,205 @@ fn a_second_tab_takes_the_persons_session_over() {
 fn an_empty_relay_secret_binds_no_door() {
     assert!(thalamus::relay::bind("", 0).unwrap().is_none());
 }
+
+// --- contract 8: the person's catalogue marks their input; face limbs let Iris act on the face's screen ---
+
+fn say(s: &UnixStream, m: &ToThalamus) {
+    (&*s).write_all(encode(m).as_bytes()).unwrap();
+}
+
+/// The first message of type `t` on this connection, and every one before it.
+fn until(r: &mut BufReader<UnixStream>, t: &str) -> (Vec<ToShell>, ToShell) {
+    let mut before = vec![];
+    loop {
+        let m = next(r).unwrap_or_else(|| panic!("serve closed before a {t}: {before:?}"));
+        if serde_json::to_value(&m).unwrap()["t"] == t {
+            return (before, m);
+        }
+        before.push(m);
+    }
+}
+
+fn catalogue_ids(m: &ToShell) -> Vec<String> {
+    match m {
+        ToShell::Catalogue { tables, .. } => tables.iter().map(|t| t.id.clone()).collect(),
+        other => panic!("expected a catalogue, got {other:?}"),
+    }
+}
+
+#[test]
+fn a_catalogue_follows_the_session_hides_what_the_septum_hides_and_comes_again_after_working_for() {
+    let rig = rig_at("catsept", mapped(), septum_keap(), vec![answer("hi")], Some(local()));
+    septum_defs(&rig);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    say(&s, &ToThalamus::Catalogue);
+    let (before, all) = until(&mut r, "catalogue");
+    assert!(matches!(before.as_slice(), [ToShell::Session { .. }]), "the catalogue follows the session: {before:?}");
+    let ids = catalogue_ids(&all);
+    for t in ["party", "invoice", "invoice-line", "engram", "systems"] {
+        assert!(ids.contains(&t.to_string()), "{t} is the person's with no wall: {ids:?}");
+    }
+    let ToShell::Catalogue { tables, .. } = &all else { unreachable!() };
+    let role = tables.iter().find(|t| t.id == "party").unwrap().columns.iter().find(|c| c.key == "role").unwrap();
+    assert_eq!((role.label.as_deref(), role.kind.as_str()), (Some("Role"), "select"), "a column keeps its label: {role:?}");
+    assert_eq!(role.options.as_deref(), Some(&["counterparty".to_string(), "client".into(), "own_firm".into()][..]), "and its options");
+    let said = work_for(&s, &mut r, Scope::Client("ACME s.r.o.".into()));
+    assert!(matches!(said, ToShell::WorkingFor { .. }), "{said:?}");
+    let walled = catalogue_ids(&next(&mut r).expect("a catalogue again after working_for"));
+    assert!(!walled.contains(&"engram".to_string()), "a personal table is hidden while working for a client: {walled:?}");
+    assert!(walled.contains(&"invoice".to_string()), "{walled:?}");
+}
+
+#[test]
+fn a_shell_that_never_asks_gets_no_catalogue() {
+    let rig = rig_at("catnone", mapped(), septum_keap(), vec![answer("hi")], Some(local()));
+    septum_defs(&rig);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "hello");
+    work_for(&s, &mut r, Scope::Personal);
+    let after = turn(&s, &mut r, Some(session_of(&got)), "again");
+    assert!(!got.iter().chain(&after).any(|m| matches!(m, ToShell::Catalogue { .. })), "{got:?} {after:?}");
+}
+
+fn limb(app: &str, action: &str, params: serde_json::Value, writes: bool) -> serde_json::Value {
+    serde_json::json!({"app": app, "action": action, "params": params, "writes": writes, "says": format!("{action} on the face")})
+}
+
+fn limbs() -> ToThalamus {
+    let l = serde_json::json!({"t": "limbs", "limbs": [
+        limb("desktop", "open_app", serde_json::json!({"slug": {"type": "string", "required": true}}), false),
+        limb("files", "rename", serde_json::json!({"path": {"type": "string", "required": true}, "to": {"type": "string", "required": true}}), true)]});
+    nos_contract::wire::decode_to_thalamus(&l.to_string()).unwrap()
+}
+
+fn act(app: &str, action: &str, params: serde_json::Value) -> String {
+    call("face_act", &serde_json::json!({"app": app, "action": action, "params": params}).to_string())
+}
+
+/// The tool names of the n-th model request, and its system prompt.
+fn offered(rig: &Rig, n: usize) -> (Vec<String>, String) {
+    let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[n].1).unwrap();
+    let names = body["tools"].as_array().unwrap().iter().map(|t| t["function"]["name"].as_str().unwrap().to_string()).collect();
+    (names, body["messages"][0]["content"].as_str().unwrap().to_string())
+}
+
+#[test]
+fn face_act_is_offered_only_to_a_session_that_declared_limbs() {
+    let rig = rig("nolimbs", mapped(), ROWS, vec![answer("hi")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "open my tables");
+    let (tools, prompt) = offered(&rig, 0);
+    assert!(!tools.contains(&"face_act".to_string()) && !prompt.contains("face_act"), "no limbs, no face_act: {tools:?}");
+    say(&s, &limbs());
+    turn(&s, &mut r, Some(session_of(&got)), "open my tables");
+    let (tools, prompt) = offered(&rig, 1);
+    assert!(tools.contains(&"face_act".to_string()), "{tools:?}");
+    assert!(prompt.contains("face_act") && prompt.contains("desktop.open_app"), "the prompt names the limbs: {prompt}");
+}
+
+#[test]
+fn face_act_on_an_undeclared_limb_or_with_bad_params_is_refused_and_recorded() {
+    let rig = rig("badlimb", mapped(), ROWS, vec![act("desktop", "format_disk", serde_json::json!({})),
+        act("desktop", "open_app", serde_json::json!({"slug": 3})), act("desktop", "open_app", serde_json::json!({"app": "tables"})),
+        answer("I cannot.")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    say(&s, &limbs());
+    let got = turn(&s, &mut r, None, "wipe it");
+    assert!(!got.iter().any(|m| matches!(m, ToShell::Act { .. })), "nothing undeclared reaches the face: {got:?}");
+    let session = session_of(&got);
+    gone(s, r);
+    let ev = events(&rig.ledger, &session);
+    let errors: Vec<String> = ev.iter().filter(|(t, k, _)| t == "agent_tool_result" && k.ends_with("/tool:face_act"))
+        .map(|e| e.2["error"].as_str().unwrap_or("").to_string()).collect();
+    assert_eq!(errors.len(), 3, "each refused call is recorded: {errors:?}");
+    assert!(errors[0].contains("desktop.format_disk"), "{errors:?}");
+    assert!(errors[1].contains("bad param slug"), "{errors:?}");
+    assert!(errors[2].contains("unknown param app"), "{errors:?}");
+    let uses = ev.iter().filter(|(t, k, _)| t == "agent_tool_use" && k.ends_with("/tool:face_act")).count();
+    assert_eq!(uses, 3, "every call is a tool_use too");
+}
+
+#[test]
+fn a_limb_that_writes_nothing_acts_and_is_a_tool_use_and_result_pair() {
+    let rig = rig("uilimb", mapped(), ROWS, vec![act("desktop", "open_app", serde_json::json!({"slug": "tables"})), answer("Opened.")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    say(&s, &limbs());
+    say(&s, &ToThalamus::Turn { session: None, text: "open my tables".into() });
+    let (before, a) = until(&mut r, "act");
+    assert!(!before.iter().any(|m| matches!(m, ToShell::ApprovalRequest { .. })), "a limb that writes nothing asks no card");
+    let ToShell::Act { session, act: id, app, action, params } = a else { unreachable!() };
+    assert_eq!((app.as_str(), action.as_str()), ("desktop", "open_app"));
+    assert_eq!(serde_json::Value::Object(params), serde_json::json!({"slug": "tables"}));
+    say(&s, &ToThalamus::Acted { act: id.clone(), ok: true, result: Some(serde_json::json!(true)), reason: None });
+    let (_, end) = until(&mut r, "text");
+    assert!(matches!(&end, ToShell::Text { text, .. } if text == "Opened."), "{end:?}");
+    let heard = rig.model.lock().unwrap()[1].1.clone();
+    assert!(heard.contains(r#"\"ok\":true"#), "the model hears the face's answer: {heard}");
+    gone(s, r);
+    let ev = events(&rig.ledger, &session);
+    let face: Vec<&String> = ev.iter().filter(|(_, k, _)| k.ends_with("/tool:face_act")).map(|(t, _, _)| t).collect();
+    assert_eq!(face, ["agent_tool_use", "agent_tool_result"], "{ev:?}");
+    let result = &ev.iter().find(|(t, k, _)| t == "agent_tool_result" && k.ends_with("/tool:face_act")).unwrap().2;
+    assert_eq!((result["act"].as_str(), result["ok"].as_bool()), (Some(id.as_str()), Some(true)), "{result}");
+}
+
+#[test]
+fn a_limb_that_writes_asks_a_card_before_any_act() {
+    let rig = rig("writelimb", mapped(), ROWS, vec![act("files", "rename", serde_json::json!({"path": "/a.md", "to": "b.md"})), answer("Asked.")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    say(&s, &limbs());
+    let got = turn(&s, &mut r, None, "rename a to b");
+    assert!(!got.iter().any(|m| matches!(m, ToShell::Act { .. })), "no act before the person decides: {got:?}");
+    let (approval, card) = got.iter().find_map(|m| match m {
+        ToShell::ApprovalRequest { approval, component: Component::ActionApproval(a), .. } => Some((approval.clone(), a.clone())),
+        _ => None,
+    }).unwrap_or_else(|| panic!("no action_approval card: {got:?}"));
+    assert_eq!((card.app.as_str(), card.action.as_str(), card.says.as_str()), ("files", "rename", "rename on the face"));
+    assert_eq!(card.params["to"], "b.md");
+    decide(&s, &approval, Decision::Approve);
+    let (_, a) = until(&mut r, "act");
+    let ToShell::Act { act: id, app, action, .. } = a else { unreachable!() };
+    assert_eq!((app.as_str(), action.as_str()), ("files", "rename"));
+    say(&s, &ToThalamus::Acted { act: id, ok: true, result: None, reason: None });
+    let (_, end) = until(&mut r, "text");
+    assert!(matches!(&end, ToShell::Text { text, .. } if text.starts_with("Approved")), "{end:?}");
+}
+
+#[test]
+fn a_rejected_card_sends_no_act() {
+    let rig = rig("rejectlimb", mapped(), ROWS, vec![act("files", "rename", serde_json::json!({"path": "/a.md", "to": "b.md"})), answer("Asked.")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    say(&s, &limbs());
+    let got = turn(&s, &mut r, None, "rename a to b");
+    let approval = got.iter().find_map(|m| match m { ToShell::ApprovalRequest { approval, .. } => Some(approval.clone()), _ => None }).unwrap();
+    decide(&s, &approval, Decision::Reject);
+    let (before, end) = until(&mut r, "text");
+    assert!(!before.iter().any(|m| matches!(m, ToShell::Act { .. })), "{before:?}");
+    assert!(matches!(&end, ToShell::Text { text, .. } if text.starts_with("Rejected")), "{end:?}");
+}
+
+#[test]
+fn a_face_that_never_answers_the_act_is_a_tool_error() {
+    READER_SECS.with(|c| c.set(1));
+    let rig = rig("mutelimb", mapped(), ROWS, vec![act("desktop", "open_app", serde_json::json!({"slug": "tables"})), answer("It did not open.")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    say(&s, &limbs());
+    say(&s, &ToThalamus::Turn { session: None, text: "open my tables".into() });
+    let (before, _) = until(&mut r, "act");
+    let session = session_of(&before);
+    let (_, end) = until(&mut r, "text");
+    assert!(matches!(&end, ToShell::Text { text, .. } if text == "It did not open."), "{end:?}");
+    let heard = rig.model.lock().unwrap()[1].1.clone();
+    assert!(heard.contains("no answer from the face in 1s"), "the model hears the act went unanswered: {heard}");
+    gone(s, r);
+    let rec = recorded(&rig, &session, "face_act");
+    assert!(rec["error"].as_str().is_some_and(|e| e.contains("no answer")), "{rec}");
+}
