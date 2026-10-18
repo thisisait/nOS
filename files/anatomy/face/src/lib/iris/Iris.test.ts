@@ -134,4 +134,45 @@ describe('Iris on a transport', () => {
 			{ t: 'approval_decision', approval: ask.approval, decision: 'reject', note: null }
 		]);
 	});
+
+	// Contract 9 (operator 2026-10-18): each tab its own conversation, /branch and /clear, and a Stop.
+	it('resumes the tab it shows, branches and clears by slash command, and stops a running turn', async () => {
+		const fake = await open();
+		expect(fake.sent[0]).toEqual({ t: 'resume', workspace: 'ws1' });
+		const s = sample('session opened') as Extract<ToShell, { t: 'session' }>;
+		fake.shell(s);
+		await settle();
+		const type = async (text: string) => {
+			const box = document.querySelector('textarea')!;
+			box.value = text;
+			box.dispatchEvent(new Event('input', { bubbles: true }));
+			flushSync();
+			box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+			await settle();
+		};
+		await type('/branch');
+		const tabs = () => [...document.querySelectorAll('[role="tab"]')];
+		expect(tabs()).toHaveLength(2);
+		const branch = fake.sent.find((m) => m.t === 'branch') as { t: 'branch'; workspace: string };
+		expect(branch.workspace).toMatch(/^ws/);
+		expect(branch.workspace).not.toBe('ws1');
+		await type('/clear');
+		expect(fake.sent.at(-1)).toEqual({ t: 'clear' });
+		expect(fake.sent.some((m) => m.t === 'turn')).toBe(false);
+		// Showing the first tab again resumes its session.
+		(tabs()[0] as HTMLElement).click();
+		await settle();
+		expect(fake.sent.at(-1)).toEqual({ t: 'resume', workspace: 'ws1' });
+		const stop = () =>
+			[...document.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'stop');
+		expect(stop()).toBeUndefined();
+		fake.shell({ t: 'activity', session: s.session, phase: 'thinking' });
+		await settle();
+		stop()!.click();
+		await settle();
+		expect(fake.sent.at(-1)).toEqual({ t: 'stop', session: s.session });
+		fake.shell({ t: 'activity', session: s.session, phase: 'idle' });
+		await settle();
+		expect(stop()).toBeUndefined();
+	});
 });

@@ -44,11 +44,18 @@ fn fake(bodies: Vec<String>) -> (String, Seen) {
             let mut body = vec![0; len];
             r.read_exact(&mut body).unwrap();
             s.lock().unwrap().push((head, String::from_utf8(body).unwrap()));
-            // A body may lead with "!<status> " to answer with that status.
-            let out = &bodies[n.min(bodies.len() - 1)];
+            // A body may lead with "~<ms> " to answer that late, then "!<status> " to answer with that status.
+            let out = bodies[n.min(bodies.len() - 1)].as_str();
+            let out = match out.strip_prefix('~').and_then(|r| r.split_once(' ')) {
+                Some((ms, rest)) => {
+                    std::thread::sleep(std::time::Duration::from_millis(ms.parse().unwrap()));
+                    rest
+                }
+                None => out,
+            };
             let (status, out) = match out.strip_prefix('!') {
                 Some(rest) => rest.split_once(' ').unwrap(),
-                None => ("200", out.as_str()),
+                None => ("200", out),
             };
             write!(c, "HTTP/1.1 {status} X\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{out}", out.len())
                 .unwrap();
@@ -138,6 +145,11 @@ thread_local! {
 }
 
 thread_local! {
+    /// The next rig's model base_url ends in /v1, as ollama's does, so serve can find its /api/ps.
+    static V1: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+thread_local! {
     /// The rows serve offers for a session pick (W5) and the size floors; the next rig takes them.
     static PICKS: std::cell::RefCell<(Vec<thalamus::binding::Pick>, Option<(f64, f64)>)> = Default::default();
 }
@@ -162,6 +174,7 @@ fn rig_deciders(name: &str, map: serde_json::Value, (keap_url, keap): (String, S
     let map_path = d.join("identity-map.yml");
     std::fs::write(&map_path, map.to_string()).unwrap();
     let (model_url, model) = fake(model_bodies);
+    let model_url = if V1.with(|v| v.take()) { format!("{model_url}/v1") } else { model_url };
     let log = Log::default();
     let (picks, floors) = PICKS.with(|p| p.take());
     let ledger = d.join("ledger.db");
@@ -6176,4 +6189,190 @@ fn a_face_that_never_answers_the_act_is_a_tool_error() {
     gone(s, r);
     let rec = recorded(&rig, &session, "face_act");
     assert!(rec["error"].as_str().is_some_and(|e| e.contains("no answer")), "{rec}");
+}
+
+// --- contract 9: a turn the person can stop, a refused call not run again, a session per workspace tab,
+// and whether the local model is in memory. Journeys over the wire as JSON, so they read v9's lines as sent.
+
+fn say_v(s: &UnixStream, v: serde_json::Value) {
+    (&*s).write_all(format!("{v}\n").as_bytes()).unwrap();
+}
+
+/// The next line as JSON, everything included.
+fn raw_v(r: &mut impl BufRead) -> serde_json::Value {
+    let mut line = String::new();
+    assert!(r.read_line(&mut line).unwrap() > 0, "serve closed");
+    serde_json::from_str(&line).unwrap()
+}
+
+/// The next line the conversation is made of: activity and model_state are the eye's.
+fn next_v(r: &mut impl BufRead) -> serde_json::Value {
+    loop {
+        let v = raw_v(r);
+        if v["t"] != "activity" && v["t"] != "model_state" {
+            return v;
+        }
+    }
+}
+
+/// Lines up to and including the first of type `t`.
+fn until_v(r: &mut impl BufRead, t: &str) -> Vec<serde_json::Value> {
+    let mut got = vec![];
+    loop {
+        let v = next_v(r);
+        let end = v["t"] == t;
+        got.push(v);
+        if end {
+            return got;
+        }
+    }
+}
+
+fn opened_v(r: &mut impl BufRead) -> String {
+    let v = next_v(r);
+    assert_eq!(v["t"], "session", "{v}");
+    v["session"].as_str().unwrap().to_string()
+}
+
+/// Live 2026-10-18: a show refused for "a chart has no points" was sent 8 times, identically.
+#[test]
+fn a_refused_call_says_why_and_is_not_run_again() {
+    let src = serde_json::json!({"query": {"table": "sheet"}, "x": "when", "op": "count"});
+    let rig = rig_at("retry", mapped(), fake_table(SHEET, statuses()).0, vec![sourced("line", src)], Some(local()));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "chart it per day");
+    let session = session_of(&got);
+    // Asked, refused, asked again (told it repeated), asked a third time: the turn ends, no fourth request.
+    assert_eq!(rig.model.lock().unwrap().len(), 3, "the model was asked again after the turn should have ended");
+    let why = tool_result(&rig, 1);
+    let e = why["error"].as_str().unwrap_or_default();
+    assert!(e.contains("4 rows") && e.contains("`when`"), "the error says why, with numbers: {why}");
+    let again = tool_result(&rig, 2);
+    assert_eq!(again["repeated"], true, "{again}");
+    assert!(again["hint"].as_str().is_some_and(|h| h.contains("change")), "{again}");
+    let runs = events(&rig.ledger, &session).iter().filter(|e| e.0 == "agent_tool_use" && e.1.ends_with("/tool:show_source")).count();
+    assert_eq!(runs, 1, "the identical call ran against KEAP again");
+    let refused = got.iter().filter(|m| matches!(m, ToShell::Refused { reason, .. } if reason.starts_with("show: "))).count();
+    assert_eq!(refused, 1, "the person saw the same refusal again: {got:?}");
+    match got.last() {
+        Some(ToShell::Text { text, .. }) => assert!(text.contains("`when`"), "the person is not told why it ended: {text}"),
+        other => panic!("the turn did not end with a text: {other:?}"),
+    }
+    assert!(system_prompt(&rig).contains("never repeat a call that failed"), "{}", system_prompt(&rig));
+}
+
+#[test]
+fn stop_ends_a_running_turn_at_once_and_the_next_turn_runs() {
+    let rig = rig("stop", mapped(), ROWS, vec![format!("~3000 {}", answer("too late")), answer("again")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    say_v(&s, serde_json::json!({"t": "turn", "session": null, "text": "slow one"}));
+    let session = opened_v(&mut r);
+    loop {
+        let v = raw_v(&mut r);
+        if v["t"] == "activity" && v["phase"] == "thinking" {
+            break;
+        }
+    }
+    let asked = std::time::Instant::now();
+    say_v(&s, serde_json::json!({"t": "stop", "session": session}));
+    let v = next_v(&mut r);
+    assert_eq!((&v["t"], &v["text"]), (&serde_json::json!("text"), &serde_json::json!("Stopped.")), "{v}");
+    assert!(asked.elapsed() < std::time::Duration::from_millis(1500), "the stop waited for the model: {:?}", asked.elapsed());
+    let idle = raw_v(&mut r);
+    assert_eq!((&idle["t"], &idle["phase"]), (&serde_json::json!("activity"), &serde_json::json!("idle")), "{idle}");
+    let said: Vec<_> = events(&rig.ledger, &session).into_iter().filter(|e| e.0 == "agent_message").map(|e| e.2).collect();
+    assert!(said.contains(&serde_json::json!({"role": "thalamus", "text": "Stopped."})), "{said:?}");
+    say_v(&s, serde_json::json!({"t": "turn", "session": session, "text": "again"}));
+    let v = next_v(&mut r);
+    assert_eq!(v["text"], "again", "the turn after a stop did not run: {v}");
+}
+
+#[test]
+fn each_workspace_tab_is_its_own_session_and_clear_and_branch_start_fresh() {
+    let rig = rig("tabs", mapped(), ROWS, vec![answer("one"), answer("two"),
+        call("show", &serde_json::json!({"component": ask(false)}).to_string()), answer("Pick one.")]);
+    let ended = |session: &str| events(&rig.ledger, session).into_iter().rev().find(|e| e.0 == "agent_session_end").map(|e| e.2["stop_reason"].clone());
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    say_v(&s, serde_json::json!({"t": "resume", "workspace": "ws1"}));
+    let s1 = opened_v(&mut r);
+    say_v(&s, serde_json::json!({"t": "turn", "session": s1, "text": "hello one"}));
+    assert_eq!(until_v(&mut r, "text").last().unwrap()["text"], "one");
+    // Another tab is another conversation; the first waits, switched, not closed.
+    say_v(&s, serde_json::json!({"t": "resume", "workspace": "ws2"}));
+    let s2 = opened_v(&mut r);
+    assert_ne!(s2, s1);
+    assert_eq!(ended(&s1), Some(serde_json::json!("switched")));
+    say_v(&s, serde_json::json!({"t": "turn", "session": s2, "text": "hello two"}));
+    assert_eq!(until_v(&mut r, "text").last().unwrap()["text"], "two");
+    // /branch: a new tab's session that starts from this one's conversation.
+    say_v(&s, serde_json::json!({"t": "branch", "workspace": "ws3"}));
+    let s3 = opened_v(&mut r);
+    assert!(s3 != s1 && s3 != s2);
+    let ev = events(&rig.ledger, &s3);
+    assert!(ev.iter().any(|e| e.0 == "agent_session_start" && e.2["branched_from"] == s2.as_str()), "{ev:?}");
+    assert!(ev.iter().any(|e| e.0 == "agent_message" && e.2["text"] == "hello two" && e.2["copied"] == true), "{ev:?}");
+    drop((s, r));
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    // A new connection resumes the tab it names, with that tab's chat.
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    say_v(&s, serde_json::json!({"t": "resume", "workspace": "ws1"}));
+    assert_eq!(opened_v(&mut r), s1, "the tab did not resume its own session");
+    let replay = next_v(&mut r);
+    assert_eq!(replay["t"], "replay", "{replay}");
+    let texts: Vec<&str> = replay["log"].as_array().unwrap().iter().filter_map(|m| m["text"].as_str()).collect();
+    assert_eq!(texts, ["hello one", "one"], "{replay}");
+    // /clear: a fresh session for the same tab; the old one ends cleared, its chat file goes.
+    say_v(&s, serde_json::json!({"t": "clear"}));
+    let s4 = opened_v(&mut r);
+    assert_ne!(s4, s1);
+    assert_eq!(ended(&s1), Some(serde_json::json!("cleared")));
+    let file = rig.sock.parent().unwrap().join("people/alice-smith/conversation-ws1.json");
+    assert!(!std::fs::read_to_string(&file).unwrap_or_default().contains("hello one"), "the cleared chat is still kept");
+    // While a choice waits, /clear is refused: nothing is decided for the person.
+    say_v(&s, serde_json::json!({"t": "turn", "session": s4, "text": "chart something"}));
+    until_v(&mut r, "text");
+    say_v(&s, serde_json::json!({"t": "clear"}));
+    let v = next_v(&mut r);
+    assert!(v["t"] == "refused" && v["reason"].as_str().is_some_and(|w| w.contains("answer")), "{v}");
+    drop((s, r));
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    say_v(&s, serde_json::json!({"t": "resume", "workspace": "ws1"}));
+    assert_eq!(opened_v(&mut r), s4, "the cleared tab came back to its old session");
+}
+
+#[test]
+fn the_eye_hears_whether_the_local_model_is_in_memory_when_it_changes() {
+    V1.with(|v| v.set(true));
+    let ps = |names: &[&str]| serde_json::json!({"models": names.iter().map(|n| serde_json::json!({"name": n, "model": n})).collect::<Vec<_>>()}).to_string();
+    let rig = rig("ps", mapped(), ROWS, vec![ps(&[]), answer("one"), ps(&["qwen3:14b"]), answer("two"), ps(&["qwen3:14b"])]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    say_v(&s, serde_json::json!({"t": "resume"}));
+    let session = opened_v(&mut r);
+    assert_eq!(raw_v(&mut r), serde_json::json!({"t": "model_state", "session": session, "loaded": false}));
+    say_v(&s, serde_json::json!({"t": "turn", "session": session, "text": "hi"}));
+    let mut lines = vec![];
+    while lines.last().is_none_or(|v: &serde_json::Value| v["t"] != "model_state") {
+        lines.push(raw_v(&mut r));
+    }
+    let tail: Vec<_> = lines.iter().rev().take(3).rev().map(|v| v["t"].as_str().unwrap().to_string()).collect();
+    assert_eq!(tail, ["text", "activity", "model_state"], "{lines:?}");
+    assert_eq!(lines.last().unwrap()["loaded"], true);
+    // Still loaded after the next turn: nothing more is said.
+    say_v(&s, serde_json::json!({"t": "turn", "session": session, "text": "again"}));
+    assert_eq!(next_v(&mut r)["text"], "two");
+    say_v(&s, serde_json::json!({"t": "workspace_load"}));
+    let mut after = vec![];
+    while after.last().is_none_or(|v: &serde_json::Value| v["t"] != "workspace") {
+        after.push(raw_v(&mut r));
+    }
+    assert!(!after.iter().any(|v| v["t"] == "model_state"), "an unchanged state was said again: {after:?}");
+    let paths: Vec<String> = rig.model.lock().unwrap().iter().map(|(h, _)| h.lines().next().unwrap_or("").to_string()).collect();
+    assert!(paths[0].starts_with("GET /api/ps") && paths[1].starts_with("POST /v1/chat/completions"), "{paths:?}");
 }

@@ -31,6 +31,30 @@ test.describe('Iris in the face', () => {
 		await expect(page.locator('.win').getByText('What is on the roadmap?')).toBeVisible();
 	});
 
+	// Contract 9 (operator 2026-10-18): a running turn stops, /branch makes a tab, /clear empties the chat.
+	test('a turn stops on Stop, /branch adds a tab, /clear empties the chat', async ({ page }: { page: Page }) => {
+		await page.goto(FACE_URL);
+		await page.getByRole('button', { name: 'Iris' }).first().click();
+		const win = page.locator('.win');
+		const box = win.locator('textarea').first();
+		await expect(box).toBeEnabled({ timeout: 20_000 });
+		await box.fill('Count the rows of every table, one by one.');
+		await box.press('Enter');
+		await win.getByRole('button', { name: 'stop' }).click({ timeout: 20_000 });
+		await expect(win.getByText('Stopped.')).toBeVisible({ timeout: 10_000 });
+		await expect(win.getByRole('button', { name: 'stop' })).toHaveCount(0);
+
+		const tabs = page.getByRole('tab');
+		const before = await tabs.count();
+		await box.fill('/branch');
+		await box.press('Enter');
+		await expect(tabs).toHaveCount(before + 1);
+
+		await box.fill('/clear');
+		await box.press('Enter');
+		await expect(win.getByText('Stopped.')).toHaveCount(0);
+	});
+
 	test('a cross-site POST to bff/iris/send is refused', async ({ page }: { page: Page }) => {
 		await page.goto(FACE_URL);
 		const status = await page.evaluate(async () => {
