@@ -3,7 +3,9 @@
 The release gate is "a blank since the last tag + nos-smoke --strict", and on
 2026-10-16 the only way to find the last blank was grepping RELEASE.md. Runs the
 start task (main.yml) + tasks/post-smoke.yml through real Ansible with a temp
-HOME and a fake nos-smoke: the record must still be written, and it is closed
+HOME and a fake nos-smoke: the record must still be written, carry the strict
+smoke a blank always runs ({ok, total, failed ids}, even without
+nos_smoke_strict — 10-17 recorded null and the 32/32 was copied by hand), and it is closed
 with the PLAY's outcome (a failure after smoke, e.g. first-login, is failed=true
 with the task's name) by the callback ansible.cfg enables.
 """
@@ -21,8 +23,14 @@ import yaml
 
 REPO = Path(__file__).resolve().parents[2]
 START = "[Blank] Record that a confirmed blank started"
-FAKE_SMOKE = "import sys\nprint('\\u274c 3 / 4 OK  \\u00b7  1 failed  \\u00b7  0 unreachable')\nsys.exit(1)\n"
-GREEN_SMOKE = "print('\\u2705 4 / 4 OK')\n"
+#: A fake nos-smoke: probe rows as JSON under --strict --json (what the blank
+#: records), else the summary line the verdict reads. GREEN = svc1 passes too.
+_SMOKE = ("import json, sys\nGREEN = {}\n"
+          "rows = [dict(id='svc%d' % i, ok=i > 1 or GREEN, skipped=False) for i in range(1, 5)]\n"
+          "if '--strict' in sys.argv and '--json' in sys.argv:\n"
+          "    print('\\n'.join(json.dumps(r) for r in rows))\n"
+          "else:\n    print('%d / 4 OK' % sum(r['ok'] for r in rows))\nsys.exit(0 if GREEN else 1)\n")
+FAKE_SMOKE, GREEN_SMOKE = _SMOKE.format(False), _SMOKE.format(True)
 
 
 def _boom(name: str) -> dict:
@@ -52,7 +60,7 @@ def _converge(tmp_path: Path, removing: bool, confirmed: bool = True, leaving: b
     (tmp_path / "tools/nos-smoke.py").write_text(smoke)
     play = [{"hosts": "localhost", "gather_facts": False, "connection": "local",
              "vars": {"nos_removing": removing, "nos_confirmed": confirmed, "nos_leaving": leaving,
-                      "nos_smoke_strict": True, "nos_deployed_ref": "abc123",
+                      "nos_deployed_ref": "abc123",
                       "nos_docker_ready": True,
                       "ansible_facts": {"env": {"HOME": str(tmp_path)}}},
              "tasks": [_start_task(), *before,
@@ -87,10 +95,10 @@ def test_a_blank_whose_smoke_fails_still_leaves_its_record(tmp_path, monkeypatch
     assert rows[0]["finished"] is None and rows[0]["nos_commit"] == "abc123"
     last = rows[-1]
     assert last["started"] == rows[0]["started"] and last["finished"]
-    assert last["failed"] is True and last["smoke_strict"] == {"passed": 3, "total": 4}
+    assert last["failed"] is True and last["smoke_strict"] == {"ok": 3, "total": 4, "failed": ["svc1"]}
     assert last["failed_task"] == "[smoke] Fail the run on the smoke verdict"
     mod, line = _blank_line(tmp_path, monkeypatch)
-    assert line.state == mod.DISAGREE, line
+    assert line.state == mod.DISAGREE and "3/4" in line.detail and "svc1" in line.detail, line
 
 
 @pytest.mark.skipif(not shutil.which("ansible-playbook"), reason="runs through real Ansible")
@@ -111,7 +119,7 @@ def test_a_clean_blank_closes_green(tmp_path, monkeypatch):
     assert r.returncode == 0, r.stdout
     last = _rows(tmp_path)[-1]
     assert last["finished"] and last["failed"] is False and last["failed_task"] is None, last
-    assert last["smoke_strict"] == {"passed": 4, "total": 4}
+    assert last["smoke_strict"] == {"ok": 4, "total": 4, "failed": []}
     mod, line = _blank_line(tmp_path, monkeypatch)
     assert line.state == mod.OK, line
 
@@ -131,7 +139,7 @@ def _write(home: Path, *lines: str) -> None:
 
 @pytest.mark.parametrize("body", ["[1, 2]", json.dumps(
     {"started": "2026-10-09T08:00:00Z", "finished": "2026-10-09T09:00:00Z", "nos_commit": "x",
-     "failed": False, "smoke_strict": {"passed": 1}})], ids=["not-a-dict", "smoke-without-total"])
+     "failed": False, "smoke_strict": {"ok": 1}})], ids=["not-a-dict", "smoke-without-total"])
 def test_a_malformed_record_is_unknown_not_a_crash(tmp_path, monkeypatch, body):
     _write(tmp_path, body)
     mod, line = _blank_line(tmp_path, monkeypatch)
@@ -163,6 +171,16 @@ def test_a_clean_strict_blank_is_green_with_its_age(tmp_path, monkeypatch):
     (tmp_path / ".nos").mkdir()
     (tmp_path / ".nos/blank-runs.jsonl").write_text(json.dumps(
         {"started": "2026-10-09T08:00:00Z", "finished": "2026-10-09T09:00:00Z",
-         "nos_commit": "x", "failed": False, "smoke_strict": {"passed": 6, "total": 6}}) + "\n")
+         "nos_commit": "x", "failed": False, "smoke_strict": {"ok": 6, "total": 6, "failed": []}}) + "\n")
     mod, line = _blank_line(tmp_path, monkeypatch)
     assert line.state == mod.OK and "6/6" in line.detail and "ago" in line.detail
+
+
+def test_a_finished_blank_with_a_red_strict_probe_is_not_green(tmp_path, monkeypatch):
+    """The strict smoke is evidence, not the run's verdict: a blank can close
+    failed=false while a probe is red, and the reader must say which."""
+    _write(tmp_path, json.dumps({"started": "2026-10-09T08:00:00Z", "finished": "2026-10-09T09:00:00Z",
+                                 "nos_commit": "x", "failed": False,
+                                 "smoke_strict": {"ok": 31, "total": 32, "failed": ["gitea"]}}))
+    mod, line = _blank_line(tmp_path, monkeypatch)
+    assert line.state == mod.DISAGREE and "31/32" in line.detail and "gitea" in line.detail, line
