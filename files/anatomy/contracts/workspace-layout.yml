@@ -1,30 +1,36 @@
 # The pupil's workspace layout: what the person laid out, saved on their Mac.
 # Protocol: ssot/doctrine/cross-repo-contracts.md §1 (spec + fixture + gates over
 # the same bytes). No wire message reads or writes it: the model never sees a layout.
-version: 2   # 2: a workspace's lens; a v1 file loads as v2 with no lens
+version: 3   # 3: an infinite canvas (operator 2026-10-18): items in world px, a saved view, a reserved parent; 2: a workspace's lens
 fixture: files/anatomy/contracts/workspace-layout.fixture.json
 
 producer:
   organ: pupil
   code:
-    - files/anatomy/face/src/lib/iris/workspace.ts        # the reducers that change it
+    - files/anatomy/face/src/lib/iris/workspace.ts        # the reducers that change it, and migrate()
 consumer:
   organ: pupil
   code:
-    - files/anatomy/pupil/src-tauri/src/workspace.rs     # decodes and checks on every load and save
-    - files/anatomy/face/src/lib/iris/workspace.test.ts   # restores every fixture sample
+    - files/anatomy/pupil/src-tauri/src/workspace.rs     # decodes, migrates and checks on every load and save
+    - files/anatomy/face/src/lib/iris/workspace.test.ts   # restores every sample, migrates every v2 one
+    - files/anatomy/face/src/lib/iris/canvas.test.ts      # the canvas journey: v2 in, v3 saved, the same places on reload
 gates:
   both: tests/anatomy/test_workspace_layout_contract.py
 
 file: "<tauri app_data_dir>/workspaces.json, written atomically (tmp + rename), mode 0600; one that fails to decode is renamed .broken-<unix seconds> and the pupil starts with one empty workspace and says so"
+thalamus: "the thalamus holds the same document opaquely (thalamus-shell.yml wire.workspace, at most 512 KiB); the shells migrate it on load as they do the local file"
 
 layout:
-  shape: "{version: 2, active: id, chat: {x, y, w, h, open}, workspaces[1..12]{id, name, lens?[0..4], widgets[0..24]{id, title, spec, x, y, w, h}}}; unknown keys refused; a version 1 file loads as version 2 with no lens (it is never set aside for the missing key)"
+  shape: "{version: 3, active: id, chat: {x, y, w, h, open}, workspaces[1..12]{id, name, parent?, lens?[0..4], view?, items[0..64]}}; unknown keys refused"
+  migration: "a version 1 or 2 file loads as version 3 and is never set aside for its version: each widget {id, title, spec, x, y, w, h} in grid units (12 columns, rows of 40 px + an 8 px gap) becomes {kind: widget, id, title, spec, x: x*100, y: y*48, w: w*100-8, h: h*48-8} in world px (a column was 100 px on a 1232 px panel); no parent, no view. Done in workspace.rs decode and workspace.ts migrate; the fixture's `migrated` cases pin both"
+  items: "kind widget {id, kind, title, spec, x, y, w, h}; kind heading {id, kind, text, x, y, w, h}; kind frame {id, kind, title, x, y, w, h}: a titled rectangle drawn behind the other items. At most 64 items and 24 widgets a workspace"
+  world: "x, y, w, h are integer world px of the canvas: |x|, |y| <= 100000, w 80..4000, h 32..4000; a drag or an arrow snaps to 8 px"
+  view: "{x, y, zoom}: Svelte Flow's viewport, the screen px of world 0,0 (integers, |x|, |y| <= 1000000) and the zoom 0.1..4; absent is 0, 0, 1"
+  parent: "reserved for nested boards, not drawn yet: names another workspace of the file; no cycle; a chain at most 6 deep, the root counted"
   lens: "thalamus-shell.yml components.dashboard Lens {column, op eq|neq|lt|gt|contains, value, kind?, options?}: the tab's shared filter. Set (non-empty) values join every rows, chart and kpi widget's where when it is sent (workspace.ts lensed), never its saved spec; a form takes the eq values as prefill only. The person edits it in the bar over the tab; a change re-runs the tab (trigger click)"
-  ids: "workspace and widget ids are [A-Za-z0-9_-]{1,64}, unique in the file; a widget id is its wire token; active names a workspace"
+  ids: "workspace and item ids are [A-Za-z0-9_-]{1,64}, unique in the file; a widget id is its wire token; active names a workspace"
   name: "at most 40 chars"
-  title: "at most 120 chars"
-  grid: "x, y, w, h are integer grid units: 12 columns, rows of 40 px; x from 0, w 2..12, x + w <= 12; y 0..400, h 2..40"
-  spec: "exactly one WidgetSpec of thalamus-shell.yml `widget` (rows | chart | form | kpi); two keys or an unknown key refused"
+  title: "a widget's or a frame's title, and a heading's text: at most 120 chars"
+  spec: "a widget's exactly one WidgetSpec of thalamus-shell.yml `widget` (rows | chart | form | kpi); two keys or an unknown key refused; a heading or a frame has none"
   chat: "CSS px of the window (integers; w, h >= 0); clampChat keeps it on screen on load and on resize"
-  face: "integer twelfths map onto face LayoutCellSpec fractions (x/12); the face reuses the format, not the code"
+  face: "v3 broke v2's promise that integer twelfths map onto face LayoutCellSpec fractions: world px have no column. The face is to read v3 itself (roadmap), reusing the format, not the code"
