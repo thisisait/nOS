@@ -6077,7 +6077,7 @@ fn offered(rig: &Rig, n: usize) -> (Vec<String>, String) {
 
 #[test]
 fn face_act_is_offered_only_to_a_session_that_declared_limbs() {
-    let rig = rig("nolimbs", mapped(), ROWS, vec![answer("hi")]);
+    let rig = rig("nolimbs", mapped(), ROWS, vec![answer("hi"), answer("hi"), answer("hi")]);
     let s = connect(&rig.sock);
     let mut r = BufReader::new(s.try_clone().unwrap());
     let got = turn(&s, &mut r, None, "open my tables");
@@ -6088,6 +6088,21 @@ fn face_act_is_offered_only_to_a_session_that_declared_limbs() {
     let (tools, prompt) = offered(&rig, 1);
     assert!(tools.contains(&"face_act".to_string()), "{tools:?}");
     assert!(prompt.contains("face_act") && prompt.contains("desktop.open_app"), "the prompt names the limbs: {prompt}");
+    // D3: the prompt says 24 limbs in full (says cut to 80 chars), names the rest only; the wire still takes 64.
+    let many: Vec<_> = (0..30).map(|i| serde_json::json!({"app": "desktop", "action": format!("a{i:02}"),
+        "params": {"slug": {"type": "string", "required": true}}, "writes": false, "says": format!("s{i:02}{}", "x".repeat(197))})).collect();
+    say(&s, &nos_contract::wire::decode_to_thalamus(&serde_json::json!({"t": "limbs", "limbs": many}).to_string()).unwrap());
+    turn(&s, &mut r, Some(session_of(&got)), "open my tables");
+    let (_, prompt) = offered(&rig, 2);
+    let line = &prompt[prompt.find("The person's face screen declares").unwrap()..];
+    let line = line.split('\n').next().unwrap();
+    for i in 0..30 {
+        assert!(line.contains(&format!("desktop.a{i:02}")), "every limb is named: a{i:02} in {line}");
+        assert_eq!(line.contains(&format!("s{i:02}x")), i < 24, "a{i:02} said in full only below 24: {line}");
+    }
+    assert!(!line.contains(&"x".repeat(78)), "a says is cut to 80 chars: {line}");
+    // 24 × (80 says + ~40 name and params) + 6 bare names + the lead: ~2.9K; 200-char says uncut would be ~5.8K.
+    assert!(line.len() < 3_600, "the limb text stays small for a 9b model: {} chars", line.len());
 }
 
 #[test]
