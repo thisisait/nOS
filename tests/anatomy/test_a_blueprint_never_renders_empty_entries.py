@@ -139,6 +139,10 @@ POPULATED_CONTEXT = dict(
                               "client_secret": "sec", "scopes": ["read"]}],
     authentik_agent_scopes=[{"name": "read", "scope_name": "nos.read",
                              "description": "read", "expression": "return {}"}],
+    # 05-synthetic-identities: the personas, apart from 00 since 2026-10-18.
+    nos_test_users_enabled=True,
+    nos_synthetic_identities=[{"name": "alice", "email": "alice@x", "tier": 1, "password_var": "pw_alice"}],
+    lookup=lambda kind, name: "pw",
 )
 
 

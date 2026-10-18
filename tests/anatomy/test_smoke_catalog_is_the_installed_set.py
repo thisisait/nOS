@@ -34,6 +34,9 @@ def stale_home(tmp_path, monkeypatch):
     (tmp_path / ".nos").mkdir()
     (tmp_path / ".nos/smoke-catalog.runtime.yml").write_text(yaml.safe_dump(STALE))
     monkeypatch.setenv("HOME", str(tmp_path))
+    # Hermetic: nos-smoke reads the main checkout's config.yml, so the
+    # operator's own toggles would leak into this gate.
+    monkeypatch.setattr(smoke, "operator_file", lambda name: tmp_path / name)
     return tmp_path
 
 

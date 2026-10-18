@@ -75,12 +75,16 @@ _Loader.add_constructor("!Find", lambda ld, n: ("Find", ld.construct_sequence(n,
 
 
 def _render_users(on: bool, tmp: Path, confirmed: bool = False, retire: bool = False) -> dict:
-    """Run the loader's own render_dir for authentik-base, read 00 back."""
+    """Run the loader's own render_dir for authentik-base, read 00 (the people)
+    and 05 (the personas, apart since 2026-10-18) back."""
     plugin = lp.Plugin.from_manifest_file(PLUGIN / "plugin.yml")
     note = lp._run_actions(plugin, "pre_compose", [{"render_dir": "provisioning.blueprints"}], _ctx(on, tmp, confirmed, retire))
     assert "rendered" in note, note
-    doc = yaml.load((tmp / "infra/authentik/blueprints/00-admin-groups.yaml").read_text(), _Loader)
-    return {e["identifiers"]["username"]: e for e in doc["entries"] if e["model"] == "authentik_core.user"}
+    out = {}
+    for f in ("00-admin-groups.yaml", "05-synthetic-identities.yaml"):
+        doc = yaml.load((tmp / "infra/authentik/blueprints" / f).read_text(), _Loader)
+        out.update({e["identifiers"]["username"]: e for e in doc["entries"] if e["model"] == "authentik_core.user"})
+    return out
 
 
 def test_the_defaults_declare_no_synthetic_identity():
