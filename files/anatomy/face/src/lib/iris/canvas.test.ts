@@ -147,4 +147,51 @@ describe('a workspace is a canvas', () => {
 		expect(viewport()).toEqual({ x: -80, y: -50, zoom: 1.2 });
 		expect(button('zoom to 100%').textContent?.trim()).toBe('120%');
 	});
+
+	it('is driven by keys alone: Tab in reading order, arrows move, + and f zoom, a heading lands at the centre', async () => {
+		// The items stored out of reading order: the tab order is still top-left first.
+		const shuffled = structuredClone(v2) as unknown as { workspaces: { widgets: unknown[] }[] };
+		shuffled.workspaces[0].widgets.reverse();
+		await open(shuffled as unknown as Layout);
+		// happy-dom does not move focus on Tab: the tab order is the DOM order of the focusable nodes.
+		const order = [...document.querySelectorAll<HTMLElement>('.svelte-flow__node')]
+			.filter((n) => n.tabIndex >= 0)
+			.map((n) => n.dataset.id);
+		expect(order, 'Tab walks top-left first').toEqual(['w1', 'w2', 'w3']);
+
+		const w1 = node('w1')!;
+		w1.focus();
+		const press = (key: string) =>
+			w1.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+		press('ArrowRight');
+		press('ArrowDown');
+		flushSync();
+		expect(at('w1')).toBe('translate(8px, 8px)');
+
+		press('+');
+		await wait();
+		expect(button('zoom to 100%').textContent?.trim()).toBe('120%');
+		press('0');
+		await wait();
+		expect(button('zoom to 100%').textContent?.trim()).toBe('100%');
+		press('-');
+		await wait();
+		expect(button('zoom to 100%').textContent?.trim()).toBe('83%');
+		// happy-dom lays nothing out, so Svelte Flow's fit (button or key) never resolves here:
+		// what is pinned is that the canvas takes f, as it takes + - 0, and not the page.
+		expect(press('f'), 'the canvas took f').toBe(false);
+
+		button('+ heading').click();
+		flushSync();
+		const id = document.querySelector<HTMLElement>('.svelte-flow__node[aria-label^="heading"]')!
+			.dataset.id!;
+		// The window is 1200 x 800: its centre in world px, the 400 x 48 heading centred on it.
+		const v = viewport();
+		const snap = (n: number) => Math.round(n / 8) * 8;
+		const x = snap((600 - v.x) / v.zoom - 200),
+			y = snap((400 - v.y) / v.zoom - 24);
+		expect(at(id), 'the new heading sits at the centre of the view').toBe(
+			`translate(${x}px, ${y}px)`
+		);
+	});
 });
