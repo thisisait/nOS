@@ -773,11 +773,11 @@ fn tool_ids(rig: &Rig, n: usize) -> Vec<String> {
         .map(|m| m["tool_call_id"].as_str().unwrap_or("").to_string()).collect()
 }
 
-/// A turn ends at Text or Refused; a refused offer is said mid-turn and the model answers after it.
+/// A turn ends at Text or Refused; a refused render is said mid-turn and the model answers after it.
 fn ends(m: &ToShell) -> bool {
     match m {
         ToShell::Text { .. } => true,
-        ToShell::Refused { reason, .. } => !reason.starts_with("offer_dashboard: "),
+        ToShell::Refused { reason, .. } => !reason.starts_with("offer_dashboard: ") && !reason.starts_with("show: "),
         _ => false,
     }
 }
@@ -1562,11 +1562,14 @@ fn show_renders_a_valid_component_and_refuses_an_invalid_one() {
     let mut r = BufReader::new(s.try_clone().unwrap());
     let got = turn(&s, &mut r, None, "list the steps");
     assert_eq!(drawn_kinds(&got), ["list"], "only the valid component is drawn: {got:?}");
-    assert!(!got.iter().any(|m| matches!(m, ToShell::Refused { .. })), "a refused show is the model's to hear, not a refusal line");
+    // Operator 2026-10-18: a refusal is shown too (transparency); the model still hears it and may retry.
+    let said: Vec<&str> = got.iter().filter_map(|m| match m { ToShell::Refused { reason, .. } => Some(reason.as_str()), _ => None }).collect();
     assert_eq!(tool_result(&rig, 1), serde_json::json!({"shown": "list"}));
+    assert_eq!(said.len(), bad.len(), "each refused show is said to the person: {said:?}");
     for (i, (_, want)) in bad.iter().enumerate() {
         let e = tool_result(&rig, i + 2);
         assert!(e["error"].as_str().is_some_and(|e| e.contains(want)), "show #{} must be refused naming {want}: {e}", i + 2);
+        assert!(said[i].starts_with("show: ") && said[i].contains(want.as_str()), "the person sees why show #{} was refused: {}", i + 2, said[i]);
     }
     assert!(rig.keap.lock().unwrap().is_empty(), "show read KEAP");
 }
