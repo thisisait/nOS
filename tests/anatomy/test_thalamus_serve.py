@@ -25,6 +25,16 @@ def test_one_identity_map_one_renderer():
     assert not list(CRATE.rglob("*identity-map*")), "a second map drifts from the receptor's"
 
 
+def test_the_relay_door_is_gated_in_the_serve_lane():
+    """Row thalamus-web-relay: the face's door is pinned by name in the lane test_the_daemon_runs runs."""
+    src = (CRATE / "tests/serve.rs").read_text()
+    for name in ("the_relay_refuses_no_hello_or_a_wrong_secret", "the_relay_refuses_a_person_it_cannot_name_by_name",
+                 "a_relay_person_acts_only_as_themselves_and_the_secret_goes_nowhere",
+                 "a_relay_decision_is_the_persons_and_an_unlisted_socket_peer_still_is_not",
+                 "a_second_tab_takes_the_persons_session_over", "an_empty_relay_secret_binds_no_door"):
+        assert f"fn {name}()" in src, name
+
+
 @pytest.mark.skipif(not shutil.which("cargo"), reason="cargo runs the daemon")
 def test_the_daemon_runs():
     r = subprocess.run(["cargo", "test", "--quiet", "--manifest-path", str(CRATE / "Cargo.toml"),

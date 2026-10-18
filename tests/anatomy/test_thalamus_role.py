@@ -470,3 +470,75 @@ def test_a_sign_that_cannot_reach_the_key_says_the_one_command(tmp_path):
 def test_the_local_temperature_is_a_config_knob_in_the_plist():
     assert _default_config()["iris_local_temperature"] == 0.3
     assert _plist(iris_local_temperature=0.1)["EnvironmentVariables"]["NOS_LOCAL_TEMPERATURE"] == "0.1"
+
+
+# --- row thalamus-web-relay: the optic nerve, the face's loopback door into serve ---
+
+def test_the_relay_door_is_rendered_only_beside_the_face():
+    """Empty secret = no listener (src/main.rs): a host without the face renders no secret and no port."""
+    for face in (False, True):
+        p = _plist(install_face=face, thalamus_relay_secret="relay-s3cret", thalamus_relay_port=8097)
+        env = p["EnvironmentVariables"]
+        assert "relay-s3cret" not in " ".join(p["ProgramArguments"])
+        if face:
+            assert env["THALAMUS_RELAY_SECRET"] == "relay-s3cret" and env["THALAMUS_RELAY_PORT"] == "8097"
+        else:
+            assert "THALAMUS_RELAY_SECRET" not in env and "THALAMUS_RELAY_PORT" not in env, env
+    main = (REPO / "files/anatomy/thalamus/thalamus/src/main.rs").read_text()
+    assert 'remove_var("THALAMUS_RELAY_SECRET")' in main, "serve does not drop the secret it read"
+
+
+def test_the_relay_secret_is_derived_and_its_port_is_nobody_elses():
+    creds = yaml.safe_load((REPO / "default.credentials.yml").read_text())
+    assert creds["thalamus_relay_secret"] == "{{ nos_derived_secrets.thalamus_relay }}"
+    registry = yaml.safe_load((REPO / "files/anatomy/secrets/registry.yml").read_text())["credentials"]
+    assert registry["thalamus_relay"] == {"service": "thalamus", "purpose": "relay-secret"}
+    cfg = _default_config()
+    port = cfg["thalamus_relay_port"]
+    assert isinstance(port, int) and 1024 < port < 65536
+    ports = {k: v for k, v in cfg.items() if k.endswith("_port") and k != "thalamus_relay_port"}
+    for d in REPO.glob("roles/*/defaults/main.yml"):
+        ports.update({f"{d.parts[-3]}:{k}": v for k, v in (yaml.safe_load(d.read_text()) or {}).items() if k.endswith("_port")})
+    assert port not in ports.values(), [k for k, v in ports.items() if v == port]
+
+
+def _face_env(**over) -> dict:
+    from test_docker_sock_only_behind_proxy import _env, _vars
+    text = (REPO / "roles/pazny.face/templates/compose.yml.j2").read_text()
+    doc = yaml.safe_load(_env().from_string(text).render(**{**_vars("Darwin"), **over}))
+    return doc["services"]["face"]["environment"]
+
+
+def test_the_face_gets_the_relay_address_and_secret_only_with_the_thalamus():
+    on = _face_env(install_thalamus=True, thalamus_relay_secret="relay-s3cret", thalamus_relay_port=8097)
+    assert on["THALAMUS_RELAY_SECRET"] == "relay-s3cret"
+    assert on["NOS_THALAMUS_RELAY_ADDR"] == "host.docker.internal:8097"
+    off = _face_env(install_thalamus=False, thalamus_relay_secret="relay-s3cret", thalamus_relay_port=8097)
+    assert "relay-s3cret" not in json.dumps(off) and "NOS_THALAMUS_RELAY_ADDR" not in off, off
+
+
+def test_the_reader_says_the_relay_is_bound_exactly_when_the_secret_is_set():
+    r = _reader()
+    with tempfile.TemporaryDirectory() as d:
+        log, plist = pathlib.Path(d) / "launchd.err.log", pathlib.Path(d) / "t.plist"
+        assert r.judge_relay(log, plist)["state"] == "UNKNOWN"                   # nothing to read
+        plist.write_bytes(plistlib.dumps(_plist(install_face=False)))
+        assert r.judge_relay(log, plist)["state"] == "UNKNOWN"                   # no start line
+        log.write_text("thalamus: relay closed (no THALAMUS_RELAY_SECRET)\n")
+        assert r.judge_relay(log, plist)["state"] == "OK"
+        with socket.socket() as s:
+            s.bind(("127.0.0.1", 0))
+            s.listen(1)
+            port = s.getsockname()[1]
+            log.write_text(f"thalamus: relay bound 127.0.0.1:{port}\n")
+            assert r.judge_relay(log, plist)["state"] == "RED", "bound with no secret in the plist"
+            plist.write_bytes(plistlib.dumps(_plist(install_face=True, thalamus_relay_secret="relay-s3cret",
+                                                    thalamus_relay_port=port)))
+            got = r.judge_relay(log, plist)
+            assert got["state"] == "OK" and "relay-s3cret" not in json.dumps(got), got
+        assert r.judge_relay(log, plist)["state"] == "RED", "nobody accepts on the bound port"
+        log.write_text("thalamus: relay closed (no THALAMUS_RELAY_SECRET)\n")
+        assert r.judge_relay(log, plist)["state"] == "RED", "a set secret and a closed door"
+        log.write_text("thalamus: relay FAILED 127.0.0.1:1: Address already in use\n")
+        assert r.judge_relay(log, plist)["state"] == "RED"
+    assert "judge_relay(" in inspect.getsource(r.collect), "the reader never reports the relay line"

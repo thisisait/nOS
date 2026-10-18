@@ -197,13 +197,13 @@ fn connect(sock: &std::path::Path) -> UnixStream {
 }
 
 /// The next message, activity included.
-fn raw(r: &mut BufReader<UnixStream>) -> Option<ToShell> {
+fn raw(r: &mut impl BufRead) -> Option<ToShell> {
     let mut line = String::new();
     (r.read_line(&mut line).unwrap() > 0).then(|| decode_to_shell(&line))
 }
 
 /// The next message the conversation is made of; activity is the eye's, not the log's.
-fn next(r: &mut BufReader<UnixStream>) -> Option<ToShell> {
+fn next(r: &mut impl BufRead) -> Option<ToShell> {
     loop {
         match raw(r) {
             Some(ToShell::Activity { .. }) => continue,
@@ -5773,4 +5773,205 @@ fn a_resumed_outside_write_keeps_its_scope_and_asks_once_more() {
     decide(&s, &second, Decision::Approve);
     until_said(&mut r);
     assert_eq!(writes(&rig), 1, "the second approve writes");
+}
+
+// --- row thalamus-web-relay: the optic nerve, the face's loopback door (D1-D3, 2026-10-18) ---
+
+const RELAY: &str = "relay-hop-secret-a91c";
+
+/// The relay door over the rig's server, on a free loopback port.
+fn relay(rig: &Rig) -> std::net::SocketAddr {
+    let l = thalamus::relay::bind(RELAY, 0).unwrap().expect("a set secret binds the door");
+    let addr = l.local_addr().unwrap();
+    assert!(addr.ip().is_loopback(), "the relay binds {addr}, not loopback");
+    let door = Arc::new(thalamus::relay::Relay::new(rig.srv.clone(), RELAY.into()));
+    std::thread::spawn(move || thalamus::relay::run(l, door));
+    addr
+}
+
+/// The face's hello for (uid, username) in `tab`; it claims tier 1, which only the map can grant.
+fn hello(uid: &str, username: &str, tab: &str) -> String {
+    format!("{}\n", serde_json::json!({"relay": "face", "secret": RELAY, "uid": uid, "username": username,
+                                       "groups": ["nos-admins"], "tab": tab}))
+}
+
+/// A tab: a TCP connection that sent `first` (a hello, or not).
+fn tab(addr: std::net::SocketAddr, first: &str) -> (std::net::TcpStream, BufReader<std::net::TcpStream>) {
+    let s = std::net::TcpStream::connect(addr).unwrap();
+    s.set_read_timeout(Some(std::time::Duration::from_secs(10))).unwrap();
+    (&s).write_all(first.as_bytes()).unwrap();
+    let r = BufReader::new(s.try_clone().unwrap());
+    (s, r)
+}
+
+fn session_count(ledger: &std::path::Path) -> i64 {
+    rusqlite::Connection::open(ledger).unwrap().query_row("SELECT count(*) FROM sessions", [], |r| r.get(0)).unwrap()
+}
+
+/// A refused tab: one Refused, then the door closes; returns the reason.
+fn refused(addr: std::net::SocketAddr, first: &str) -> String {
+    let (s, mut r) = tab(addr, first);
+    // What a client sends after a refused hello is never read as the wire.
+    let _ = (&s).write_all(encode(&ToThalamus::Turn { session: None, text: "hi".into() }).as_bytes());
+    let reason = match next(&mut r) {
+        Some(ToShell::Refused { reason, .. }) => reason,
+        other => panic!("{first:?} must be refused, got {other:?}"),
+    };
+    assert!(next(&mut r).is_none(), "{first:?}: the refused tab is closed");
+    reason
+}
+
+/// T1: no hello, a wrong secret or anything that is not exactly the hello is refused; nothing opens.
+#[test]
+fn the_relay_refuses_no_hello_or_a_wrong_secret() {
+    let rig = rig("relayhello", mapped(), ROWS, vec![answer("never")]);
+    let addr = relay(&rig);
+    let good = serde_json::json!({"relay": "face", "secret": RELAY, "uid": "alice-smith", "username": "Alice Smith",
+                                  "groups": [], "tab": "t1"});
+    let with = |k: &str, v: serde_json::Value| {
+        let mut h = good.clone();
+        h[k] = v;
+        format!("{h}\n")
+    };
+    let mut extra = good.clone();
+    extra["actor"] = serde_json::json!("user:akadmin");
+    let mut short = good.clone();
+    short.as_object_mut().unwrap().remove("tab");
+    for first in [encode(&ToThalamus::Turn { session: None, text: "hi".into() }), "not json\n".into(), "\n".into(),
+                  with("secret", serde_json::json!("relay-hop-secret-a91d")), with("secret", serde_json::json!("")),
+                  with("secret", serde_json::json!(RELAY.to_uppercase())), with("relay", serde_json::json!("wing")),
+                  format!("{extra}\n"), format!("{short}\n"), with("tab", serde_json::json!("t1\nconnected akadmin"))] {
+        let reason = refused(addr, &first);
+        assert!(!reason.contains(RELAY), "the refusal said the secret: {reason}");
+    }
+    // A tab that never says hello is closed, not held.
+    drop(std::net::TcpStream::connect(addr).unwrap());
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    assert_eq!(session_count(&rig.ledger), 0, "a refused hello opened a session");
+    assert!(rig.keap.lock().unwrap().is_empty() && rig.model.lock().unwrap().is_empty(), "a refused hello reached KEAP or the model");
+    let log = String::from_utf8(rig.log.0.lock().unwrap().clone()).unwrap();
+    assert!(log.contains("refused a relay hello"), "{log}");
+    assert!(!log.contains(RELAY) && !log.contains("\nconnected akadmin"), "{log}");
+}
+
+/// T2: the right secret, but a person the thalamus cannot name, is refused by name.
+#[test]
+fn the_relay_refuses_a_person_it_cannot_name_by_name() {
+    let map = serde_json::json!({"logins": {me(): {"username": "Alice Smith", "groups": ["nos-users"]},
+                                            "bob-login": {"username": "bob", "groups": ["nos-users"]}}});
+    let rig = rig("relaywho", map, ROWS, vec![answer("never")]);
+    let addr = relay(&rig);
+    for (first, says) in [(hello("Alice-Smith", "Alice Smith", "t1"), "not canonical"),
+                          (hello("", "", "t1"), "not canonical"),
+                          (hello("carol", "carol", "t1"), "carol is not in the identity map"),
+                          (hello("alice-smith", "bob", "t1"), "does not fold to alice-smith"),
+                          (hello("bob", "Alice Smith", "t1"), "does not fold to bob")] {
+        let reason = refused(addr, &first);
+        assert!(reason.contains(says), "{first:?}: {reason:?} does not say {says:?}");
+    }
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    assert_eq!(session_count(&rig.ledger), 0);
+    let log = String::from_utf8(rig.log.0.lock().unwrap().clone()).unwrap();
+    assert!(log.contains("carol is not in the identity map"), "{log}");
+}
+
+/// T3 + T7: a mapped person over the relay acts only as themselves, with the map's groups, and the
+/// relay secret reaches no log, ledger, KEAP or model.
+#[test]
+fn a_relay_person_acts_only_as_themselves_and_the_secret_goes_nowhere() {
+    let rig = rig_n("relayas", mapped(), shown_then(&[]), vec![query(r#"{"table": "todos", "q": "ALPHA"}"#), answer("Found one.")]);
+    let addr = relay(&rig);
+    let (s, mut r) = tab(addr, &hello("alice-smith", "Alice Smith", "tab-7f"));
+    (&s).write_all(encode(&ToThalamus::Turn { session: None, text: "find alpha".into() }).as_bytes()).unwrap();
+    let session = match next(&mut r) {
+        Some(ToShell::Session { session, actor, .. }) => {
+            assert_eq!(actor, "user:alice-smith");
+            session
+        }
+        other => panic!("expected Session, got {other:?}"),
+    };
+    assert!(matches!(next(&mut r), Some(ToShell::Render { component: Component::TableResults(_), .. })));
+    assert!(matches!(next(&mut r), Some(ToShell::Text { text, .. }) if text == "Found one."));
+    drop((s, r));
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    let keap = rig.keap.lock().unwrap().clone();
+    assert_eq!(keap.len(), 2);
+    for (head, body) in &keap {
+        let head = head.to_ascii_lowercase();
+        assert!(head.contains("x-authentik-uid: alice-smith") && head.contains("x-authentik-username: alice smith"), "{head}");
+        assert!(head.contains("x-authentik-groups: nos-users\r\n"), "the hello's groups reached KEAP:\n{head}");
+        assert!(!head.contains(&RELAY.to_ascii_lowercase()) && !body.contains(RELAY), "KEAP saw the relay secret");
+    }
+    assert!(rig.model.lock().unwrap().iter().all(|(h, b)| !h.contains(RELAY) && !b.contains(RELAY)), "the model saw the relay secret");
+    let log = String::from_utf8(rig.log.0.lock().unwrap().clone()).unwrap();
+    assert!(log.contains("connected alice-smith via face tab tab-7f"), "{log}");
+    assert!(log.contains("nos-admins"), "the hello's groups are logged beside: {log}");
+    assert!(!log.contains(RELAY), "the relay secret reached the log");
+    let db = rusqlite::Connection::open(&rig.ledger).unwrap();
+    let rows: Vec<String> = db.prepare("SELECT COALESCE(task, '') || COALESCE(result_json, '') FROM events").unwrap()
+        .query_map([], |x| x.get(0)).unwrap().map(Result::unwrap).collect();
+    assert!(!rows.is_empty() && rows.iter().all(|x| !x.contains(RELAY)), "the relay secret reached the ledger");
+    assert_eq!(db.query_row("SELECT actor_id FROM sessions WHERE uuid = ?1", [&session], |x| x.get::<_, String>(0)).unwrap(),
+               "user:alice-smith");
+}
+
+/// Decider proof: with a decider list that admits no socket peer, a relay tab's approval is the
+/// person's and is ledgered with peer.via face, while the socket peer is still refused.
+#[test]
+fn a_relay_decision_is_the_persons_and_an_unlisted_socket_peer_still_is_not() {
+    let link = decider_link("relaydecide");
+    let keap = [SCHEMA, ROWS, ROWS, SCHEMA, ROWS, ROWS, ROWS, POSTED].map(String::from).to_vec();
+    let model = [edit_turn(), edit_turn()].concat();
+    let rig = rig_deciders("relaydecide", mapped(), fake(keap), model, Some(local()), vec![link]);
+    let (s, mut r, _, approval, _) = propose(&rig);
+    decide(&s, &approval, Decision::Approve);
+    assert!(matches!(next(&mut r), Some(ToShell::Refused { reason, .. }) if reason.contains("decider")), "the socket peer decided");
+    assert!(posts(&rig).is_empty());
+    drop((s, r));
+
+    let addr = relay(&rig);
+    let (s, mut r) = tab(addr, &hello("alice-smith", "Alice Smith", "t1"));
+    (&s).write_all(encode(&ToThalamus::Turn { session: None, text: "close alpha".into() }).as_bytes()).unwrap();
+    let Some(ToShell::Session { session, .. }) = next(&mut r) else { panic!("no session") };
+    assert!(matches!(next(&mut r), Some(ToShell::Render { .. })));
+    let Some(ToShell::ApprovalRequest { approval, .. }) = next(&mut r) else { panic!("no card") };
+    assert!(matches!(next(&mut r), Some(ToShell::Text { .. })));
+    (&s).write_all(encode(&ToThalamus::ApprovalDecision { approval, decision: Decision::Approve, note: None }).as_bytes()).unwrap();
+    assert!(matches!(next(&mut r), Some(ToShell::TableChanged { ref row, .. }) if row == "r1"), "the relay's approval was refused");
+    assert!(matches!(next(&mut r), Some(ToShell::Text { ref text, .. }) if text.contains("row r1 written")));
+    assert_eq!(posts(&rig).len(), 1);
+    drop((s, r));
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    let decided: Vec<_> = events(&rig.ledger, &session).into_iter().filter(|e| e.0 == "agent_approval_decision").map(|e| e.2).collect();
+    assert_eq!(decided.len(), 1, "{decided:?}");
+    assert_eq!(decided[0]["peer"], serde_json::json!({"via": "face", "tab": "t1", "uid": "alice-smith"}));
+}
+
+/// T9 (D3): a second tab for the same person takes the session over; the first is told and closed.
+#[test]
+fn a_second_tab_takes_the_persons_session_over() {
+    let rig = rig("relaytabs", mapped(), ROWS, vec![answer("hi")]);
+    let addr = relay(&rig);
+    let (s1, mut r1) = tab(addr, &hello("alice-smith", "Alice Smith", "t1"));
+    (&s1).write_all(encode(&ToThalamus::Turn { session: None, text: "hi".into() }).as_bytes()).unwrap();
+    let Some(ToShell::Session { session: first, .. }) = next(&mut r1) else { panic!("no session") };
+    assert!(matches!(next(&mut r1), Some(ToShell::Text { .. })));
+    let (s2, mut r2) = tab(addr, &hello("alice-smith", "Alice Smith", "t2"));
+    match next(&mut r1) {
+        Some(ToShell::Refused { reason, .. }) => assert_eq!(reason, "opened in another tab"),
+        other => panic!("the older tab was not told, got {other:?}"),
+    }
+    assert!(next(&mut r1).is_none(), "the older tab stays open");
+    (&s2).write_all(encode(&ToThalamus::Resume).as_bytes()).unwrap();
+    match next(&mut r2) {
+        Some(ToShell::Session { session, .. }) => assert_eq!(session, first, "the newer tab did not take the session over"),
+        other => panic!("expected Session, got {other:?}"),
+    }
+    drop((s1, s2));
+}
+
+/// T10: an empty secret binds nothing, so a host without the face has no port.
+#[test]
+fn an_empty_relay_secret_binds_no_door() {
+    assert!(thalamus::relay::bind("", 0).unwrap().is_none());
 }
