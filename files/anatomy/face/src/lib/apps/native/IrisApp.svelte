@@ -7,6 +7,7 @@
 	import Iris from '$lib/iris/Iris.svelte';
 	import type { Transport } from '$lib/iris/transport';
 	import { webTransport } from '$lib/iris/transport.web';
+	import { declaredLimbs, dispatch } from '$lib/limbs/dispatch';
 
 	let { transport = webTransport() }: { transport?: Transport & { close?(): void } } = $props();
 	onDestroy(() => transport.close?.());
@@ -14,7 +15,7 @@
 
 <!-- contain: the floating chat is position: fixed; here it floats in this window, not the desktop. -->
 <div class="iris">
-	<Iris {transport} />
+	<Iris {transport} limbs={declaredLimbs} act={dispatch} />
 </div>
 
 <style>

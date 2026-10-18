@@ -41,7 +41,8 @@ describe('IrisApp', () => {
 		const fake = fakeTransport();
 		const app = mount(IrisApp, { target: document.body, props: { transport: fake.transport } });
 		await settle();
-		const limbs = fake.sent.find((m) => m.t === 'limbs') as { limbs: { app: string; action: string }[] } | undefined;
+		const limbs = fake.sent.find((m) => m.t === 'limbs') as
+			{ limbs: { app: string; action: string }[] } | undefined;
 		expect(limbs?.limbs.some((l) => l.app === 'desktop' && l.action === 'open_app')).toBe(true);
 		unmount(app);
 	});
