@@ -1,4 +1,4 @@
-"""Code copied into pupil keeps its upstream MIT notice whole.
+"""Code copied into Iris (pupil + face) keeps its upstream MIT notice whole.
 
 MIT allows reuse only if the permission notice ships in full; a header cut after
 "EXPRESS OR IMPLIED." drops the liability limitation (layout.ts, 8984916a).
@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-COPIED = [ROOT / "files/anatomy/pupil/src/sequence/layout.ts"]
+COPIED = [ROOT / "files/anatomy/face/src/lib/iris/sequence/layout.ts"]
 
 MIT_TAIL = (
     'THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, '

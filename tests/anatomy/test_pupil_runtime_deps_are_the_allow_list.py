@@ -21,7 +21,8 @@ import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 PUPIL = REPO / "files/anatomy/pupil"
-FACE = REPO / "files/anatomy/face/src"  # vite.config.ts `$face`; `$ui` is its lib/components/ui
+FACE = REPO / "files/anatomy/face/src"  # vite.config.ts `$face`; `$lib` is its lib, `$iris` lib/iris
+BORROWED = ("$face/", "$lib/", "$iris/")
 CI = REPO / ".github/workflows/ci.yml"
 #: the toolchain's native binaries; both are devDependencies (lock `dev: true`)
 INSTALL_SCRIPTS_OK = {"esbuild", "fsevents"}
@@ -56,8 +57,10 @@ def _specifiers(text: str) -> list[str]:
 def _resolve(spec: str, here: pathlib.Path) -> pathlib.Path | None:
     if spec.startswith("."):
         base = here.parent / spec
-    elif spec.startswith("$ui/"):
-        base = FACE / "lib/components/ui" / spec[4:]
+    elif spec.startswith("$lib/"):
+        base = FACE / "lib" / spec[5:]
+    elif spec.startswith("$iris/"):
+        base = FACE / "lib/iris" / spec[6:]
     elif spec.startswith("$face/"):
         base = FACE / spec[6:]
     else:
@@ -77,7 +80,7 @@ def _bare_imports() -> dict[str, set[str]]:
             continue
         seen.add(f)
         for spec in _specifiers(f.read_text(encoding="utf-8")):
-            if spec.startswith((".", "$ui/", "$face/")):
+            if spec.startswith((".", *BORROWED)):
                 if (hit := _resolve(spec, f)) is not None:
                     todo.append(hit)
             bare.setdefault(spec, set()).add(str(f.relative_to(REPO)))
@@ -85,7 +88,7 @@ def _bare_imports() -> dict[str, set[str]]:
 
 
 def _not_allowed(spec: str) -> bool:
-    return not (spec.startswith((".", "$face/", "$ui/", "svelte/")) or spec == "svelte")
+    return not (spec.startswith((".", *BORROWED, "svelte/")) or spec == "svelte")
 
 
 def test_the_pupil_has_no_runtime_dependencies():
@@ -109,9 +112,9 @@ def test_a_planted_lock_entry_goes_red():
 
 def test_the_shipped_code_imports_only_svelte_and_the_face():
     bare = _bare_imports()
-    assert "svelte" in bare and any(s.startswith("$ui/") for s in bare), f"the import scan saw nothing: {sorted(bare)}"
+    assert "svelte" in bare and any(s.startswith("$lib/components/ui/") for s in bare), f"the import scan saw nothing: {sorted(bare)}"
     bad = {s: sorted(f) for s, f in bare.items() if _not_allowed(s)}
-    assert not bad, f"an import outside svelte, $face/*, $ui/*: {bad}"
+    assert not bad, f"an import outside svelte, $face/*, $lib/*, $iris/*: {bad}"
 
 
 def test_a_planted_import_goes_red():
@@ -128,7 +131,9 @@ def test_ci_installs_the_pupil_without_running_scripts():
 
 
 def test_the_pupil_draws_colour_through_tokens():
-    bad = [f"{p.name}: {m}" for p in sorted((PUPIL / "src").rglob("*.svelte")) if p.name not in FIXED_COLOUR
+    svelte = sorted([*(PUPIL / "src").rglob("*.svelte"), *(FACE / "lib/iris").rglob("*.svelte")])
+    assert any(p.name == "Component.svelte" and p.is_relative_to(FACE) for p in svelte), "the colour scan does not see Iris"
+    bad = [f"{p.name}: {m}" for p in svelte if p.name not in FIXED_COLOUR
            for m in COLOUR.findall(p.read_text(encoding="utf-8"))]
     assert not bad, f"a colour literal (use a var(--…) token, so the dark theme holds): {bad}"
     assert COLOUR.findall('fill="#fff"') and COLOUR.findall("color: rgb(0 0 0)") and not COLOUR.findall("url(#eye-glow)")

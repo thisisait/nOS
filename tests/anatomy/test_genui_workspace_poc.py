@@ -6,7 +6,7 @@ a submit stores a row, and the two readers re-run and answer what KEAP now holds
 with no model call and a ledger that says who read and wrote what. This runs the
 cargo script over the stateful fake (tests/serve.rs genui_workspace_poc), the
 pupil's decode of the PoC layout, and checks poc.test.ts is in the vitest lane
-(test_pupil_and_thalamus_lanes_run.py runs every *.test.ts). genui I5i.
+(test_pupil_and_thalamus_lanes_run.py runs every face and pupil *.test.ts). genui I5i.
 """
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ def test_the_poc_fixture_is_the_expenses_table_and_one_tab():
     assert len(json.loads((POC / "expenses.rows.json").read_text(encoding="utf-8"))) == 3
     layout = json.loads((POC / "workspace.json").read_text(encoding="utf-8"))
     assert [sorted(w["spec"]) for w in layout["workspaces"][0]["widgets"]] == [["rows"], ["chart"], ["form"]]
-    assert (PUPIL / "src/poc.test.ts").is_file()
+    assert (REPO / "files/anatomy/face/src/lib/iris/poc.test.ts").is_file()
 
 
 def _cargo(cwd: pathlib.Path, *args: str) -> str:

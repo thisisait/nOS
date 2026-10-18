@@ -115,7 +115,7 @@ def test_the_source_hash_covers_the_frontend_the_bridge_and_the_contract():
     """Run the hash script on this tree: it must answer, and see the path dep and the lock."""
     sh = _task("hash the pupil source")["ansible.builtin.shell"]
     for part in ("src", "package-lock.json", "src-tauri/src", "src-tauri/Cargo.lock",
-                 "src-tauri/tauri.conf.json", "../thalamus/contract/src"):
+                 "src-tauri/tauri.conf.json", "../thalamus/contract/src", "../face/src/lib/iris"):
         assert f" {part}" in sh, f"{part} can change without a rebuild"
     out = subprocess.run(["/bin/bash", "-c", _render(sh, playbook_dir=str(REPO))],
                          capture_output=True, text=True, check=True).stdout.strip()
@@ -153,9 +153,11 @@ def test_verify_reads_the_installed_binary():
     assert "shasum -a 256 {{ thalamus_pupil_exe | quote }}" in rec and ".sha256" in rec
 
 
-_BORROW = re.compile(r"""(?:from|import)\s+['"](\$face|\$ui|\.{1,2})(/[^'"]*)['"]""")
+_BORROW = re.compile(r"""(?:from|import)\s+['"](\$face|\$lib|\$iris|\.{1,2})(/[^'"]*)['"]""")
+# $lib is the face's own alias (SvelteKit): the files moved into face/src/lib/iris keep it in the pupil.
 _ALIAS = {"$face": REPO / "files" / "anatomy" / "face" / "src",
-          "$ui": REPO / "files" / "anatomy" / "face" / "src" / "lib" / "components" / "ui"}
+          "$lib": REPO / "files" / "anatomy" / "face" / "src" / "lib",
+          "$iris": REPO / "files" / "anatomy" / "face" / "src" / "lib" / "iris"}
 
 
 def _resolve(base: pathlib.Path, rel: str) -> pathlib.Path:
@@ -175,6 +177,7 @@ def test_the_source_hash_covers_what_vite_borrows_from_the_face():
             if f.suffix in {".ts", ".svelte"} and not f.name.endswith(".test.ts")
             for m in _BORROW.finditer(f.read_text()) if m.group(1) in _ALIAS]
     assert todo, "the pupil borrows nothing from the face: drop ../face from this gate"
+    assert any(h == "$iris" for _, h, _ in todo), "the pupil does not mount Iris from face/src/lib/iris"
     while todo:
         f, head, rel = todo.pop()
         hit = _resolve(_ALIAS[head], rel) if head in _ALIAS else _resolve(f.parent, head + rel)

@@ -188,6 +188,11 @@ jobs:
       - name: Install the pupil's JS lane.
         run: npm ci --ignore-scripts --prefix files/anatomy/pupil
 
+      # Iris's components and their vitest live in face/src/lib/iris (the pupil borrows them);
+      # test_pupil_approvals_hold, _eye_reads_the_wire and _renders_the_fixture run them there.
+      - name: Install the face's JS lane.
+        run: npm ci --ignore-scripts --prefix files/anatomy/face
+
       # fastapi: tests/bone_vfs mounts the Bone VFS router on a throwaway app to
       # exercise the containment + filename-hardening gates (nOS-face v0.2).
       # ansible-core comes from the FROZEN pin (tools/ci-freeze.env) rather
