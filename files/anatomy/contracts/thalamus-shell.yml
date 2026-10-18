@@ -2,7 +2,7 @@
 # Protocol: ssot/doctrine/cross-repo-contracts.md §1 (spec + fixture + gates
 # over the same bytes). Both sides link one Rust crate (nos-contract), so the
 # gate is the crate decoding the fixture; one copy only, both sides cite this.
-contract_version: 6   # 6: dashboard, kpi, working_for, model_options, model_pick; 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice, delta, sequence; 5: row_diff_approval op/title/read_from
+contract_version: 7   # 7: workspace_load, workspace_save, workspace, said, replay; 6: dashboard, kpi, working_for, model_options, model_pick; 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice, delta, sequence; 5: row_diff_approval op/title/read_from
 fixture: files/anatomy/contracts/thalamus-shell.fixture.json
 
 producer:
@@ -24,8 +24,8 @@ gates:
 wire:
   framing: "newline-delimited JSON, one message per line, UTF-8"
   tag: "every message is an object whose `t` names its variant (snake_case)"
-  to_thalamus: [turn, approval_decision, control, widget, form_submit, choice_reply, working_for, model_options, model_pick]
-  to_shell: [session, text, render, approval_request, refused, activity, widget, form_result, table_changed, working_for, model_options]
+  to_thalamus: [turn, approval_decision, control, widget, form_submit, choice_reply, working_for, model_options, model_pick, workspace_load, workspace_save]
+  to_shell: [session, text, render, approval_request, refused, activity, widget, form_result, table_changed, working_for, model_options, said, replay, workspace]
   widget: >-
     A widget is a spec the person placed; the pupil re-runs it over `widget {widget, spec, trigger}`
     and the thalamus answers as that person, without the model, with `widget {session, widget,
@@ -95,6 +95,18 @@ wire:
     {from_model_uri, to_model_uri, by person, reason} plus backend, model, processor,
     transfers_outside_eu), rebinds the session from its next turn, whose first answered model request says the
     move once (naming who answered before; nothing if no turn was), and answers `model_options` with the pick current. A refused pick stays agent_tool_result tool:model.
+  workspace: >-
+    The person's workspace document is the thalamus's, per person (the peer's identity, never a field), in
+    <data-dir>/people/<uid>/workspace.json (0600, written whole). `workspace_load` answers `workspace {doc}`,
+    doc null when none is held; `workspace_save {doc}` replaces it with a JSON object of at most 512 KiB and
+    answers nothing, or `refused`. Neither opens a session. The pupil keeps its own file as an offline cache
+    and moves it up once, when the thalamus holds none.
+  replay: >-
+    A connection's first session resumes the person's last one closed by its connection (connection_closed):
+    the same `session` uuid, then `replay {session, log, open}`: that session's chat oldest first (said, text,
+    render, approval_request, refused; at most 200 lines), and `open` the approvals and choices still
+    waiting, each decided or answered once, as before. `said {session, text}` is the person's own turn.
+    Another person resumes and reads none of it.
   phase: [thinking, tool, writing, idle]   # activity.phase; tool is {tool: {name}}
   decision: [approve, reject]
   control_view: [inbox, approvals, red_status]
