@@ -5753,3 +5753,24 @@ fn an_approval_left_open_survives_reconnect_and_is_decided_once() {
     assert!(open.is_empty(), "a decided card is not open again: {open:?}");
     assert!(log.iter().any(|m| matches!(m, ToShell::Said { text, .. } if text == "approve")), "the decision is in the chat: {log:?}");
 }
+
+/// D2 §4.3 across a restart: the resumed session works for whom the person set, and an outside row's
+/// card left open still asks once more before anything is written.
+#[test]
+fn a_resumed_outside_write_keeps_its_scope_and_asks_once_more() {
+    let (rig, s, r, got) = septum_write("septresume", ("propose_row_insert", r#"{"table": "invoice", "values": {"number": "B-2", "book_owner": "bolt"}}"#));
+    let (first, _) = card_of(&got).unwrap_or_else(|| panic!("no card: {got:?}"));
+    gone(s, r);
+    let (s, mut r, got) = reopen(&rig);
+    assert!(got.iter().any(|m| matches!(m, ToShell::WorkingFor { scope: Scope::Client(c), .. } if c == "acme")), "the scope is set again: {got:?}");
+    assert_eq!(replay_of(&got).map(|(_, open)| open), Some(vec![first.clone()]));
+    let writes = |rig: &Rig| rig.keap.lock().unwrap().iter().filter(|(h, _)| h.starts_with("POST ") && h.contains("/api/tables/invoice/rows")).count();
+    decide(&s, &first, Decision::Approve);
+    let again = until_said_all(&mut r);
+    let (second, d2) = card_of(&again).unwrap_or_else(|| panic!("a resumed outside write was not asked once more: {again:?}"));
+    assert!(d2.title.contains("once more"), "{}", d2.title);
+    assert_eq!(writes(&rig), 0, "written on the first approve after a resume");
+    decide(&s, &second, Decision::Approve);
+    until_said(&mut r);
+    assert_eq!(writes(&rig), 1, "the second approve writes");
+}
