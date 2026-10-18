@@ -37,6 +37,15 @@ describe('IrisApp', () => {
 		expect(closed).toBe(1);
 	});
 
+	it('declares the face limbs, so Iris may drive the desktop', async () => {
+		const fake = fakeTransport();
+		const app = mount(IrisApp, { target: document.body, props: { transport: fake.transport } });
+		await settle();
+		const limbs = fake.sent.find((m) => m.t === 'limbs') as { limbs: { app: string; action: string }[] } | undefined;
+		expect(limbs?.limbs.some((l) => l.app === 'desktop' && l.action === 'open_app')).toBe(true);
+		unmount(app);
+	});
+
 	it('is registered as a view with its own state namespace', () => {
 		registerBuiltinNativeApps();
 		const iris = faceApps().find((a) => a.slug === 'iris');
