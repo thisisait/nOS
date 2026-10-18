@@ -3364,8 +3364,8 @@ fn a_decision_sent_by_an_unlisted_process_on_a_listed_connection_is_refused() {
 // --- live 2026-10-14 on a client: Iris said she had no tool to list tables ---
 
 const TABLES: &str = r#"{"success": true, "data": [
-    {"id": "dd74acfd", "title": "expenses", "visibility": "private"},
-    {"id": "rt-1", "title": "nOS Roadmap", "visibility": "shared"}]}"#;
+    {"id": "dd74acfd", "title": "expenses", "visibility": "private", "rowCount": 12, "updatedAt": 1760745600},
+    {"id": "rt-1", "title": "nOS Roadmap", "visibility": "shared", "rowCount": 0, "updatedAt": 1760745600000}]}"#;
 
 #[test]
 fn list_tables_names_the_tables_the_person_can_read() {
@@ -3374,8 +3374,11 @@ fn list_tables_names_the_tables_the_person_can_read() {
     let mut r = BufReader::new(s.try_clone().unwrap());
     let got = turn(&s, &mut r, None, "jaké mám tabulky?");
     let t = tool_result(&rig, 1);
-    assert_eq!(t["tables"], serde_json::json!([{"id": "dd74acfd", "title": "expenses"}, {"id": "rt-1", "title": "nOS Roadmap"}]), "{t}");
-    assert!(got.iter().any(|m| matches!(m, ToShell::Render { component: Component::Table(x), .. } if x.rows.len() == 2)), "{got:?}");
+    // live 2026-10-18: "every table with its row count" had no count to answer from; updatedAt may be s or ms.
+    assert_eq!(t["tables"], serde_json::json!([{"id": "dd74acfd", "title": "expenses", "rowCount": 12, "updated": "2025-10-18"},
+                                               {"id": "rt-1", "title": "nOS Roadmap", "rowCount": 0, "updated": "2025-10-18"}]), "{t}");
+    assert!(got.iter().any(|m| matches!(m, ToShell::Render { component: Component::Table(x), .. }
+        if x.rows.len() == 2 && x.columns.contains(&"rows".to_string()) && x.rows[0].contains(&serde_json::json!(12)))), "{got:?}");
     assert!(system_prompt(&rig).contains("call list_tables"), "{}", system_prompt(&rig));
     let keap = rig.keap.lock().unwrap();
     assert!(keap[0].0.starts_with("GET /api/tables "), "{:?}", keap[0].0);
