@@ -32,6 +32,29 @@ ever given a default person. KEAP sees the person's `X-Authentik-*` headers and
 the proxy secret; the thalamus is a proxy-secret holder of its own (operator
 ruling 2026-10-11), it does not go through the receptor's socket.
 
+### The second door: the face relay (the optic nerve)
+
+The face runs in Docker and cannot reach the socket, so `thalamus serve` also
+listens on TCP `127.0.0.1:<thalamus_relay_port>` (8097), only when
+`THALAMUS_RELAY_SECRET` is set; the plist sets it only with `install_face`.
+Empty secret: no listener, no port. The face BFF sends one hello line, then
+the same newline-JSON wire:
+`{"relay":"face","secret":…,"uid":…,"username":…,"groups":[…],"tab":…}`.
+
+- The secret (`thalamus_relay_secret`, HKDF-derived) is compared without an
+  early exit, read once from the env, then removed. No log, ledger or model sees it.
+- `uid` must be canonical and equal the folded `username`, and the identity map
+  must hold an entry whose username folds to it. Groups come from the map; the
+  hello's groups are only logged. Anything else is refused by name.
+- The ledger records the peer as `{"via":"face","tab":…,"uid":…}`. The
+  authenticated hello is the decider proof (operator 2026-10-18), so a relay tab
+  can approve. The exe allowlist still governs socket peers.
+- A second tab for the same person takes over. The older tab gets
+  `refused{reason:"opened in another tab"}` and closes; the newer one can `resume`.
+- Loopback only, no HMAC or replay guard (same ruling as `face-wing.yml`). A
+  signed hello is needed only if this ever leaves loopback.
+  `tools/thalamus-status.py` prints a `relay` line: bound exactly when the plist sets the secret.
+
 ## What Iris can do
 
 - `query_rows{table, q?, where?, columns?, order_by?, limit 0..50}`: one

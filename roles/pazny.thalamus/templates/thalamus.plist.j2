@@ -30,6 +30,13 @@
         <!-- Read once at start, then removed from the process env (src/main.rs). -->
         <key>KEAP_PROXY_SHARED_SECRET</key>
         <string>{{ keap_proxy_shared_secret }}</string>
+{% if install_face | default(false) | bool and thalamus_relay_secret | default('') %}
+        <!-- The face's door (src/relay.rs, 127.0.0.1 only); the secret is read once, then removed. -->
+        <key>THALAMUS_RELAY_SECRET</key>
+        <string>{{ thalamus_relay_secret }}</string>
+        <key>THALAMUS_RELAY_PORT</key>
+        <string>{{ thalamus_relay_port }}</string>
+{% endif %}
 {% for var in thalamus_model_secrets | default([]) %}
         <!-- The key of an armed row iris may bind; read once, then removed; sent only as the model's bearer. -->
         <key>NOS_SECRET_{{ var | upper }}</key>

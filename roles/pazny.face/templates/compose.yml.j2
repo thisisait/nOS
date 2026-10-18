@@ -59,6 +59,12 @@ services:
       # until then the file browser degrades gracefully (shows "unreachable").
       NOS_VFS_API_URL: "http://host.docker.internal:{{ bone_port | default(8099) }}/api/v1/vfs"
       NOS_VFS_API_TOKEN: "{{ face_vfs_token | default('') }}"
+{% if install_thalamus | default(false) | bool %}
+      # Iris: the thalamus relay door (host loopback). The BFF sends one hello with this secret,
+      # then pipes the wire unchanged (thalamus src/relay.rs).
+      NOS_THALAMUS_RELAY_ADDR: "host.docker.internal:{{ thalamus_relay_port }}"
+      THALAMUS_RELAY_SECRET: "{{ thalamus_relay_secret | default('') }}"
+{% endif %}
       # Bone loop ledger — the Anatomy app's Runs view. The base URL is derived
       # from NOS_VFS_API_URL above (same daemon), so this token is the only
       # thing that was missing; without it the screen renders "unwired" rather

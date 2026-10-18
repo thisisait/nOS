@@ -586,6 +586,9 @@ receptor_socket: "{{ ansible_facts['env']['HOME'] }}/.nos/keap-identity.sock"
 # only after you approve its cell diff (roles/pazny.thalamus). Needs install_receptor: it
 # reads the receptor's identity map. Off until the operator proves it live.
 install_thalamus: false
+# The face's door into thalamus serve (src/relay.rs): loopback only, opened with install_face, read by
+# the plist and the face compose env. 8097: free, beside cortex 8098 and Bone 8099.
+thalamus_relay_port: 8097
 # Iris's row on THIS host: "" = the cell's own (mistral-eu); "ollama" = on-device (the default while
 # llm_on_host), needs install_ollama + ollama_enabled + an ollama_model of llm_cell_min_params_b or more.
 iris_backend: "{{ 'ollama' if llm_on_host else '' }}"

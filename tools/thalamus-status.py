@@ -4,7 +4,8 @@
 Reads the socket (~/.nos/thalamus.sock: a socket, mode 0600, accepting a connect), the launchd job
 (eu.thisisait.nos.thalamus), the model serve last started with (~/thalamus/log/launchd.err.log),
 the ledger (<--data-dir>/ledger.db, its dir 0700; the dir is read from the deployed plist, the path
-the daemon opens) and the ledger's last session. Each line is OK / RED / UNKNOWN with its source;
+the daemon opens), the ledger's last session and the face's relay door (bound exactly when the plist
+sets THALAMUS_RELAY_SECRET; an accepted connect without a hello is refused by serve, never a session). Each line is OK / RED / UNKNOWN with its source;
 serving without a model is UNKNOWN (degraded).
 
 Reads only (the connect opens no session). Exit 0 always. A source it cannot read is UNKNOWN, never green.
@@ -134,6 +135,36 @@ def judge_model(log: pathlib.Path) -> dict:
     return line("model", UNKNOWN, f"degraded: serving without a model: {said.removeprefix('UNBOUND: ')}", str(log))
 
 
+def judge_relay(log: pathlib.Path, plist: pathlib.Path) -> dict:
+    """The face's door (src/relay.rs): bound exactly when the plist carries THALAMUS_RELAY_SECRET (never printed)."""
+    try:
+        want = bool((plistlib.loads(plist.read_bytes()).get("EnvironmentVariables") or {}).get("THALAMUS_RELAY_SECRET"))
+    except (OSError, plistlib.InvalidFileException, ValueError, AttributeError) as exc:
+        return line("relay", UNKNOWN, f"plist unreadable ({type(exc).__name__})", str(plist))
+    try:
+        with log.open("rb") as f:
+            f.seek(max(0, log.stat().st_size - (1 << 20)))
+            lines = f.read().decode(errors="replace").splitlines()
+    except OSError as exc:
+        return line("relay", UNKNOWN, f"no start line read ({type(exc).__name__})", str(log))
+    said = next((ln[len("thalamus: relay "):] for ln in reversed(lines) if ln.startswith("thalamus: relay ")), None)
+    if said is None:
+        return line("relay", UNKNOWN, "no start line in the log", str(log))
+    if not said.startswith("bound "):
+        if said.startswith("closed") and not want:
+            return line("relay", OK, "closed: no secret, no face on this host", str(log))
+        return line("relay", RED, f"{said} (the plist {'sets' if want else 'sets no'} secret)", str(log))
+    if not want:
+        return line("relay", RED, f"{said}, but the plist sets no secret", str(log))
+    host, _, port = said.removeprefix("bound ").rpartition(":")
+    try:
+        with socket.create_connection((host, int(port)), timeout=2):
+            pass
+    except (OSError, ValueError) as exc:
+        return line("relay", RED, f"{said} in the log, nobody accepts ({type(exc).__name__})", str(log))
+    return line("relay", OK, f"{said}, accepting", str(log))
+
+
 def _launchctl() -> tuple[int, str] | None:
     try:
         p = subprocess.run(["launchctl", "print", f"gui/{os.getuid()}/{LABEL}"], capture_output=True, text=True, timeout=10)
@@ -145,7 +176,7 @@ def _launchctl() -> tuple[int, str] | None:
 def collect() -> list[dict]:
     sock = pathlib.Path(os.environ.get("NOS_THALAMUS_SOCKET", HOME / ".nos/thalamus.sock"))
     log = pathlib.Path(os.environ.get("NOS_THALAMUS_LOG", HOME / "thalamus/log/launchd.err.log"))
-    head = [judge_socket(sock), judge_launchd(_launchctl()), judge_model(log)]
+    head = [judge_socket(sock), judge_launchd(_launchctl()), judge_model(log), judge_relay(log, PLIST)]
     if os.environ.get("NOS_THALAMUS_LEDGER"):
         return head + judge_ledger(pathlib.Path(os.environ["NOS_THALAMUS_LEDGER"]))
     db, why = ledger_path(PLIST)
