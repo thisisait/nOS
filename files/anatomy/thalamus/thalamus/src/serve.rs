@@ -374,7 +374,8 @@ impl Face {
 
     /// The system prompt's line on the limbs, said at request time; none without limbs.
     fn said(&self) -> Option<String> {
-        let each: Vec<String> = self.limbs.iter().map(|l| {
+        let (full, rest) = self.limbs.split_at(self.limbs.len().min(LIMBS_SAID));
+        let mut each: Vec<String> = full.iter().map(|l| {
             let ps: Vec<String> = l.params.iter().map(|(k, p)| {
                 let ty = match p.kind {
                     ParamKind::String => "string".to_string(),
@@ -384,8 +385,10 @@ impl Face {
                 };
                 format!("{k}{}: {ty}", if p.required == Some(true) { "" } else { "?" })
             }).collect();
-            format!("{}.{} {{{}}}{}: {}", l.app, l.action, ps.join(", "), if l.writes { " (asks the person first)" } else { "" }, l.says)
+            let says: String = l.says.chars().take(SAYS_SAID).collect();
+            format!("{}.{} {{{}}}{}: {says}", l.app, l.action, ps.join(", "), if l.writes { " (asks the person first)" } else { "" })
         }).collect();
+        each.extend(rest.iter().map(|l| format!("{}.{}", l.app, l.action)));
         (!each.is_empty()).then(|| format!("The person's face screen declares these limbs; call face_act {{app, action, params}} with one of \
 them only when the person asks for it, and say in a line what you did: {}.", each.join("; ")))
     }
@@ -412,6 +415,11 @@ enum How {
     /// Fresh, starting from this session's conversation (/branch).
     Branch(String),
 }
+
+/// D3: the prompt says this many limbs in full and names the rest only; a 9b local model reads it every turn
+/// (the wire takes 64 limbs, says up to 200 chars).
+const LIMBS_SAID: usize = 24;
+const SAYS_SAID: usize = 80;
 
 const FACE_ACT: &str = "Act on the person's face screen with one limb it declared (the system prompt lists them): open, focus, \
 close or arrange windows. The window moving is what the person sees. A limb that writes asks the person with a card first; \
