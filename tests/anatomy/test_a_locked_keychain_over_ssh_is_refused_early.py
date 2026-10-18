@@ -6,8 +6,8 @@ Docker credential helper reads the login keychain, which an SSH session cannot
 unlock ("the current session does not allow user interaction").
 
 Pinned: main.yml probes the keychain on macOS when SSH_CONNECTION is set,
-refuses before any stack comes up, prints the unlock command, and fires on
-exactly the runs the no-Docker refusal fires on.
+refuses before any stack comes up, prints the unlock command, and is tagged
+`always` like the compose up it guards.
 """
 
 from __future__ import annotations
@@ -62,8 +62,8 @@ def test_the_refusal_prints_the_unlock_command_before_any_stack():
     core = _index(lambda t: "core-up.yml" in str(t.get("import_tasks", "")))
     assert 0 <= r < core, "the keychain refusal must run before core-up"
     assert _index(_is_probe) < r, "the refusal must follow the probe it reads"
-    sibling = next(t for t in tasks
-                   if _mod(t, "fail") and "nos_allow_no_docker" in str(t.get("when", "")))
-    assert set(tasks[r].get("tags") or []) == set(sibling.get("tags") or []), (
-        "the keychain refusal must fire on exactly the runs the no-Docker "
-        "refusal fires on")
+    # Was: tags equal to the no-Docker refusal's. Those tags skip under
+    # `--tags pulse` while stack-up's compose up is `always` (2026-10-18).
+    # Full reach: test_the_keychain_refusal_precedes_every_compose_up.py.
+    assert "always" in (tasks[r].get("tags") or []), (
+        "the keychain refusal must run on every --tags run that can build")
