@@ -1,0 +1,47 @@
+# yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+# ── Synthetic identities (nos_synthetic_identities, profiles/test-users.yml) ──
+# Apart from 00-admin-groups on purpose: an import is all-or-nothing, so one bad
+# persona (an unset password_var, a tier with no group) must never block akadmin
+# and the operator (measured 2026-10-18). Applied after 00, whose groups it finds.
+# Present while nos_test_users_enabled, each in ONE group — the one its tier adds
+# in authentik_rbac_tiers. Off, they linger until -e retire_synthetic=true;
+# absent then matches username AND attributes.kind synthetic (Authentik ANDs
+# identifiers, a dict is __contains), so a person who shares the name stays.
+
+version: 1
+metadata:
+  name: nos-synthetic-identities
+  labels:
+    managed-by: nos
+    blueprint-version: "1"
+
+{% set _synthetic_on = nos_test_users_enabled | default(false) | bool %}
+{% set _personas = (nos_synthetic_identities | default([])) if (_synthetic_on or (retire_synthetic | default(false) | bool)) else [] %}
+{% if not _personas %}
+entries: []
+{% else %}
+entries:
+{% for u in _personas %}
+  - model: authentik_core.user
+    state: {{ 'present' if _synthetic_on else 'absent' }}
+    identifiers:
+      username: "{{ u.name }}"
+{% if not _synthetic_on %}
+      attributes:
+        kind: synthetic
+{% endif %}
+{% if _synthetic_on %}
+    attrs:
+      name: "{{ u.name }}"
+      email: "{{ u.email }}"
+      password: "{{ lookup('vars', u.password_var) }}"
+      is_active: true
+      path: "users"
+      type: "internal"
+      attributes:
+        kind: synthetic
+      groups:
+        - !Find [authentik_core.group, [name, "{{ (authentik_rbac_tiers | selectattr('tier', 'equalto', u.tier | int) | first).groups | last }}"]]
+{% endif %}
+{% endfor %}
+{% endif %}

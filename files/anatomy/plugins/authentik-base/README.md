@@ -18,6 +18,7 @@ files/anatomy/plugins/authentik-base/
 ├── README.md                        # this file
 └── blueprints/
     ├── 00-admin-groups.yaml.j2      # akadmin user, RBAC groups, nos-tester, nos-api token
+    ├── 05-synthetic-identities.yaml.j2 # test personas, apart so one cannot block 00
     ├── 10-oidc-apps.yaml.j2         # OAuth2 + proxy providers + applications
     ├── 20-rbac-policies.yaml.j2     # tier-based expression policies + bindings
     └── 30-agent-clients.yaml.j2     # machine-to-machine OIDC clients (Bone, Pulse, conductor)

@@ -11,6 +11,7 @@ are the only list). Apps without a first_login are NAMED, never skipped silently
       tools/nos-first-login.py --auth-host auth.example [--local-tld]
 
 Prints one line per identity × app; exit 1 if any declared walk failed.
+--login-only stops after the Authentik login (tasks/verify-authentik-apps.yml).
 "own_password": true marks a person whose password is theirs after the first
 sign-in: a refused login is not a failure, an accepted one is named.
 Passwords come only from the environment and are never printed.
@@ -73,12 +74,13 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--auth-host", required=True)
     ap.add_argument("--local-tld", action="store_true", help="a local TLD: verify against the mkcert root CA")
+    ap.add_argument("--login-only", action="store_true", help="the Authentik login alone, no app walk (--tags verify)")
     a = ap.parse_args(argv)
     identities = json.loads(os.environ.get("NOS_FIRST_LOGIN", "[]"))
     verify = tls_verify(a.local_tld)
     if a.local_tld:           # no DNS on Linux, the edge is on loopback
         loopback_for_unresolvable()
-    apps = [r for r in _plan() if r["mode"] in ("native_oidc", "header_oidc")]
+    apps = [] if a.login_only else [r for r in _plan() if r["mode"] in ("native_oidc", "header_oidc")]
     for r in apps:
         if not r.get("first_login"):
             why = r.get("first_login_blocked") or "no authentik.first_login declared"
@@ -95,6 +97,8 @@ def main(argv: list[str] | None = None) -> int:
             print(f"FAIL  {name}: authentik login refused ({exc})")
             failed += 1
             continue
+        if a.login_only:
+            print(f"ok    {name}: authentik login")
         if ident.get("own_password"):
             # The initial password is derivable from the secret master: a
             # temporary key, not the person's. Say so until they change it.

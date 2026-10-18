@@ -221,3 +221,74 @@
     - nos_docker_ready | default(true)
     - _verify_ak_brand.json is defined
   tags: ['always', 'verify']
+
+# ── Verify: 00-admin-groups and 05-synthetic-identities imported, and every
+# declared identity can log in. MEASURED 2026-10-18: `pazny` could not sign in
+# with the derived password while identity-status said ok — an import is
+# all-or-nothing and its failure was swallowed. The worker's own apply writes
+# status=error on the instance; Authentik re-applies every 60 min, so a stale
+# error clears within the hour once the file is valid.
+
+- name: "[Verify] Read the blueprint instances Authentik holds"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ authentik_port | default(9003) }}/api/v3/managed/blueprints/?page_size=300"
+    headers:
+      Authorization: "Bearer {{ authentik_bootstrap_token | default('') }}"
+    validate_certs: false
+    status_code: [200]
+  register: _verify_ak_blueprints
+  when:
+    - install_authentik | default(false) | bool
+    - nos_docker_ready | default(true)
+  tags: ['always', 'verify']
+
+- name: "[Verify] The identity blueprints did not fail to import (00, 05)"
+  ansible.builtin.assert:
+    that:
+      - _verify_bp_errors | length == 0
+    fail_msg: |
+      Blueprint(s) at status=error: {{ _verify_bp_errors | join(', ') }}.
+      The import is all-or-nothing — its users and passwords are NOT applied.
+      Read the reason (it may print entry attributes; do not paste it anywhere):
+        {{ docker_bin | default('docker') }} compose -p infra exec authentik-worker \
+          ak apply_blueprint /blueprints/{{ _verify_bp_errors | first | default('custom/00-admin-groups.yaml') }}
+    success_msg: "00-admin-groups and 05-synthetic-identities imported."
+  vars:
+    _verify_bp_errors: >-
+      {{ (_verify_ak_blueprints.json.results | default([]))
+         | selectattr('path', 'in', ['custom/00-admin-groups.yaml', 'custom/05-synthetic-identities.yaml'])
+         | selectattr('status', 'equalto', 'error') | map(attribute='path') | list }}
+  when:
+    - install_authentik | default(false) | bool
+    - nos_docker_ready | default(true)
+    - _verify_ak_blueprints.json is defined
+  tags: ['always', 'verify']
+
+- name: "[Verify] Every declared Authentik identity can log in"
+  ansible.builtin.command:
+    argv: "{{ [nos_tools_python, playbook_dir ~ '/tools/nos-first-login.py', '--login-only', '--auth-host=' ~ authentik_domain]
+              + (['--local-tld'] if (tenant_domain_is_local | default(true) | bool) else []) }}"
+  environment:
+    NOS_FIRST_LOGIN: >-
+      {% set out = [] %}{% for i in nos_identities if 'authentik' in (i.realms | default([])) %}{%
+      set _ = out.append({'name': i.name, 'password': lookup('vars', i.password_var)}) %}{% endfor %}{{ out | to_json }}
+  register: _verify_ak_logins
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  no_log: true   # env carries the passwords; the tool prints names only
+  when:
+    - install_authentik | default(false) | bool
+    - nos_docker_ready | default(true)
+  tags: ['always', 'verify']
+
+- name: "[Verify] Declared identity logins"
+  ansible.builtin.assert:
+    that: _verify_ak_logins.rc | default(1) == 0
+    fail_msg: "{{ (_verify_ak_logins.stdout_lines | default([])) | select('match', 'FAIL') | list }}"
+    success_msg: "{{ _verify_ak_logins.stdout_lines | default([]) }}"
+  when:
+    - install_authentik | default(false) | bool
+    - nos_docker_ready | default(true)
+    - _verify_ak_logins.rc is defined
+  tags: ['always', 'verify']

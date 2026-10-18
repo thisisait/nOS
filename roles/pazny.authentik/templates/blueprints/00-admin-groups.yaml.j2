@@ -56,35 +56,8 @@ entries:
       groups:
         - !Find [authentik_core.group, [name, nos-admins]]
 
-  # ── Synthetic identities (nos_synthetic_identities, profiles/test-users.yml):
-  # present while nos_test_users_enabled, each in ONE group — the one its tier
-  # adds in authentik_rbac_tiers. Off, they linger until -e retire_synthetic=true;
-  # absent then matches username AND attributes.kind synthetic (Authentik ANDs
-  # identifiers, a dict is __contains), so a person who shares the name stays.
-{% set _synthetic_on = nos_test_users_enabled | default(false) | bool %}
-{% for u in nos_synthetic_identities | default([]) if _synthetic_on or (retire_synthetic | default(false) | bool) %}
-  - model: authentik_core.user
-    state: {{ 'present' if _synthetic_on else 'absent' }}
-    identifiers:
-      username: "{{ u.name }}"
-{% if not _synthetic_on %}
-      attributes:
-        kind: synthetic
-{% endif %}
-{% if _synthetic_on %}
-    attrs:
-      name: "{{ u.name }}"
-      email: "{{ u.email }}"
-      password: "{{ lookup('vars', u.password_var) }}"
-      is_active: true
-      path: "users"
-      type: "internal"
-      attributes:
-        kind: synthetic
-      groups:
-        - !Find [authentik_core.group, [name, "{{ (authentik_rbac_tiers | selectattr('tier', 'equalto', u.tier | int) | first).groups | last }}"]]
-{% endif %}
-{% endfor %}
+  # Synthetic identities live in 05-synthetic-identities: an import is
+  # all-or-nothing, and a bad persona must never block akadmin and the operator.
 
   # ── The operator's extra people (nos_extra_identities). The password is
   # set ONCE (state: created — never updated): the person owns it after the

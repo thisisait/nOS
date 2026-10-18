@@ -23,8 +23,12 @@
   # it). Root bypasses the mode; the boot scan stays unprivileged; the verify
   # task reads the result back. Measured: run 33660558975, apps == [].
   ansible.builtin.shell: |
-    for bp in 00-admin-groups{{ ' 50-mfa-policy' if (enforce_mfa | default(false) | bool) else '' }}{{ ' 10-oidc-apps' if (authentik_engine | default('blueprint')) != 'tofu' else '' }} 20-rbac-policies 30-agent-clients 40-enrollment-flow 46-brand-auth-flow; do
+    for bp in 00-admin-groups 05-synthetic-identities{{ ' 50-mfa-policy' if (enforce_mfa | default(false) | bool) else '' }}{{ ' 10-oidc-apps' if (authentik_engine | default('blueprint')) != 'tofu' else '' }} 20-rbac-policies 30-agent-clients 40-enrollment-flow 46-brand-auth-flow; do
       {{ docker_bin }} compose -p infra exec -T -u root authentik-worker \
-        ak apply_blueprint "/blueprints/custom/${bp}.yaml" 2>&1 || true
+        ak apply_blueprint "/blueprints/custom/${bp}.yaml" >/dev/null 2>&1 || echo "NOS_BLUEPRINT_FAILED ${bp}"
     done
-  failed_when: false
+  # Mirror of the main.yml handler: names only (an invalid entry is logged
+  # WITH its password); a failed 00 fails, the rest stay best-effort.
+  register: _ak_blueprint_apply
+  changed_when: false
+  failed_when: "'NOS_BLUEPRINT_FAILED 00-admin-groups' in _ak_blueprint_apply.stdout"

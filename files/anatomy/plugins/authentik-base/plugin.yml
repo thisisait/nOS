@@ -14,8 +14,8 @@
 #   roles/pazny.authentik/tasks/blueprints.yml — Ansible template tasks
 #
 # Post-P0.3 shape (inventory refreshed 2026-08-18):
-#   files/anatomy/plugins/authentik-base/blueprints/ — seven templates
-#   ({00,10,20,30,40,46,50}) rendered by the plugin loader pre_compose hook.
+#   files/anatomy/plugins/authentik-base/blueprints/ — eight templates
+#   ({00,05,10,20,30,40,46,50}) rendered by the plugin loader pre_compose hook.
 #   roles/pazny.authentik/tasks/blueprints.yml still renders the TWO
 #   surviving role-side copies (00-admin-groups, 30-agent-clients) into the
 #   same target dir; those two MUST stay byte-identical with the plugin
