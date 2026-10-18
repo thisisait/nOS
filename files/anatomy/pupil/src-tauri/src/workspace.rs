@@ -393,9 +393,15 @@ mod tests {
         };
         let lens = |n: usize| move |v: &mut serde_json::Value| v["workspaces"][0]["lens"] = vec![serde_json::json!({"column": "kind", "op": "eq", "value": ""}); n].into();
         let set = |ptr: &'static str, val: serde_json::Value| move |v: &mut serde_json::Value| *v.pointer_mut(ptr).unwrap() = val.clone();
+        let spaces = |n: usize| move |v: &mut serde_json::Value| {
+            let one = v["workspaces"][0].clone();
+            let more = (1..n).map(|i| serde_json::json!({"id": format!("s{i}"), "name": "s", "items": []}));
+            v["workspaces"] = std::iter::once(one).chain(more).collect();
+        };
         let zoom = |z: f64| move |v: &mut serde_json::Value| v["workspaces"][0]["view"] = serde_json::json!({"x": 0, "y": 0, "zoom": z});
         let edges: Vec<(&str, Box<dyn Fn(&mut serde_json::Value)>, Box<dyn Fn(&mut serde_json::Value)>)> = vec![
-            ("24 widgets", Box::new(items(24, "widget")), Box::new(items(25, "widget"))),
+            ("64 workspaces", Box::new(spaces(64)), Box::new(spaces(65))),
+            ("24 widgets",Box::new(items(24, "widget")), Box::new(items(25, "widget"))),
             ("64 items", Box::new(items(64, "heading")), Box::new(items(65, "heading"))),
             ("title 120", Box::new(set("/workspaces/0/items/0/title", "t".repeat(120).into())),
                           Box::new(set("/workspaces/0/items/0/title", "t".repeat(121).into()))),
@@ -414,6 +420,42 @@ mod tests {
             takes(edge).unwrap_or_else(|e| panic!("{cap}: the edge was refused: {e}"));
             assert!(takes(past).is_err(), "{cap}: one past the cap was accepted");
         }
+    }
+
+    #[test]
+    fn a_board_opens_its_own_child() {
+        // iris-canvas-nested-boards: a board item names a workspace whose parent is the board's own.
+        let board = |child: &str| serde_json::json!({"id": "b1", "kind": "board", "board": child, "x": 0, "y": 800, "w": 240, "h": 96});
+        let nest = |child: &'static str| move |v: &mut serde_json::Value| {
+            let ws = v["workspaces"].as_array_mut().unwrap();
+            ws.push(serde_json::json!({"id": "q4", "name": "Q4", "parent": "main", "items": []}));
+            ws.push(serde_json::json!({"id": "other", "name": "O", "items": []}));
+            v["workspaces"][0]["items"].as_array_mut().unwrap().push(board(child));
+        };
+        let l = takes(nest("q4")).unwrap_or_else(|e| panic!("a board on its child was refused: {e}"));
+        assert_eq!(serde_json::to_value(&l).unwrap()["workspaces"][0]["items"][3], board("q4"), "a board re-encodes to itself");
+        assert!(takes(nest("other")).is_err(), "a board on a workspace that is not its child was accepted");
+        assert!(takes(nest("nowhere")).is_err(), "a board on no workspace was accepted");
+        let titled = |v: &mut serde_json::Value| {
+            nest("q4")(v);
+            v["workspaces"][0]["items"][3]["title"] = "t".into();
+        };
+        assert!(takes(titled).is_err(), "a board with a title was accepted");
+    }
+
+    #[test]
+    fn the_layout_fits_the_thalamus() {
+        // 64 boards of 64 full headings are ~3.3 MiB; the thalamus holds 512 KiB (wire MAX_WORKSPACE).
+        let fat = |n: usize| move |v: &mut serde_json::Value| {
+            let heading = |id: String| serde_json::json!({"id": id, "kind": "heading", "text": "\u{1}".repeat(120), "x": 0, "y": 0, "w": 80, "h": 32});
+            v["workspaces"] = (0..64)
+                .map(|k| serde_json::json!({"id": format!("s{k}"), "name": "s", "items": (0..n).map(|i| heading(format!("h{k}x{i}"))).collect::<Vec<_>>()}))
+                .collect();
+            v["active"] = "s0".into();
+        };
+        takes(fat(4)).unwrap_or_else(|e| panic!("64 boards of 4 headings were refused: {e}"));
+        let why = takes(fat(64)).unwrap_err();
+        assert!(why.contains("512 KiB"), "{why}");
     }
 
     #[test]
