@@ -773,13 +773,22 @@ fn tool_ids(rig: &Rig, n: usize) -> Vec<String> {
         .map(|m| m["tool_call_id"].as_str().unwrap_or("").to_string()).collect()
 }
 
+/// A turn ends at Text or Refused; a refused offer is said mid-turn and the model answers after it.
+fn ends(m: &ToShell) -> bool {
+    match m {
+        ToShell::Text { .. } => true,
+        ToShell::Refused { reason, .. } => !reason.starts_with("offer_dashboard: "),
+        _ => false,
+    }
+}
+
 /// Sends one Turn and reads until the turn's Text or Refused.
 fn turn(s: &UnixStream, r: &mut BufReader<UnixStream>, session: Option<String>, text: &str) -> Vec<ToShell> {
     let mut w = s;
     w.write_all(encode(&ToThalamus::Turn { session, text: text.into() }).as_bytes()).unwrap();
     let mut got = Vec::new();
     while let Some(m) = next(r) {
-        let end = matches!(m, ToShell::Text { .. } | ToShell::Refused { .. });
+        let end = ends(&m);
         got.push(m);
         if end {
             break;
@@ -1345,7 +1354,7 @@ fn phases(got: &[ToShell]) -> Vec<String> {
 fn until_text(r: &mut BufReader<UnixStream>) -> Vec<ToShell> {
     let mut got = Vec::new();
     while let Some(m) = raw(r) {
-        let end = matches!(m, ToShell::Text { .. } | ToShell::Refused { .. });
+        let end = ends(&m);
         got.push(m);
         if end {
             break;
@@ -4129,26 +4138,9 @@ fn offer_over(name: &str, keap: (String, Seen), args: serde_json::Value) -> (Rig
     let rig = rig_at(name, mapped(), keap, vec![call("offer_dashboard", &args.to_string()), answer("Offered.")], Some(local()));
     let s = connect(&rig.sock);
     let mut r = BufReader::new(s.try_clone().unwrap());
-    let mut got = turn(&s, &mut r, None, "make me a dashboard of the sheet");
-    // A refused offer is said mid-turn; the turn ends in the model's text after it.
-    if matches!(got.last(), Some(ToShell::Refused { .. })) {
-        got.extend(turn_rest(&mut r));
-    }
+    let got = turn(&s, &mut r, None, "make me a dashboard of the sheet");
     let result = tool_result(&rig, 1);
     (rig, got, result)
-}
-
-/// The rest of a turn, up to its Text.
-fn turn_rest(r: &mut BufReader<UnixStream>) -> Vec<ToShell> {
-    let mut got = Vec::new();
-    while let Some(m) = next(r) {
-        let end = matches!(m, ToShell::Text { .. });
-        got.push(m);
-        if end {
-            break;
-        }
-    }
-    got
 }
 
 fn dashboards(got: &[ToShell]) -> Vec<serde_json::Value> {
@@ -4493,7 +4485,7 @@ fn card_props(got: &[ToShell]) -> (String, serde_json::Value) {
 fn until_said_all(r: &mut BufReader<UnixStream>) -> Vec<ToShell> {
     let mut got = Vec::new();
     while let Some(m) = next(r) {
-        let end = matches!(m, ToShell::Text { .. } | ToShell::Refused { .. });
+        let end = ends(&m);
         got.push(m);
         if end {
             break;

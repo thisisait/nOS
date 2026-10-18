@@ -347,6 +347,24 @@ fn shown_values(v: Map<String, Value>) -> Map<String, Value> {
     v.into_iter().filter(|(k, v)| !k.starts_with("__") && !v.is_null()).collect()
 }
 
+/// A content message that is exactly one call of a declared tool, as MLX models write it (operator 2026-10-18):
+/// bare or in the only fence; {name|tool, arguments|parameters} or {type: function, function: {..}}.
+/// An array, an undeclared name or anything else stays text.
+fn text_call(text: &str, n: usize) -> Option<Value> {
+    let parts: Vec<&str> = text.trim().split("```").collect();
+    let body = if parts.len() == 3 { parts[1].trim().trim_start_matches("json") } else { text };
+    let v: Value = serde_json::from_str(body.trim()).ok()?;
+    let f = v.get("function").filter(|_| v["type"] == "function").unwrap_or(&v);
+    let name = f.get("name").or_else(|| f.get("tool")).and_then(Value::as_str)?;
+    tools().as_array()?.iter().any(|t| t["function"]["name"] == name).then_some(())?;
+    let args = match f.get("arguments").or_else(|| f.get("parameters")).cloned().unwrap_or(json!({})) {
+        Value::String(a) => a,
+        a @ Value::Object(_) => a.to_string(),
+        _ => return None,
+    };
+    Some(json!({"id": format!("text-{n}"), "type": "function", "function": {"name": name, "arguments": args}}))
+}
+
 fn refuse(out: &mut UnixStream, why: &str) {
     send(out, &ToShell::Refused { reason: why.to_string(), widget: None });
 }
@@ -1563,7 +1581,9 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                 Err(why) => return refuse(out, &why),
             };
             o.messages.push(msg.clone());
-            let Some(asked) = msg.get("tool_calls").and_then(Value::as_array).filter(|a| !a.is_empty()).cloned() else {
+            let real = msg.get("tool_calls").and_then(Value::as_array).filter(|a| !a.is_empty()).cloned();
+            let from_text = real.is_none();
+            let Some(asked) = real.or_else(|| text_call(msg["content"].as_str()?, o.messages.len()).map(|c| vec![c])) else {
                 let text = msg.get("content").and_then(Value::as_str).unwrap_or("").to_string();
                 let _ = self.record(o, Kind::Message, None, json!({"role": "iris", "text": text}));
                 // Live 2026-10-13: a blank answer drew nothing, so the person could not tell it ended.
@@ -1573,6 +1593,10 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                 let text = mark_links(&text, &known).replace(['⟦', '⟧'], "");
                 return send(out, &ToShell::Text { session: o.session.clone(), text });
             };
+            if from_text {
+                // The provider hears it as the call it was meant to be; a tool message needs one.
+                *o.messages.last_mut().expect("just pushed") = json!({"role": "assistant", "content": null, "tool_calls": asked});
+            }
             for (i, call) in asked.iter().enumerate() {
                 calls += 1;
                 if calls > MAX_TOOL_CALLS {
@@ -1589,7 +1613,11 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                 let mut args: Value = call.pointer("/function/arguments").and_then(Value::as_str)
                     .and_then(|a| serde_json::from_str(a).ok()).unwrap_or(Value::Null);
                 unmark(&mut args); // a ⟦data⟧ mark copied back is never searched for or written
-                let _ = self.record(o, Kind::ToolUse, Some(name), json!({"args": args}));
+                let mut used = json!({"args": args});
+                if from_text {
+                    used["text_tool_call"] = json!(true);
+                }
+                let _ = self.record(o, Kind::ToolUse, Some(name), used);
                 activity(out, o, Phase::Tool { name: name.to_string() });
                 let result = match name {
                     "query_rows" => self.query_rows(who, &args).map(|(t, answer, notes)| {
@@ -1775,6 +1803,11 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                 });
                 let for_model = result.unwrap_or_else(|why| {
                     let _ = self.record(o, Kind::ToolResult, Some(name), json!({"error": why}));
+                    // An offer that draws nothing is said, or the person sees only the tool's name;
+                    // a refused show stays the model's to retry (tests/serve.rs show_renders_a_valid_component...).
+                    if name == "offer_dashboard" {
+                        refuse(out, &format!("{name}: {why}"));
+                    }
                     json!({"error": why})
                 });
                 o.messages.push(json!({"role": "tool", "tool_call_id": call.get("id").cloned().unwrap_or(Value::Null),
