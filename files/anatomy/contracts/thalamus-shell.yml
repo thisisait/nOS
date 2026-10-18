@@ -117,7 +117,7 @@ wire:
     first (it comes back with its own tab). `clear` (the shell's /clear) ends the open session `cleared` (never
     resumed; the ledger keeps it), forgets its tab's chat and opens a fresh session for the same tab. `branch
     {workspace}` (the shell's /branch, after it added that tab) opens a fresh session for it that starts from
-    this one's conversation: the model hears it, the chat is copied, its ledger says {branched_from} and holds
+    this one's conversation: the model hears it, the chat is copied and replayed, its ledger says {branched_from} and holds
     the last 40 said lines {role, text, copied: true} before the shell hears the session; the old one ends
     `switched`. A switch, clear or branch is refused while an approval or a choice waits ("answer or reject the
     card first"). The shell parses /clear and /branch; serve takes no commands. Without `workspace`, resume is v7's.

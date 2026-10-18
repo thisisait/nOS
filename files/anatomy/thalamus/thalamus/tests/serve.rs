@@ -6311,6 +6311,9 @@ fn each_workspace_tab_is_its_own_session_and_clear_and_branch_start_fresh() {
     say_v(&s, serde_json::json!({"t": "branch", "workspace": "ws3"}));
     let s3 = opened_v(&mut r);
     assert!(s3 != s1 && s3 != s2);
+    let copied = next_v(&mut r);
+    let texts: Vec<&str> = copied["log"].as_array().unwrap().iter().filter_map(|m| m["text"].as_str()).collect();
+    assert_eq!((&copied["t"], &copied["session"], texts), (&serde_json::json!("replay"), &serde_json::json!(s3), vec!["hello two", "two"]), "{copied}");
     let ev = events(&rig.ledger, &s3);
     assert!(ev.iter().any(|e| e.0 == "agent_session_start" && e.2["branched_from"] == s2.as_str()), "{ev:?}");
     assert!(ev.iter().any(|e| e.0 == "agent_message" && e.2["text"] == "hello two" && e.2["copied"] == true), "{ev:?}");

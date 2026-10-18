@@ -1152,6 +1152,9 @@ impl Server {
         if let Err(why) = store::write(&self.chat_file(who, Some(tab)), &json!({"session": o.session, "log": log})) {
             self.say(format!("the branch {} starts with no chat: {why}", o.session));
         }
+        // Replayed as a resume is, so the shell shows the branch's chat; nothing waits in it.
+        let log = log.into_iter().filter_map(|v| serde_json::from_value(v).ok()).collect();
+        send(out, &ToShell::Replay { session: o.session.clone(), log, open: vec![] });
     }
 
     /// Whether the session's local model is in memory, from Ollama's GET <origin>/api/ps (base_url is
