@@ -334,7 +334,9 @@ def axis_blank(res: Result) -> None:
         last = [r for r in rows if r.get("started") == started][-1]
         age = datetime.now(timezone.utc) - datetime.strptime(started, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
         smoke = last.get("smoke_strict")
-        strict = f"smoke --strict {smoke['passed']}/{smoke['total']}" if smoke else "no strict smoke"
+        red = smoke and (smoke["ok"] < smoke["total"] or smoke["failed"])
+        strict = f"smoke --strict {smoke['ok']}/{smoke['total']}" if smoke else "no strict smoke"
+        strict += f" failed: {', '.join(map(str, smoke['failed']))}" if red else ""
     except (AttributeError, KeyError, TypeError, ValueError) as exc:
         res.add("blank", "newest blank", f"UNKNOWN — unreadable record ({type(exc).__name__}: {path})", UNREADABLE)
         return
@@ -343,7 +345,7 @@ def axis_blank(res: Result) -> None:
         res.add("blank", "newest blank", f"{when} never finished (still running, or the run died)", DISAGREE)
     elif last.get("failed"):
         res.add("blank", "newest blank", f"{when} FAILED · {strict}", DISAGREE)
-    elif not smoke:  # skipped or non-strict smoke: the release gate needs --strict
+    elif not smoke or red:  # no strict smoke, or a strict probe red: the release gate needs all green
         res.add("blank", "newest blank", f"{when} · {strict} (release gate unmet)", DISAGREE)
     else:
         res.add("blank", "newest blank", f"{when} · {strict}")

@@ -44,18 +44,36 @@
   failed_when: false
   tags: ['always', 'smoke']
 
+# A blank is the release gate, so it always runs nos-smoke --strict as evidence
+# (10-17: smoke_strict was null and the 32/32 was copied by hand). Evidence only:
+# the verdict above stays the run's verdict; estate-status reads ok/total + ids.
+- name: "[smoke] Strict smoke for the blank-run record"
+  when: nos_blank_started is defined and (nos_docker_ready | default(true) | bool)
+  ansible.builtin.command: >
+    {{ ansible_playbook_python | default('python3') }}
+    {{ playbook_dir }}/tools/nos-smoke.py --strict --json --no-jsonl
+    --tenant-domain {{ tenant_domain | default('dev.local') | quote }}
+    --host-alias {{ host_alias | default('') | quote }}
+    --apps-subdomain {{ apps_subdomain | default('apps') | quote }}
+    --apps-runner-enabled {{ apps_runner_enabled | default(true) | bool | lower }}
+  register: _nos_smoke_strict
+  changed_when: false
+  failed_when: false
+  tags: ['always', 'smoke']
+
 # Record the smoke result BEFORE the verdict can end the play. Still unfinished:
 # callback_plugins/blank_record.py closes it with the play's outcome at the end.
 - name: "[smoke] Record the smoke result in the blank-run record"
   vars:
-    _counts: "{{ (_nos_smoke.stdout | default('')) | regex_search('(\\d+) / (\\d+) OK', '\\1', '\\2') }}"
+    _probes: "{{ (_nos_smoke_strict.stdout_lines | default([])) | select('match', '^\\{') | map('from_json') | list }}"
   ansible.builtin.lineinfile:
     path: "{{ nos_blank_record }}"
     line: "{{ {'started': nos_blank_started, 'finished': none,
                'nos_commit': nos_deployed_ref | default('unknown'),
                'failed': _nos_smoke.rc | default(0) != 0,
-               'smoke_strict': ({'passed': _counts[0] | int, 'total': _counts[1] | int}
-                                if (_counts and nos_smoke_strict | default(false) | bool) else none)} | to_json }}"
+               'smoke_strict': ({'ok': _probes | selectattr('ok') | list | length, 'total': _probes | length,
+                                 'failed': _probes | rejectattr('ok') | rejectattr('skipped') | map(attribute='id') | list}
+                                if _probes else none)} | to_json }}"
     insertafter: EOF
     mode: '0600'
   when: nos_blank_started is defined
