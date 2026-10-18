@@ -57,6 +57,9 @@ afterEach(async () => {
 	await new Promise((ok) => server.close(ok));
 });
 
+// The connection by its hello's tab, not by arrival order: under load peers[0] was another tab's (2026-10-18).
+const peerOf = (tab: string) => peers.find((p) => p.lines[0] && JSON.parse(p.lines[0]).tab === tab);
+
 const until = async (ok: () => boolean) => {
 	// 5 s, not 1: failed once at 1 s while the pytest lanes loaded the host (2026-10-18).
 	for (let i = 0; i < 1000 && !ok(); i++) await new Promise((r) => setTimeout(r, 5));
@@ -196,15 +199,15 @@ describe('bff/iris/send', () => {
 		const s = await stream(ALICE);
 		const body = '{"t":"turn","session":null,"text":"hello"}';
 		expect((await post(ALICE, s.tab, body)).status).toBe(204);
-		await until(() => peers[0]?.lines.length === 2);
-		expect(peers[0].lines[1]).toBe(body);
+		await until(() => peerOf(s.tab)?.lines.length === 2);
+		expect(peerOf(s.tab)!.lines[1]).toBe(body);
 	});
 
 	it('a pretty-printed body still travels as one line', async () => {
 		const s = await stream(ALICE);
 		await post(ALICE, s.tab, '{\n  "t": "resume"\n}');
-		await until(() => peers[0]?.lines.length === 2);
-		expect(peers[0].lines[1]).toBe('{"t":"resume"}');
+		await until(() => peerOf(s.tab)?.lines.length === 2);
+		expect(peerOf(s.tab)!.lines[1]).toBe('{"t":"resume"}');
 	});
 
 	it.each([
