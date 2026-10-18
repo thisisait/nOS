@@ -1803,9 +1803,9 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                 });
                 let for_model = result.unwrap_or_else(|why| {
                     let _ = self.record(o, Kind::ToolResult, Some(name), json!({"error": why}));
-                    // An offer that draws nothing is said, or the person sees only the tool's name;
-                    // a refused show stays the model's to retry (tests/serve.rs show_renders_a_valid_component...).
-                    if name == "offer_dashboard" {
+                    // A render that draws nothing is said, or the person sees only the tool's name;
+                    // the model still hears it and may retry.
+                    if name == "offer_dashboard" || name == "show" {
                         refuse(out, &format!("{name}: {why}"));
                     }
                     json!({"error": why})
