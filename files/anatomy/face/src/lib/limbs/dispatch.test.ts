@@ -100,17 +100,16 @@ describe('limbs · app-declared', () => {
 					params: { name: { type: 'string', required: true } },
 					writes: true,
 					says: 'Rename a note',
-					run: () => {
-						throw new Error('must not run');
-					}
+					run: ({ name }) => `renamed ${name}`
 				}
 			]
 		});
 	});
 
-	it('a writes:true limb is refused with needs approval', async () => {
+	// The thalamus sends an Act for a write only after the card is approved.
+	it('a writes:true limb runs when the Act arrives and answers ok', async () => {
 		const r = await dispatch(act('rename', { name: 'x' }, 'notes'));
-		expect(r).toEqual({ act: 'a-rename', ok: false, reason: 'needs approval' });
+		expect(r).toEqual({ act: 'a-rename', ok: true, result: 'renamed x' });
 	});
 
 	it('declaredLimbs lists the desktop limbs and the app limb', () => {
