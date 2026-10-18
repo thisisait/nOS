@@ -196,8 +196,8 @@ describe('nothing adds a widget without a click', () => {
 		).toEqual([]);
 	});
 
-	it('App places a pin only in the handler it gives Message as onpin', () => {
-		const { template, script } = nodes('../../../../pupil/src/App.svelte');
+	it('Iris places a pin only in the handler it gives Message as onpin', () => {
+		const { template, script } = nodes('./Iris.svelte');
 		const calls = script.filter(
 			([n]) =>
 				n.type === 'CallExpression' &&
