@@ -12,7 +12,7 @@ vi.mock('$env/dynamic/private', () => ({ env: ENV }));
 import { ANON, type Identity } from '$lib/contracts';
 import { GET } from '../../routes/bff/iris/stream/+server';
 import { POST } from '../../routes/bff/iris/send/+server';
-import { _tabs, MAX_TABS } from './thalamus';
+import { _tabs, MAX_TABS, openTab, sendLine } from './thalamus';
 
 const SECRET = 'test-relay-secret-not-a-real-credential';
 const ORIGIN = 'https://face.test';
@@ -195,6 +195,15 @@ describe('bff/iris/stream', () => {
 });
 
 describe('bff/iris/send', () => {
+	it('a line sent before the socket connects still goes after the hello', async () => {
+		const t = openTab(ALICE, { line: () => {}, link: () => {} } as never)!;
+		expect(sendLine(ALICE, t.tab, '{"t":"resume"}')).toBe('sent');
+		await until(() => peers[0]?.lines.length === 2);
+		expect(JSON.parse(peers[0].lines[0]).relay).toBe('face');
+		expect(peers[0].lines[1]).toBe('{"t":"resume"}');
+		t.close();
+	});
+
 	it('same-origin JSON is forwarded as one line equal to the body', async () => {
 		const s = await stream(ALICE);
 		const body = '{"t":"turn","session":null,"text":"hello"}';
