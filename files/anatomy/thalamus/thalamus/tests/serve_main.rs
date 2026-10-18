@@ -152,7 +152,9 @@ const RELAY: &str = "relay-main-secret-77b3";
 #[test]
 fn serve_binds_the_relay_only_with_a_secret_and_no_child_inherits_it() {
     use std::io::{BufRead, Write};
-    for secret in [None, Some(""), Some(RELAY)] {
+    // The free port is closed before serve binds it, so a parallel test can take it in between:
+    // a relay FAILED line, or a door some other listener answers, retries on a fresh port.
+    for secret in [None, Some(""), Some(RELAY)] { for attempt in 0..5 {
         let home = iris_home(&format!("relay{}", secret.map_or(0, str::len)));
         let port = std::net::TcpListener::bind("127.0.0.1:0").unwrap().local_addr().unwrap().port();
         let mut cmd = Command::new(env!("CARGO_BIN_EXE_thalamus"));
@@ -195,6 +197,11 @@ fn serve_binds_the_relay_only_with_a_secret_and_no_child_inherits_it() {
         child.kill().unwrap();
         child.wait().unwrap();
         let line = line.unwrap_or_else(|_| panic!("serve printed no `thalamus: relay ` line with secret {secret:?}"));
+        let raced = if secret == Some(RELAY) { line.starts_with("thalamus: relay FAILED") } else { door.is_ok() };
+        if raced && attempt < 4 {
+            let _ = std::fs::remove_dir_all(&home);
+            continue;
+        }
         if secret == Some(RELAY) {
             assert_eq!(line, format!("thalamus: relay bound 127.0.0.1:{port}"));
             assert!(door.is_ok(), "the relay is not accepting");
@@ -209,7 +216,8 @@ fn serve_binds_the_relay_only_with_a_secret_and_no_child_inherits_it() {
         assert!(!env.values().any(|v| v.as_str().unwrap_or("").contains(RELAY)), "a child inherited the relay secret");
         assert!(!all.lock().unwrap().contains(RELAY), "the relay secret reached the log");
         let _ = std::fs::remove_dir_all(&home);
-    }
+        break;
+    } }
 }
 
 #[test]
