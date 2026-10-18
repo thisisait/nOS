@@ -5245,6 +5245,19 @@ fn the_options_are_allowed_armed_pulled_and_above_the_floor() {
     assert!(rig.model.lock().unwrap()[0].0.starts_with("GET /models"), "the pulled models are asked of ollama");
 }
 
+/// Client host 2026-10-18: ollama listed qwen2.5vl:7b twice, and the picker's keyed each threw
+/// on the duplicate key, so the person saw no picker at all.
+#[test]
+fn a_model_pulled_twice_is_offered_once() {
+    let twice = r#"{"object": "list", "data": [{"id": "qwen3:14b"}, {"id": "qwen3:14b"}]}"#;
+    let rig = picker("mtwice", picks_of("iris", BOTH), vec![twice.into()]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let ToShell::ModelOptions { options, .. } = said_to(&s, &mut r, ToThalamus::ModelOptions) else { panic!("no options") };
+    let local: Vec<&str> = options.iter().filter(|o| o.backend == "ollama").map(|o| o.model.as_str()).collect();
+    assert_eq!(local, ["qwen3:14b"], "one option per (backend, model)");
+}
+
 #[test]
 fn a_pick_below_the_floor_or_not_pulled_is_refused_by_name() {
     let rig = picker("mfloor", picks_of("iris", BOTH), vec![PULLED.into()]);
