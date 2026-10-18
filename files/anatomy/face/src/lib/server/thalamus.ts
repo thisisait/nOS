@@ -49,14 +49,14 @@ export function openTab(who: Identity, sink: Sink): { tab: string; close: () => 
 	if (!r || !who.authenticated || tabsOf(who.uid) >= MAX_TABS) return null;
 	const tab = randomUUID();
 	const sock = connect({ host: r.host, port: r.port });
+	// The hello is queued before the tab is known: written on 'connect', a POST that came first
+	// went ahead of it and the relay refused the tab (seen under load, 2026-10-18).
+	sock.write(hello(who, tab, r.secret) + '\n');
 	tabs.set(tab, { uid: who.uid, sock });
 	let buf = '';
 	let why: string | null = null;
 	sock.setEncoding('utf8');
-	sock.on('connect', () => {
-		sock.write(hello(who, tab, r.secret) + '\n');
-		sink.link({ state: 'connected', reason: null });
-	});
+	sock.on('connect', () => sink.link({ state: 'connected', reason: null }));
 	sock.on('data', (chunk: string) => {
 		buf += chunk;
 		let nl;
