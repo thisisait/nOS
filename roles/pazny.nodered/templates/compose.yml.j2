@@ -14,7 +14,9 @@ services:
   nodered:
     image: nodered/node-red:{{ nodered_version }}
     restart: unless-stopped
-    user: "{{ nodered_uid }}:{{ nodered_gid }}"
+    # Linux: the operator owns /data (nos_container_user), so the image's uid 1000
+    # cannot create /data/lib (EACCES restart loop, CI bonus lane 2026-10-19).
+    user: "{{ nos_container_user if (nos_container_user | default('') | length > 0) else (nodered_uid | string ~ ':' ~ nodered_gid | string) }}"
     ports:
 {% if services_lan_access %}
       - "{{ nodered_port }}:1880"
