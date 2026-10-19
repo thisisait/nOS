@@ -791,6 +791,8 @@ jobs:
     if: needs.bonus-select.outputs.lanes != '[]'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    # Bonus lanes are debt, not a release condition (operator 2026-10-19): the tag gate skips them.
+    continue-on-error: true
     env:
       PYTHONNOUSERSITE: '1'
     strategy:
