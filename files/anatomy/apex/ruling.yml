@@ -361,6 +361,9 @@ nodes:
   # 2026-10-06: Ollama got its own row (out of openclaw's). WITHHELD until the
   # operator authors its sentence and re-signs (tools/apex-sign.py).
   "service:ollama":        withheld
+  # JupyterHub (2026-10-19, Linux workstations). WITHHELD until the operator
+  # authors its speaks: sentence — the published set stays as ruled.
+  "service:jupyterhub": withheld
   "service:open_webui":    { publish: wits, speaks: "a chat room with the house's own models" }
   "service:mcp_gateway":   { publish: wits, speaks: "one socket where minds plug into tools" }
 

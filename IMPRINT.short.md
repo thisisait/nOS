@@ -19,13 +19,13 @@ nOS is built so an AI agent can do real work here, and so that a mistake — the
 
 - nOS is an Ansible playbook that turns one Mac (Apple Silicon) or Ubuntu 24.04 host into a self-hosted Agentic Home Lab.
 - This repo is the SOURCE. The running estate lives elsewhere on the host and changes only when the operator runs a converge.
-- Each service is an organ: one role, one compose override, one row in state/manifest.yml (76 rows).
+- Each service is an organ: one role, one compose override, one row in state/manifest.yml (77 rows).
 - All data stays on the machine. Sign-in goes through Authentik; work is tracked in KEAP tables, not in prose files.
 - When this page and a reader disagree, the reader is right. Ask it (section 4).
 
 ## 3. The body plan
 
-Levels, smallest to largest, then the cross-cutting systems: genome (22), cell (17), tissue (1), organ (80), organ system (13), organism (0), habitat (8), sense (80), limb (118), memory (41), law (52), reflex (43), heartbeat (1). Look closer: `tools/body.py <level>` or `tools/body.py <node>`.
+Levels, smallest to largest, then the cross-cutting systems: genome (22), cell (17), tissue (1), organ (81), organ system (13), organism (0), habitat (8), sense (80), limb (118), memory (41), law (52), reflex (43), heartbeat (1). Look closer: `tools/body.py <level>` or `tools/body.py <node>`.
 
 ## 4. How to ask — the senses
 
@@ -60,7 +60,7 @@ What a model may never do:
 
 - KEAP agent API: `http://127.0.0.1:8091/agent/v1` (bearer token; the RO token reads, the RW token writes).
 - Local models (Ollama, OpenAI-compatible): `http://127.0.0.1:11434/v1`, no token. Models the register names: `hermes3:8b`, `qwen3:14b`.
-- Web: Traefik owns ports 80/443. A service with a `domain_var` in state/manifest.yml (54 of 76) answers at that variable, by default `<name>.{{ tenant_domain }}` with `tenant_domain: dev.local`. This host's value: `tools/estate-status.py --config tenant_domain`. The routed ids are those rows' `id`s.
+- Web: Traefik owns ports 80/443. A service with a `domain_var` in state/manifest.yml (55 of 77) answers at that variable, by default `<name>.{{ tenant_domain }}` with `tenant_domain: dev.local`. This host's value: `tools/estate-status.py --config tenant_domain`. The routed ids are those rows' `id`s.
 
 ## 7. The level words
 

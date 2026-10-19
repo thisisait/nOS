@@ -39,8 +39,12 @@
 # and bypass RBAC entirely. host.docker.internal still resolves to the
 # loopback inside Docker Desktop on macOS, so Traefik continues to reach
 # the listener.
+# Linux: host.docker.internal is docker0's address, NOT the loopback, so
+# Traefik reaches Wing only if it also listens there. Still no LAN interface,
+# and every request must carry X-Wing-Edge-Token (wing-edge@file) anyway.
 :9000 {
-    bind 127.0.0.1
+    bind 127.0.0.1{% if (nos_docker_host_ip | default('127.0.0.1')) != '127.0.0.1' %} {{ nos_docker_host_ip }}{% endif %}
+
     root * {{ wing_app_dir }}/www
     encode zstd gzip
 

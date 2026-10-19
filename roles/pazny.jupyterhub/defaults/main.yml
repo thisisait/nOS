@@ -1,0 +1,30 @@
+---
+# pazny.jupyterhub — notebooks on a shared Linux host. Install flag and route:
+# install_jupyterhub, jupyterhub_domain, jupyterhub_port (default.config.yml).
+#
+# The boundary is the person's Linux login (the `unix` identity realm,
+# roles/pazny.linux.users): SystemdSpawner starts each server as a transient
+# systemd unit OF THAT USER, in their 0700 home, with its own cgroup limits.
+# The same wall an ssh session meets — one boundary to test, not two.
+
+# Pins. The Hub, Lab and kernel live in one root-owned venv every user can exec.
+jupyterhub_version: "6.0.0"
+jupyterlab_version: "4.6.3"
+jupyterhub_ipykernel_version: "7.3.0"
+jupyterhub_oauthenticator_version: "17.4.0"
+jupyterhub_systemdspawner_version: "1.0.2"
+# The proxy is a pinned container on the host network, so no Node on the host.
+jupyterhub_chp_image: "quay.io/jupyterhub/configurable-http-proxy:5.2.0"
+
+jupyterhub_prefix: /opt/nos/jupyterhub
+jupyterhub_state_dir: /var/lib/nos-jupyterhub
+
+# Where the proxy listens: docker0, so Traefik reaches it through
+# host.docker.internal and the LAN does not (Traefik is the only door).
+jupyterhub_bind_host: "{{ nos_docker_host_ip | default('172.17.0.1') }}"
+jupyterhub_hub_port: 8081
+jupyterhub_proxy_api_port: 8001
+
+# Per-person ceilings (systemd MemoryMax / CPUQuota of each server's unit).
+jupyterhub_mem_limit: "32G"
+jupyterhub_cpu_limit: 10

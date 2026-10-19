@@ -115,7 +115,7 @@ SYSTEM_NAME = {
     "authentik": "Authentik", "infisical": "Infisical", "portainer": "Portainer",
     "traefik": "Traefik", "bluesky-pds": "Bluesky PDS", "smtp-stalwart": "Stalwart Mail",
     "grafana": "Grafana", "prometheus": "Prometheus", "loki": "Loki", "tempo": "Tempo",
-    "wordpress": "WordPress", "apex": "Apex Site", "nextcloud": "Nextcloud", "n8n": "n8n",
+    "wordpress": "WordPress", "apex": "Apex Site", "nextcloud": "Nextcloud", "n8n": "n8n", "jupyterhub": "JupyterHub",
     "nodered": "Node-RED", "kiwix": "Kiwix", "offline-maps": "Offline Maps",
     "jellyfin": "Jellyfin", "open-webui": "Open WebUI", "uptime-kuma": "Uptime Kuma",
     "calibre-web": "Calibre-Web", "homeassistant": "Home Assistant", "rustfs": "RustFS",
@@ -313,6 +313,11 @@ SYSTEM_EN = {
         "Nextcloud, the tenant file cloud: WebDAV storage with sharing, calendars and "
         "contacts on top. The canonical home for user documents, as opposed to the S3 "
         "object bucket that machines write to."
+    ),
+    "jupyterhub": (
+        "JupyterHub, the multi-user notebook server on a Linux host. Each person's "
+        "notebooks run as their own Linux login in their own home, so it is the "
+        "interactive compute surface, not a chat or an automation canvas."
     ),
     "n8n": (
         "n8n, the workflow automation engine. Operators wire HTTP triggers, schedules and "

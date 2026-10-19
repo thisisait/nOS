@@ -13,10 +13,14 @@ from __future__ import annotations
 
 import pathlib
 
+import sys
+
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 ROLE = REPO / "roles" / "pazny.ollama"
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 
 
 def _tasks() -> list[dict]:
@@ -36,9 +40,10 @@ def test_the_archive_is_the_pin_and_verified():
 def test_the_unit_binds_the_declared_host_never_all_interfaces():
     unit = (ROLE / "templates" / "ollama.service.j2").read_text()
     assert 'OLLAMA_HOST={{ ollama_bind_host }}:11434' in unit
-    cfg = yaml.safe_load((REPO / "default.config.yml").read_text())
-    assert "0.0.0.0" not in cfg["ollama_bind_host"]
-    assert "127.0.0.1" in cfg["ollama_bind_host"], "macOS stays on loopback"
+    cfg = ni.default_config()
+    assert cfg["ollama_bind_host"] == "{{ nos_docker_host_ip }}"
+    assert "0.0.0.0" not in cfg["nos_docker_host_ip"]
+    assert "127.0.0.1" in cfg["nos_docker_host_ip"], "macOS stays on loopback"
 
 
 def test_the_running_daemon_is_read_back_at_the_pin():

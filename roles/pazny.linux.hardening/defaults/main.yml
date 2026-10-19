@@ -42,6 +42,13 @@ hardening_ufw_allowed_services:
 # 2-hour ban on 4 failed SSH attempts is the ANSSI default for human users.
 # nginx jail uses the bundled nginx-http-auth filter.
 
+# Containers -> host daemons on docker0 (Ollama, JupyterHub's proxy, Wing, ...).
+# Those daemons bind the docker0 address so containers reach them via
+# host.docker.internal and the LAN does not; with incoming=deny, ufw would
+# drop the container side too. Empty `to` disables the rule.
+hardening_ufw_from_containers:
+  from: "172.16.0.0/12"
+  to: "{{ nos_docker_host_ip | default('172.17.0.1') }}"
 hardening_fail2ban_bantime_seconds: 7200
 hardening_fail2ban_findtime_seconds: 600
 hardening_fail2ban_maxretry: 4

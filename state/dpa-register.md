@@ -20,8 +20,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 115 (90 core services, 3 manifest apps)
-- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (103)
+- **Processing activities:** 116 (91 core services, 3 manifest apps)
+- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (104)
 - **Transfers outside the EU:** 12 activities
 - **Activities engaging a third-party processor:** 18
 
@@ -1601,6 +1601,19 @@ Anthropic (US) — update transfers_outside_eu + processors accordingly.
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 3650 days (~10y)
+- **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
+
+#### Jupyterhub — `svc_jupyterhub`
+- **Purpose:** Hosts personal Jupyter notebook servers. Each person's notebooks, data
+files and kernel state live in their own Linux home (mode 0700); the Hub
+stores the user list, server state and OIDC session cookies.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `user_files`; `user_accounts`; `oauth_session_data`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** 365 days (~1y)
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
 

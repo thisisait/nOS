@@ -1,0 +1,105 @@
+---
+# ==============================================================================
+# JUPYTERHUB — notebooks as the person's own Linux login. Linux only: the
+# boundary IS a systemd unit per user (SystemdSpawner), which macOS has not.
+# ==============================================================================
+
+- name: "[jupyterhub] Linux with systemd only"
+  ansible.builtin.assert:
+    that: nos_pkg_manager == 'apt'
+    fail_msg: >-
+      install_jupyterhub needs a Linux host: each notebook runs as its person's
+      own systemd unit. On macOS leave it off.
+
+- name: "[jupyterhub] python3-venv"
+  ansible.builtin.apt:
+    name: python3-venv
+    state: present
+  become: true
+
+- name: "[jupyterhub] Prefix and state directories"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "{{ item.mode }}"
+  loop:
+    - {path: "{{ jupyterhub_prefix }}", mode: "0755"}          # every user execs the venv
+    - {path: "{{ jupyterhub_state_dir }}", mode: "0700"}       # db, cookie secret, env
+  become: true
+
+- name: "[jupyterhub] The pinned Hub, Lab and kernel in one venv"
+  ansible.builtin.pip:
+    name:
+      - "jupyterhub=={{ jupyterhub_version }}"
+      - "jupyterlab=={{ jupyterlab_version }}"
+      - "ipykernel=={{ jupyterhub_ipykernel_version }}"
+      - "oauthenticator=={{ jupyterhub_oauthenticator_version }}"
+      - "jupyterhub-systemdspawner=={{ jupyterhub_systemdspawner_version }}"
+    virtualenv: "{{ jupyterhub_prefix }}/venv"
+    virtualenv_command: "python3 -m venv"
+  become: true
+  register: _jh_pip
+
+- name: "[jupyterhub] The proxy image"
+  community.docker.docker_image:
+    name: "{{ jupyterhub_chp_image }}"
+    source: pull
+  become: true
+
+- name: "[jupyterhub] Config"
+  ansible.builtin.template:
+    src: jupyterhub_config.py.j2
+    dest: "{{ jupyterhub_prefix }}/jupyterhub_config.py"
+    owner: root
+    group: root
+    mode: "0644"
+  become: true
+  register: _jh_cfg
+
+- name: "[jupyterhub] Secrets env (root 0600)"
+  ansible.builtin.template:
+    src: hub.env.j2
+    dest: "{{ jupyterhub_state_dir }}/hub.env"
+    owner: root
+    group: root
+    mode: "0600"
+  become: true
+  no_log: true
+  register: _jh_env
+
+- name: "[jupyterhub] Units"
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    mode: "0644"
+  loop: [nos-jupyterhub-proxy.service, nos-jupyterhub.service]
+  become: true
+  register: _jh_units
+
+- name: "[jupyterhub] Proxy running"
+  ansible.builtin.systemd_service:
+    name: nos-jupyterhub-proxy
+    state: "{{ 'restarted' if (_jh_units.changed or _jh_env.changed) else 'started' }}"
+    enabled: true
+    daemon_reload: "{{ _jh_units.changed }}"
+  become: true
+
+# Restart on what changed, not on having run: cleanup_servers is off, so a Hub
+# restart leaves everyone's kernels running.
+- name: "[jupyterhub] Hub running"
+  ansible.builtin.systemd_service:
+    name: nos-jupyterhub
+    state: "{{ 'restarted' if (_jh_units.changed or _jh_env.changed or _jh_cfg.changed or _jh_pip.changed) else 'started' }}"
+    enabled: true
+  become: true
+
+- name: "[jupyterhub] The Hub answers through its proxy"
+  ansible.builtin.uri:
+    url: "http://{{ jupyterhub_bind_host }}:{{ jupyterhub_port }}/hub/health"
+  register: _jh_health
+  retries: 30
+  delay: 2
+  until: _jh_health.status | default(0) == 200
+  changed_when: false

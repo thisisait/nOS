@@ -1,0 +1,82 @@
+# =============================================================================
+# jupyterhub-base — service plugin (2026-10-19, DGX cut-over to the playbook)
+#
+# JupyterHub is host-native (roles/pazny.jupyterhub): no compose extension.
+# This plugin carries what the estate harvests — the Authentik OAuth2 client
+# the Hub's GenericOAuthenticator uses, GDPR, notification routing, e2e.
+# =============================================================================
+
+name: jupyterhub-base
+version: 0.1.0
+description: |
+  Wiring layer for JupyterHub. Native OIDC against Authentik; each person's
+  notebook server runs as their own Linux login (realm unix, SystemdSpawner).
+upstream: https://github.com/jupyterhub/jupyterhub
+license: BSD-3-Clause
+
+type:
+  - service
+
+requires:
+  role: pazny.jupyterhub
+  feature_flag: install_jupyterhub
+  variables:
+    - jupyterhub_domain
+    - jupyterhub_port
+    - tenant_domain
+
+authentik:
+  mode: native_oidc
+  client_id: nos-jupyterhub
+  client_secret: "{{ nos_derived_secrets.oidc_jupyterhub }}"
+  slug: jupyterhub
+  first_login: "https://{{ jupyterhub_domain }}/hub/oauth_login"
+  name: 'JupyterHub'
+  enabled: "{{ install_jupyterhub | default(false) }}"
+  redirect_uris:
+    - "https://{{ jupyterhub_domain }}/hub/oauth_callback"
+  launch_url: "https://{{ jupyterhub_domain }}/hub/oauth_login"
+  scopes:
+    - openid
+    - profile
+    - email
+  tier: 3   # user — the Hub itself refuses anyone without a Linux login
+
+gdpr:
+  purpose: |
+    Hosts personal Jupyter notebook servers. Each person's notebooks, data
+    files and kernel state live in their own Linux home (mode 0700); the Hub
+    stores the user list, server state and OIDC session cookies.
+  legal_basis: legitimate_interests
+  data_categories:
+    - user_files
+    - user_accounts
+    - oauth_session_data
+  data_subjects:
+    - operators
+    - end_users
+  retention_days: 365
+  processors: []
+  eu_residency: true
+
+notification:
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []
+
+ui-extension:
+  hub_card:
+    title: JupyterHub
+    icon: book-open
+    url: "https://{{ jupyterhub_domain }}"
+    tier: 3
+    description: Notebooks, run as your own Linux login
+    health_check: "https://{{ jupyterhub_domain }}/hub/health"
+
+e2e:
+  probes:
+    - name: oidc-start-reaches-authentik
+      url: https://{{ jupyterhub_domain }}/hub/oauth_login
+      expect: {status: [302, 303, 307], location_contains: "{{ authentik_domain }}/application/o/authorize"}
