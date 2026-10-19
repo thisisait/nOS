@@ -32,6 +32,10 @@ With cortex, each case is also judged on the pipeline the thalamus planned, read
 through POST <--validate-url>/agent/v1/validate (CORTEX_TOKEN_RO), op by op, never as text;
 a single-prompt case without expect_pipeline must fall back (pipeline_fell_back); a plan check the
 judge cannot answer (validator, ledger) makes the case NO-DATA. --validate-url is loopback only.
+Two plans are equal when the thalamus runs the same query for them (meaning()), not when they read alike.
+
+`--rescore run.json ...` re-judges pipeline_equals_expected on saved runs offline (the cases come from
+the run's own argv; --domain needs NOS_ASSAY_DIR) and writes run.rescored.json; other verdicts are kept.
 """
 
 from __future__ import annotations
@@ -201,9 +205,6 @@ def _answers_in(text: str, lang: str) -> bool:
 
 # ── the cortex plan path: the pipeline the ledger holds, judged by the validator ──
 
-COSMETIC = ("title", "unit")  # a show label is not the plan
-
-
 class Unjudged(RuntimeError):
     """The judge could not answer (validator, ledger): the failure is named, never a wrong plan."""
 
@@ -220,28 +221,127 @@ def validate_report(url: str, token: str, source: str) -> dict:
         raise Unjudged(f"validator unreachable ({type(e).__name__}: {e})") from e
 
 
-def _stages(ast: dict, table: dict | None = None):
-    # `?k=v` vs `k=v` (defaulted) and spans are spelling; opcode, operands and param values are the plan.
-    # `table` is the plan row's resolution {said, id, title}: any of those names is the one table the
-    # mapper read; and a param the mapper fills when absent (cortex_plan.rs plan()/calls()) is that value.
+def _ast_stages(ast: dict):
+    """A /validate AST as (source, [(opcode, [(ns, surface)], {param: value})]): spans and `?` are spelling."""
+    p = ast["pipeline"]
+    return p.get("source"), [(s["opcode"], [(o["ns"], o["surface"]) for o in s["operands"]],
+                              {k: v["value"] for k, v in s["params"].items()}) for s in p["stages"]]
+
+
+TOKEN = re.compile(r"""\s*(?:"((?:\\.|[^"\\])*)"|'((?:\\.|[^'\\])*)'|\[((?:\\.|[^\]\\])*)\]|(@?[A-Za-z0-9_/.\-]+)|(\S))""")
+
+
+def _unescape(s: str) -> str:
+    return re.sub(r"\\(.)", lambda e: {"n": "\n", "t": "\t", "r": "\r"}.get(e[1], e[1]), s)
+
+
+def _split(toks: list, sep: str) -> list[list]:
+    out, cur = [], []
+    for t in toks:
+        if t[0] == sep:
+            out.append(cur)
+            cur = []
+        else:
+            cur.append(t)
+    return out + [cur]
+
+
+def parse_source(text: str):
+    """cortex-lang source as _ast_stages gives it, offline (--rescore): the organ's grammar shape, not its checks."""
+    toks, pos, end = [], 0, len(text.rstrip())
+    while pos < end:
+        m = TOKEN.match(text, pos)
+        quoted = next((g for g in m.groups()[:3] if g is not None), None)
+        toks.append(("v", _unescape(quoted)) if quoted is not None else ("w", m[4]) if m[4] is not None else (m[5], m[5]))
+        pos = m.end()
+    groups = _split(toks, "|")
+    source = groups.pop(0)[0][1] if len(groups[0]) == 1 and groups[0][0][1].startswith("@") else None
+    stages = []
+    for g in groups:
+        if len(g) < 3 or g[0][0] != "w" or g[1][0] != "(" or g[-1][0] != ")":
+            raise ValueError(f"not a stage: {g}")
+        operands, params = [], {}
+        for a in (x for x in _split(g[2:-1], ",") if x):
+            a = a[1:] if a[0][0] == "?" else a
+            if len(a) >= 3 and a[1][0] == ":":
+                operands.append((a[0][1], "".join(t[1] for t in a[2:])))
+            elif len(a) == 3 and a[1][0] == "=":
+                kind, v = a[2]
+                params[a[0][1]] = v if kind == "v" else (v == "true") if v in ("true", "false") else \
+                    int(v) if re.fullmatch(r"-?\d+", v) else v
+            else:
+                raise ValueError(f"not an argument: {a}")
+        stages.append((g[0][1], operands, params))
+    return source, stages
+
+
+WHERE_OPS = ("eq", "neq", "in", "contains", "lt", "gt", "between", "before", "after")
+WHERE_SYMBOLS = (("!=", "neq"), ("<>", "neq"), ("=", "eq"), (">", "gt"), ("<", "lt"))
+
+
+def parse_where(s: str):
+    """cortex_plan.rs parse_where: (column, op, value), in and between a list; before/after read as lt/gt."""
+    low = s.lower()
+    hits = [(low.find(f" {w} "), w, op) for w, op in [(o, o) for o in WHERE_OPS] + list(WHERE_SYMBOLS) if f" {w} " in low]
+    if not hits:
+        return s, None, None  # the mapper refuses it: compared as written
+    at, said, op = min(hits)
+    col, val = s[:at].strip(), s[at + len(said) + 2:].strip().strip("\"'")
+    op = {"before": "lt", "after": "gt"}.get(op, op)
+    val = [v.strip() for v in val.split(",")] if op in ("in", "between") else val
+    return col, op, sorted(val) if op == "in" else val
+
+
+def meaning(source, stages, table: dict | None = None) -> dict:
+    """What the thalamus runs for a pipeline (cortex_plan.rs plan()+calls(), then serve.rs query_rows):
+    - a db: operand named by any of the plan row's {said, id, title} is the one table the mapper resolved;
+    - filters AND into one where list (order-free; an `in` list is a set; before/after are lt/gt);
+      a write's set= is a map (order-free), its values as written;
+    - the mapper's defaults: aggregate op=count, rank dir=desc, limit=20, chart=bar, a chart's x = the
+      aggregate's by and its y = the aggregate's y; title and unit are labels;
+    - show(kind=chart|kpi) queries only where+q: get/rank limit, fields and order never reach it;
+      show(kind=table|list|record) is the same query_rows as no show;
+    - with aggregate, query_rows answers its total or groups before order_by, limit and columns apply,
+      and count reads no y. Everything else is compared as the mapper reads it.
+    """
     names = {table[k] for k in ("said", "id", "title") if table and table.get(k)}
-    p, out, by = ast["pipeline"], [], None
-    for s in p["stages"]:
-        params = {k: v["value"] for k, v in s["params"].items() if k not in COSMETIC}
-        if s["opcode"] == "aggregate":
-            by = params.get("by")
-        if s["opcode"] == "rank":
-            params.setdefault("dir", "desc")
-        if s["opcode"] == "show" and params.get("kind") == "chart" and by is not None:
-            params.setdefault("x", by)
-        operands = [("db", "\0table") if o["ns"] == "db" and o["surface"] in names else (o["ns"], o["surface"]) for o in s["operands"]]
-        out.append((s["opcode"], operands, params))
-    return p.get("source"), out
+    tables, wheres, q, fields, limit, order, agg, show, write = [], [], None, [], None, None, None, None, None
+    for op, operands, prm in stages:
+        tables += ["\0table" if ns == "db" and s in names else f"{ns}:{s}" for ns, s in operands]
+        n = prm.get("limit") if type(prm.get("limit")) is int else None
+        if op == "get":
+            limit = limit if n is None else n
+            fields = [c.strip() for c in str(prm.get("fields") or "").split(",") if c.strip()]
+        elif op == "filter":
+            if prm.get("where"):
+                wheres.append(json.dumps(parse_where(prm["where"])))
+            q = prm.get("q") or q
+        elif op == "rank":
+            order, limit = (prm.get("by"), prm.get("dir") or "desc"), limit if n is None else n
+        elif op == "aggregate":
+            agg = (prm.get("op") or "count", prm.get("by"), prm.get("y"))
+        elif op == "show":
+            show = prm
+        else:
+            # parse_set: "k=v;k=v" is a map, values trimmed, never unquoted
+            write = (op, sorted(tuple(x.strip() for x in p.partition("=")[::2]) for p in str(prm.get("set") or "").split(";") if p.strip()))
+    base = {"source": source, "tables": sorted(set(tables)), "where": sorted(wheres), "q": q}
+    kind = (show or {}).get("kind")
+    aop, by, y = agg or ("count", None, None)
+    if kind in ("chart", "kpi"):
+        return base | {"show": kind, "chart": (show.get("chart") or "bar") if kind == "chart" else None,
+                       "x": None if kind == "kpi" else show.get("x") or by, "kpi_by": by if kind == "kpi" else None,
+                       "y": show.get("y") or y, "op": aop}
+    if kind not in (None, "table", "list", "record"):
+        return base | {"show": kind}
+    if agg and not write:
+        return base | {"op": aop, "by": by, "y": None if aop == "count" else y}
+    return base | {"agg": agg, "fields": fields, "order": order, "limit": 20 if limit is None else limit, "write": write}
 
 
 def same_pipeline(a: dict, b: dict, table: dict | None = None) -> bool:
-    """Two /validate ASTs plan the same thing, stage by stage."""
-    return _stages(a, table) == _stages(b, table)
+    """Two /validate ASTs plan the same thing: meaning()."""
+    return meaning(*_ast_stages(a), table) == meaning(*_ast_stages(b), table)
 
 
 def _ledger_open():
@@ -707,6 +807,65 @@ def score(case: dict, got: dict, now: float) -> list[str]:
     return judge(case, got, now)[0]
 
 
+# ── --rescore: a saved run re-judged offline (no wire, model, KEAP or validator) ──
+
+REJUDGED = ("pipeline_equals_expected",)  # the only check whose evidence (the plan's source) a run file keeps
+
+
+def equals_offline(want, plan) -> bool:
+    if not (isinstance(plan, dict) and plan.get("source") and plan.get("valid") is True):
+        return False
+    have = meaning(*parse_source(plan["source"]), plan.get("table"))
+    return any(meaning(*parse_source(w), plan.get("table")) == have for w in ([want] if isinstance(want, str) else want))
+
+
+def _tally(results: list[dict]) -> dict:
+    out: dict = {}
+    for r in results:
+        if not r["no_data"]:
+            k = out.setdefault(r.get("kind") or "-", [0, 0])
+            k[0], k[1] = k[0] + bool(r["pass"]), k[1] + 1
+    return out
+
+
+def rescore(path: Path) -> Path:
+    """Re-judge REJUDGED on a saved run with the cases its argv named; every other verdict stays as saved.
+    Writes <name>.rescored.json beside it; the saved run is never rewritten."""
+    run = json.loads(path.read_text(encoding="utf-8"))
+    ap = argparse.ArgumentParser(add_help=False)
+    for f in ("--cases", "--domain", "--tier"):
+        ap.add_argument(f)
+    saved = ap.parse_known_args(run["provenance"]["argv"])[0]
+    cases = {c["id"]: c for c in load_cases(saved.cases or str(CASES), saved.domain, saved.tier)}
+    before = _tally(run["cases"])
+    for r in run["cases"]:
+        case, old = cases.get(r["id"]), r["failed"]
+        last = r["turns"][-1] if r.get("turns") else {"status": "not_reached"}
+        # ponytail: a --repeat run keeps one run's failures; re-judging it needs every run's plan
+        if not (case and case.get("expect_pipeline") and "pipeline_equals_expected" in r.get("plan_checks", [])) \
+                or r.get("runs", 1) != 1 or last["status"] == "not_reached" \
+                or any(f.startswith(("error:", "pipeline_equals_expected: ")) for f in old):
+            continue
+        ok = equals_offline(case["expect_pipeline"], r.get("pipeline"))
+        fix = lambda fs: [f for f in fs if f != "pipeline_equals_expected"] + ([] if ok else ["pipeline_equals_expected"])  # noqa: E731
+        failed, last["failed"] = fix(old), fix(last["failed"])
+        last["status"] = "fail" if last["failed"] else "pass"
+        # ponytail: no_data(case, got) needs the wire's renders; a newly red case is NO-DATA only if it was
+        r |= {"failed": failed, "pass": not failed, "passes": int(not failed), "depth": case_depth(case, r["turns"]),
+              "no_data": bool(failed) and (r["no_data"] or unjudged(failed))}
+    head = subprocess.run(["git", "-C", str(REPO), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+    run["rescored"] = {"nos_commit": head or None, "from": path.name, "rejudged": list(REJUDGED),
+                       "kept": "every other check: its saved verdict (it needs the wire, the validator or the ledger)"}
+    out = path.with_suffix(".rescored.json")
+    out.write_text(json.dumps(run, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    after, tot = _tally(run["cases"]), lambda t: (sum(v[0] for v in t.values()), sum(v[1] for v in t.values()))
+    print(f"{path.name}: {'%d/%d' % tot(before)} -> {'%d/%d' % tot(after)} passed · {out}")
+    for k in sorted(set(before) | set(after)):
+        b, a = before.get(k, [0, 0]), after.get(k, [0, 0])
+        print(f"  {k:<16} {b[0]}/{b[1]} -> {a[0]}/{a[1]}")
+    return out
+
+
 # ── provenance: a run says which weights answered (nos-assay keeps runs as evidence) ──
 
 def ollama_tags(base=None):
@@ -783,7 +942,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--validate-url", default="http://127.0.0.1:8098", help="the cortex organ; needs CORTEX_TOKEN_RO")
     ap.add_argument("--seed", action="store_true",
                     help="create the iris-bench-2 tables, or with --domain the domain's tables, once (writes KEAP; NOS_LIVE=1)")
+    ap.add_argument("--rescore", nargs="+", metavar="RUN.json",
+                    help="re-judge saved runs offline with this scorer; writes <run>.rescored.json beside each")
     a = ap.parse_args(argv)
+    if a.rescore:
+        for f in a.rescore:
+            rescore(Path(f))
+        return 0
     if a.seed:
         if os.environ.get("NOS_LIVE") != "1":
             print("--seed writes a KEAP table; set NOS_LIVE=1.", file=sys.stderr)

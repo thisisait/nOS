@@ -836,6 +836,13 @@ def _gh(*args: str) -> list | dict | None:
         return None
 
 
+def _maintainer_host() -> bool:
+    """install_loops (the maintainer's development loops) is the declared fact; a
+    client host turns it off (profiles/core.yml). Unreadable reads as maintainer:
+    a red is never hidden on a guess (10-18: a client listed the maintainer's CI)."""
+    return (_install_flags() or {}).get("install_loops", True) is not False
+
+
 def ci_runs() -> dict | None:
     """Newest run per workflow on each long-lived branch, and its conclusion.
 
@@ -990,7 +997,7 @@ def doctrine_reviews(root: pathlib.Path = REPO / "ssot" / "doctrine") -> list[di
 
 
 def collect() -> dict:
-    report: dict = {"generated_at": _now().isoformat(), "sources_read": [], "sources_missing": []}
+    report: dict = {"generated_at": _now().isoformat(), "sources_read": [], "sources_missing": [], "info": []}
     conn = _connect()
     if conn is None:
         report["sources_missing"].append(str(WING_DB))
@@ -1025,6 +1032,10 @@ def collect() -> dict:
         ("ci", pathlib.Path("gh run list"), ci_runs),
         ("dependabot", pathlib.Path("gh api dependabot/alerts"), dependabot),
     ):
+        if label == "ci" and not _maintainer_host():
+            report["info"].append("CI not shown: install_loops is off, so this is a client host and "
+                                  "the dev/master runs are the maintainer's to act on")
+            continue
         value = fn()
         if value is None:
             report["sources_missing"].append(str(path))
@@ -1292,6 +1303,8 @@ def main() -> int:
         sys.stdout.write("\n")
         return 0
 
+    for line in report["info"]:
+        print(f"ℹ {line}")
     if holds:
         print(f"{len(holds)} on hold (intentional):")
         for line in holds:

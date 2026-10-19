@@ -31,7 +31,8 @@ while read -r local_ref local_sha remote_ref remote_sha; do
 
 	# A release tag needs a green trunk. Cut on red at v0.10 AND v0.11
 	# (fee 39): the checklist said "check CI", nothing enforced it. Fail
-	# CLOSED — no gh, no runs, or any failure on the tagged commit refuses.
+	# CLOSED — no gh, no runs, or a red BLOCKING job refuses. A job the tagged
+	# commit's workflow marks continue-on-error is reported as info (v0.17 cut).
 	# Loud bypass: NOS_TAG_RED_OK=1 git push origin v<x>. (--no-verify works
 	# too, but skips every check, not just this one.)
 	case "$remote_ref" in
@@ -47,24 +48,60 @@ while read -r local_ref local_sha remote_ref remote_sha; do
 			if [[ -z "$_py" ]]; then
 				verdict="UNKNOWN: no python to parse gh JSON"
 			else
-			verdict=$("${NOS_TAG_GATE_GH:-gh}" run list --commit "$commit" --limit 20 					--json name,status,conclusion 2>/dev/null 				| "$_py" -c '
-import json, sys
-try:
-    runs = json.load(sys.stdin)
-except Exception:
-    runs = None
+			verdict=$("$_py" -c '
+import json, re, subprocess, sys
+gh, commit = sys.argv[1], sys.argv[2]
+def ask(*args):
+    try:
+        out = subprocess.run([gh, *args], capture_output=True, text=True, timeout=60)
+        return json.loads(out.stdout) if out.returncode == 0 else None
+    except Exception:
+        return None
+def sh(*args):
+    return subprocess.run(args, capture_output=True, text=True).stdout
+runs = ask("run", "list", "--commit", commit, "--limit", "20",
+           "--json", "databaseId,name,status,conclusion")
 if not runs:
     print("UNKNOWN: no CI run exists for this commit — a tag needs evidence, not absence")
     sys.exit(0)
-red = sorted({r["name"] for r in runs if r.get("conclusion") == "failure"})
-green = [r for r in runs if r.get("status") == "completed" and r.get("conclusion") == "success"]
+# Non-blocking = jobs the TAGGED commit declares continue-on-error: true,
+# read from its own workflows. No pyyaml -> empty set: every job blocks.
+soft = []
+try:
+    import yaml
+    for f in sh("git", "ls-tree", "--name-only", commit, ".github/workflows/").split():
+        jobs = (yaml.safe_load(sh("git", "show", commit + ":" + f)) or {}).get("jobs") or {}
+        for key, job in jobs.items():
+            if isinstance(job, dict) and job.get("continue-on-error") is True:
+                parts = re.split(r"\$\{\{.*?\}\}", str(job.get("name") or key))
+                soft.append(re.compile("^" + ".*".join(map(re.escape, parts)) + "$"))
+except ImportError:
+    print("info: no pyyaml — every CI job is judged blocking", file=sys.stderr)
+red, info, green = set(), set(), False
+for r in runs:
+    if r.get("conclusion") == "success" and r.get("status") == "completed":
+        green = True
+    if r.get("conclusion") != "failure":
+        continue
+    view = ask("run", "view", str(r.get("databaseId")), "--json", "jobs")
+    jobs = view.get("jobs") if isinstance(view, dict) else None
+    if not jobs:
+        red.add(r.get("name", "?") + " (its jobs are unreadable)")
+        continue
+    bad = [j["name"] for j in jobs if j.get("conclusion") in ("failure", "timed_out", "cancelled")]
+    hard = [n for n in bad if not any(p.match(n) for p in soft)]
+    red.update(r.get("name", "?") + ": " + n for n in hard)
+    info.update(set(bad) - set(hard))
+    green = green or (bool(bad) and not hard)
+for n in sorted(info):
+    print("info: non-blocking job red (continue-on-error): " + n, file=sys.stderr)
 if red:
-    print("RED: " + ", ".join(red))
+    print("RED: " + ", ".join(sorted(red)))
 elif not green:
     print("UNKNOWN: no completed successful run — pending is not green")
 else:
     print("GREEN")
-' ) || verdict="UNKNOWN: the gh probe itself failed"
+' "${NOS_TAG_GATE_GH:-gh}" "$commit") || verdict="UNKNOWN: the gh probe itself failed"
 			fi
 			if [[ "$verdict" != "GREEN" ]]; then
 				cat >&2 <<-EOF
