@@ -17,6 +17,10 @@ c.ConfigurableHTTPProxy.api_url = "http://127.0.0.1:{{ jupyterhub_proxy_api_port
 c.JupyterHub.db_url = f"sqlite:///{STATE}/jupyterhub.sqlite"
 c.JupyterHub.cookie_secret_file = f"{STATE}/jupyterhub_cookie_secret"
 c.JupyterHub.cleanup_servers = False   # a Hub restart does not kill anyone's kernel
+# Sign-in lands on the Hub's home page; the person starts their server there.
+# A login that auto-spawned would start a notebook for every identity the
+# install's first-login walk signs in.
+c.JupyterHub.default_url = "/hub/home"
 
 # ── Who: Authentik (native OIDC), and only people who have a login here ──────
 c.JupyterHub.authenticator_class = "generic-oauth"
@@ -52,7 +56,6 @@ c.Authenticator.post_auth_hook = _has_a_login
 # ── Where: the person's own login, home, cgroup ──────────────────────────────
 c.JupyterHub.spawner_class = "systemdspawner.SystemdSpawner"
 c.SystemdSpawner.dynamic_users = False
-c.SystemdSpawner.user_workingdir = "{HOME}"
 c.SystemdSpawner.mem_limit = "{{ jupyterhub_mem_limit }}"
 c.SystemdSpawner.cpu_limit = {{ jupyterhub_cpu_limit }}
 c.SystemdSpawner.isolate_tmp = True
