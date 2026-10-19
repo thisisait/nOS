@@ -28,6 +28,10 @@ traefik_domain: "traefik{{ _host_alias_seg | default('') }}.{{ tenant_domain | d
 # confusing 404. Turn on AFTER registering a provider for traefik_domain;
 # until then reach routing state via `docker exec infra-traefik-1` internally.
 traefik_dashboard_route_enabled: false
+
+# http(s)://<host ip> redirects to the face (face_domain) instead of a 404 —
+# the address a LAN visitor types first. Needs install_face.
+traefik_bare_ip_redirect: true
 traefik_log_level: "INFO"                           # DEBUG / INFO / WARN / ERROR
 
 # Config tree on the host. Bind-mounted into the container.
