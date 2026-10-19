@@ -405,6 +405,7 @@ nodes:
   "authentik:backrest": withheld
   "authentik:bookstack": withheld
   "authentik:calibre-web": withheld
+  "authentik:jupyterhub": withheld
   "authentik:code-server": withheld
   "authentik:documenso": withheld
   "authentik:dolibarr": withheld

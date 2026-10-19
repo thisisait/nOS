@@ -17,7 +17,7 @@
     "law": 52,
     "reflex": 43,
     "heartbeat": 1,
-    "internal": 75,
+    "internal": 76,
     "edges": 434
   },
   "nodes": {
@@ -274,6 +274,10 @@
       "kind": "authentik"
     },
     "authentik:jellyfin": {
+      "level": "internal",
+      "kind": "authentik"
+    },
+    "authentik:jupyterhub": {
       "level": "internal",
       "kind": "authentik"
     },
