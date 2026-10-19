@@ -37,8 +37,9 @@ def _gen():
     return _load(GEN, "keap_docs_gen")
 
 
-def _build():
-    return _gen().build_docs(str(MANIFEST), str(DOCS_ROOT), str(ROOT))
+@pytest.fixture
+def build(estate):
+    return lambda: estate.once("keap_docs:live", lambda: _gen().build_docs(str(MANIFEST), str(DOCS_ROOT), str(ROOT)))
 
 
 # ── sources ───────────────────────────────────────────────────────────────────
@@ -110,11 +111,11 @@ def test_provenance_shape_and_git_blob_sha():
     assert prov["dirty"] is True and prov["commit"] is None
 
 
-def test_provenance_is_in_brief_not_in_the_embedded_en():
+def test_provenance_is_in_brief_not_in_the_embedded_en(build):
     """§4: the churning commit/blob live in brief (→ taxonomy_metadata); the en
     (→ node_descriptions, the only embedded text) must never carry them, or every
     commit re-embeds the corpus (hidden_fees/04)."""
-    docs = _build()
+    docs = build()
     checked = 0
     for nodes in docs["nodes_by_domain"].values():
         for n in nodes:
@@ -186,8 +187,8 @@ def test_coverage_counts_unresolved_provenance(tmp_path):
 
 # ── §6: coverage is DATA, services missed are NAMED ────────────────────────────
 
-def test_coverage_is_data_and_partitions_the_estate():
-    cov = _build()["coverage"]
+def test_coverage_is_data_and_partitions_the_estate(build):
+    cov = build()["coverage"]
     # every kind counted, and the counts sum to the node total (nothing lost)
     assert set(cov["nodes_by_kind"]) == {"skill", "hint", "note", "snippet"}
     assert sum(cov["nodes_by_kind"].values()) == cov["doc_nodes"] > 0
@@ -216,18 +217,18 @@ def test_the_gap_is_reported_by_name_not_hidden(tmp_path):
     assert len(cov["services_missed"]) > len(cov["services_covered"])
 
 
-def test_live_estate_is_fully_documented(tmp_path):
+def test_live_estate_is_fully_documented(tmp_path, build):
     """The branch's deliverable, pinned as a fact: every manifest service has a
     docs tree that produces at least one node, so the live coverage report shows
     zero missed and zero empty. If a future service lands in the manifest without
     a docs/systems/<svc>/ tree, THIS is the gate that turns red and names it."""
-    cov = _build()["coverage"]
+    cov = build()["coverage"]
     assert cov["services_missed"] == [], f"undocumented services: {cov['services_missed']}"
     assert cov["services_empty"] == [], f"empty doc trees: {cov['services_empty']}"
     assert len(cov["services_covered"]) == cov["services_total"]
 
 
-def test_every_kind_is_producible_even_where_the_corpus_has_none():
+def test_every_kind_is_producible_even_where_the_corpus_has_none(build):
     """Every kind is producible; the live counts are whatever the corpus DECLARES,
     which is the honest result of a declared-not-inferred contract. hints are rare
     (3 today, all in pulse/README.md, each a genuinely conditional heading) because
@@ -238,7 +239,7 @@ def test_every_kind_is_producible_even_where_the_corpus_has_none():
     NB the signal is section-wide: ONE `**When`-leading line retypes its whole
     section, which is how home-assistant's Authentication section briefly became a
     hint and lost its standing credential facts to a `note` filter (S1)."""
-    cov = _build()["coverage"]
+    cov = build()["coverage"]
     assert cov["nodes_by_kind"]["skill"] > 0 and cov["nodes_by_kind"]["note"] > 0
     assert _gen().classify(["**When** X happens: do Y"], "note")["kind"] == "hint"
 
@@ -256,9 +257,9 @@ def _selfmodel_tree(tmp_path):
     return tmp_path / "canonical"
 
 
-def test_merge_lands_doc_nodes_under_their_system_and_is_deterministic(tmp_path):
+def test_merge_lands_doc_nodes_under_their_system_and_is_deterministic(tmp_path, build):
     mod = _gen()
-    docs = _build()
+    docs = build()
     a = _selfmodel_tree(tmp_path / "a")
     b = _selfmodel_tree(tmp_path / "b")
     mod.generate(str(a), docs)

@@ -13,6 +13,7 @@ import importlib.util
 import sys
 from pathlib import Path
 
+import pytest
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
@@ -29,11 +30,12 @@ VARS = {**plan_mod.smoke.merge_config(*ni.default_layers()),
         "install_paperclip": True, "install_ntfy": True, "install_gitea": True}
 
 
-def _plan():
-    return plan_mod.plan(VARS, include_disabled=True)
+@pytest.fixture
+def _plan(estate):
+    return lambda: estate.once("e2e_plan:manifests_vars", lambda: plan_mod.plan(VARS, include_disabled=True))
 
 
-def test_every_authentik_block_becomes_a_row():
+def test_every_authentik_block_becomes_a_row(_plan):
     rows = {r["slug"] for r in _plan()}
     for p in sorted((REPO / "files/anatomy/plugins").glob("*-base/plugin.yml")):
         ak = (yaml.safe_load(p.read_text()) or {}).get("authentik") or {}
@@ -45,7 +47,7 @@ def test_every_authentik_block_becomes_a_row():
             assert ak["slug"] in rows, a
 
 
-def test_enabled_rows_resolve_and_carry_the_edge():
+def test_enabled_rows_resolve_and_carry_the_edge(_plan):
     rows = {r["slug"]: r for r in _plan()}
     assert rows["paperclip"]["launch_url"] == "https://paperclip.example.test"
     assert rows["paperclip"]["edge"] == "proxy" and rows["ntfy"]["mode"] is None  # e2e-only row, no SSO claim
@@ -114,7 +116,7 @@ def test_a_flow_interface_goes_through_the_executor_to_a_code():
     assert w.outcome == sso_walk.CODE
 
 
-def test_every_declared_probe_renders_to_a_runnable_shape():
+def test_every_declared_probe_renders_to_a_runnable_shape(_plan):
     """Each plugin e2e probe, rendered against the defaults, has a known kind,
     a URL (or host/port) with no Jinja left, and an auth the runner knows."""
     probes = [(r["slug"], p, r) for r in _plan() for p in r["probes"]]

@@ -7,6 +7,7 @@ without an editable install, and this directory itself so the shared
 
 from __future__ import annotations
 
+import copy
 import os
 import sys
 
@@ -61,3 +62,22 @@ def _offline_boundary(request):
             yield
     else:
         yield
+
+
+class _Estate:
+    """Estate builds made once per session (a keap docs walk is ~7 s). `once` returns a
+    deep copy each call, so a test that mutates its result cannot reach another test.
+    A key names ONE build of the committed tree: reuse it only for an identical call."""
+
+    def __init__(self):
+        self._memo: dict = {}
+
+    def once(self, key: str, build):
+        if key not in self._memo:
+            self._memo[key] = build()
+        return copy.deepcopy(self._memo[key])
+
+
+@pytest.fixture(scope="session")
+def estate() -> _Estate:
+    return _Estate()
