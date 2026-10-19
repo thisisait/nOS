@@ -219,6 +219,11 @@ nos_test_users_enabled: false   # profiles/test-users.yml flips it
 # Add realms: [authentik, unix] to also make the person a Linux host login
 # (roles/pazny.linux.users, home 0700) — the shared-workstation case.
 nos_extra_identities: []
+# The operator's Authentik password is the derived one by default, and the
+# install's identity checks fail if it stops working. true = it is only the
+# INITIAL password, like an extra person's: a refusal means the operator set
+# their own (first-login and --tags verify then say so instead of failing).
+nos_operator_owns_password: false
 
 # ── TLD class detection (drives mkcert vs ACME, dnsmasq vs real DNS) ─────────
 # tenant_domain_is_local: true  → use mkcert + dnsmasq + /etc/resolver (dev mode)

@@ -271,7 +271,10 @@
   environment:
     NOS_FIRST_LOGIN: >-
       {% set out = [] %}{% for i in nos_identities if 'authentik' in (i.realms | default([])) %}{%
-      set _ = out.append({'name': i.name, 'password': lookup('vars', i.password_var)}) %}{% endfor %}{{ out | to_json }}
+      set e = {'name': i.name, 'password': lookup('vars', i.password_var)} %}{%
+      if (nos_operator_owns_password | default(false)) and i.name == nos_primary_admin %}{%
+      set _ = e.update({'own_password': true}) %}{% endif %}{%
+      set _ = out.append(e) %}{% endfor %}{{ out | to_json }}
   register: _verify_ak_logins
   changed_when: false
   failed_when: false
