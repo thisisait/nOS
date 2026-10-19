@@ -216,6 +216,8 @@ nos_test_users_enabled: false   # profiles/test-users.yml flips it
 # step writes it). Each gets an Authentik user in its tier's group and its app
 # accounts from the first-login walk; the password is derived per name in
 # main.yml — read it with tools/nos-secret.py --user <name> nos-identity password.
+# Add realms: [authentik, unix] to also make the person a Linux host login
+# (roles/pazny.linux.users, home 0700) — the shared-workstation case.
 nos_extra_identities: []
 
 # ── TLD class detection (drives mkcert vs ACME, dnsmasq vs real DNS) ─────────

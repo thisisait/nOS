@@ -38,7 +38,9 @@ An identity SHALL be `{name, kind, tier, email, realms}`:
   the genome's `access.tier` (1 admin … 4 guest). One vocabulary, not a new
   one.
 - `realms` — where the account MUST be able to exist/authenticate:
-  `authentik | gitea | gitlab | woodpecker | wing`. A realm consumer var
+  `authentik | gitea | gitlab | woodpecker | wing | unix`. `unix` is a Linux
+  host login (`roles/pazny.linux.users`: tier group = the RBAC tier's own
+  group, home 0700, locked never deleted); inert on macOS. A realm consumer var
   SHALL be a PROJECTION of the roster (e.g. `woodpecker_admin` = every
   identity whose realms include `woodpecker`, joined by commas).
 

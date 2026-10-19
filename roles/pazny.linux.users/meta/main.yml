@@ -1,0 +1,15 @@
+---
+galaxy_info:
+  role_name: linux_users
+  author: pazny
+  description: "The `unix` identity realm: host logins derived from the declared roster (nos_identities)."
+  license: "MIT"
+  min_ansible_version: "2.20"
+  platforms:
+    - name: Ubuntu
+      versions: [jammy, noble]
+    - name: Debian
+      versions: [bookworm, trixie]
+  galaxy_tags: [users, identity, linux]
+
+dependencies: []
