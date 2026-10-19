@@ -32,6 +32,7 @@ from __future__ import annotations
 import json
 import os
 import pathlib
+import re
 import subprocess
 import sys
 
@@ -45,6 +46,7 @@ SECRETS_TPL = REPO / "templates" / "secrets.yml.j2"
 CREDS = REPO / "default.credentials.yml"
 REGISTRY = REPO / "state" / "habitat" / "llm-backends.yml"
 WING_PLIST = REPO / "roles" / "pazny.wing" / "templates" / "wing.plist.j2"
+WING_ENV = WING_PLIST.with_name("wing.env.j2")
 
 
 def test_disabled_by_default():
@@ -78,6 +80,16 @@ def test_arming_renders_into_the_plist_not_the_catalog():
         "wing.plist.j2 no longer renders NOS_ARMED_BACKENDS from "
         "minimax_enabled — the flag would arm nothing anywhere, or worse, "
         "something somewhere else"
+    )
+    # Linux runs Wing from wing.env (systemd EnvironmentFile): the same arming
+    # keys with the same expressions, or Wing there arms nothing (DGX 2026-10).
+    keys = r"NOS_(?:ARMED_BACKENDS|AGENTS_BACKEND|OPENCLAW_AGENT|\w+_MODEL)"
+    in_plist = dict(re.findall(rf"<key>({keys})</key>\s*<string>(.*?)</string>", plist))
+    in_env = dict(re.findall(rf"^({keys})=(.*)$", WING_ENV.read_text(), re.M))
+    assert in_plist and in_env == in_plist, (
+        "wing.env.j2 does not render the plist's backend arming identically: "
+        f"missing {sorted(in_plist.keys() - in_env.keys())}, "
+        f"differ {sorted(k for k in in_plist.keys() & in_env.keys() if in_env[k] != in_plist[k])}"
     )
 
 
