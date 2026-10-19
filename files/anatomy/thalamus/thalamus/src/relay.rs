@@ -38,12 +38,14 @@ struct Tabs {
     next: u64,
 }
 
-/// The door, on loopback only; None when the secret is empty (no face, no port).
+/// The door, on loopback unless THALAMUS_RELAY_HOST names docker0's address (Linux: the face
+/// container reaches host.docker.internal there, not loopback); None when the secret is empty.
 pub fn bind(secret: &str, port: u16) -> std::io::Result<Option<TcpListener>> {
     if secret.is_empty() {
         return Ok(None);
     }
-    TcpListener::bind(("127.0.0.1", port)).map(Some)
+    let host = std::env::var("THALAMUS_RELAY_HOST").ok().filter(|h| !h.is_empty()).unwrap_or_else(|| "127.0.0.1".into());
+    TcpListener::bind((host.as_str(), port)).map(Some)
 }
 
 pub fn run(listener: TcpListener, relay: Arc<Relay>) {

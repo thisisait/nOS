@@ -195,7 +195,7 @@ fn entry(entry: &Value) -> Option<Person> {
 }
 
 /// Binds the socket 0600 from birth: no window where another uid may connect.
-pub fn bind(path: &Path) -> std::io::Result<UnixListener> {
+pub fn bind(path: &Path, mode: u32) -> std::io::Result<UnixListener> {
     // Only a stale socket is removed; any other file at the path is not ours to delete.
     if let Ok(m) = std::fs::symlink_metadata(path) {
         if !m.file_type().is_socket() {
@@ -207,7 +207,7 @@ pub fn bind(path: &Path) -> std::io::Result<UnixListener> {
     let l = UnixListener::bind(path);
     unsafe { libc::umask(old) };
     let l = l?;
-    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))?;
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode))?;
     Ok(l)
 }
 

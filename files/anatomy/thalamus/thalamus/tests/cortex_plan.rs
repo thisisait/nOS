@@ -204,7 +204,7 @@ fn rig(name: &str, b: Binding, models: Vec<String>, cortex: Option<String>) -> R
         data: d.clone(),
     };
     let sock = d.join("t.sock");
-    let listener = serve::bind(&sock).unwrap();
+    let listener = serve::bind(&sock, 0o600).unwrap();
     std::thread::spawn(move || serve::run(listener, Arc::new(srv)));
     Rig { sock, ledger, model, keap }
 }

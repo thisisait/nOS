@@ -3,11 +3,6 @@
 # ~/.nos/thalamus.sock, Iris's tools run as the peer's person through KEAP's human door.
 # Gated on install_thalamus in main.yml. The identity map is the receptor's (ruling 1).
 
-- name: "[pazny.thalamus] macOS only in slice 1"
-  ansible.builtin.fail:
-    msg: "The thalamus has no systemd --user unit yet (slice 1 converges macOS first)."
-  when: (nos_service_manager | default('launchd')) != 'launchd'
-
 # Without the map every peer is refused; say so now rather than serve a door nobody can use.
 - name: "[pazny.thalamus] The receptor renders the identity map it reads"
   ansible.builtin.assert:
@@ -21,18 +16,6 @@
       (receptor_identity_map | default(ansible_facts['env']['HOME'] ~ '/.nos/identity-map.yml'))
       == ansible_facts['env']['HOME'] ~ '/.nos/identity-map.yml'
     fail_msg: "receptor_identity_map is overridden; the thalamus reads only ~/.nos/identity-map.yml (src/serve.rs IDENTITY_MAP)."
-
-- name: "[pazny.thalamus] Ensure runtime directories exist"
-  ansible.builtin.file:
-    path: "{{ item.path }}"
-    state: directory
-    mode: "{{ item.mode }}"
-  loop:
-    - { path: "{{ thalamus_home }}", mode: '0755' }
-    - { path: "{{ thalamus_home }}/bin", mode: '0755' }
-    # 0700: the logs name every person; the ledger holds turns and approved cell values.
-    - { path: "{{ thalamus_log_dir }}", mode: '0700' }
-    - { path: "{{ thalamus_data_dir }}", mode: '0700' }
 
 # Build only when the source differs from the one the binary was built from (Pulse's pattern).
 - name: "[pazny.thalamus] Hash the thalamus source"
@@ -53,90 +36,6 @@
   changed_when: false
   failed_when: false
   check_mode: false
-
-# rustup's cargo when the host has one; else Homebrew's rust (nOS installs no rustup). Live 2026-10-14:
-# a fresh client had neither, and the build died with "No such file or directory".
-- name: "[pazny.thalamus] Find a Rust toolchain"
-  ansible.builtin.stat:
-    path: "{{ thalamus_cargo }}"
-  register: _thalamus_cargo_stat
-
-- name: "[pazny.thalamus] Install Homebrew's rust when there is no cargo"
-  community.general.homebrew:
-    name: rust
-    state: present
-  when:
-    - nos_pkg_manager == 'homebrew'
-    - not (_thalamus_cargo_stat.stat.executable | default(false))
-
-- name: "[pazny.thalamus] Use Homebrew's cargo"
-  ansible.builtin.set_fact:
-    thalamus_cargo: "{{ homebrew_prefix }}/bin/cargo"
-  when:
-    - nos_pkg_manager == 'homebrew'
-    - not (_thalamus_cargo_stat.stat.executable | default(false))
-
-# --locked: the Cargo.lock dependabot watches is what ships. The target dir lives off the checkout.
-- name: "[pazny.thalamus] Install thalamus binary"
-  ansible.builtin.shell: |
-    set -euo pipefail
-    export CARGO_TARGET_DIR={{ thalamus_target_dir | quote }}
-    {{ thalamus_cargo | quote }} build --release --locked --manifest-path {{ (playbook_dir ~ '/files/anatomy/thalamus/thalamus/Cargo.toml') | quote }}
-    install -m 0755 "$CARGO_TARGET_DIR/release/thalamus" {{ thalamus_bin | quote }}
-  args:
-    executable: /bin/bash
-  register: _thalamus_build
-  when: _thalamus_src_sha.stdout != (_thalamus_built_sha.stdout | default(''))
-  changed_when: true
-  notify: Restart thalamus
-
-- name: "[pazny.thalamus] Record the hash the binary was built from"
-  ansible.builtin.copy:
-    content: "{{ _thalamus_src_sha.stdout }}"
-    dest: "{{ thalamus_bin }}.source-sha256"
-    mode: '0644'
-  when: _thalamus_build is not skipped
-
-# The removable-volume grant (ledger under nos_data_root) binds to the designated requirement; the
-# linker's ad-hoc DR is the cdhash, so every rebuild re-asked. Minted once, operator-approved 2026-10-12;
-# untrusted on purpose: it signs only for TCC, never for Gatekeeper. Needs the login keychain unlocked.
-- name: "[pazny.thalamus] The local code-signing identity (minted once in the login keychain)"
-  ansible.builtin.shell: |
-    set -euo pipefail
-    KC={{ thalamus_signing_keychain | quote }}
-    CN={{ thalamus_signing_cn | quote }}
-    if ! security find-certificate -c "$CN" "$KC" >/dev/null 2>&1; then
-      d=$(mktemp -d); trap 'rm -rf "$d"' EXIT
-      pw=$(/usr/bin/openssl rand -hex 16)
-      /usr/bin/openssl req -x509 -newkey rsa:2048 -nodes -days 3650 -subj "/CN=$CN" \
-        -addext "keyUsage=critical,digitalSignature" -addext "extendedKeyUsage=critical,codeSigning" \
-        -addext "basicConstraints=critical,CA:false" -keyout "$d/k.pem" -out "$d/c.pem" 2>/dev/null
-      /usr/bin/openssl pkcs12 -export -inkey "$d/k.pem" -in "$d/c.pem" -out "$d/id.p12" -passout "pass:$pw"
-      security import "$d/id.p12" -k "$KC" -P "$pw" -T /usr/bin/codesign >/dev/null
-      echo minted
-    fi
-    security find-certificate -c "$CN" -Z "$KC" | awk '/SHA-1 hash/ {print $3; exit}'
-  args:
-    executable: /bin/bash
-  register: _thalamus_signing
-  changed_when: "'minted' in _thalamus_signing.stdout"
-
-- name: "[pazny.thalamus] Sign the binary with it (same identity every build)"
-  ansible.builtin.shell: |
-    set -euo pipefail
-    H={{ _thalamus_signing.stdout_lines[-1] | quote }}
-    want="certificate leaf = H\"$(printf %s "$H" | tr 'A-F' 'a-f')\""
-    if codesign -d -r- {{ thalamus_bin | quote }} 2>&1 | grep -qF "$want"; then echo same; exit 0; fi
-    out=$(codesign -f -s "$H" -i {{ thalamus_launchd_label | quote }} {{ thalamus_bin | quote }} 2>&1) || { echo "$out" >&2; grep -q errSecInternalComponent <<<"$out" && { echo "codesign could not reach the signing key (errSecInternalComponent). Over SSH the keychain cannot ask
-      'allow codesign?'. Once, in this session (it asks the login password), then re-run:
-        security set-key-partition-list -S apple-tool:,apple:,codesign: -s {{ thalamus_signing_keychain | quote }}" >&2; exit 1; }; exit 1; }
-    echo signed
-  args:
-    executable: /bin/bash
-  register: _thalamus_signed
-  changed_when: "'signed' in _thalamus_signed.stdout"
-  when: _thalamus_signing.stdout_lines | default([]) | length > 0  # --check mints nothing
-  notify: Restart thalamus
 
 # The vars behind the auth_secret (nos:<var>) of each row iris may bind that is ARMED here (its
 # enabled_flag true); a keyless row has none. The plist renders each value as NOS_SECRET_<VAR>
@@ -176,82 +75,10 @@
       - thalamus_decider_exes | select('string') | reject('match', '^/[^:]+$') | list | length == 0
     fail_msg: "thalamus_decider_exes must be a list of absolute paths without ':', e.g. [\"{{ thalamus_pupil_exe }}\", \"{{ thalamus_bin }}\"]."
 
-- name: "[pazny.thalamus] Render launchd plist"
-  ansible.builtin.template:
-    src: thalamus.plist.j2
-    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ thalamus_launchd_label }}.plist"
-    mode: '0600'   # carries the KEAP proxy secret and the model key
-  no_log: true     # --diff would print both
-  register: _thalamus_plist
-  notify: Restart thalamus
+# One daemon per host: launchd on macOS (macos.yml, plus the pupil app), the
+# operator's systemd --user unit on Linux with a socket every login shares (linux.yml).
+- ansible.builtin.import_tasks: macos.yml
+  when: nos_service_manager == 'launchd'
 
-- name: "[pazny.thalamus] Bootstrap launchd job (idempotent)"
-  ansible.builtin.shell: |
-    set -e
-    PLIST=~/Library/LaunchAgents/{{ thalamus_launchd_label }}.plist
-    UID_NUM=$(id -u)
-    if launchctl print "gui/${UID_NUM}/{{ thalamus_launchd_label }}" >/dev/null 2>&1; then
-      echo "already-loaded"
-    else
-      launchctl bootstrap gui/${UID_NUM} "$PLIST"
-      echo "bootstrapped"
-    fi
-  register: _thalamus_bootstrap
-  changed_when: "'bootstrapped' in _thalamus_bootstrap.stdout"
-
-- name: "[pazny.thalamus] Flush handlers (apply a pending restart now)"
-  ansible.builtin.meta: flush_handlers
-
-# Static, so --tags thalamus reaches it; signs with the identity minted above. After the daemon
-# serves, so a failed pupil build (npm, tauri) never holds back the plist or the bootstrap.
-- ansible.builtin.import_tasks: pupil.yml
-
-# After pupil.yml built nos-pupil: a listed path that names no file admits nobody, silently.
-- name: "[pazny.thalamus] Each listed decider exists"
-  ansible.builtin.stat:
-    path: "{{ item }}"
-  loop: "{{ thalamus_decider_exes }}"
-  register: _thalamus_deciders
-
-- name: "[pazny.thalamus] A decider that names no file is refused"
-  ansible.builtin.assert:
-    that: _thalamus_deciders.results | rejectattr('stat.exists') | list | length == 0
-    fail_msg: >-
-      thalamus_decider_exes names no file:
-      {{ _thalamus_deciders.results | rejectattr('stat.exists') | map(attribute='item') | join(', ') }};
-      it would admit nobody (src/serve.rs decider_refusal).
-  when: not ansible_check_mode  # --check builds no pupil
-
-# The effect, read by the reader: socket 0600, job loaded, ledger readable. Any line not OK fails,
-# except the model line: serving without one warns (ruling 2026-10-12) — the reader still says UNKNOWN.
-- name: "[pazny.thalamus] Verify — the reader sees the socket, the job and the ledger"
-  ansible.builtin.shell: |
-    set -o pipefail
-    # Wait for a socket that accepts: a stale one from a crashed run exists but answers nobody.
-    for _ in $(seq 1 20); do
-      out=$(/usr/bin/python3 {{ (playbook_dir ~ '/tools/thalamus-status.py') | quote }} --json) || exit 1
-      echo "$out" | /usr/bin/python3 -c 'import json,sys; sys.exit(any(r["state"] != "OK" for r in json.load(sys.stdin) if r["check"] != "model"))' && break
-      sleep 0.5
-    done
-    echo "$out"
-  args:
-    executable: /bin/bash
-  register: _thalamus_verify
-  changed_when: false
-  failed_when: >-
-    _thalamus_verify.rc != 0
-    or (_thalamus_verify.stdout | from_json | rejectattr('check', 'equalto', 'model')
-        | rejectattr('state', 'equalto', 'OK') | list | length) > 0
-  tags: ['verify']
-
-# Red in the log, ignored=1 in the recap: visible, not green, not a failure.
-- name: "[pazny.thalamus] Verify — WARN: the thalamus serves without a model"
-  ansible.builtin.fail:
-    msg: >-
-      WARN (not a failure): {{ (_thalamus_verify.stdout | from_json | selectattr('check', 'equalto', 'model') | first).detail }}.
-      Controls answer, turns are refused until iris binds a model (tools/thalamus-status.py).
-  when: >-
-    (_thalamus_verify.stdout | from_json | selectattr('check', 'equalto', 'model')
-     | rejectattr('state', 'equalto', 'OK') | list | length) > 0
-  ignore_errors: true  # noqa: ignore-errors - a warning by ruling, counted as ignored in the recap
-  tags: ['verify']
+- ansible.builtin.import_tasks: linux.yml
+  when: nos_service_manager != 'launchd'
