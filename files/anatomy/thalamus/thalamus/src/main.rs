@@ -12,9 +12,20 @@ use thalamus::serve::{self, Server, IDENTITY_MAP};
 /// shared Linux host sets it outside every (0700) home so each login's shell finds the one
 /// daemon; THALAMUS_SOCKET_SHARED=1 then opens it 0666 — the peer's uid still has to be in
 /// the identity map, so a wider mode admits no one the map does not name.
+/// Without THALAMUS_SOCKET a shell that is not a login shell (an editor's terminal,
+/// `bash -c`) never read /etc/profile.d, so the shared host socket is the fallback
+/// when the home one does not exist (spark1, 2026-10-19).
+pub const SHARED_SOCKET: &str = "/run/nos/thalamus.sock";
+
 fn socket_path(home: &std::path::Path) -> PathBuf {
-    std::env::var("THALAMUS_SOCKET").ok().filter(|s| !s.is_empty()).map(PathBuf::from)
-        .unwrap_or_else(|| home.join(".nos/thalamus.sock"))
+    if let Some(p) = std::env::var("THALAMUS_SOCKET").ok().filter(|s| !s.is_empty()) {
+        return PathBuf::from(p);
+    }
+    let own = home.join(".nos/thalamus.sock");
+    if !own.exists() && std::path::Path::new(SHARED_SOCKET).exists() {
+        return PathBuf::from(SHARED_SOCKET);
+    }
+    own
 }
 
 fn serve_main(args: &[String]) -> Result<(), String> {

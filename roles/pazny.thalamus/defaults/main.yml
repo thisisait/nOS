@@ -50,7 +50,7 @@ thalamus_binding_env:
 # homes and is opened 0666 — serve still names the peer by SO_PEERCRED and
 # refuses a uid the identity map does not list. /etc/profile.d tells each
 # login's shell where it is; `iris` is the shell.
-thalamus_shared_socket_dir: /run/nos
+thalamus_shared_socket_dir: /run/nos   # src/main.rs SHARED_SOCKET is this dir + thalamus.sock
 thalamus_shared_socket: "{{ thalamus_shared_socket_dir }}/thalamus.sock"
 # Built in a pinned container: no Rust toolchain on the host, the same compiler every run.
 thalamus_rust_image: "rust:1.90-bookworm"
