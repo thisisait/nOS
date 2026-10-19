@@ -81,8 +81,10 @@ DAEMON_ROLES_EXCUSED = {
 
 
 def _tasks(role: str) -> list[dict]:
-    p = REPO / "roles" / role / "tasks" / "main.yml"
-    return [t for t in (yaml.safe_load(p.read_text()) or []) if isinstance(t, dict)]
+    # Every task file of the role, main.yml first: a role may split by platform
+    # (pazny.thalamus macos.yml / linux.yml, 2026-10-19) and the build moves with it.
+    files = sorted((REPO / "roles" / role / "tasks").glob("*.yml"), key=lambda p: (p.name != "main.yml", p.name))
+    return [t for p in files for t in (yaml.safe_load(p.read_text()) or []) if isinstance(t, dict)]
 
 
 def _notifies(task: dict) -> list[str]:
