@@ -77,6 +77,65 @@
 # prefix: previous_password_prefix from .ansible-prefix-state holds the last
 # prefix -> creates "previous_metabase_password" and calls POST /api/session
 # -> PUT /api/user/{id}/password. Runs only after setup has already completed.
+# ── The admin's email moved with tenant_domain (n8n shape, 2026-10-19) ─────
+# Every login below names admin@<tenant_domain>; after a domain change they all
+# 401 and the break-glass admin drifts. Read user 1's email read-only, log in
+# under it, move it through Metabase's API; the current-password login below
+# is the reader that proves the move.
+- name: "[pazny.metabase Post] Read the admin's email Metabase holds (read-only)"
+  ansible.builtin.command:
+    argv:
+      - "{{ docker_bin | default('docker') }}"
+      - exec
+      - "{{ postgresql_container_name | default('infra-postgresql-1') }}"
+      - psql
+      - "-U"
+      - "{{ postgresql_root_user | default('postgres') }}"
+      - "-d"
+      - "{{ metabase_db_name | default('metabase') }}"
+      - "-tAc"
+      - "SELECT email FROM core_user WHERE id = 1"
+  register: _mb_admin_email_held
+  changed_when: false
+  failed_when: false
+  when:
+    - _mb_ready.status | default(0) == 200
+    - _mb_setup_token | default('', true) | length == 0
+
+- name: "[pazny.metabase Post] Log in under the admin's previous email"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ metabase_port | default(3002) }}/api/session"
+    method: POST
+    body_format: json
+    body:
+      username: "{{ _mb_admin_email_held.stdout | trim }}"
+      password: "{{ metabase_admin_password }}"
+    status_code: [200, 401]
+    timeout: 10
+  register: _mb_session_moved
+  when:
+    - (_mb_admin_email_held.stdout | default('') | trim) not in ['', (metabase_admin_email | default(default_admin_email))]
+  changed_when: false
+  failed_when: false
+  no_log: true
+
+- name: "[pazny.metabase Post] Move the admin to the declared email (PUT /api/user/1)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ metabase_port | default(3002) }}/api/user/1"
+    method: PUT
+    body_format: json
+    headers:
+      X-Metabase-Session: "{{ _mb_session_moved.json.id }}"
+    body:
+      email: "{{ metabase_admin_email | default(default_admin_email) }}"
+    status_code: [200]
+    timeout: 10
+  register: _mb_email_moved
+  when: _mb_session_moved.status | default(0) == 200
+  changed_when: true
+  failed_when: false
+  no_log: true
+
 - name: "[pazny.metabase Post] Login with previous password (for reconverge)"
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ metabase_port | default(3002) }}/api/session"
