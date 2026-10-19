@@ -60,8 +60,8 @@ fn table(id: &str, title: &str, cols: Value) -> Value {
 }
 
 /// KEAP's table routes over the fixture's tables, read-only: a write would be a defect here.
-fn keap() -> (String, Seen) {
-    let tables = vec![
+fn keap(extra: Vec<(Value, Value)>) -> (String, Seen) {
+    let mut tables = vec![
         (table("todos", "Todos", json!([{"key": "title", "label": "Title", "kind": "text"},
             {"key": "status", "label": "Status", "kind": "select", "options": ["open", "done"]},
             {"key": "amount", "label": "Amount", "kind": "number"}, {"key": "track", "label": "Track", "kind": "text"}])),
@@ -74,6 +74,7 @@ fn keap() -> (String, Seen) {
             {"key": "legal_name", "label": "Legal name", "kind": "text"}, {"key": "role", "label": "Role", "kind": "text"}])),
          json!([{"id": "acme", "values": {"slug": "acme", "legal_name": "ACME s.r.o.", "role": "client"}}])),
     ];
+    tables.extend(extra);
     listen(Box::new(move |method, path, _, _| {
         let ok = |d: Value| (200, json!({"success": true, "data": d}).to_string());
         if method != "GET" {
@@ -169,10 +170,11 @@ fn binding(name: &str, local: bool) -> Binding {
 }
 
 fn rig(name: &str, b: Binding, models: Vec<String>, cortex: Option<String>) -> Rig {
-    rig_cx(name, b, models, cortex.map(|url| Cortex { url, token: "cx-ro-token".into(), rich_catalogue: false }))
+    rig_cx(name, b, models, cortex.map(|url| Cortex { url, token: "cx-ro-token".into(), rich_catalogue: false }), vec![])
 }
 
-fn rig_cx(name: &str, b: Binding, models: Vec<String>, cortex: Option<Cortex>) -> Rig {
+/// A rig whose KEAP holds `extra` tables after the fixture's three.
+fn rig_cx(name: &str, b: Binding, models: Vec<String>, cortex: Option<Cortex>, extra: Vec<(Value, Value)>) -> Rig {
     let d = PathBuf::from(format!("/tmp/thc-{}-{name}", std::process::id()));
     let _ = std::fs::remove_dir_all(&d);
     for p in [d.clone(), d.join("state"), d.join("state/keap-tables")] {
@@ -189,7 +191,7 @@ fn rig_cx(name: &str, b: Binding, models: Vec<String>, cortex: Option<Cortex>) -
     let map = d.join("identity-map.yml");
     std::fs::write(&map, json!({"logins": {me(): {"username": "Alice Smith", "groups": ["nos-users"]}}}).to_string()).unwrap();
     let (model_url, model) = model(models);
-    let (keap_url, keap) = keap();
+    let (keap_url, keap) = keap(extra);
     let ledger = d.join("ledger.db");
     let srv = Server {
         map,
@@ -293,6 +295,13 @@ fn fingerprinted(v: &Value) -> Value {
             v[k] = json!("hex");
         }
     }
+    // the catalogue the plan saw: sha256 of its table lines, first 16 hex, and the table ids it held
+    if v.get("catalogue_digest").and_then(Value::as_str).is_some_and(|h| h.len() == 16 && h.chars().all(|c| matches!(c, '0'..='9' | 'a'..='f'))) {
+        v["catalogue_digest"] = json!("hex16");
+    }
+    if v.get("catalogue_tables").and_then(Value::as_array).is_some_and(|t| !t.is_empty() && t.iter().all(Value::is_string)) {
+        v["catalogue_tables"] = json!("ids");
+    }
     v
 }
 
@@ -328,7 +337,8 @@ fn every_fixture_pipeline_runs_as_its_tool_calls_or_falls_back() {
         let ev = tools(&rig, &session);
         let uses: Vec<&Value> = ev.iter().filter(|(t, _)| t.ends_with("tool_use:cortex_plan")).map(|e| &e.1).collect();
         assert_eq!(fingerprinted(uses[0]), json!({"source": c["pipeline"], "engine": "ollama-json-schema", "constrained": true,
-            "primer_sha256": "hex", "grammar_sha256": "hex", "catalogue": "lean"}), "{name}");
+            "primer_sha256": "hex", "grammar_sha256": "hex", "catalogue": "lean",
+            "catalogue_digest": "hex16", "catalogue_tables": "ids"}), "{name}");
         let results: Vec<&Value> = ev.iter().filter(|(t, _)| t.ends_with("tool_result:cortex_plan")).map(|e| &e.1).collect();
         let last = *results.last().unwrap_or_else(|| panic!("{name}: no cortex_plan result: {ev:?}"));
         let said = models_said(&rig);
@@ -386,7 +396,8 @@ fn the_unconstrained_engine_repairs_once_with_the_validators_errors() {
     let uses: Vec<&Value> = ev.iter().filter(|(t, _)| t.ends_with("tool_use:cortex_plan")).map(|e| &e.1).collect();
     assert_eq!(uses.len(), 2);
     assert_eq!(fingerprinted(uses[0]), json!({"source": "get(db:todos, colour=red)", "engine": "unconstrained", "constrained": false,
-        "primer_sha256": "hex", "grammar_sha256": null, "catalogue": "lean"}), "the fence is stripped; an unconstrained plan has no grammar");
+        "primer_sha256": "hex", "grammar_sha256": null, "catalogue": "lean",
+        "catalogue_digest": "hex16", "catalogue_tables": "ids"}), "the fence is stripped; an unconstrained plan has no grammar");
     assert!(ev.iter().any(|(t, v)| t.ends_with("tool_use:query_rows") && v["args"]["limit"] == 5), "the repaired plan ran: {ev:?}");
 }
 
@@ -698,7 +709,7 @@ fn a_plan_row_names_the_table_it_resolved() {
     assert_eq!(used(&rig, &session), "lean");
     let (organ_url, _) = organ(known(&all));
     let rich = rig_cx("tablerich", binding("ollama", true), vec![say(&json!({"stages": c["stages"]}).to_string()), say("done")],
-                      Some(Cortex { url: organ_url, token: "cx-ro-token".into(), rich_catalogue: true }));
+                      Some(Cortex { url: organ_url, token: "cx-ro-token".into(), rich_catalogue: true }), vec![]);
     let (s2, _) = turn(&rich, None, "todos by amount");
     assert!(prompt(&rich).contains("status:select \"Status\" (open|done)"), "{}", prompt(&rich));
     assert_eq!(used(&rich, &s2), "rich");
@@ -716,4 +727,42 @@ fn a_plan_row_names_the_table_it_resolved() {
     };
     let status = tables.iter().find(|t| t.id == "todos").unwrap().columns.iter().find(|c| c.key == "status").unwrap();
     assert_eq!((status.label.as_deref(), status.options.as_deref()), (Some("Status"), Some(&["open".to_string(), "done".into()][..])));
+}
+
+/// Live 2026-10-18 the cortex path fell 85->70/283 with 31 bare `get(db:t, limit=N)` plans: the plan
+/// saw the first 12 tables in KEAP's order, so a table the person named could be cut. A table the turn
+/// names (id, title or column label, folded) goes in first; the plan row says which catalogue it saw.
+#[test]
+fn a_table_the_turn_names_is_in_the_plan_catalogue_even_when_13th() {
+    let all = cases();
+    let c = all.iter().find(|c| c["name"] == "a title and labels resolve, rank orders and cuts").unwrap();
+    let (organ_url, _) = organ(known(&all));
+    // todos, engram, party, nine fillers: the stock table is the 13th in KEAP's order
+    let mut extra: Vec<(Value, Value)> = (1..=9).map(|i| (table(&format!("filler-{i:02}"), &format!("Filler {i}"),
+        json!([{"key": "x", "label": "X", "kind": "text"}])), json!([]))).collect();
+    extra.push((table("whs-stock", "Skladové zásoby", json!([{"key": "bin", "label": "Regál", "kind": "text"},
+        {"key": "qty", "label": "Qty", "kind": "number"}])), json!([])));
+    let plan = say(&json!({"stages": c["stages"]}).to_string());
+    let cx = || Some(Cortex { url: organ_url.clone(), token: "cx-ro-token".into(), rich_catalogue: false });
+    let catalogue = |r: &Rig| models_said(r)[0]["messages"][0]["content"].as_str().unwrap().split_once("Tables:\n").unwrap().1.to_string();
+    let row = |r: &Rig, s: &str| tools(r, s).into_iter().find(|(t, _)| t.ends_with("tool_use:cortex_plan")).unwrap().1;
+    // by its title (diacritics folded), by a column label, by its id
+    for (i, text) in ["Nakresli graf SKLADOVE zasoby podle bin", "rows by Regál", "chart of whs-stock"].iter().enumerate() {
+        let rig = rig_cx(&format!("named{i}"), binding("ollama", true), vec![plan.clone(), say("done")], cx(), extra.clone());
+        let (session, _) = turn(&rig, None, text);
+        let cat = catalogue(&rig);
+        assert!(cat.starts_with("- whs-stock \"Skladové zásoby\": bin:text, qty:number\n"), "{text}: the named table goes first: {cat}");
+        assert_eq!(cat.lines().count(), 12, "{text}: the cap stays 12: {cat}");
+        let r = row(&rig, &session);
+        let ids: Vec<&str> = r["catalogue_tables"].as_array().unwrap().iter().filter_map(Value::as_str).collect();
+        assert_eq!((ids.len(), ids[0], ids[1]), (12, "whs-stock", "todos"), "{text}: named first, then KEAP's order: {ids:?}");
+        assert!(!ids.contains(&"filler-09"), "{text}: the last in order is the one cut: {ids:?}");
+        assert_eq!(r["catalogue_digest"], json!(cortex_plan::sha256_hex(&cat)[..16]), "{text}: the digest is of the table lines");
+    }
+    // A turn that names none keeps today's order: the first 12.
+    let rig = rig_cx("named-none", binding("ollama", true), vec![plan, say("done")], cx(), extra);
+    let (session, _) = turn(&rig, None, "something else");
+    let r = row(&rig, &session);
+    let ids: Vec<&str> = r["catalogue_tables"].as_array().unwrap().iter().filter_map(Value::as_str).collect();
+    assert_eq!((ids.len(), ids[0], ids[11]), (12, "todos", "filler-09"), "{ids:?}");
 }
