@@ -3238,6 +3238,23 @@
     # armed job lacks. Fails ONLY on a need the config requires and the host
     # still lacks — a configured tier model that did not pull, claude absent
     # with install_claude_cli_vendor on. A need the config leaves off holds.
+    # The model pulls run in the background (roles/pazny.ollama, poll: 0). Wait
+    # for them here, after everything else, so the verify below judges a pull
+    # that finished, not one still on the wire. A failed pull is its verdict.
+    - name: "[Verify] Wait for the background model pulls"
+      ansible.builtin.async_status:
+        jid: "{{ item.ansible_job_id }}"
+      loop: "{{ _ollama_pulled.results | default([]) | selectattr('ansible_job_id', 'defined') | list }}"
+      loop_control:
+        label: "{{ item.item }}"
+      register: _ollama_pull_done
+      until: _ollama_pull_done.finished | default(false)
+      retries: 720
+      delay: 10
+      failed_when: false
+      changed_when: false
+      tags: ['always', 'verify']
+
     - name: "[Verify] Every armed job has what it needs"
       ansible.builtin.command:
         argv: [python3, "{{ playbook_dir }}/tools/job_readiness.py", --verify]
