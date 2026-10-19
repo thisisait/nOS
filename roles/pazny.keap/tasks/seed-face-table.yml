@@ -75,12 +75,14 @@
     status_code: [200, 201, 400, 404, 409]
   register: _face_tbl_create
   no_log: true   # Bearer keap_agent_token_rw in header
-  # A reconcile that changed nothing still answers 200, so this reports changed
-  # on every run for an existing table. Accepted deliberately: the alternative
-  # is diffing the live schema here, which re-implements KEAP's own comparison
-  # in Jinja and would drift from it. Idempotence of EFFECT is asserted by
-  # KEAP's table-schema-reconcile.test.ts.
-  changed_when: _face_tbl_create.status | default(0) in [200, 201]
+  # KEAP answers 200 either way; changed = created, or the stored schema/ACL the
+  # probe saw differs from what the reconcile answered (both KEAP-normalized).
+  # ponytail: view/anchors/graph live on the card and are not answered; add them if KEAP returns them.
+  changed_when: >-
+    _face_tbl_create.status | default(0) in [200, 201] and (
+    _face_tbl_probe.status | default(0) != 200 or
+    (_face_tbl_probe.json.data | default({})).schema | default(none) != (_face_tbl_create.json.data | default({})).schema | default(none) or
+    (_face_tbl_probe.json.data | default({})).sharedWith | default(none) != (_face_tbl_create.json.data | default({})).sharedWith | default(none))
   # create_only: a table older than its definition (the hand-made roadmap) is left as it is.
   when: not (_face_tbl.create_only | default(false) and _face_tbl_probe.status | default(0) == 200)
 
@@ -106,7 +108,11 @@
   register: _face_tbl_retry
   no_log: true
   when: _face_tbl_create.status | default(0) == 400
-  changed_when: _face_tbl_retry.status | default(0) in [200, 201]
+  changed_when: >-
+    _face_tbl_retry.status | default(0) in [200, 201] and (
+    _face_tbl_probe.status | default(0) != 200 or
+    (_face_tbl_probe.json.data | default({})).schema | default(none) != (_face_tbl_retry.json.data | default({})).schema | default(none) or
+    (_face_tbl_probe.json.data | default({})).sharedWith | default(none) != (_face_tbl_retry.json.data | default({})).sharedWith | default(none))
 
 - name: "[pazny.keap] Keep the no-view reconcile when the facet pin refused"
   ansible.builtin.set_fact:
@@ -151,7 +157,7 @@
 - name: "[pazny.keap] Compute already-seeded row slugs for {{ _face_tbl.slug }}"
   ansible.builtin.set_fact:
     _face_existing_row_slugs: >-
-      {{ ((_face_rows_probe.json | default({})).rows | default([])) | map(attribute='slug') | list }}
+      {{ (((_face_rows_probe.json | default({})).data | default({})).rows | default([])) | map(attribute='slug') | list }}
   when: (_face_tbl.rows | default([]) | length) > 0
 
 - name: "[pazny.keap] No row WHERE-guard when {{ _face_tbl.slug }} seeds nothing"
