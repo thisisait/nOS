@@ -2,8 +2,9 @@
 
 Measured 2026-10-18 on the client host: 'CI on dev is failure' and 'CI on
 master is failure' — GitHub runs nobody there can act on. The declared fact is
-install_loops (the maintainer's development loops; profiles/core.yml turns it
-off). Runs the real reader with a temp HOME and a stub `gh` that reports red CI.
+nos_host_role (maintainer|client): install_loops was not it, the client keeps its
+loops installed and paused (operator 2026-10-19). Runs the real reader with a temp
+HOME and a stub `gh` that reports red CI.
 """
 from __future__ import annotations
 
@@ -20,8 +21,9 @@ WRAP = """
 import importlib.util, sys
 spec = importlib.util.spec_from_file_location("_red", sys.argv[1])
 mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
-loops = sys.argv[2] == "maintainer"
-mod._install_flags = lambda: {"install_loops": loops}
+role = sys.argv[2]
+mod._install_flags = lambda: {"install_loops": True}   # the client's loops stay installed
+mod._host_role = lambda: role
 sys.argv = ["red-status.py", "--json"]
 raise SystemExit(mod.main())
 """
