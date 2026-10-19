@@ -1039,6 +1039,18 @@ services:
     launchd_label: "com.ollama.agent"      # ollama_launchd_label (roles/pazny.ollama)
     data_path_var: ollama_models_dir
 
+  - id: vllm
+    software_owner: symbiont
+    category: ai
+    stack: iiab
+    install_flag: install_vllm
+    version_var: vllm_image
+    version_source: docker_image
+    image: nvcr.io/nvidia/vllm
+    container_name: iiab-vllm-1
+    port_var: vllm_port
+    oidc: none
+
   - id: jupyterhub
     software_owner: symbiont
     category: data

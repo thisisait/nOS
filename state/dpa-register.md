@@ -20,8 +20,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 117 (92 core services, 3 manifest apps)
-- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (105)
+- **Processing activities:** 118 (93 core services, 3 manifest apps)
+- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (106)
 - **Transfers outside the EU:** 12 activities
 - **Activities engaging a third-party processor:** 18
 
@@ -1746,3 +1746,16 @@ and approved cell values in the ledger, and one log line per request.
 - **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
 - **Storage:** Host only: {nos_data_root}/platform/services/thalamus/data/ledger.db (dir 0700) and ~/thalamus/log (0700).
 - **Security measures:** `Caller identified by the kernel (getpeereid), never by a field on the wire`; `Socket 0600 under ~/.nos (0700); a login not in the map is refused, never defaulted`; `No write without an approve decision row in the ledger for that session`; `Proxy secret only in the 0600 plist env, removed from the process env at start`
+
+#### Vllm — `svc_vllm`
+- **Purpose:** Runs a language model on this host for the estate's chat, notebooks and
+agents. Prompts and completions pass through memory only; vLLM stores no
+conversation (the calling app keeps its own history under its own record).
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `prompts_transient`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** transient (not persisted)
+- **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)

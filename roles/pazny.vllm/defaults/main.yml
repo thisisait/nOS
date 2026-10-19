@@ -1,0 +1,10 @@
+---
+# pazny.vllm — one resident model behind an OpenAI-compatible API, beside
+# Ollama (which keeps serving every other model on demand). Install flag, pins
+# and the memory budget live in default.config.yml (install_vllm, vllm_*).
+
+# The container's port; the host publishes vllm_port on loopback only.
+vllm_container_port: 8000
+# The one-shot fetch container (async weight download) is named so a later
+# converge can tell it is still running.
+vllm_fetch_container: nos-vllm-fetch

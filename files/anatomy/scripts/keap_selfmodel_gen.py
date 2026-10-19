@@ -115,7 +115,7 @@ SYSTEM_NAME = {
     "authentik": "Authentik", "infisical": "Infisical", "portainer": "Portainer",
     "traefik": "Traefik", "bluesky-pds": "Bluesky PDS", "smtp-stalwart": "Stalwart Mail",
     "grafana": "Grafana", "prometheus": "Prometheus", "loki": "Loki", "tempo": "Tempo",
-    "wordpress": "WordPress", "apex": "Apex Site", "nextcloud": "Nextcloud", "n8n": "n8n", "jupyterhub": "JupyterHub", "landing": "Landing",
+    "wordpress": "WordPress", "apex": "Apex Site", "nextcloud": "Nextcloud", "n8n": "n8n", "jupyterhub": "JupyterHub", "landing": "Landing", "vllm": "vLLM",
     "nodered": "Node-RED", "kiwix": "Kiwix", "offline-maps": "Offline Maps",
     "jellyfin": "Jellyfin", "open-webui": "Open WebUI", "uptime-kuma": "Uptime Kuma",
     "calibre-web": "Calibre-Web", "homeassistant": "Home Assistant", "rustfs": "RustFS",
@@ -318,6 +318,11 @@ SYSTEM_EN = {
         "The landing page, the estate's signpost at the root domain: a card per routed "
         "service and a short how-to for the people who use the host. Unlike the apex page "
         "it is not a public projection for strangers."
+    ),
+    "vllm": (
+        "vLLM, the batched model server: one resident model on the host's GPU behind an "
+        "OpenAI-compatible API, for many concurrent callers. It sits beside the on-demand "
+        "local model server rather than replacing it."
     ),
     "jupyterhub": (
         "JupyterHub, the multi-user notebook server on a Linux host. Each person's "

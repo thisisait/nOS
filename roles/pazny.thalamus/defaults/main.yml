@@ -33,12 +33,14 @@ thalamus_binding_env:
     {{ (('mistral-eu ' if mistral_enabled | default(false) | bool else '')
     ~ ('anthropic-api ' if anthropic_api_enabled | default(false) | bool else '')
     ~ ('minimax-api ' if minimax_api_enabled | default(false) | bool else '')
+    ~ ('vllm ' if install_vllm | default(false) | bool else '')
     ~ ('ollama' if (ollama_enabled | default(false) | bool and install_ollama | default(false) | bool) else '')) | trim }}
   NOS_LOCAL_MODEL: "{{ ollama_model | default('') }}"
   NOS_LOCAL_SMALL_MODEL: "{{ ollama_small_model | default('') }}"
   NOS_MISTRAL_MODEL: "{{ mistral_model | default('') }}"
   NOS_ANTHROPIC_API_MODEL: "{{ anthropic_api_model | default('') }}"
   NOS_MINIMAX_MODEL: "{{ minimax_model | default('') }}"
+  NOS_VLLM_MODEL: "{{ vllm_served_model_name | default('') if install_vllm | default(false) | bool else '' }}"
   NOS_CELL_BACKEND: "{{ iris_backend | default('') }}"
   NOS_GDPR_POSTURE: "{{ gdpr_posture | default('standard') }}"
   NOS_LOCAL_TEMPERATURE: "{{ iris_local_temperature | default(0.3) }}"

@@ -296,3 +296,24 @@ backends:
       opus: null
     enabled_flag: "minimax_api_enabled"
     processor_match: "MiniMax"
+
+  # vLLM (roles/pazny.vllm, 2026-10-19): ONE resident model, batched, on this
+  # host's NVIDIA GPU — the many-users row beside `ollama` (which serialises:
+  # spark1 measured 65 tok/s aggregate at 1, 4 and 8 concurrent streams). Local
+  # and EU-resident; keyed (vllm_api_key) because it also sits on shared_net.
+  # Only the sonnet tier: it serves exactly vllm_served_model_name.
+  vllm:
+    local: true
+    protocol: openai
+    residency:
+      country: "CZ (this host)"
+      eu: true
+    base_url: "http://127.0.0.1:8011/v1"
+    auth_secret: "nos:vllm_api_key"
+    model_env:
+      haiku: null
+      sonnet: NOS_VLLM_MODEL
+      opus: null
+    enabled_flag: install_vllm
+    processor_match: "on-device"
+    served_by: vllm

@@ -366,6 +366,9 @@ nodes:
   "service:jupyterhub": withheld
   # Landing (2026-10-19): the estate's own signpost. WITHHELD from the public page.
   "service:landing": withheld
+  # vLLM (2026-10-19 PoC). WITHHELD until the operator authors its speaks: sentence.
+  "service:vllm": withheld
+  "backend:vllm": withheld
   "service:open_webui":    { publish: wits, speaks: "a chat room with the house's own models" }
   "service:mcp_gateway":   { publish: wits, speaks: "one socket where minds plug into tools" }
 
