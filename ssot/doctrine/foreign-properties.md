@@ -270,3 +270,39 @@ zero from a tool that cannot parse the schema is not a measurement. Ask the
 process that owns the store. Same shape as §7 — never diagnose from the host's
 `df` when the container is told a different number. (The near-miss false
 data-loss record, and the ANN-leg corollary: companion §9.)
+
+## 10. vLLM images on a DGX Spark: driver, CUDA arch and packaging
+
+MEASURED 2026-10-19 on spark1 (DGX Spark, GB10 = sm_121, DGX OS 7.2.3, kernel
+6.17.0-1032-nvidia, driver 580.173.02 = CUDA 13.0). Three independent facts,
+each of which looked like "vLLM does not start":
+
+| Image | Needs | On driver 580 / GB10 |
+|---|---|---|
+| `nvcr.io/nvidia/vllm:25.09`–`25.11` | driver 580.82–580.95 (CUDA 13.0) | runs, but its vLLM predates Qwen3.5 |
+| `nvcr.io/nvidia/vllm:25.12`–`26.02` | driver 590.44–590.48 (CUDA 13.1) | refuses: "compatibility mode is UNAVAILABLE" |
+| `nvcr.io/nvidia/vllm:26.03`–`26.05` | driver 595.45–595.58 (CUDA 13.2) | refuses |
+| `nvcr.io/nvidia/vllm:26.06`+ | driver 610+ (CUDA 13.3+) | refuses |
+| `vllm/vllm-openai:v0.31.0-cu129` | CUDA 12.9 (runs on 580) | starts; ships `sm_80/90/100/120` cubins only |
+
+1. **The image's CUDA must not exceed the driver's** (`nvidia-smi` "CUDA
+   Version"). NGC labels it: `CUDA_DRIVER_VERSION` in the image config. The
+   container otherwise starts, prints the compatibility error and never turns
+   healthy — the converge's health-wait is the first to notice.
+   `roles/pazny.vllm` now compares the two before compose.
+2. **`vllm/vllm-openai:v0.31.0-cu129` (arm64) ships a `torchcodec` built for
+   CUDA 13** (`libnvrtc.so.13`). `vllm/multimodal/media/audio.py` catches
+   ImportError/RuntimeError but not the OSError that raises, so every start
+   dies, even for a text model. Workaround without a custom image: an empty
+   tmpfs over the package dir (`vllm_masked_paths`), which turns it into a
+   handled ImportError.
+3. **FP8 block-quantized checkpoints die in CUTLASS on GB10 with sm_120
+   cubins**: `cutlass_gemm_caller … Error Internal` after weight load, also
+   with `VLLM_TEST_FORCE_FP8_MARLIN=1` and with
+   `VLLM_DISABLED_KERNELS=CutlassScaledMMLinearKernel`. sm_121 needs kernels
+   built for it (NGC images from a 590+ driver line), or a non-FP8 checkpoint
+   (GPTQ-Int4 → Marlin).
+
+DGX OS's apt offers prebuilt modules for the 595 line on this kernel
+(`linux-modules-nvidia-595-open-6.17.0-1032-nvidia`, driver 595.99.02);
+`nvidia-driver-590-open` is a transitional package to 595.
