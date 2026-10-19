@@ -33,7 +33,7 @@ sys.path.insert(0, str(REPO / "tools"))
 import nos_identity as ni  # noqa: E402
 
 KINDS = {"operator", "user", "service", "agent"}
-KNOWN_REALMS = {"authentik", "gitea", "gitlab", "woodpecker", "wing"}
+KNOWN_REALMS = {"authentik", "gitea", "gitlab", "woodpecker", "wing", "unix"}
 
 
 def _config() -> dict:

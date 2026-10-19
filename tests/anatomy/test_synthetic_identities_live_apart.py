@@ -102,7 +102,10 @@ def test_the_profile_declares_them_synthetic_for_every_tier_below_admin():
     emails = [i["email"] for i in CFG["nos_identities"] + SYNTHETIC]
     assert len(emails) == len(set(emails)), "two identities share an email — apps keyed on email merge them"
     for i in SYNTHETIC:
-        assert i["kind"] == "synthetic" and i["realms"] == ["authentik"], i
+        # authentik always; unix (a Linux login, 2026-10-19) is the only other
+        # realm a synthetic may hold — never a forge, never wing.
+        assert i["kind"] == "synthetic" and "authentik" in i["realms"], i
+        assert set(i["realms"]) <= {"authentik", "unix"}, i
     assert [i["name"] for i in ni.synthetic_identities({})] == [i["name"] for i in SYNTHETIC]
     assert ni.synthetic_identities({"nos_synthetic_identities": [{"name": "zed"}]}) == [{"name": "zed", "kind": "synthetic"}]
 
