@@ -16,7 +16,7 @@ by a code oracle — the model never grades itself:
 ONE RUN IS NOT A MEASUREMENT (state/fixtures/ops-task-families/invoice-extract/family.yml):
 --repeat N runs each image N times and pools, reporting per-field accuracy and the
 per-doc spread, so a lucky pass cannot read as a ceiling. The report written to
-state/fixtures/vision-bench/last-run.json is the LAST run, never the best.
+~/.nos/loops/vision-bench/last-run.json is the LAST run, never the best.
 
 Exit: 0 ran and pooled accuracy >= --threshold · 3 ran but BELOW floor (a finding,
 declared in the loop's findings_exit_codes) · 2 could not run (no images, or the
@@ -29,6 +29,7 @@ from __future__ import annotations
 import argparse
 import collections
 import json
+import os
 import pathlib
 import subprocess
 import sys
@@ -43,7 +44,8 @@ import yaml  # noqa: E402
 
 FIXTURE = REPO / "state" / "fixtures" / "consulting-firm"
 PIPELINE = REPO / "tools" / "invoice-vision-pipeline.py"
-REPORT_DIR = REPO / "state" / "fixtures" / "vision-bench"
+REPORT_DIR = pathlib.Path(os.environ.get("NOS_LOOP_STATE_DIR") or os.environ.get("STATE_DIR")
+                          or pathlib.Path.home() / ".nos").expanduser() / "loops" / "vision-bench"
 
 # The fields scored for extraction fidelity, each as a (record) -> comparable and
 # a (truth) -> comparable. Amounts compared at 2dp; strings exact.

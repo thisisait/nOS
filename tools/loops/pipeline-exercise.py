@@ -57,6 +57,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import os
 import pathlib
 import shutil
 import subprocess
@@ -75,7 +76,11 @@ import job_readiness  # noqa: E402
 import nos_digest  # noqa: E402
 
 FIXTURE = REPO / "state" / "fixtures" / "consulting-firm"
-STATE = REPO / "state" / "fixtures" / "pipeline-exercise"
+#: Committed coverage is only the SEED; each host's run state lives outside
+#: the checkout (the repo is not the running system), like Bone's state_dir().
+SEED = REPO / "state" / "fixtures" / "pipeline-exercise"
+STATE = pathlib.Path(os.environ.get("NOS_LOOP_STATE_DIR") or os.environ.get("STATE_DIR")
+                     or pathlib.Path.home() / ".nos").expanduser() / "loops" / "pipeline-exercise"
 PY = sys.executable
 
 
@@ -97,11 +102,12 @@ DEGRADATIONS = [p for p in GEN.DEGRADE_PROFILES if p != "combo"]
 # ── coverage: what has been tried, across runs ───────────────────────────────
 
 def load_coverage() -> dict:
-    p = STATE / "coverage.json"
-    try:
-        return json.loads(p.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return {}
+    for p in (STATE / "coverage.json", SEED / "coverage.json"):
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+    return {}
 
 
 def save_coverage(cov: dict) -> None:
