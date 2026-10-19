@@ -50,3 +50,12 @@ def test_the_running_daemon_is_read_back_at_the_pin():
     readback = [t for t in _tasks() if "ansible.builtin.uri" in t]
     assert readback, "the converge must ask the daemon, not the file"
     assert "ollama_version" in readback[-1]["until"]
+
+
+def test_the_loopback_door_is_loopback_only_and_forwards_to_the_server():
+    """llm-backends.yml says 127.0.0.1:11434 for every consumer; on Linux the
+    server is on docker0, so a socket-activated proxy answers on loopback."""
+    sock = (ROLE / "templates" / "nos-ollama-loopback.socket.j2").read_text()
+    svc = (ROLE / "templates" / "nos-ollama-loopback.service.j2").read_text()
+    assert "ListenStream=127.0.0.1:11434" in sock
+    assert "systemd-socket-proxyd {{ ollama_bind_host }}:11434" in svc

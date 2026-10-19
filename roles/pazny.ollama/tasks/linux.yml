@@ -115,3 +115,39 @@
   delay: 2
   until: (_ollama_linux_api.json.version | default('')) == ollama_version
   changed_when: false
+
+# ── The loopback door (2026-10-19) ──────────────────────────────────────────
+# Every host-side consumer that predates the Linux port asks 127.0.0.1:11434
+# (state/habitat/llm-backends.yml base_url, read by the thalamus, Wing's
+# AgentKit and the Python jobs alike). The server listens on docker0, so a
+# socket-activated systemd-socket-proxyd answers on loopback and forwards there:
+# one address for every consumer, still nothing on the LAN. spark1 measured
+# it: Iris's first turn was "model unreachable: Connection refused".
+- name: "[Ollama] Loopback door units"
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    mode: '0644'
+  loop: [nos-ollama-loopback.socket, nos-ollama-loopback.service]
+  become: true
+  register: _ollama_door
+  when: ollama_bind_host != '127.0.0.1'
+
+- name: "[Ollama] Loopback door listening"
+  ansible.builtin.systemd_service:
+    name: nos-ollama-loopback.socket
+    state: "{{ 'restarted' if _ollama_door.changed else 'started' }}"
+    enabled: true
+    daemon_reload: "{{ _ollama_door.changed }}"
+  become: true
+  when: ollama_bind_host != '127.0.0.1'
+
+- name: "[Ollama] The loopback door answers"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:11434/api/version"
+  register: _ollama_door_api
+  retries: 10
+  delay: 2
+  until: (_ollama_door_api.json.version | default('')) == ollama_version
+  changed_when: false
+  when: ollama_bind_host != '127.0.0.1'

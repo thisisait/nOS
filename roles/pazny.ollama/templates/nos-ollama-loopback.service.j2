@@ -1,0 +1,10 @@
+# {{ ansible_managed }} — roles/pazny.ollama (Linux loopback door)
+[Unit]
+Description=Ollama loopback door -> {{ ollama_bind_host }}:11434 (nOS)
+Requires=nos-ollama-loopback.socket ollama.service
+After=nos-ollama-loopback.socket ollama.service
+
+[Service]
+ExecStart=/usr/lib/systemd/systemd-socket-proxyd {{ ollama_bind_host }}:11434
+PrivateTmp=yes
+DynamicUser=yes

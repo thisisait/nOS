@@ -117,7 +117,9 @@ fn serve_main(args: &[String]) -> Result<(), String> {
     };
     match bound {
         Ok(Some(l)) => {
-            eprintln!("thalamus: relay bound 127.0.0.1:{port}");
+            // The address the socket actually holds (THALAMUS_RELAY_HOST may move it to docker0).
+            let at = l.local_addr().map(|a| a.to_string()).unwrap_or_else(|_| format!("?:{port}"));
+            eprintln!("thalamus: relay bound {at}");
             let door = Arc::new(thalamus::relay::Relay::new(srv.clone(), relay_secret));
             std::thread::spawn(move || thalamus::relay::run(l, door));
         }
