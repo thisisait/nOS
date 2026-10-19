@@ -194,4 +194,35 @@ describe('a workspace is a canvas', () => {
 			`translate(${x}px, ${y}px)`
 		);
 	});
+
+	it('selects two items, frames them, and the frame carries them; an item outside stays', async () => {
+		const fake = await open(v2);
+		const shift = (type: string) =>
+			window.dispatchEvent(new KeyboardEvent(type, { key: 'Shift', bubbles: true }));
+		shift('keydown');
+		node('w1')!.click();
+		node('w3')!.click();
+		shift('keyup');
+		flushSync();
+		expect(document.querySelectorAll('.svelte-flow__node.selected').length).toBe(2);
+
+		button('frame the selection').click();
+		flushSync();
+		const frame = document.querySelector<HTMLElement>('.svelte-flow__node[aria-label^="frame"]')!;
+		const grip = frame.querySelector('.move')!;
+		mouse(grip, 'mousedown', 300, 300);
+		mouse(window, 'mousemove', 302, 300);
+		mouse(window, 'mousemove', 380, 340);
+		mouse(window, 'mouseup', 380, 340);
+		await wait(400);
+
+		const items = Object.fromEntries(fake.saved.at(-1)!.workspaces[0].items.map((i) => [i.id, i]));
+		const f = items[frame.dataset.id!];
+		expect(f.kind).toBe('frame');
+		expect(f.x <= items.w1.x && f.y <= items.w1.y, 'the frame wraps them').toBe(true);
+		expect(items.w1).toMatchObject({ x: 80, y: 40 });
+		expect(items.w3).toMatchObject({ x: 80, y: 424 });
+		expect(items.w2, 'outside the frame: it stayed').toMatchObject({ x: 600, y: 0 });
+		expect(at('w3'), 'drawn where it was saved').toBe('translate(80px, 424px)');
+	});
 });
