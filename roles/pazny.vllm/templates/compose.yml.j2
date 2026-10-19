@@ -63,7 +63,7 @@ services:
       timeout: 6s
       retries: 3
       # Loading tens of GB of weights and capturing CUDA graphs takes minutes.
-      start_period: {{ vllm_start_period | default('900s') }}
+      start_period: {{ vllm_start_period_s }}s
     networks:
       - iiab_net
       - {{ stacks_shared_network }}

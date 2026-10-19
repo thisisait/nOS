@@ -87,7 +87,9 @@ impl Engine {
             // ponytail: no llamacpp register row (ruling B(c) 2026-10-17), so Gbnf is unreachable;
             // a llamacpp row/role comes only after the Ollama GGUF and MLX measurements.
             "llamacpp" => Engine::Gbnf,
-            "ollama" => Engine::JsonSchema,
+            // vLLM serves response_format json_schema (xgrammar) like Ollama GGUF does
+            // (review of #60): an unconstrained plan there would waste the guarantee.
+            "ollama" | "vllm" => Engine::JsonSchema,
             _ => Engine::Free,
         }
     }

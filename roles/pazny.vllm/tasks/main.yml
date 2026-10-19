@@ -12,13 +12,63 @@
 #      which then runs offline (HF_HUB_OFFLINE=1) against exactly that revision.
 # ==============================================================================
 
-- name: "[pazny.vllm] Linux with an NVIDIA GPU visible to Docker (CDI)"
+# A FACT, not a toggle (review of #60): a host without an NVIDIA GPU visible to
+# Docker through CDI cannot serve vLLM, and a profile that turns every ai row on
+# (tools/test-tiers.py on a GPU-less CI runner) must not fail the converge for
+# it. Skip with a message; refuse only when the operator demands the GPU path.
+- name: "[pazny.vllm] Is an NVIDIA GPU visible to Docker (CDI)?"
   ansible.builtin.command: "{{ nos_docker_bin | default('docker') }} info"
   register: _vllm_cdi
   changed_when: false
-  failed_when: >-
-    nos_pkg_manager != 'apt'
-    or 'nvidia.com/gpu=all' not in (_vllm_cdi.stdout | default(''))
+  failed_when: false
+
+- name: "[pazny.vllm] No GPU here: refuse when required, skip otherwise"
+  ansible.builtin.fail:
+    msg: >-
+      install_vllm needs Linux and an NVIDIA GPU visible to Docker through CDI
+      (`docker info` lists nvidia.com/gpu=all after `nvidia-ctk cdi generate`).
+      This host has {{ 'no CDI GPU' if nos_pkg_manager == 'apt' else 'no Linux' }}.
+  when:
+    - _vllm_no_gpu
+    - vllm_require_gpu | default(false) | bool
+  vars:
+    _vllm_no_gpu: "{{ nos_pkg_manager != 'apt' or 'nvidia.com/gpu=all' not in (_vllm_cdi.stdout | default('')) }}"
+
+- name: "[pazny.vllm] No GPU here: vLLM is not served on this host"
+  ansible.builtin.debug:
+    msg: "install_vllm is on but this host has no CDI-visible NVIDIA GPU — vLLM skipped (vllm_require_gpu: true makes it a refusal)."
+  when: nos_pkg_manager != 'apt' or 'nvidia.com/gpu=all' not in (_vllm_cdi.stdout | default(''))
+
+- name: "[pazny.vllm] Stop here without a GPU"
+  ansible.builtin.meta: end_role
+  when: nos_pkg_manager != 'apt' or 'nvidia.com/gpu=all' not in (_vllm_cdi.stdout | default(''))
+
+# Unified memory (DGX Spark): vLLM PRE-ALLOCATES gpu_memory_utilization of the
+# whole pool at start, from the same RAM Ollama's resident models, notebooks and
+# containers use. Refuse a start the host cannot fit instead of an OOM or a
+# restart loop (review of #60, finding 6).
+- name: "[pazny.vllm] The memory vLLM will pre-allocate is free now"
+  ansible.builtin.shell: |
+    set -o pipefail
+    awk '/MemTotal/{t=$2} /MemAvailable/{a=$2} END{printf "%d %d\n", t/1048576, a/1048576}' /proc/meminfo
+  args:
+    executable: /bin/bash
+  register: _vllm_mem
+  changed_when: false
+
+- name: "[pazny.vllm] Refuse a pre-allocation the host cannot fit"
+  ansible.builtin.assert:
+    that: >-
+      (_vllm_mem.stdout.split()[1] | int) >=
+      ((_vllm_mem.stdout.split()[0] | int) * (vllm_gpu_memory_utilization | float)) | int
+      or (lookup('ansible.builtin.pipe', (nos_docker_bin | default('docker')) ~ ' ps -q --filter name=^iiab-vllm-1$') | length) > 0
+    fail_msg: >-
+      vllm_gpu_memory_utilization {{ vllm_gpu_memory_utilization }} would pre-allocate
+      {{ ((_vllm_mem.stdout.split()[0] | int) * (vllm_gpu_memory_utilization | float)) | int }} GiB
+      of {{ _vllm_mem.stdout.split()[0] }} GiB, and {{ _vllm_mem.stdout.split()[1] }} GiB are available
+      (Ollama's resident models, notebooks and containers share the pool). Lower it,
+      or free memory (OLLAMA keep_alive / loaded slots) first.
+    quiet: true
 
 # ── The image must fit the host's driver (spark1, 2026-10-19) ───────────────
 # NGC 26.09 is built for driver >= 615 and the DGX Spark ships 580: the
@@ -89,6 +139,35 @@
   register: _vllm_snapshot
   changed_when: false
 
+# No --rm on the fetch (review of #60, finding 7): a failed download (HF 401,
+# full disk) would vanish with its container. A finished fetch is read here,
+# its exit code decides, and only then it is removed.
+- name: "[pazny.vllm] How the last fetch ended"
+  ansible.builtin.command: "{{ nos_docker_bin | default('docker') }} inspect -f '{{ '{{' }}.State.Status{{ '}}' }} {{ '{{' }}.State.ExitCode{{ '}}' }}' {{ vllm_fetch_container }}"
+  register: _vllm_fetch_state
+  changed_when: false
+  failed_when: false
+
+- name: "[pazny.vllm] A failed fetch fails the converge, with its log"
+  ansible.builtin.fail:
+    msg: >-
+      The weight fetch for {{ vllm_model }}@{{ vllm_model_revision[:12] }} exited
+      {{ _vllm_fetch_state.stdout.split()[1] }}. Last lines:
+      {{ lookup('ansible.builtin.pipe', (nos_docker_bin | default('docker')) ~ ' logs --tail 15 ' ~ vllm_fetch_container ~ ' 2>&1') }}
+      Fix the cause, then `docker rm {{ vllm_fetch_container }}` and converge again.
+  when:
+    - _vllm_fetch_state.rc == 0
+    - _vllm_fetch_state.stdout.split()[0] == 'exited'
+    - _vllm_fetch_state.stdout.split()[1] != '0'
+
+- name: "[pazny.vllm] Remove a fetch that finished cleanly"
+  ansible.builtin.command: "{{ nos_docker_bin | default('docker') }} rm {{ vllm_fetch_container }}"
+  when:
+    - _vllm_fetch_state.rc == 0
+    - _vllm_fetch_state.stdout.split()[0] == 'exited'
+    - _vllm_fetch_state.stdout.split()[1] == '0'
+  changed_when: true
+
 - name: "[pazny.vllm] Is a fetch already running?"
   ansible.builtin.command: "{{ nos_docker_bin | default('docker') }} ps -q --filter name=^{{ vllm_fetch_container }}$"
   register: _vllm_fetching
@@ -102,7 +181,6 @@
       - "{{ nos_docker_bin | default('docker') }}"
       - run
       - -d
-      - --rm
       - --name
       - "{{ vllm_fetch_container }}"
       - --user
@@ -134,6 +212,19 @@
   when: _vllm_snapshot.stdout != 'complete'
 
 # ── 3. The service, once the snapshot is whole ───────────────────────────────
+# The stack's strict health-wait must outlast vLLM's own start window (load +
+# CUDA graphs: ~3-6 min for a 35B on GB10), or the converge fails a healthy
+# start (review of #60, finding 5).
+- name: "[pazny.vllm] The health-wait outlasts vLLM's start window"
+  ansible.builtin.assert:
+    that: (stack_up_wait_timeout | default(540) | int) >= (vllm_start_period_s | int)
+    fail_msg: >-
+      stack_up_wait_timeout {{ stack_up_wait_timeout | default(540) }} s is shorter than
+      vllm_start_period_s {{ vllm_start_period_s }} s: the converge would give up on a
+      vLLM that is still loading. Raise stack_up_wait_timeout in config.yml.
+    quiet: true
+  when: _vllm_snapshot.stdout == 'complete'
+
 - name: "[pazny.vllm] Render compose override fragment"
   ansible.builtin.template:
     src: compose.yml.j2

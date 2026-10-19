@@ -1753,7 +1753,12 @@ vllm_extra_args: []
 # Re-check (and empty this) whenever vllm_image moves.
 vllm_masked_paths:
   - /usr/local/lib/python3.12/dist-packages/torchcodec
-vllm_api_key: "{{ nos_derived_secrets.vllm_api_key }}"
+# How long vLLM may take to load and capture CUDA graphs before its healthcheck
+# counts; the role refuses when stack_up_wait_timeout is shorter.
+vllm_start_period_s: 480
+# A host without a CDI-visible NVIDIA GPU skips vLLM with a message; true makes
+# that a refusal (a host that is SUPPOSED to serve it).
+vllm_require_gpu: false
 # REM-176, the THIRD consecutive supersession of this component: REM-101 moved
 # it 0.8.12 → 0.9.6, REM-138 0.9.6 → 0.10.2, this one 0.10.2 → 0.11.0. Each was
 # correct when written and stale within weeks, which is the argument for
@@ -3266,6 +3271,7 @@ backup_coverage:
   geo_cache_dir:               { class: derived, why: "RÚIAN/INSPIRE downloads — re-fetchable open data; the loaded tables are in pg_dumpall" }
   maps_cache_dir:              { class: derived, why: "Planetiler PMTiles + OSM sources, glyphs, sprites — rebuildable from open data" }
   nos_atlas_src_dir:           { class: never, why: "the nos-atlas dev checkout — operator-owned source, not estate state" }
+  vllm_data_dir:               { class: derived, why: "a pinned Hugging Face snapshot — re-downloadable by revision (slow: tens of GB)" }
   geolibre_data_dir:           { class: derived, why: "copy of the nos-atlas dist bundle — rebuildable from the nos-atlas checkout" }
   mariadb_data_dir:            { class: dump, why: "mariadb.sql.gz — all databases" }
   postgresql_data_dir:         { class: dump, why: "postgres.sql.gz — pg_dumpall (incl. the PostGIS geo db; restore replays into the same image)" }
