@@ -787,7 +787,7 @@ fn the_route_recalls_the_cortex_intents_and_never_plans_the_losing_kinds() {
         let routes: Vec<_> = c["turns"].as_array().unwrap().iter().map(|t| cortex_plan::route(t.as_str().unwrap(), &intents)).collect();
         let got = routes.iter().find_map(|(r, i, _)| (*r == "cortex").then(|| i.unwrap())).unwrap_or("tools");
         *m.entry(kind.into()).or_default().entry(got.into()).or_default() += 1;
-        if (INTENTS.contains(&kind) || NEVER_CORTEX.contains(&kind) || got != "tools") && got != kind {
+        if got != if INTENTS.contains(&kind) { kind } else { "tools" } {
             wrong.push(format!("{kind} -> {got}: {} {:?}", c["turns"], routes.iter().map(|r| &r.2).collect::<Vec<_>>()));
         }
     }
