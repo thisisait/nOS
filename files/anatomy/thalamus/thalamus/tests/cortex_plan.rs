@@ -567,7 +567,7 @@ fn a_param_the_mapper_does_not_read_is_refused_not_dropped() {
         (vec![stage("get", Some("db:todos"), json!({})), stage("show", None, json!({"kind": "chart", "by": "status"}))], "by"),
     ] {
         let err = cortex_plan::plan(None, &st).err().unwrap_or_else(|| panic!("{key} was dropped: {st:?}"));
-        assert!(err.contains(&format!("`{key}`")), "the refusal names {key}: {err}");
+        assert!(err.contains(&format!("takes no {key}=: it would be dropped, not run")), "the refusal names {key}: {err}");
     }
     // the card is the gate: a write's dry_run and commit are read as nothing, on purpose (module doc)
     let w = vec![stage("get", Some("db:todos"), json!({})), stage("filter", None, json!({"where": "title eq Review"})),
@@ -622,6 +622,24 @@ fn a_mapper_refusal_gets_the_repair_round() {
     let last = ev.iter().rev().find(|(t, _)| t.ends_with("tool_result:cortex_plan")).unwrap();
     assert_eq!(last.1["valid"], json!(true), "{ev:?}");
     assert!(ev.iter().any(|(t, v)| t.ends_with("tool_use:query_rows") && v["args"]["limit"] == 5), "the repaired plan ran: {ev:?}");
+
+    // free text skips the closed schema and a db: stage's params are open at the organ, so a foreign
+    // param reaches the mapper: refused twice, the turn falls back, never runs with the where dropped
+    let foreign = "get(db:todos, where=\"status eq open\") | aggregate(op=\"count\")";
+    let mut k = known(&cases());
+    k.push((foreign.into(), json!([{"op": "get", "operand": "db:todos", "params": {"where": "status eq open"}},
+            {"op": "aggregate", "params": {"op": "count"}}]), cortex_plan::REGISTRY_HASH.into(), vec![]));
+    let (organ_url, _) = organ(k);
+    let fr = self::rig("foreign", binding("mistral-eu", false), vec![say(foreign), say(foreign), say("done")], Some(organ_url));
+    let (session, _) = turn(&fr, None, "open todos");
+    let why = "get() takes no where=: it would be dropped, not run";
+    let said = models_said(&fr);
+    assert!(said[1].get("tools").is_none() && said[1].to_string().contains(why), "the repair hears the refusal: {}", said[1]);
+    assert!(said[2].get("tools").is_some(), "the fallback is plain tool calling");
+    let ev = tools(&fr, &session);
+    let last = ev.iter().rev().find(|(t, _)| t.ends_with("tool_result:cortex_plan")).unwrap();
+    assert!(last.1["fallback"].as_str().is_some_and(|f| f.contains(why)), "fallback {}", last.1);
+    assert!(!ev.iter().any(|(t, _)| t.ends_with("tool_use:query_rows")), "a refused plan runs nothing: {ev:?}");
 }
 
 /// Organ probe 2026-10-17: a free-text answer (Ollama MLX, a cloud row) is read by extract(), and its
