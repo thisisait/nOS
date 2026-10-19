@@ -17,6 +17,11 @@ services:
   # ── Authentik – SSO / Identity Provider ──────────────────────────────────────
   authentik-server:
     image: {{ authentik_image }}:{{ authentik_version }}
+{% if nos_container_user | default('') | length > 0 %}
+    # Linux: the image runs as uid 1000 and cannot read the operator's 0600
+    # blueprints — no nOS blueprint applied, so no `nos-api` token (spark1 2026-10-19).
+    user: "{{ nos_container_user }}"
+{% endif %}
     command: server
     restart: unless-stopped
     ports:
@@ -113,6 +118,11 @@ services:
 
   authentik-worker:
     image: {{ authentik_image }}:{{ authentik_version }}
+{% if nos_container_user | default('') | length > 0 %}
+    # Linux: the image runs as uid 1000 and cannot read the operator's 0600
+    # blueprints — no nOS blueprint applied, so no `nos-api` token (spark1 2026-10-19).
+    user: "{{ nos_container_user }}"
+{% endif %}
     command: worker
     restart: unless-stopped
     volumes:

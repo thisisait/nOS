@@ -114,6 +114,34 @@
     # comment above the static-config block.
     nos_manifest: "{{ lookup('file', playbook_dir ~ '/state/manifest.yml') | from_yaml }}"
 
+# ── The names a client must resolve (2026-10-19) ─────────────────────────────
+# A local TLD (dev.local, spark.internal) is resolved by nothing a client already
+# uses, so every person on the LAN typed the router list into their hosts file by
+# hand. The list is what Traefik routes, read back from the files it watches, and
+# the address is this host's default-route IPv4. ~/.nos/hosts-snippet.txt.
+- name: "[pazny.traefik] Read back every Host() Traefik routes"
+  ansible.builtin.shell: |
+    set -o pipefail
+    cat {{ traefik_dynamic_dir | quote }}/*.yml | grep -o 'Host(`[^`]*`)' | sed 's/Host(`//;s/`)//' | sort -u
+  args:
+    executable: /bin/bash
+  register: _traefik_hosts
+  changed_when: false
+  failed_when: false
+
+- name: "[pazny.traefik] Write the hosts-file snippet for LAN clients"
+  ansible.builtin.copy:
+    content: |
+      # nOS — paste into a client's hosts file (Windows: C:\Windows\System32\drivers\etc\hosts,
+      # macOS/Linux: /etc/hosts) when no DNS on the LAN resolves {{ tenant_domain }}.
+      # Regenerated on every converge from the routes Traefik serves (roles/pazny.traefik).
+      {{ ansible_facts['default_ipv4']['address'] | default('127.0.0.1') }} {{ _traefik_hosts.stdout_lines | join(' ') }}
+    dest: "{{ ansible_facts['env']['HOME'] }}/.nos/hosts-snippet.txt"
+    mode: '0644'
+  when:
+    - tenant_domain_is_local | default(true) | bool
+    - _traefik_hosts.stdout_lines | default([]) | length > 0
+
 # ── Compose override fragment ────────────────────────────────────────────────
 - name: "[pazny.traefik] Render compose override fragment"
   ansible.builtin.template:

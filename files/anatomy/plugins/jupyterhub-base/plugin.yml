@@ -31,6 +31,9 @@ authentik:
   client_secret: "{{ nos_derived_secrets.oidc_jupyterhub }}"
   slug: jupyterhub
   first_login: "https://{{ jupyterhub_domain }}/hub/oauth_login"
+  # Only an identity with a Linux login can have notebooks; the Hub refuses the
+  # rest (post_auth_hook), so the install's first-login walk skips them.
+  first_login_realm: unix
   name: 'JupyterHub'
   enabled: "{{ install_jupyterhub | default(false) }}"
   redirect_uris:

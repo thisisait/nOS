@@ -107,6 +107,10 @@ def main(argv: list[str] | None = None) -> int:
         for r in apps:
             if not r.get("first_login"):
                 continue
+            realm = r.get("first_login_realm")
+            if realm and realm not in (ident.get("realms") or ["authentik"]):
+                print(f"-     {name} → {r['slug']}: only {realm}-realm identities enter it (refused by design)")
+                continue
             if not within_tier(ident, r):
                 print(f"-     {name} → {r['slug']}: a tier-{ident['tier']} identity may not open a tier-{r['tier']} app")
                 continue

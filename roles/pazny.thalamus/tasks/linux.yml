@@ -76,7 +76,7 @@
 - name: "[pazny.thalamus] Every login's shell finds the one daemon"
   ansible.builtin.copy:
     content: |
-      # {{ ansible_managed }} — roles/pazny.thalamus (Linux)
+      # Managed by nOS — roles/pazny.thalamus (Linux)
       export THALAMUS_SOCKET={{ thalamus_shared_socket }}
     dest: /etc/profile.d/nos-thalamus.sh
     mode: '0644'

@@ -153,6 +153,8 @@ def plan(vars_: dict | None = None, include_disabled: bool = False) -> list[dict
             # or for header_oidc the launch URL (the proxy headers provision).
             "first_login": r.get("first_login") or (launch if r.get("mode") == "header_oidc" else None),
             "first_login_blocked": r.get("first_login_blocked"),
+            # An app only identities of this realm can enter (jupyterhub: unix).
+            "first_login_realm": r.get("first_login_realm"),
             "edge": edge.get(key, "proxy"),
             "enabled": enabled,
             "probes": _render(env, e2e.get("probes") or []),

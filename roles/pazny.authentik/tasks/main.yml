@@ -19,6 +19,18 @@
     state: directory
     mode: '0755'
 
+# The three bind mounts exist BEFORE compose, so Docker does not create them as
+# root — on Linux the containers run as the operator (nos_container_user) and a
+# root-owned /media or /certs is unwritable (spark1 2026-10-19).
+- name: "[pazny.authentik] Bind-mount directories, owned by the operator"
+  ansible.builtin.file:
+    path: "{{ authentik_data_dir }}/{{ item }}"
+    state: directory
+    owner: "{{ ansible_facts['user_id'] }}"
+    mode: '0755'
+  loop: [media, templates, certs]
+  become: "{{ nos_container_user | default('') | length > 0 }}"
+
 - name: "[pazny.authentik] Render compose override fragment"
   ansible.builtin.template:
     src: compose.yml.j2
