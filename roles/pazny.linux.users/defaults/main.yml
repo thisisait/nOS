@@ -16,3 +16,10 @@ linux_users_shell: /bin/bash
 # An existing login keeps its own (an operator account that predates nOS is
 # not reset under them); `always` makes the config the truth on every run.
 linux_users_update_password: on_create
+
+# A login nOS creates carries this GECOS marker. A pre-existing login without it
+# is refused, never taken over, unless its name is listed in linux_users_adopted
+# (config.yml; the operator decides: an adopted login gets the tier group and a
+# 0700 home). Logins made before the marker existed must be listed there too.
+linux_users_marker: "nos-managed"
+linux_users_adopted: []

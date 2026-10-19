@@ -42,6 +42,26 @@
   loop: "{{ _unix_tier_group.values() | unique | list }}"
   become: true
 
+# A shared host has people nOS did not create. A roster name that matches one
+# of them must not take that login over (groups, home 0700, a lock): refuse
+# unless config.yml hands it over in linux_users_adopted.
+- name: "[unix] Read the host's logins before touching any"
+  ansible.builtin.getent:
+    database: passwd
+
+- name: "[unix] Refuse a login nOS did not create"
+  ansible.builtin.fail:
+    msg: >-
+      {{ item }} already exists on this host and nOS did not create it (its
+      GECOS lacks '{{ linux_users_marker }}'). nOS will not take over that login.
+      Rename the identity, or list {{ item }} in linux_users_adopted (config.yml)
+      to hand the login to nOS.
+  loop: "{{ _unix_people | map(attribute='name') | list }}"
+  when:
+    - item in ansible_facts['getent_passwd']
+    - linux_users_marker not in (ansible_facts['getent_passwd'][item][3] | default(''))
+    - item not in (linux_users_adopted | default([]))
+
 # The salt is derived from the name, so the same password hashes the same way
 # on every run and `update_password: always` does not churn.
 - name: "[unix] The logins"
@@ -50,6 +70,7 @@
     groups: ["{{ _unix_tier_group[item.tier] }}"]
     append: true
     shell: "{{ linux_users_shell }}"
+    comment: "{{ omit if item.name in (linux_users_adopted | default([])) else linux_users_marker }}"
     create_home: true
     password: "{{ item.password | password_hash('sha512', (item.name | hash('sha256'))[:16]) }}"
     update_password: "{{ linux_users_update_password }}"
