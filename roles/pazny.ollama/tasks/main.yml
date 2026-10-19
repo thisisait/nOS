@@ -549,7 +549,8 @@
 # for a quarter of an hour on spark1 while nothing after it needed the model.
 # The pull is started and left running (poll: 0); ollama finishes it on its own.
 # Its arrival is a reader's job, not this task's: `tools/job_readiness.py
-# --verify` (the verify play) fails on a configured model still missing.
+# --verify` (the verify play, which first waits on these jobs) fails on a
+# configured model still missing.
 - name: "[Ollama] Pull a configured tier model the host lacks (in the background)"
   ansible.builtin.command: "ollama pull {{ item }}"
   environment:
