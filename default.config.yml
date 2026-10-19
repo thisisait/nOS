@@ -1746,6 +1746,13 @@ vllm_data_dir: "{{ nos_data_root }}/platform/services/vllm"
 vllm_gpu_memory_utilization: 0.45
 vllm_max_model_len: 32768
 vllm_extra_args: []
+# Optional packages broken in the pinned image, hidden behind an empty tmpfs so
+# their import fails as ImportError (handled) instead of OSError (fatal).
+# v0.31.0-cu129 arm64 ships a torchcodec built for CUDA 13 (needs libnvrtc.so.13):
+# vllm/multimodal/media/audio.py dies on it at startup, even for a text model.
+# Re-check (and empty this) whenever vllm_image moves.
+vllm_masked_paths:
+  - /usr/local/lib/python3.12/dist-packages/torchcodec
 vllm_api_key: "{{ nos_derived_secrets.vllm_api_key }}"
 # REM-176, the THIRD consecutive supersession of this component: REM-101 moved
 # it 0.8.12 → 0.9.6, REM-138 0.9.6 → 0.10.2, this one 0.10.2 → 0.11.0. Each was

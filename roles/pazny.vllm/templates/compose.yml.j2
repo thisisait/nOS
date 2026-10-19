@@ -14,6 +14,14 @@ services:
     devices:
       - "nvidia.com/gpu=all"
     ipc: host
+{% if vllm_masked_paths | default([]) | length > 0 %}
+    # Paths inside the image hidden behind an empty tmpfs (vllm_masked_paths):
+    # a broken optional package then fails as ImportError, which vLLM handles.
+    tmpfs:
+{% for p in vllm_masked_paths %}
+      - "{{ p }}"
+{% endfor %}
+{% endif %}
     ports:
       - "127.0.0.1:{{ vllm_port }}:{{ vllm_container_port }}"
     volumes:
