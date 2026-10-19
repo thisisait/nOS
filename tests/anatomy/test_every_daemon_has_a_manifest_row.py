@@ -195,8 +195,10 @@ def test_a_local_backend_is_served_by_a_row_that_owns_its_daemon():
         if not b.get("local"):
             continue
         row = rows.get(b.get("served_by"))
-        if not row or not row.get("launchd_label"):
-            bad.append(f"{name}: served_by {b.get('served_by')!r} is no manifest row with a launchd_label")
+        # A host daemon (launchd_label) or a compose service (container_name):
+        # vLLM (2026-10-19) is a local backend whose server is a container.
+        if not row or not (row.get("launchd_label") or row.get("container_name")):
+            bad.append(f"{name}: served_by {b.get('served_by')!r} is no manifest row that owns a daemon or container")
         elif (f"service:{row['id']}", f"backend:{name}") not in edges:
             bad.append(f"{name}: no graph edge service:{row['id']} -> backend:{name}")
     assert not bad, "\n".join(bad)

@@ -84,6 +84,10 @@ REFUSED = {
     ("landing", "authentik"): "a link in the how-to, not a call",
     ("landing", "jupyterhub"): "a link in the how-to, not a call",
     ("landing", "open_webui"): "a link in the how-to, not a call",
+    ("landing", "vllm"): "a link in the how-to, not a call",
+    # vLLM's post registers itself as an OpenAI connection in Open WebUI: wiring,
+    # not a dependency — neither needs the other to run (2026-10-19).
+    ("vllm", "open_webui"): "wiring only — vllm post registers a connection in Open WebUI",
     # dolibarr joined the class 2026-09-21 (native_oidc flip: post.yml writes
     # the MAIN_AUTHENTICATION_OIDC_*_URL consts pointing at authentik_domain)
     ("dolibarr", "authentik"): "SSO — carried by the authentik provider chain",
