@@ -22,7 +22,8 @@ ollama_context_length: 32768
 
 # Models persist across --blank only on the external SSD (external-paths.yml
 # sets external_storage_root/llmModels); this fallback does not.
-ollama_models_dir: "{{ ansible_facts['env']['HOME'] }}/.ollama/models"
+# Linux: the system unit's home, where the upstream installer also puts them.
+ollama_models_dir: "{{ (ansible_facts['env']['HOME'] ~ '/.ollama/models') if nos_service_manager | default('launchd') == 'launchd' else '/usr/share/ollama/.ollama/models' }}"
 
 # Every tier model the config names, pulled when the ollama backend is armed.
 # Each id rides wing.plist as the NOS_LOCAL_* env its tier binds; a tier the

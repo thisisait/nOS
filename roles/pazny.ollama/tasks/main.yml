@@ -5,6 +5,12 @@
 # from roles/pazny.openclaw, which now only consumes it.
 # ==============================================================================
 
+# Linux: release tarball at the pin + a system unit (tasks/linux.yml). Every
+# task below that is not homebrew/launchd-gated is shared by both platforms.
+- name: "[Ollama] Linux install and unit"
+  ansible.builtin.include_tasks: linux.yml
+  when: nos_pkg_manager == 'apt'
+
 # `state: present`, NOT `latest` — changed 2026-08-27 after the pin guard below
 # fired a third time: `latest` had adopted a formula ONE DAY old in
 # homebrew-core (`ollama 0.33.0`, 2026-08-26T03:01:09Z), unattended. The lag is
@@ -288,6 +294,7 @@
     path: "{{ ollama_models_dir }}"
     state: directory
     mode: '0755'
+  when: nos_service_manager == 'launchd'
 
 - name: "[Ollama] Set launchd env vars (models path + memory + KV cache)"
   ansible.builtin.command: "launchctl setenv {{ item.key }} {{ item.value }}"
@@ -308,6 +315,7 @@
   ansible.builtin.command: pkill -f 'openclaw-gateway'
   changed_when: false
   failed_when: false
+  when: nos_service_manager == 'launchd'
 
 # -- Ollama persistent LaunchAgent (replaces brew-managed plist) ─────────────
 # Brew's homebrew.mxcl.ollama.plist HAS NO env vars, so OLLAMA_MODELS
@@ -340,6 +348,7 @@
     state: stopped
     timeout: 15
   failed_when: false
+  when: nos_service_manager == 'launchd'
 
 - name: "[Ollama] Deploy persistent user LaunchAgent (ollama)"
   ansible.builtin.template:
@@ -367,10 +376,11 @@
     exit 1
   changed_when: false
   failed_when: false
+  when: nos_service_manager == 'launchd'
 
 - name: "[Ollama] Wait for API to respond"
   ansible.builtin.uri:
-    url: "http://127.0.0.1:11434/api/version"
+    url: "{{ ollama_url }}/api/version"
     status_code: [200]
     timeout: 5
   register: _ollama_api
@@ -528,7 +538,7 @@
   ansible.builtin.command: ollama list
   environment:
     PATH: "{{ homebrew_prefix }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
-    OLLAMA_HOST: "http://127.0.0.1:11434"
+    OLLAMA_HOST: "{{ ollama_url }}"
   register: _ollama_have
   changed_when: false
   failed_when: false
@@ -540,7 +550,7 @@
   environment:
     PATH: "{{ homebrew_prefix }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
     OLLAMA_MODELS: "{{ ollama_models_dir }}"
-    OLLAMA_HOST: "http://127.0.0.1:11434"
+    OLLAMA_HOST: "{{ ollama_url }}"
   loop: "{{ ollama_pull_models | reject('in', _have) | reject('in', _have | map('regex_replace', ':latest$', '')) | list }}"
   loop_control:
     label: "{{ item }}"

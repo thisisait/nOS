@@ -2727,7 +2727,7 @@
         name: pazny.ollama
       when:
         - install_ollama | default(false)
-        - ansible_os_family == 'Darwin'
+        - nos_pkg_manager in ['homebrew', 'apt']
       tags: ['ollama', 'openclaw', 'ai', 'agent']
 
     # ──────────────────────────────────────────────────────────────────────────

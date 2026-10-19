@@ -577,6 +577,7 @@
     # keap_port / keap_agent_token_rw tokens; the catalog literal-substitutes
     # them from these Ansible-rendered values.
     NOS_KEAP_PORT: "{{ keap_port | default(8091) }}"
+    NOS_OLLAMA_URL: "{{ ollama_url | default('http://127.0.0.1:11434') }}"
     # keap-consolidate (cortex dream sweep): capture-tier token + source roots.
     # backup-restore-drill: backup-base/plugin.yml carries the bare
     # {{ backup_verify_script_path }} token; the catalog literal-substitutes it.

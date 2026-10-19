@@ -1084,6 +1084,13 @@ llm_cell_recommended_params_b: 8
 # /v1/systemone decision models (dtt local-decision-tev1) need >= 0.35.
 ollama_version: "0.35.0"
 
+# Where the model server listens. macOS: loopback (Docker Desktop's
+# host.docker.internal reaches it). Linux: docker0's address, because Linux
+# host-gateway cannot reach a loopback bind; the LAN still cannot (no auth).
+# Host-side consumers read ollama_url, containers host.docker.internal.
+ollama_bind_host: "{{ '127.0.0.1' if (ansible_system | default('Darwin')) == 'Darwin' else '172.17.0.1' }}"
+ollama_url: "http://{{ ollama_bind_host }}:11434"
+
 # The model server itself (roles/pazny.ollama, row `ollama`). Its own flag since
 # 2026-10-06: core cells use it as backend:ollama, so install_openclaw: false must
 # not take it away. Default true = what install_openclaw: true installed before.
