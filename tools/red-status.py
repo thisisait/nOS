@@ -836,11 +836,19 @@ def _gh(*args: str) -> list | dict | None:
         return None
 
 
+def _host_role() -> str:
+    """nos_host_role as this host resolves it; unreadable reads as maintainer."""
+    try:
+        import nos_identity  # noqa: PLC0415
+        return str(nos_identity.resolved(["nos_host_role"])["nos_host_role"] or "maintainer")
+    except Exception:  # noqa: BLE001 — UNKNOWN reads as maintainer, never a traceback
+        return "maintainer"
+
+
 def _maintainer_host() -> bool:
-    """install_loops (the maintainer's development loops) is the declared fact; a
-    client host turns it off (profiles/core.yml). Unreadable reads as maintainer:
-    a red is never hidden on a guess (10-18: a client listed the maintainer's CI)."""
-    return (_install_flags() or {}).get("install_loops", True) is not False
+    """nos_host_role is the declared fact (install_loops was not: a client keeps its loops,
+    paused). Only an explicit client hides CI, so a red is never hidden on a guess (10-18)."""
+    return _host_role() != "client"
 
 
 def ci_runs() -> dict | None:
@@ -1033,7 +1041,7 @@ def collect() -> dict:
         ("dependabot", pathlib.Path("gh api dependabot/alerts"), dependabot),
     ):
         if label == "ci" and not _maintainer_host():
-            report["info"].append("CI not shown: install_loops is off, so this is a client host and "
+            report["info"].append("CI not shown: nos_host_role is client, so "
                                   "the dev/master runs are the maintainer's to act on")
             continue
         value = fn()
