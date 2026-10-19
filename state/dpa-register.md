@@ -20,8 +20,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 116 (91 core services, 3 manifest apps)
-- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (104)
+- **Processing activities:** 117 (92 core services, 3 manifest apps)
+- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (105)
 - **Transfers outside the EU:** 12 activities
 - **Activities engaging a third-party processor:** 18
 
@@ -1614,6 +1614,19 @@ stores the user list, server state and OIDC session cookies.
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
+- **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
+
+#### Landing — `svc_landing`
+- **Purpose:** Shows visitors of the root domain which services this estate runs and how
+to reach them. Serves static files; records no personal data (nginx keeps
+the standard access log under the host's log retention).
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `visitors`
+- **Data categories:** `access_logs`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** 14 days
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
 

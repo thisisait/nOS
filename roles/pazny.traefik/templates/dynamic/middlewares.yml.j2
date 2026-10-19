@@ -8,7 +8,7 @@ http:
     bare-ip-to-face:
       redirectRegex:
         regex: ".*"
-        replacement: "https://{{ face_domain | default('os.' ~ tenant_domain) }}/"
+        replacement: "https://{{ (landing_domain | default(tenant_domain)) if (install_landing | default(false) | bool) else (face_domain | default('os.' ~ tenant_domain)) }}/"
         permanent: false
 
     # ── Authentik forward-auth ────────────────────────────────────────────

@@ -1,0 +1,32 @@
+# =============================================================================
+# pazny.landing — compose override fragment (iiab stack)
+# =============================================================================
+
+services:
+  landing:
+    image: nginx:{{ landing_version }}
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+    ports:
+      - "127.0.0.1:{{ landing_port }}:80"
+    volumes:
+      - {{ landing_web_root }}:/usr/share/nginx/html:ro
+      - {{ stacks_dir }}/iiab/landing-nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - gated_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    mem_limit: {{ docker_mem_limit_light | default('256m') }}
+    cpus: {{ docker_cpus_light | default('0.25') }}

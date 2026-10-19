@@ -19,6 +19,7 @@ install_ollama: true            # Linux: pinned release + system unit on docker0
 install_openwebui: true         # chat, native OIDC
 install_n8n: true               # automation; CE has no OIDC, so the edge gates it
 install_jupyterhub: true        # notebooks as the person's own login (SystemdSpawner)
+install_landing: true           # the root domain: a signpost to every service + a short how-to
 
 # Iris for every login: one thalamus daemon, a socket every ssh session shares
 # (roles/pazny.thalamus tasks/linux.yml); `iris` in any shell. The receptor

@@ -1,0 +1,83 @@
+---
+# ==============================================================================
+# pazny.landing — the estate's front door at the root domain (tenant_domain).
+# A static page: a card per routed service (the wing-base hub-card harvest),
+# then a short how-to for the people who use this host. No application, no
+# session, no data. Not the apex page: apex is a signed public projection for
+# strangers; this is a signpost for the estate's own people. One of the two.
+# ==============================================================================
+
+- name: "[pazny.landing] Not together with the apex page (same root domain)"
+  ansible.builtin.assert:
+    that: not (install_apex | default(false) | bool)
+    fail_msg: "install_landing and install_apex both claim the root domain; turn one off."
+
+- name: "[pazny.landing] Read the harvested service cards"
+  ansible.builtin.slurp:
+    src: "{{ landing_hub_cards }}"
+  register: _landing_cards_raw
+  failed_when: false
+
+# A card whose host Traefik does not route would be a link to a 404 (the
+# Traefik dashboard is off by default): keep only routed hosts, read back from
+# the files Traefik watches.
+- name: "[pazny.landing] The hosts Traefik routes"
+  ansible.builtin.shell: |
+    set -o pipefail
+    cat {{ (stacks_dir ~ '/infra/traefik/conf.d') | quote }}/*.yml | grep -o 'Host(`[^`]*`)' | sed 's/Host(`//;s/`)//' | sort -u
+  args:
+    executable: /bin/bash
+  register: _landing_routed
+  changed_when: false
+  failed_when: false
+
+- name: "[pazny.landing] The cards, routed only, sorted by tier then title"
+  ansible.builtin.set_fact:
+    _landing_cards: >-
+      {{ (((_landing_cards_raw.content | b64decode | from_json).cards | default([]))
+          if (_landing_cards_raw.content | default('', true) | length > 0) else [])
+         | selectattr('url', 'search', '^https://(' ~ (_landing_routed.stdout_lines | map('regex_escape') | join('|')) ~ ')(/|$)')
+         | sort(attribute='title') | sort(attribute='tier', reverse=true) | list }}
+
+- name: "[pazny.landing] Web root"
+  ansible.builtin.file:
+    path: "{{ landing_web_root }}"
+    state: directory
+    mode: '0755'
+
+- name: "[pazny.landing] The page"
+  ansible.builtin.template:
+    src: index.html.j2
+    dest: "{{ landing_web_root }}/index.html"
+    mode: '0644'
+
+- name: "[pazny.landing] The CA a client imports (public half only)"
+  ansible.builtin.copy:
+    src: "{{ stacks_dir }}/shared-certs/rootCA.pem"
+    dest: "{{ landing_web_root }}/nos-root-ca.pem"
+    remote_src: true
+    mode: '0644'
+  failed_when: false
+  when: tenant_domain_is_local | default(true) | bool
+
+- name: "[pazny.landing] The hosts line a client pastes (public, no secret)"
+  ansible.builtin.copy:
+    src: "{{ ansible_facts['env']['HOME'] }}/.nos/hosts-snippet.txt"
+    dest: "{{ landing_web_root }}/hosts.txt"
+    remote_src: true
+    mode: '0644'
+  failed_when: false
+  when: tenant_domain_is_local | default(true) | bool
+
+- name: "[pazny.landing] nginx server config"
+  ansible.builtin.template:
+    src: landing-nginx.conf.j2
+    dest: "{{ stacks_dir }}/iiab/landing-nginx.conf"
+    mode: '0644'
+  notify: Restart landing
+
+- name: "[pazny.landing] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/iiab/overrides/landing.yml"
+    mode: '0600'
