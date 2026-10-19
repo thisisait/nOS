@@ -27,6 +27,8 @@ const PARAMS: [(&str, &str); 14] = [("limit", "integer"), ("fields", "string"), 
 pub struct Cortex {
     pub url: String,
     pub token: String,
+    /// NOS_CORTEX_CATALOGUE=rich: the plan's table lines carry each column's label and options, not only key:kind.
+    pub rich_catalogue: bool,
 }
 
 /// One stage of the flat AST: what the JSON-schema engine emits and the organ's AST is read into.

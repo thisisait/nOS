@@ -57,6 +57,8 @@
         <key>NOS_IRIS_PLAN</key>
         <string>{{ iris_plan | default('tools') }}</string>
 {% if iris_plan | default('tools') == 'cortex' and install_cortex | default(false) | bool %}
+        <key>NOS_CORTEX_CATALOGUE</key>
+        <string>{{ thalamus_cortex_catalogue | default('lean') }}</string>
         <key>NOS_CORTEX_URL</key>
         <string>http://127.0.0.1:{{ cortex_port | default(8098) }}</string>
         <!-- The organ's RO token (validate only); read once as nos:cortex_ro_token, then removed. -->

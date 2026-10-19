@@ -328,7 +328,7 @@ fn every_fixture_pipeline_runs_as_its_tool_calls_or_falls_back() {
         let ev = tools(&rig, &session);
         let uses: Vec<&Value> = ev.iter().filter(|(t, _)| t.ends_with("tool_use:cortex_plan")).map(|e| &e.1).collect();
         assert_eq!(fingerprinted(uses[0]), json!({"source": c["pipeline"], "engine": "ollama-json-schema", "constrained": true,
-            "primer_sha256": "hex", "grammar_sha256": "hex"}), "{name}");
+            "primer_sha256": "hex", "grammar_sha256": "hex", "catalogue": "lean"}), "{name}");
         let results: Vec<&Value> = ev.iter().filter(|(t, _)| t.ends_with("tool_result:cortex_plan")).map(|e| &e.1).collect();
         let last = *results.last().unwrap_or_else(|| panic!("{name}: no cortex_plan result: {ev:?}"));
         let said = models_said(&rig);
@@ -386,7 +386,7 @@ fn the_unconstrained_engine_repairs_once_with_the_validators_errors() {
     let uses: Vec<&Value> = ev.iter().filter(|(t, _)| t.ends_with("tool_use:cortex_plan")).map(|e| &e.1).collect();
     assert_eq!(uses.len(), 2);
     assert_eq!(fingerprinted(uses[0]), json!({"source": "get(db:todos, colour=red)", "engine": "unconstrained", "constrained": false,
-        "primer_sha256": "hex", "grammar_sha256": null}), "the fence is stripped; an unconstrained plan has no grammar");
+        "primer_sha256": "hex", "grammar_sha256": null, "catalogue": "lean"}), "the fence is stripped; an unconstrained plan has no grammar");
     assert!(ev.iter().any(|(t, v)| t.ends_with("tool_use:query_rows") && v["args"]["limit"] == 5), "the repaired plan ran: {ev:?}");
 }
 

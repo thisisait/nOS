@@ -69,9 +69,11 @@ fn serve_main(args: &[String]) -> Result<(), String> {
     }
     // iris_plan: cortex (the role renders NOS_IRIS_PLAN, NOS_CORTEX_URL and the RO token as nos:cortex_ro_token).
     let cortex = std::env::var("NOS_CORTEX_URL").ok().filter(|u| !u.is_empty() && std::env::var("NOS_IRIS_PLAN").as_deref() == Ok("cortex"))
-        .map(|url| thalamus::cortex_plan::Cortex { url, token: lookup("nos:cortex_ro_token").unwrap_or_default() });
+        .map(|url| thalamus::cortex_plan::Cortex { url, token: lookup("nos:cortex_ro_token").unwrap_or_default(),
+            rich_catalogue: std::env::var("NOS_CORTEX_CATALOGUE").as_deref() == Ok("rich") });
     match &cortex {
-        Some(c) => eprintln!("thalamus: iris plans in cortex-lang via {}", c.url),
+        Some(c) => eprintln!("thalamus: iris plans in cortex-lang via {}, catalogue {}", c.url,
+            if c.rich_catalogue { "rich" } else { "lean" }),
         None if std::env::var("NOS_IRIS_PLAN").as_deref() == Ok("cortex") => eprintln!("thalamus: WARNING iris_plan is cortex but \
             NOS_CORTEX_URL is unset (install_cortex off?): iris plans with tools"),
         None => {}

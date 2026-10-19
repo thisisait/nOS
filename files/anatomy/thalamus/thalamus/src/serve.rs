@@ -1963,7 +1963,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
             o.messages.push(json!({"role": "user", "content": format!("[thalamus] cortex plan refused: {why}; answer with the tools")}));
             None
         };
-        let catalogue = match self.catalogue(who) {
+        let catalogue = match self.catalogue(who, c.rich_catalogue) {
             Ok(c) => c,
             Err(why) => return refused(o, format!("the table catalogue is unreadable ({why})"), "infra", json!({})),
         };
@@ -2011,7 +2011,8 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
             };
             let (primer_sha, grammar_sha) = cortex_plan::fingerprint(engine, gbnf.as_deref());
             let mut asked = json!({"source": source, "engine": engine.name(), "constrained": engine != Engine::Free,
-                                   "primer_sha256": primer_sha, "grammar_sha256": grammar_sha});
+                                   "primer_sha256": primer_sha, "grammar_sha256": grammar_sha,
+                                   "catalogue": if c.rich_catalogue { "rich" } else { "lean" }});
             if let Some(d) = &downgrade {
                 asked["downgraded_from"] = json!(Engine::JsonSchema.name());
                 asked["downgrade"] = json!(d);
@@ -2080,10 +2081,22 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
         }).collect())
     }
 
-    /// The plan call's table lines: each table this scope shows, its id, title and column key:kind.
-    fn catalogue(&self, who: &Person) -> Result<String, String> {
+    /// The plan call's table lines: each table this scope shows, its id, title and column key:kind; rich adds
+    /// a column's label and options (measured 2026-10-18 alongside a 85->70/283 drop: the A/B decides).
+    fn catalogue(&self, who: &Person, rich: bool) -> Result<String, String> {
         Ok(self.catalogue_tables(who)?.iter().map(|t| {
-            let cols: Vec<String> = t.columns.iter().map(|c| format!("{}:{}", c.key, c.kind)).collect();
+            let cols: Vec<String> = t.columns.iter().map(|c| {
+                let mut s = format!("{}:{}", c.key, c.kind);
+                if rich {
+                    if let Some(l) = c.label.as_deref().filter(|l| *l != c.key) {
+                        s += &format!(" \"{l}\"");
+                    }
+                    if let Some(o) = c.options.as_ref().filter(|o| !o.is_empty()) {
+                        s += &format!(" ({})", o.join("|"));
+                    }
+                }
+                s
+            }).collect();
             format!("- {} \"{}\": {}", t.id, t.title, cols.join(", "))
         }).collect::<Vec<_>>().join("\n"))
     }
