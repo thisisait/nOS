@@ -42,10 +42,12 @@
   become: true
   register: _jh_pip
 
+# The docker CLI, not community.docker: that module needs python requests on the
+# target interpreter, which a fresh host (and CI's runner) does not have.
 - name: "[jupyterhub] The proxy image"
-  community.docker.docker_image:
-    name: "{{ jupyterhub_chp_image }}"
-    source: pull
+  ansible.builtin.command: "{{ nos_docker_bin | default('docker') }} pull -q {{ jupyterhub_chp_image }}"
+  register: _jh_chp_pull
+  changed_when: "'Downloaded newer image' in _jh_chp_pull.stdout or 'Pull complete' in _jh_chp_pull.stdout"
   become: true
 
 - name: "[jupyterhub] Config"
