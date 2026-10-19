@@ -300,6 +300,22 @@ def _run(script, tmp_path, *extra):
     return rc, json.loads(out.read_text()), fake
 
 
+def test_a_run_without_out_leaves_the_checkout_untouched(tmp_path, monkeypatch):
+    """The repo is not the running system: the default record lands under ~/.nos, never in git."""
+    for k in ("NOS_LOOP_STATE_DIR", "STATE_DIR"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    status = ["git", "-C", str(REPO), "status", "--porcelain"]
+    before = subprocess.run(status, capture_output=True, text=True, check=True).stdout
+    fake = Fake(_script(bad=False))
+    try:
+        _bench().main(["--sock", fake.path, "--offline", "--timeout", "10"])
+    finally:
+        fake.close()
+    assert subprocess.run(status, capture_output=True, text=True, check=True).stdout == before
+    assert (tmp_path / ".nos/bench/iris-bench/last-run.json").is_file()
+
+
 def test_a_good_run_passes_every_check(tmp_path):
     rc, res, fake = _run(_script(bad=False), tmp_path)
     assert {c["id"]: c["failed"] for c in res["cases"]} == {c["id"]: [] for c in CASES}
