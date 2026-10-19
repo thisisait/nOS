@@ -2745,6 +2745,18 @@
       tags: ['ollama', 'openclaw', 'ai', 'agent']
 
     # ──────────────────────────────────────────────────────────────────────────
+    # JupyterHub - notebooks as the person's own Linux login (Linux only;
+    # people come from the unix realm, SSO from the jupyterhub-base plugin).
+    # ──────────────────────────────────────────────────────────────────────────
+    - name: "JupyterHub (pazny.jupyterhub role)"
+      ansible.builtin.import_role:
+        name: pazny.jupyterhub
+      when:
+        - install_jupyterhub | default(false)
+        - nos_pkg_manager == 'apt'
+      tags: ['jupyterhub', 'ai']
+
+    # ──────────────────────────────────────────────────────────────────────────
     # OpenClaw - self-hosted AI agent (Ollama, no API key)
     # ──────────────────────────────────────────────────────────────────────────
     - name: "OpenClaw (pazny.openclaw role)"

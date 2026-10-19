@@ -141,6 +141,12 @@ services:
     note: "GET /api/v1/users/ (match by email) -> GET /api/v1/users/{id}; chats
            via /api/v1/chats (admin JWT)."
 
+  - id: svc_jupyterhub
+    flag: install_jupyterhub
+    method: manual
+    note: "The person's notebooks and files are their Linux home (0700): archive
+           /home/<login>; Hub state via GET /hub/api/users/{name} (admin token)."
+
   - id: svc_n8n
     flag: install_n8n
     method: manual

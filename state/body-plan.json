@@ -7,7 +7,7 @@
     "genome": 22,
     "cell": 17,
     "tissue": 1,
-    "organ": 80,
+    "organ": 81,
     "organ system": 13,
     "organism": 0,
     "habitat": 8,
@@ -1698,6 +1698,10 @@
       "kind": "service"
     },
     "service:jellyfin": {
+      "level": "organ",
+      "kind": "service"
+    },
+    "service:jupyterhub": {
       "level": "organ",
       "kind": "service"
     },

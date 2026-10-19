@@ -544,6 +544,11 @@ install_nginx: false
 # Track C+D (2026-04-26): Linux-only flags. Ignored on macOS.
 install_docker: true              # Linux: install Docker CE + compose plugin via APT
 install_hardening: true           # Linux: ANSSI baseline (ufw + fail2ban + sysctl + auditd + apparmor + chrony + ssh + unattended). Decision O5: default ON, opt-out via this flag.
+# The two ssh choices a host's USE decides (pazny.linux.hardening, server default
+# off): password logins and TCP forwarding (editor remotes tunnel over ssh).
+# profiles/workstation.yml turns both on for people who ssh into a shared box.
+hardening_ssh_password_auth: false
+hardening_ssh_tcp_forwarding: false
 
 # macOS workload telemetry (epic workload-allowlist). MONITOR mode only, never lockdown.
 # First run stops for two System Settings approvals (system extension + Full Disk Access).
@@ -680,6 +685,7 @@ install_gitea: true              # Gitea – self-hosted Git server             
 install_gitlab: false             # GitLab CE – full DevOps platform           [requires: Docker, ~4 GB RAM]
 install_woodpecker: false         # Woodpecker CI – CI/CD for Gitea            [requires: Docker, Gitea OAuth2]
 install_openwebui: true          # Open WebUI – chat UI for Ollama            [requires: Docker, Ollama]
+install_jupyterhub: false        # JupyterHub – notebooks as your own Linux login [requires: Linux, realm unix]
 install_mcp_gateway: false        # mcpo – MCP-to-OpenAPI proxy for OpenWebUI  [Docker, requires: Open WebUI]
 install_portainer: true          # Portainer CE – Docker management UI        [requires: Docker]
 install_spacetimedb: false       # SpacetimeDB Standalone – realtime DB (BSL 1.1, internal-SaaS use only) [Docker]
@@ -1086,11 +1092,15 @@ llm_cell_recommended_params_b: 8
 # /v1/systemone decision models (dtt local-decision-tev1) need >= 0.35.
 ollama_version: "0.35.0"
 
-# Where the model server listens. macOS: loopback (Docker Desktop's
+# Where host daemons meet containers. macOS: loopback (Docker Desktop's
 # host.docker.internal reaches it). Linux: docker0's address, because Linux
-# host-gateway cannot reach a loopback bind; the LAN still cannot (no auth).
-# Host-side consumers read ollama_url, containers host.docker.internal.
-ollama_bind_host: "{{ '127.0.0.1' if (ansible_system | default('Darwin')) == 'Darwin' else '172.17.0.1' }}"
+# host-gateway cannot reach a loopback bind; the LAN still cannot. Read from
+# the host's docker0 fact (a daemon.json `bip` moves it); Docker's default
+# 172.17.0.1 before Docker is installed.
+nos_docker_host_ip: "{{ '127.0.0.1' if (ansible_system | default('Darwin')) == 'Darwin' else ((((ansible_facts | default({})).get('docker0') or {}).get('ipv4') or {}).get('address') or '172.17.0.1') }}"
+# The model server listens there (no auth, so never wider). Host-side
+# consumers read ollama_url, containers host.docker.internal.
+ollama_bind_host: "{{ nos_docker_host_ip }}"
 ollama_url: "http://{{ ollama_bind_host }}:11434"
 
 # The model server itself (roles/pazny.ollama, row `ollama`). Its own flag since
@@ -1688,6 +1698,10 @@ nos_agent_forge: "gitea"
 
 openwebui_domain: "ai{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 openwebui_port: 3004             # Internal container port 8080 → host 3004
+# JupyterHub (roles/pazny.jupyterhub): host-native, Linux only. The proxy binds
+# docker0:jupyterhub_port, Traefik serves jupyter.<tld>.
+jupyterhub_domain: "jupyter{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
+jupyterhub_port: 8010
 # REM-176, the THIRD consecutive supersession of this component: REM-101 moved
 # it 0.8.12 → 0.9.6, REM-138 0.9.6 → 0.10.2, this one 0.10.2 → 0.11.0. Each was
 # correct when written and stale within weeks, which is the argument for

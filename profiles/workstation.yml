@@ -1,0 +1,31 @@
+---
+# =============================================================================
+# profiles/workstation.yml — a shared Linux GPU box: chat, notebooks, automation
+#
+# axis: use-case
+# plain: One Linux machine several people ssh into: chat with local models, notebooks as your own login, n8n — each person's data in their own home.
+# composes-with: core (the service set), test-users (personas to test isolation).
+#   nos -e @profiles/core.yml -e @profiles/workstation.yml [-e @profiles/test-users.yml]
+#
+# Built 2026-10-19 to replace bootstrap/minimal-linux-dgx on an NVIDIA DGX
+# Spark (aarch64, Ubuntu 24.04): the same services, from the playbook, with
+# the people declared in config instead of created by a recipe. The people
+# themselves are nos_extra_identities with realms [authentik, unix] in your
+# config.yml — this profile only decides what runs.
+# =============================================================================
+
+# ── The model server and its front-ends ──────────────────────────────────────
+install_ollama: true            # Linux: pinned release + system unit on docker0 (roles/pazny.ollama)
+install_openwebui: true         # chat, native OIDC
+install_n8n: true               # automation; CE has no OIDC, so the edge gates it
+install_jupyterhub: true        # notebooks as the person's own login (SystemdSpawner)
+
+# Thalamus (Iris at the terminal) has no systemd unit yet; core.yml turns it on.
+install_thalamus: false
+
+# ── People reach the box by ssh ──────────────────────────────────────────────
+# pazny.linux.hardening's server default is keys only and no forwarding. On a
+# workstation people sign in with the password their identity was given and
+# use editor remotes (VS Code / JetBrains), which tunnel over ssh.
+hardening_ssh_password_auth: true
+hardening_ssh_tcp_forwarding: true

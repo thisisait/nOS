@@ -160,6 +160,7 @@ traefik_auth_modes:
   n8n: proxy
   nextcloud: oidc
   open_webui: oidc
+  jupyterhub: oidc          # GenericOAuthenticator; the Hub refuses SSO users with no Linux login
   outline: oidc
   portainer: oidc
   vaultwarden: oidc

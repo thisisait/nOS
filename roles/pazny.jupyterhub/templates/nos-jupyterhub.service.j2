@@ -1,0 +1,18 @@
+# {{ ansible_managed }} — roles/pazny.jupyterhub
+[Unit]
+Description=JupyterHub (nOS)
+After=network-online.target nos-jupyterhub-proxy.service
+Wants=nos-jupyterhub-proxy.service
+
+[Service]
+# root: SystemdSpawner starts each person's server as THEIR unit.
+User=root
+WorkingDirectory={{ jupyterhub_state_dir }}
+EnvironmentFile={{ jupyterhub_state_dir }}/hub.env
+Environment=PATH={{ jupyterhub_prefix }}/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart={{ jupyterhub_prefix }}/venv/bin/jupyterhub -f {{ jupyterhub_prefix }}/jupyterhub_config.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

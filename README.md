@@ -5,8 +5,8 @@
 
 > **Your own cloud, on the machine on your desk.**
 >
-> nOS is an Ansible playbook that orchestrates 87 roles to turn one Apple Silicon Mac,
-> or an Ubuntu 24.04 host, into a complete self-hosted stack: 76 open-source services behind one sign-in,
+> nOS is an Ansible playbook that orchestrates 89 roles to turn one Apple Silicon Mac,
+> or an Ubuntu 24.04 host, into a complete self-hosted stack: 77 open-source services behind one sign-in,
 > one secrets vault, one observability stack and one backup, plus local AI agents that
 > run on your own hardware. Everything is FOSS and every byte of data stays on the box.
 

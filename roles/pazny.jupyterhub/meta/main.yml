@@ -1,0 +1,13 @@
+---
+galaxy_info:
+  role_name: jupyterhub
+  namespace: pazny
+  author: Pázny
+  description: JupyterHub for nOS — notebooks run as the person's own Linux login (SystemdSpawner), SSO via Authentik
+  license: MIT
+  min_ansible_version: "2.20"
+  platforms:
+    - name: Ubuntu
+      versions: [noble]
+
+dependencies: []

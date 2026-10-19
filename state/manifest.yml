@@ -1021,6 +1021,18 @@ services:
     launchd_label: "com.ollama.agent"      # ollama_launchd_label (roles/pazny.ollama)
     data_path_var: ollama_models_dir
 
+  - id: jupyterhub
+    software_owner: symbiont
+    category: data
+    stack: null
+    install_flag: install_jupyterhub
+    version_var: jupyterhub_version
+    version_source: pip
+    domain_var: jupyterhub_domain
+    port_var: jupyterhub_port
+    oidc: native
+    host_process: "systemd system units nos-jupyterhub + nos-jupyterhub-proxy (Linux); no launchd job"
+
   - id: hermes
     software_owner: symbiont
     category: messaging

@@ -92,6 +92,12 @@ services:
     method: manual
     note: "Admin Panel → Users → delete; or DELETE /api/v1/users/{id} (admin JWT)."
 
+  - id: svc_jupyterhub
+    flag: install_jupyterhub
+    method: manual
+    note: "Hub admin → delete user (or DELETE /hub/api/users/{name}, admin token); the
+           person's notebooks are their Linux home — erase with the login (realm unix)."
+
   - id: svc_n8n
     flag: install_n8n
     method: manual

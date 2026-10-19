@@ -1,0 +1,24 @@
+# {{ ansible_managed }} — roles/pazny.jupyterhub
+# configurable-http-proxy as a pinned container on the HOST network: it binds
+# docker0:{{ jupyterhub_port }} for Traefik and reaches the Hub and every
+# person's server on loopback.
+[Unit]
+Description=JupyterHub proxy (nOS)
+After=docker.service
+Requires=docker.service
+
+[Service]
+EnvironmentFile={{ jupyterhub_state_dir }}/hub.env
+ExecStartPre=-/usr/bin/docker rm -f nos-jupyterhub-proxy
+ExecStart=/usr/bin/docker run --rm --name nos-jupyterhub-proxy --network host \
+  -e CONFIGPROXY_AUTH_TOKEN {{ jupyterhub_chp_image }} \
+  --ip {{ jupyterhub_bind_host }} --port {{ jupyterhub_port }} \
+  --api-ip 127.0.0.1 --api-port {{ jupyterhub_proxy_api_port }} \
+  --default-target http://127.0.0.1:{{ jupyterhub_hub_port }} \
+  --error-target http://127.0.0.1:{{ jupyterhub_hub_port }}/hub/error
+ExecStop=/usr/bin/docker stop nos-jupyterhub-proxy
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

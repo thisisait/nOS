@@ -1,0 +1,63 @@
+# {{ ansible_managed }} — roles/pazny.jupyterhub
+# Secrets arrive as environment (EnvironmentFile, root 0600), never in this file.
+import os
+import pwd
+
+c = get_config()  # noqa: F821 — provided by JupyterHub
+
+STATE = "{{ jupyterhub_state_dir }}"
+VENV = "{{ jupyterhub_prefix }}/venv"
+
+# ── The Hub behind an external proxy (nos-jupyterhub-proxy.service) ──────────
+c.JupyterHub.bind_url = "http://{{ jupyterhub_bind_host }}:{{ jupyterhub_port }}"
+c.JupyterHub.hub_ip = "127.0.0.1"
+c.JupyterHub.hub_port = {{ jupyterhub_hub_port }}
+c.ConfigurableHTTPProxy.should_start = False
+c.ConfigurableHTTPProxy.api_url = "http://127.0.0.1:{{ jupyterhub_proxy_api_port }}"
+c.JupyterHub.db_url = f"sqlite:///{STATE}/jupyterhub.sqlite"
+c.JupyterHub.cookie_secret_file = f"{STATE}/jupyterhub_cookie_secret"
+c.JupyterHub.cleanup_servers = False   # a Hub restart does not kill anyone's kernel
+
+# ── Who: Authentik (native OIDC), and only people who have a login here ──────
+c.JupyterHub.authenticator_class = "generic-oauth"
+c.GenericOAuthenticator.client_id = "nos-jupyterhub"
+c.GenericOAuthenticator.client_secret = os.environ["NOS_JUPYTERHUB_OIDC_SECRET"]
+c.GenericOAuthenticator.oauth_callback_url = "https://{{ jupyterhub_domain }}/hub/oauth_callback"
+c.GenericOAuthenticator.authorize_url = "https://{{ authentik_domain }}/application/o/authorize/"
+# Token + userinfo over loopback: the Hub needs neither DNS nor the edge's CA.
+c.GenericOAuthenticator.token_url = "http://127.0.0.1:{{ authentik_port }}/application/o/token/"
+c.GenericOAuthenticator.userdata_url = "http://127.0.0.1:{{ authentik_port }}/application/o/userinfo/"
+c.GenericOAuthenticator.scope = ["openid", "profile", "email"]
+c.GenericOAuthenticator.username_claim = "preferred_username"
+c.GenericOAuthenticator.login_service = "Authentik"
+c.GenericOAuthenticator.claim_groups_key = "groups"
+# RBAC tier 3 and above may use notebooks; tier 1 administers the Hub.
+c.GenericOAuthenticator.allowed_groups = {{ (authentik_rbac_tiers | selectattr('tier', 'equalto', 3) | first).groups | list | to_json }}
+c.GenericOAuthenticator.admin_groups = {{ (authentik_rbac_tiers | selectattr('tier', 'equalto', 1) | first).groups | list | to_json }}
+
+
+def _has_a_login(authenticator, handler, auth_model):
+    """An SSO identity without a Linux login (realm `unix`) has nowhere to run."""
+    try:
+        pwd.getpwnam(auth_model["name"])
+    except KeyError:
+        authenticator.log.warning("refused %s: no Linux login (realm unix)", auth_model["name"])
+        return None
+    return auth_model
+
+
+c.Authenticator.post_auth_hook = _has_a_login
+
+# ── Where: the person's own login, home, cgroup ──────────────────────────────
+c.JupyterHub.spawner_class = "systemdspawner.SystemdSpawner"
+c.SystemdSpawner.dynamic_users = False
+c.SystemdSpawner.user_workingdir = "{HOME}"
+c.SystemdSpawner.mem_limit = "{{ jupyterhub_mem_limit }}"
+c.SystemdSpawner.cpu_limit = {{ jupyterhub_cpu_limit }}
+c.SystemdSpawner.isolate_tmp = True
+c.SystemdSpawner.disable_user_sudo = True
+c.SystemdSpawner.isolate_devices = False   # the GPU is a device
+c.Spawner.cmd = [f"{VENV}/bin/jupyterhub-singleuser"]
+c.Spawner.default_url = "/lab"
+c.Spawner.http_timeout = 120
+c.Spawner.start_timeout = 120
