@@ -1,0 +1,114 @@
+---
+# ==============================================================================
+# pazny.vllm — render the compose override for the iiab stack.
+#
+# The weights are a pinned Hugging Face snapshot (vllm_model @ vllm_model_revision).
+# A multi-GB download must not hold the converge (the Ollama lesson, spark1
+# 2026-10-19), and the strict health-wait cannot wait for one either. So:
+#   1. a reader asks whether the pinned snapshot is complete on disk;
+#   2. if not, a detached one-shot container (same image) downloads it, and
+#      THIS converge renders no vllm service — it says so;
+#   3. a later converge that finds the snapshot complete renders the service,
+#      which then runs offline (HF_HUB_OFFLINE=1) against exactly that revision.
+# ==============================================================================
+
+- name: "[pazny.vllm] Linux with an NVIDIA GPU visible to Docker (CDI)"
+  ansible.builtin.command: "{{ nos_docker_bin | default('docker') }} info"
+  register: _vllm_cdi
+  changed_when: false
+  failed_when: >-
+    nos_pkg_manager != 'apt'
+    or 'nvidia.com/gpu=all' not in (_vllm_cdi.stdout | default(''))
+
+- name: "[pazny.vllm] Data directories"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ vllm_data_dir }}"
+    - "{{ vllm_data_dir }}/hf"
+
+# ── 1. Is the pinned snapshot complete? (a reader, not the downloader) ───────
+- name: "[pazny.vllm] Is the pinned snapshot complete on disk?"
+  ansible.builtin.command:
+    argv:
+      - python3
+      - -c
+      - |
+        import pathlib, sys
+        hf, repo, rev = pathlib.Path(sys.argv[1]), sys.argv[2], sys.argv[3]
+        d = hf / ("models--" + repo.replace("/", "--"))
+        snap = d / "snapshots" / rev
+        incomplete = list((d / "blobs").glob("*.incomplete")) if (d / "blobs").exists() else []
+        weights = list(snap.glob("*.safetensors")) if snap.exists() else []
+        index = snap / "model.safetensors.index.json"
+        ok = (snap / "config.json").exists() and weights and not incomplete
+        if ok and index.exists():
+            import json
+            want = set(json.loads(index.read_text())["weight_map"].values())
+            ok = want <= {w.name for w in weights}
+        print("complete" if ok else "missing")
+      - "{{ vllm_data_dir }}/hf"
+      - "{{ vllm_model }}"
+      - "{{ vllm_model_revision }}"
+  register: _vllm_snapshot
+  changed_when: false
+
+- name: "[pazny.vllm] Is a fetch already running?"
+  ansible.builtin.command: "{{ nos_docker_bin | default('docker') }} ps -q --filter name=^{{ vllm_fetch_container }}$"
+  register: _vllm_fetching
+  changed_when: false
+  when: _vllm_snapshot.stdout != 'complete'
+
+# ── 2. Start the download in the background ──────────────────────────────────
+- name: "[pazny.vllm] Fetch the pinned snapshot in the background"
+  ansible.builtin.command:
+    argv:
+      - "{{ nos_docker_bin | default('docker') }}"
+      - run
+      - -d
+      - --rm
+      - --name
+      - "{{ vllm_fetch_container }}"
+      - --user
+      - "{{ nos_container_user | default('0:0', true) }}"
+      - -e
+      - HF_HOME=/hf
+      - -e
+      - HOME=/tmp
+      - -v
+      - "{{ vllm_data_dir }}/hf:/hf"
+      - --entrypoint
+      - python3
+      - "{{ vllm_image }}"
+      - -c
+      - "import sys; from huggingface_hub import snapshot_download; snapshot_download(sys.argv[1], revision=sys.argv[2], cache_dir='/hf')"
+      - "{{ vllm_model }}"
+      - "{{ vllm_model_revision }}"
+  when:
+    - _vllm_snapshot.stdout != 'complete'
+    - (_vllm_fetching.stdout | default('') | trim) == ''
+  changed_when: true
+
+- name: "[pazny.vllm] Not served this run: the weights are still arriving"
+  ansible.builtin.debug:
+    msg: >-
+      {{ vllm_model }}@{{ vllm_model_revision[:12] }} is downloading in the background
+      (`docker logs -f {{ vllm_fetch_container }}`). No vllm service is rendered until
+      it is complete; the next converge serves it.
+  when: _vllm_snapshot.stdout != 'complete'
+
+# ── 3. The service, once the snapshot is whole ───────────────────────────────
+- name: "[pazny.vllm] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/iiab/overrides/vllm.yml"
+    mode: '0600'
+  when: _vllm_snapshot.stdout == 'complete'
+
+- name: "[pazny.vllm] No half-ready service in the stack"
+  ansible.builtin.file:
+    path: "{{ stacks_dir }}/iiab/overrides/vllm.yml"
+    state: absent
+  when: _vllm_snapshot.stdout != 'complete'

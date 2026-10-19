@@ -694,6 +694,7 @@ install_gitlab: false             # GitLab CE – full DevOps platform          
 install_woodpecker: false         # Woodpecker CI – CI/CD for Gitea            [requires: Docker, Gitea OAuth2]
 install_openwebui: true          # Open WebUI – chat UI for Ollama            [requires: Docker, Ollama]
 install_jupyterhub: false        # JupyterHub – notebooks as your own Linux login [requires: Linux, realm unix]
+install_vllm: false              # vLLM – one resident model, batched, OpenAI API [requires: Linux, NVIDIA GPU (CDI)]
 install_mcp_gateway: false        # mcpo – MCP-to-OpenAPI proxy for OpenWebUI  [Docker, requires: Open WebUI]
 install_portainer: true          # Portainer CE – Docker management UI        [requires: Docker]
 install_spacetimedb: false       # SpacetimeDB Standalone – realtime DB (BSL 1.1, internal-SaaS use only) [Docker]
@@ -1724,6 +1725,25 @@ jupyterhub_oauthenticator_version: "17.4.0"
 jupyterhub_systemdspawner_version: "1.0.2"
 # The proxy fronts every notebook on the host network: tag AND digest.
 jupyterhub_chp_image: "quay.io/jupyterhub/configurable-http-proxy:5.2.0@sha256:522738d5285e4be758da5023194cbc95249efdadaa62a0998c8ed1aa2890b2da"
+# vLLM (roles/pazny.vllm): ONE resident model behind an OpenAI-compatible API,
+# beside Ollama (which keeps every other model on demand). Linux + NVIDIA only.
+# The weights are a pinned Hugging Face snapshot fetched in the background; the
+# service is rendered once a reader finds it complete, then runs offline.
+vllm_image: "nvcr.io/nvidia/vllm:26.09-py3@sha256:VLLM_DIGEST_PENDING"
+vllm_model: "Qwen/Qwen3.5-35B-A3B-FP8"
+vllm_model_revision: "9d1823d2dee688a6b25e77009dc727688c44936e"
+# The id clients ask for. Ollama-shaped (name:tag-<N>b) so the cell size floor
+# (llm_cell_min_params_b) reads its parameter count like any local model's.
+vllm_served_model_name: "qwen3.5:35b-a3b-fp8"
+vllm_port: 8011                   # 127.0.0.1 only; containers use http://vllm:8000/v1
+vllm_data_dir: "{{ nos_data_root }}/platform/services/vllm"
+# The share of the GPU's memory vLLM PRE-ALLOCATES at start (weights + KV cache).
+# On unified-memory hosts (DGX Spark: 121 GB) that is the same pool as Ollama's
+# resident models, notebooks and containers — size it, do not let it default.
+vllm_gpu_memory_utilization: 0.45
+vllm_max_model_len: 32768
+vllm_extra_args: []
+vllm_api_key: "{{ nos_derived_secrets.vllm_api_key }}"
 # REM-176, the THIRD consecutive supersession of this component: REM-101 moved
 # it 0.8.12 → 0.9.6, REM-138 0.9.6 → 0.10.2, this one 0.10.2 → 0.11.0. Each was
 # correct when written and stale within weeks, which is the argument for

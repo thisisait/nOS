@@ -1,0 +1,56 @@
+# =============================================================================
+# vllm-base — service plugin (2026-10-19, PoC on spark1 / DGX Spark)
+#
+# vLLM serves ONE resident model, batched, behind an OpenAI-compatible API on
+# loopback and shared_net. No SSO: no route, no browser surface; callers hold
+# vllm_api_key (Open WebUI via its admin API, the thalamus/Wing via the
+# `vllm` backend row). Ollama stays the on-demand server for every other model.
+# =============================================================================
+
+name: vllm-base
+version: 0.1.0
+description: |
+  Wiring layer for vLLM: GDPR record and notification routing. The OpenAI
+  surface is consumed through state/habitat/llm-backends.yml row `vllm`.
+upstream: https://github.com/vllm-project/vllm
+license: Apache-2.0
+
+type:
+  - service
+
+requires:
+  role: pazny.vllm
+  feature_flag: install_vllm
+  variables:
+    - vllm_port
+    - vllm_model
+    - vllm_model_revision
+
+gdpr:
+  purpose: |
+    Runs a language model on this host for the estate's chat, notebooks and
+    agents. Prompts and completions pass through memory only; vLLM stores no
+    conversation (the calling app keeps its own history under its own record).
+  legal_basis: legitimate_interests
+  data_categories:
+    - prompts_transient
+  data_subjects:
+    - operators
+    - end_users
+  retention_days: 0
+  processors: []
+  eu_residency: true
+
+notification:
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []
+
+# No edge route and no browser surface, so no HTTPS probe exists to point at.
+# The post-start wiring is proven by readers inside post.yml: /v1/models lists
+# the served name under the key, and Open WebUI's /api/models lists it too.
+e2e_none: >-
+  no edge route: vLLM answers on loopback and shared_net only, behind its key;
+  post.yml's readers (/v1/models, Open WebUI /api/models) prove the wiring

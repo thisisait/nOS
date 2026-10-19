@@ -1,0 +1,90 @@
+---
+# ==============================================================================
+# pazny.vllm/tasks/post.yml — after `docker compose up iiab`.
+# The proof is a READER: /v1/models answers with the served name under the
+# key. Then Open WebUI learns the connection through its own admin API — its
+# settings live in its database and outrank env (the old DGX recipe hit this).
+# ==============================================================================
+
+- name: "[pazny.vllm Post] Is the service rendered this run?"
+  ansible.builtin.stat:
+    path: "{{ stacks_dir }}/iiab/overrides/vllm.yml"
+  register: _vllm_rendered
+
+- name: "[pazny.vllm Post] The server lists the served model (under the key)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ vllm_port }}/v1/models"
+    headers:
+      Authorization: "Bearer {{ vllm_api_key }}"
+    return_content: true
+  register: _vllm_models
+  retries: 60
+  delay: 10
+  until: >-
+    _vllm_models.status | default(0) == 200
+    and vllm_served_model_name in (_vllm_models.json.data | default([]) | map(attribute='id') | list)
+  when: _vllm_rendered.stat.exists
+  no_log: false
+
+- name: "[pazny.vllm Post] Open WebUI admin token"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ openwebui_port | default(3004) }}/api/v1/auths/signin"
+    method: POST
+    body_format: json
+    body:
+      email: "{{ openwebui_admin_email | default(default_admin_email) }}"
+      password: "{{ openwebui_admin_password }}"
+  register: _vllm_owui_login
+  when:
+    - _vllm_rendered.stat.exists
+    - install_openwebui | default(false) | bool
+  no_log: true
+
+- name: "[pazny.vllm Post] Open WebUI's OpenAI connections as it holds them"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ openwebui_port | default(3004) }}/openai/config"
+    headers:
+      Authorization: "Bearer {{ _vllm_owui_login.json.token }}"
+  register: _vllm_owui_cfg
+  when: _vllm_owui_login.json.token is defined
+  no_log: true
+
+# Add, never replace: whatever the operator connected by hand stays.
+- name: "[pazny.vllm Post] Add the vLLM connection when it is missing"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ openwebui_port | default(3004) }}/openai/config/update"
+    method: POST
+    body_format: json
+    headers:
+      Authorization: "Bearer {{ _vllm_owui_login.json.token }}"
+    body:
+      ENABLE_OPENAI_API: true
+      OPENAI_API_BASE_URLS: "{{ _urls + [_vllm_url] }}"
+      OPENAI_API_KEYS: "{{ _keys + [vllm_api_key] }}"
+      OPENAI_API_CONFIGS: "{{ _cfgs | combine({(_urls | length) | string: {'enable': true}}) }}"
+  vars:
+    _vllm_url: "http://vllm:{{ vllm_container_port }}/v1"
+    _urls: "{{ _vllm_owui_cfg.json.OPENAI_API_BASE_URLS | default([]) }}"
+    _keys: "{{ _vllm_owui_cfg.json.OPENAI_API_KEYS | default([]) }}"
+    _cfgs: "{{ _vllm_owui_cfg.json.OPENAI_API_CONFIGS | default({}) }}"
+  register: _vllm_owui_update
+  when:
+    - _vllm_owui_cfg.json is defined
+    - _vllm_url not in (_vllm_owui_cfg.json.OPENAI_API_BASE_URLS | default([]))
+  changed_when: true
+  no_log: true
+
+# A reader again: Open WebUI must LIST the model, not merely store a URL.
+- name: "[pazny.vllm Post] Open WebUI lists the vLLM model"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ openwebui_port | default(3004) }}/api/models"
+    headers:
+      Authorization: "Bearer {{ _vllm_owui_login.json.token }}"
+    return_content: true
+  register: _vllm_owui_models
+  retries: 6
+  delay: 5
+  until: vllm_served_model_name in (_vllm_owui_models.content | default(''))
+  when: _vllm_owui_login.json.token is defined
+  changed_when: false
+  no_log: true

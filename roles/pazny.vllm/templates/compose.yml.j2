@@ -1,0 +1,62 @@
+# =============================================================================
+# pazny.vllm — compose override fragment (iiab stack). Rendered only once the
+# pinned snapshot is complete on disk (tasks/main.yml).
+# =============================================================================
+
+services:
+  vllm:
+    image: {{ vllm_image }}
+{% if nos_container_user | default('') | length > 0 %}
+    user: "{{ nos_container_user }}"
+{% endif %}
+    restart: unless-stopped
+    # The GPU through CDI (NVIDIA Container Toolkit): no runtime switch, no privileges.
+    devices:
+      - "nvidia.com/gpu=all"
+    ipc: host
+    ports:
+      - "127.0.0.1:{{ vllm_port }}:{{ vllm_container_port }}"
+    volumes:
+      - {{ vllm_data_dir }}/hf:/hf
+    environment:
+      HF_HOME: /hf
+      HOME: /tmp
+      # Exactly the pinned revision, never a fetch at start.
+      HF_HUB_OFFLINE: "1"
+      VLLM_API_KEY: "{{ vllm_api_key }}"
+    command:
+      - vllm
+      - serve
+      - "{{ vllm_model }}"
+      - --revision
+      - "{{ vllm_model_revision }}"
+      - --download-dir
+      - /hf
+      - --served-model-name
+      - "{{ vllm_served_model_name }}"
+      - --host
+      - 0.0.0.0
+      - --port
+      - "{{ vllm_container_port }}"
+      - --gpu-memory-utilization
+      - "{{ vllm_gpu_memory_utilization }}"
+      - --max-model-len
+      - "{{ vllm_max_model_len }}"
+{% for a in vllm_extra_args | default([]) %}
+      - "{{ a }}"
+{% endfor %}
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:{{ vllm_container_port }}/health', timeout=4)"]
+      interval: 30s
+      timeout: 6s
+      retries: 3
+      # Loading tens of GB of weights and capturing CUDA graphs takes minutes.
+      start_period: {{ vllm_start_period | default('900s') }}
+    networks:
+      - iiab_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
