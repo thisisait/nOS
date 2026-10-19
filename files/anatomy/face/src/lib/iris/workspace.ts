@@ -210,6 +210,25 @@ const withItem = (l: Layout, here: Space, item: Item): Layout => ({
 	workspaces: l.workspaces.map((s) => (s === here ? { ...s, items: [...s.items, item] } : s))
 });
 
+/** The items whose box lies wholly inside frame `f`: what a drag of it carries (no stored group). */
+export const inside = (items: Item[], f: Item): Item[] =>
+	items.filter(
+		(i) =>
+			i.id !== f.id && i.x >= f.x && i.y >= f.y && i.x + i.w <= f.x + f.w && i.y + i.h <= f.y + f.h
+	);
+
+/** A frame round the items `ids` of the active board, room for its title above; l when none is there or the board is full. */
+export function frameAround(l: Layout, id: string, ids: string[]): Layout {
+	const here = activeSpace(l);
+	const sel = here.items.filter((i) => ids.includes(i.id));
+	if (!sel.length || here.items.length >= MAX_ITEMS) return l;
+	const x = Math.min(...sel.map((i) => i.x)) - 3 * SNAP,
+		y = Math.min(...sel.map((i) => i.y)) - 6 * SNAP;
+	const w = Math.max(...sel.map((i) => i.x + i.w)) + 3 * SNAP - x,
+		h = Math.max(...sel.map((i) => i.y + i.h)) + 3 * SNAP - y;
+	return withItem(l, here, { id, kind: 'frame', title: 'Frame', ...place({ x, y, w, h }) });
+}
+
 /** A heading or a frame on the active board, centred on `c` (else below the others); l itself when the board is full. */
 export function addItem(l: Layout, id: string, kind: 'heading' | 'frame', c?: Point): Layout {
 	const here = activeSpace(l);

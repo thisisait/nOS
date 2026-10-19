@@ -1,7 +1,8 @@
 <!--
   One board: an infinite canvas (Svelte Flow, MIT) of widgets, headings, frames and boards in world px
   (workspace-layout.yml v3); a board card opens its child by double-click or Enter. Wheel or pinch zooms, dragging the background pans, −/100%/+/fit sit
-  bottom left (keys - 0 + f); Tab walks the items top-left first; a focused item moves by arrows and resizes by shift+arrows. Svelte Flow's own CSS
+  bottom left (keys - 0 + f); Tab walks the items top-left first; a focused item moves by arrows and resizes by shift+arrows.
+  Shift+click or shift+drag selects several, which move together; a dragged frame carries the items inside it. Svelte Flow's own CSS
   carries colour literals, so it is not imported: the few structural rules it needs are below.
   A board with a lens has a bar over it: one native input per condition; a change re-runs the board.
 -->
@@ -34,7 +35,7 @@
 	import { setContext, untrack } from 'svelte';
 	import CanvasItem from './CanvasItem.svelte';
 	import ZoomBar from './ZoomBar.svelte';
-	import { byKey, SNAP, type Item, type View } from './workspace';
+	import { byKey, inside, SNAP, type Item, type View } from './workspace';
 
 	let {
 		space,
@@ -123,12 +124,37 @@
 	});
 
 	const at = (id: string) => space.items.find((i) => i.id === id);
+	// A dragged frame carries the items wholly inside the box it had (space.items holds it until the drop).
+	const carried = (moved: Node[]) => {
+		const out = new Map<string, Box>();
+		for (const n of moved) {
+			const f = at(n.id);
+			if (f?.kind !== 'frame') continue;
+			const dx = n.position.x - f.x,
+				dy = n.position.y - f.y;
+			for (const i of inside(space.items, f))
+				if (!moved.some((m) => m.id === i.id)) out.set(i.id, { ...i, x: i.x + dx, y: i.y + dy });
+		}
+		return out;
+	};
+	const dragging = ({ nodes: moved }: { nodes: Node[] }) => {
+		const c = carried(moved);
+		if (c.size)
+			nodes = nodes.map((n) => {
+				const g = c.get(n.id);
+				return g ? { ...n, position: { x: g.x, y: g.y } } : n;
+			});
+	};
 	const dropped = ({ nodes: moved }: { nodes: Node[] }) => {
+		const c = carried(moved);
 		for (const n of moved) {
 			const i = at(n.id);
 			if (i) onplace(i.id, { ...i, x: n.position.x, y: n.position.y });
 		}
+		for (const [id, g] of c) onplace(id, g);
 	};
+	/** The selected items' ids (shift+click, or shift+drag a box). */
+	export const selection = () => nodes.filter((n) => n.selected).map((n) => n.id);
 	// Capture: before Svelte Flow's own arrow handling, which moves 5 px and never resizes.
 	const key = (e: KeyboardEvent) => {
 		const t = e.target as HTMLElement;
@@ -198,7 +224,9 @@
 			elevateNodesOnSelect={false}
 			zoomOnDoubleClick={false}
 			deleteKey={null}
+			multiSelectionKey={['Shift', 'Meta', 'Control']}
 			proOptions={{ hideAttribution: true }}
+			onnodedrag={dragging}
 			onnodedragstop={dropped}
 			onmoveend={moveEnd}
 		>

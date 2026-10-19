@@ -322,6 +322,13 @@
 		layout = next;
 	}
 
+	function frameSelection() {
+		const next = ws.frameAround(layout, newId(), canvas?.selection() ?? []);
+		if (next === layout)
+			layoutNote = `select items first (shift+click or shift+drag), at most ${ws.MAX_ITEMS} a board`;
+		layout = next;
+	}
+
 	// "+ board": a card here that opens a new child; this board stays shown.
 	function addBoard() {
 		const next = ws.addSpace(layout, `ws${Date.now().toString(36)}`, 'Board', layout.active, mid());
@@ -577,6 +584,7 @@
 		<button onclick={() => (adding = !adding)} aria-expanded={adding}>+ widget</button>
 		<button class="ghost" onclick={() => addItem('heading')}>+ heading</button>
 		<button class="ghost" onclick={() => addItem('frame')}>+ frame</button>
+		<button class="ghost" onclick={frameSelection}>frame the selection</button>
 		<button class="ghost" onclick={addBoard}>+ board</button>
 		{#if space.parent || roots.length > 1}
 			<button class="ghost" onclick={() => (deleting = space.id)}>delete board</button>
