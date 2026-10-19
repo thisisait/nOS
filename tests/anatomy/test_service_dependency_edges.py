@@ -79,6 +79,11 @@ REFUSED = {
     # A parallel service edge would be padding, which this graph refuses.
     ("bookstack", "authentik"): "SSO — carried by the authentik provider chain",
     ("jupyterhub", "authentik"): "SSO — carried by the authentik provider chain",
+    # The landing page LINKS to these by name (its how-to); it calls none and
+    # runs without all of them (2026-10-19).
+    ("landing", "authentik"): "a link in the how-to, not a call",
+    ("landing", "jupyterhub"): "a link in the how-to, not a call",
+    ("landing", "open_webui"): "a link in the how-to, not a call",
     # dolibarr joined the class 2026-09-21 (native_oidc flip: post.yml writes
     # the MAIN_AUTHENTICATION_OIDC_*_URL consts pointing at authentik_domain)
     ("dolibarr", "authentik"): "SSO — carried by the authentik provider chain",
