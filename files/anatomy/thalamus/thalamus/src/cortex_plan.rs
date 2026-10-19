@@ -29,6 +29,44 @@ pub struct Cortex {
     pub token: String,
     /// NOS_CORTEX_CATALOGUE=rich: the plan's table lines carry each column's label and options, not only key:kind.
     pub rich_catalogue: bool,
+    /// iris_plan: hybrid plans only a turn whose route() intent is listed (NOS_IRIS_INTENTS); None = every turn.
+    pub intents: Option<Vec<String>>,
+}
+
+/// Folded word stems (a trailing * is a prefix): a turn with any of HOLD stays on tools whatever else it
+/// says (a write other than insert, a choice, a dashboard); else the first intent whose stems it has.
+const HOLD: &[&str] = &["uprav*", "zmen*", "nastav*", "prepis*", "smaz*", "odstran*", "edit*", "change*", "set", "update*",
+    "delete*", "remove*", "rename*", "moznost*", "nabidn*", "offer*", "option*", "choice*", "dashboard*", "nastenk*", "formular*", "form"];
+const INTENT_WORDS: [(&str, &[&str]); 4] = [
+    ("kpi", &["kpi*", "dlazdic*", "tile*"]),
+    ("chart", &["graf", "grafu", "grafy", "grafem", "chart*", "nakresl*", "vykresl*", "draw*", "plot*", "kolac*", "histogram*"]),
+    ("top-n", &["top", "nejvyss*", "nejniz*", "highest", "lowest", "prvnich"]),
+    ("insert-row", &["vloz*", "insert*", "pridej*", "add"]),
+];
+/// An insert verb inserts a row only beside a row word and no column word ("add two columns"), never "add up".
+const ROW: &[&str] = &["row*", "radek", "radk*", "zaznam*"];
+const COLUMN: &[&str] = &["sloup*", "column*"];
+
+/// iris_plan: hybrid. The person's own turn, never tool results or the catalogue (an injected row cannot
+/// steer it): ("cortex", intent, matched) when its intent is listed, else ("tools", intent, matched).
+// ponytail: stems, no morphology (marks.ts has none either); a router model is the upgrade (hybrid.md §1C).
+pub fn route(text: &str, intents: &[String]) -> (&'static str, Option<&'static str>, Vec<String>) {
+    let words: Vec<String> = text.split(|c: char| !c.is_alphanumeric()).map(nos_contract::uid::fold).filter(|w| !w.is_empty()).collect();
+    let hits = |stems: &[&str]| -> Vec<String> {
+        words.iter().filter(|w| stems.iter().any(|s| s.strip_suffix('*').map_or(w.as_str() == *s, |p| w.starts_with(p)))).cloned().collect()
+    };
+    let held = hits(HOLD);
+    if !held.is_empty() {
+        return ("tools", None, held);
+    }
+    for (intent, stems) in INTENT_WORDS {
+        let m = hits(stems);
+        let adds_up = words.windows(2).any(|w| w[0] == "add" && w[1] == "up");
+        if !m.is_empty() && (intent != "insert-row" || (!hits(ROW).is_empty() && hits(COLUMN).is_empty() && !adds_up)) {
+            return (if intents.iter().any(|i| i == intent) { "cortex" } else { "tools" }, Some(intent), m);
+        }
+    }
+    ("tools", None, vec![])
 }
 
 /// One stage of the flat AST: what the JSON-schema engine emits and the organ's AST is read into.

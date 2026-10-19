@@ -67,14 +67,20 @@ fn serve_main(args: &[String]) -> Result<(), String> {
     if let Some(w) = warning {
         eprintln!("thalamus: WARNING {w}");
     }
-    // iris_plan: cortex (the role renders NOS_IRIS_PLAN, NOS_CORTEX_URL and the RO token as nos:cortex_ro_token).
-    let cortex = std::env::var("NOS_CORTEX_URL").ok().filter(|u| !u.is_empty() && std::env::var("NOS_IRIS_PLAN").as_deref() == Ok("cortex"))
+    // iris_plan: cortex|hybrid (the role renders NOS_IRIS_PLAN, NOS_IRIS_INTENTS, NOS_CORTEX_URL and the RO token
+    // as nos:cortex_ro_token); hybrid plans only the turns whose intent is listed.
+    let plan = std::env::var("NOS_IRIS_PLAN").unwrap_or_default();
+    let planned = plan == "cortex" || plan == "hybrid";
+    let cortex = std::env::var("NOS_CORTEX_URL").ok().filter(|u| !u.is_empty() && planned)
         .map(|url| thalamus::cortex_plan::Cortex { url, token: lookup("nos:cortex_ro_token").unwrap_or_default(),
-            rich_catalogue: std::env::var("NOS_CORTEX_CATALOGUE").as_deref() == Ok("rich") });
+            rich_catalogue: std::env::var("NOS_CORTEX_CATALOGUE").as_deref() == Ok("rich"),
+            intents: (plan == "hybrid").then(|| std::env::var("NOS_IRIS_INTENTS").unwrap_or_default().split(',')
+                .map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect()) });
     match &cortex {
-        Some(c) => eprintln!("thalamus: iris plans in cortex-lang via {}, catalogue {}", c.url,
-            if c.rich_catalogue { "rich" } else { "lean" }),
-        None if std::env::var("NOS_IRIS_PLAN").as_deref() == Ok("cortex") => eprintln!("thalamus: WARNING iris_plan is cortex but \
+        Some(c) => eprintln!("thalamus: iris plans in cortex-lang via {}, catalogue {}, {}", c.url,
+            if c.rich_catalogue { "rich" } else { "lean" },
+            c.intents.as_ref().map_or("every turn".into(), |i| format!("hybrid: {}", i.join(",")))),
+        None if planned => eprintln!("thalamus: WARNING iris_plan is {plan} but \
             NOS_CORTEX_URL is unset (install_cortex off?): iris plans with tools"),
         None => {}
     }

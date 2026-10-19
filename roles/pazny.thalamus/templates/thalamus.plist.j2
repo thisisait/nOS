@@ -53,10 +53,15 @@
         <key>NOS_DECIDER_EXES</key>
         <string>{{ thalamus_decider_exes | join(':') }}</string>
 {% endif %}
-        <!-- iris_plan: cortex plans a turn as one cortex-lang pipeline the organ validates (src/cortex_plan.rs). -->
+        <!-- iris_plan: cortex plans a turn as one cortex-lang pipeline the organ validates (src/cortex_plan.rs);
+             hybrid plans only a turn whose intent is in NOS_IRIS_INTENTS. -->
         <key>NOS_IRIS_PLAN</key>
         <string>{{ iris_plan | default('tools') }}</string>
-{% if iris_plan | default('tools') == 'cortex' and install_cortex | default(false) | bool %}
+{% if iris_plan | default('tools') in ['cortex', 'hybrid'] and install_cortex | default(false) | bool %}
+{% if iris_plan == 'hybrid' %}
+        <key>NOS_IRIS_INTENTS</key>
+        <string>{{ iris_cortex_intents | join(',') }}</string>
+{% endif %}
         <key>NOS_CORTEX_CATALOGUE</key>
         <string>{{ thalamus_cortex_catalogue | default('lean') }}</string>
         <key>NOS_CORTEX_URL</key>

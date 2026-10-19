@@ -26,7 +26,9 @@ see the whole wire and are judged with the last turn. A result carries turns, de
 --out carries `provenance` (nOS commit, argv, each model's Ollama digest or null + why) so a
 run can be filed in nos-assay as evidence: a model name can be re-pointed upstream, a digest not.
 
---plan cortex|tools says which Iris path the estate runs (iris_plan); it is recorded, not set.
+--plan cortex|tools|hybrid says which Iris path the estate runs (iris_plan); it is recorded, not set.
+With hybrid, each case's route is read from the ledger's /tool:route rows (cortex if any turn
+planned) and the plan checks below apply only to a cortex-routed case; the run tallies route by kind.
 With cortex, each case is also judged on the pipeline the thalamus planned, read from --ledger
 (read-only) by the session uuid on the wire: pipeline_valid and pipeline_equals_expected go
 through POST <--validate-url>/agent/v1/validate (CORTEX_TOKEN_RO), op by op, never as text;
@@ -377,6 +379,24 @@ def read_plan(ledger: str, session):
         "valid": res.get("valid"), "errors": res.get("errors"), "registry_hash": res.get("registry_hash"),
         "fell_back": "plan" not in res, "fallback": res.get("fallback"), "fallback_kind": res.get("fallback_kind"),
         "table": res.get("table")}
+
+
+def read_route(ledger: str, session):
+    """hybrid: "cortex" when any turn of the session routed to the plan, "tools" when none did, None = no route row."""
+    if not session:
+        return None
+    conn, _ = _ledger_open().open_ledger_ro(Path(ledger))
+    if conn is None:
+        return None
+    try:
+        rows = conn.execute("SELECT result_json FROM events WHERE run_id = ? AND task LIKE '%/tool:route' ORDER BY id",
+                            (session,)).fetchall()
+    except sqlite3.Error:
+        return None
+    finally:
+        conn.close()
+    routes = [json.loads(r[0] or "{}").get("route") for r in rows]
+    return None if not routes else "cortex" if "cortex" in routes else "tools"
 
 
 def _plan(got: dict):
@@ -937,9 +957,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", default=str(OUT))
     ap.add_argument("--timeout", type=float, default=180.0, help="seconds without a line before a case fails")
     ap.add_argument("--repeat", type=int, default=1, help="run each case N times; a majority of passing runs passes")
-    ap.add_argument("--plan", choices=("tools", "cortex"), default="tools",
-                    help="the Iris path the estate runs (iris_plan); cortex also judges the planned pipeline")
-    ap.add_argument("--ledger", help="with --plan cortex: the thalamus ledger.db, opened read-only (never defaulted)")
+    ap.add_argument("--plan", choices=("tools", "cortex", "hybrid"), default="tools",
+                    help="the Iris path the estate runs (iris_plan); cortex also judges the planned pipeline, "
+                         "hybrid only on cortex-routed cases")
+    ap.add_argument("--ledger", help="with --plan cortex|hybrid: the thalamus ledger.db, opened read-only (never defaulted)")
     ap.add_argument("--validate-url", default="http://127.0.0.1:8098", help="the cortex organ; needs CORTEX_TOKEN_RO")
     ap.add_argument("--seed", action="store_true",
                     help="create the iris-bench-2 tables, or with --domain the domain's tables, once (writes KEAP; NOS_LIVE=1)")
@@ -960,16 +981,16 @@ def main(argv: list[str] | None = None) -> int:
               "or pass --offline with an explicit --sock for a fake.", file=sys.stderr)
         return 2
     validate = None
-    if a.plan == "cortex":
+    if a.plan in ("cortex", "hybrid"):
         if not (a.ledger and Path(a.ledger).is_file()):
-            print("--plan cortex reads the pipeline from the thalamus ledger: pass --ledger <ledger.db>.", file=sys.stderr)
+            print(f"--plan {a.plan} reads the pipeline from the thalamus ledger: pass --ledger <ledger.db>.", file=sys.stderr)
             return 2
         if urllib.parse.urlsplit(a.validate_url).hostname not in ("127.0.0.1", "localhost", "::1"):
             print("--validate-url must be loopback: the RO token never leaves the host.", file=sys.stderr)
             return 2
         token = os.environ.get("CORTEX_TOKEN_RO", "").strip()
         if not token:
-            print("--plan cortex judges pipelines through /agent/v1/validate: set CORTEX_TOKEN_RO.", file=sys.stderr)
+            print(f"--plan {a.plan} judges pipelines through /agent/v1/validate: set CORTEX_TOKEN_RO.", file=sys.stderr)
             return 2
         validate = functools.lru_cache(maxsize=None)(functools.partial(validate_report, a.validate_url, token))
     sock = a.sock or str(SOCK)
@@ -983,8 +1004,12 @@ def main(argv: list[str] | None = None) -> int:
             got = run_case(case, sock, float(case.get("timeout", a.timeout)))
             if validate:
                 got |= {"plan": read_plan(a.ledger, got["session"]), "validate": validate}
-            failed, turns = judge(case, got, time.time())
-            runs.append((got, failed, round(time.monotonic() - t0, 2), bool(failed) and (no_data(case, got) or unjudged(failed)), turns))
+            judged = case
+            if a.plan == "hybrid":  # plan checks only where the thalamus routed to the plan
+                got["route"] = read_route(a.ledger, got["session"])
+                judged = dict(case, checks=case["checks"] | plan_checks(case, got["route"] or "tools"))
+            failed, turns = judge(judged, got, time.time())
+            runs.append((got, failed, round(time.monotonic() - t0, 2), bool(failed) and (no_data(judged, got) or unjudged(failed)), turns))
         passes = sum(1 for r in runs if not r[1])
         ok = passes * 2 > n  # report a run that agrees with the verdict
         got, failed, _, _, turns = next((r for r in runs if not r[1]), runs[-1]) if ok else \
@@ -994,7 +1019,8 @@ def main(argv: list[str] | None = None) -> int:
                         "seconds": round(sum(r[2] for r in runs) / n, 2), "model_uri": got["model_uri"], "tools": got["tools"],
                         "approvals_rejected": sum(len(r[0]["approvals"]) for r in runs), "refused": got["refused"],
                         "queries": queries(got), "text": got["text"], "pipeline": got.get("plan"),
-                        "plan_checks": sorted(plan_checks(case, a.plan)),
+                        "plan_checks": sorted(plan_checks(case, (got.get("route") or "tools") if a.plan == "hybrid" else a.plan)),
+                        **({"route": got.get("route")} if a.plan == "hybrid" else {}),
                         # Why an offered widget was left out (round 2: the model only paraphrased it).
                         "dropped": [d for r in got["renders"] if r["component"].get("kind") == "dashboard"
                                     for d in r["component"].get("props", {}).get("dropped") or []]})
@@ -1003,6 +1029,11 @@ def main(argv: list[str] | None = None) -> int:
     run["provenance"] = provenance(uri_models(run["model_uri"]), argv=argv) | {"plan": a.plan}
     plans = [r["pipeline"] for r in results if isinstance(r["pipeline"], dict)]
     run["plan_path"] = a.plan
+    if a.plan == "hybrid":  # the router's accuracy, apart from the pass rate: kind -> {route: n}
+        run["route_by_kind"] = {}
+        for r in results:
+            k = run["route_by_kind"].setdefault(r.get("kind") or "-", {})
+            k[r["route"] or "-"] = k.get(r["route"] or "-", 0) + 1
     for k in ("engine", "grammar_sha256", "primer_sha256", "registry_hash", "catalogue", "catalogue_digest"):
         seen = sorted({p[k] for p in plans if p.get(k)})
         run[k] = seen[0] if len(seen) == 1 else seen or None  # read from the ledger, never guessed
@@ -1012,6 +1043,8 @@ def main(argv: list[str] | None = None) -> int:
     for r in results:
         word = "PASS" if r["pass"] else "NO-DATA" if r["no_data"] else "FAIL"
         print(f"{word:<7} {r['id']:<18} {r['passes']}/{r['runs']} {r['seconds']:>7.2f}s  {', '.join(r['failed'])}")
+    if "route_by_kind" in run:  # before the summary: the last line stays the pass count
+        print("route by kind: " + "; ".join(f"{k} {v}" for k, v in sorted(run["route_by_kind"].items())))
     judged = [r for r in results if not r["no_data"]]
     deep = [r["depth"] for r in judged if r["depth"] is not None]
     mean = sum(deep) / len(deep) if deep else 0.0

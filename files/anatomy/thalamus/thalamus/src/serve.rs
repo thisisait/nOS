@@ -1943,8 +1943,22 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
         o.read_free.clear();
         o.messages.push(json!({"role": "user", "content": text}));
         o.last_group = None;
+        // hybrid: the turn's own words route it before any model call; the ledger says which way and why.
+        // A follow-up stays on tools: the plan sees this turn only (multi-step 2/29 cortex vs 6/29 tools, 10-18/19).
+        let first = o.messages.iter().filter(|m| m["role"] == "user").count() == 1;
+        let routed = |o: &mut Open, c: &Cortex| c.intents.as_ref().is_none_or(|intents| {
+            let (mut route, intent, matched) = cortex_plan::route(text, intents);
+            let mut row = json!({"route": route, "intent": intent, "matched": matched});
+            if route == "cortex" && !first {
+                route = "tools";
+                row["route"] = json!(route);
+                row["held"] = json!("a follow-up: the plan sees one turn");
+            }
+            let _ = self.record(o, Kind::ToolResult, Some("route"), row);
+            route == "cortex"
+        });
         let planned = match (&self.cortex, o.model.clone()) {
-            (Some(c), Ok(m)) => {
+            (Some(c), Ok(m)) if routed(o, c) => {
                 activity(out, o, Phase::Thinking);
                 self.plan(who, o, &m, c, text)
             }

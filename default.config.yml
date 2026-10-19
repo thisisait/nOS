@@ -600,8 +600,12 @@ iris_backend: "{{ 'ollama' if llm_on_host else '' }}"
 iris_local_temperature: 0.3
 # How Iris plans a turn: "tools" = the model calls the thalamus's tools; "cortex" = it first emits ONE
 # cortex-lang pipeline, the cortex organ validates it (needs install_cortex) and the thalamus maps it to
-# those tools, falling back to tools when refused (seed row iris-speaks-cortex-lang, bench before switching).
+# those tools, falling back to tools when refused (seed row iris-speaks-cortex-lang, bench before switching);
+# "hybrid" = the turn's own words pick: an iris_cortex_intents turn plans in cortex-lang, any other uses tools.
 iris_plan: "tools"
+# hybrid's cortex intents (the bench's kinds; measured 2026-10-18/19 cortex beat tools on these four).
+# insert-row sends a WRITE to the planner: the approval card still gates it.
+iris_cortex_intents: [chart, kpi, top-n, insert-row]
 # The cortex plan's table lines: "lean" = column key:kind; "rich" adds each label and select options.
 # Measured 2026-10-18 (cortex, qwen3.5:9b GGUF, standard): 85 -> 70/283 beside the catalogue rework;
 # A/B with ~/iris-bench-local/ab-catalogue.sh before choosing rich. The face's marks stay rich either way.
