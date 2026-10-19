@@ -51,12 +51,23 @@
     state: directory
     mode: '0755'
 
+# loginctl prints nothing either way, so "already enabled" never matched and
+# every unit reported changed on every run (spark1, 2026-10-19). Linger is a
+# file per user under /var/lib/systemd/linger: ask it, enable only when absent.
+- name: "[systemd_user] Is lingering already on?"
+  ansible.builtin.stat:
+    path: "/var/lib/systemd/linger/{{ ansible_facts['user_id'] | default(ansible_user_id) }}"
+  register: _su_linger_file
+  when: (nos_init | default('systemd')) == 'systemd'
+
 - name: "[systemd_user] Enable lingering (units run without an active login session)"
   ansible.builtin.command: "loginctl enable-linger {{ ansible_facts['user_id'] | default(ansible_user_id) }}"
   register: _su_linger
-  changed_when: "'already enabled' not in (_su_linger.stderr | default(''))"
+  changed_when: true
   failed_when: false
-  when: (nos_init | default('systemd')) == 'systemd'
+  when:
+    - (nos_init | default('systemd')) == 'systemd'
+    - not (_su_linger_file.stat.exists | default(false))
 
 - name: "[systemd_user] Render unit {{ _su_unit_file }}"
   ansible.builtin.template:
