@@ -774,6 +774,38 @@ def test_a_memory_hit_on_a_nonsense_token_is_no_data():
     assert not b.no_data(case, _got("I know zorblax-41.", tools=["search_memory"])), "no hit drawn: the model is judged"
 
 
+def _memory(*names, by="search_memory"):
+    items = [{"text": f"taxonomy · {n}", "detail": f"{n}: what KEAP holds."} for n in names]
+    return dict(_show("list", {"title": "Memory", "ordered": True, "items": items}), by=by)
+
+
+def test_cites_node_needs_the_name_drawn_by_search_memory_and_said():
+    """A knowledge answer cites the node by the name search_memory drew; Iris hears no node id, only the name."""
+    check, noon = _bench().check, 0.0
+    hit = _memory("Rust", "Go")
+    assert check("cites_node", "Rust", _got("Per our knowledge base (Rust): ownership, no garbage collector.", renders=[hit]), noon)
+    assert check("cites_node", ["Rust", "Go"], _got("rust borrows; go collects garbage.", renders=[hit]), noon), "any case"
+    assert not check("cites_node", "Rust", _got("Rust has no garbage collector.", renders=[]), noon), "from model memory"
+    assert not check("cites_node", "Rust", _got("Rust.", renders=[_memory("Rust", by="show")]), noon), "show drew it"
+    assert not check("cites_node", "Rust", _got("Ownership and borrowing.", renders=[hit]), noon), "drawn, not cited"
+    assert not check("cites_node", ["Rust", "C++"], _got("Rust and C++.", renders=[hit]), noon), "C++ was not drawn"
+    assert not check("cites_node", "Go", _got("Google made it.", renders=[_memory("Gossip Protocols")]), noon)
+    assert not check("cites_node", "Go", _got("Gossip Protocols is the node.", renders=[_memory("Gossip Protocols")]), noon)
+
+
+def test_says_not_in_memory_and_does_not_answer_from_its_own():
+    """Out of corpus: Iris says the knowledge base does not hold it, and never answers from model memory."""
+    check, noon = _bench().check, 0.0
+    for honest in ("Our knowledge base does not cover the Haber process.", "Nothing found about it in memory.",
+                   "That is not in our knowledge base.", "Naše znalostní báze to neobsahuje.", "V paměti jsem o tom nic nenašla."):
+        assert check("says_not_in_memory", True, _got(honest), noon), honest
+    assert not check("says_not_in_memory", True, _got("The Haber process makes ammonia from nitrogen and hydrogen."), noon)
+    forbid = {"forbid": ["ammonia", "amoniak"]}
+    assert check("says_not_in_memory", forbid, _got("Our knowledge base does not cover the Haber process."), noon)
+    assert not check("says_not_in_memory", forbid, _got("It is not in our knowledge base, but it makes Ammonia."), noon), \
+        "a disclaimer then the model's own answer"
+
+
 def test_seeding_writes_only_with_nos_live(tmp_path, monkeypatch):
     monkeypatch.delenv("NOS_LIVE", raising=False)
     assert _bench().main(["--seed"]) == 2
