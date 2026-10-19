@@ -14,9 +14,13 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity  # noqa: E402 — the one spelling of the default layers
+
 FAKE = "not-a-real-secret-0000"
 COPY = ("tools", "files/anatomy/plugins", "files/anatomy/module_utils", "files/anatomy/secrets",
-        "roles", "state", "apps", "config.d", "profiles", "default.config.yml", "default.credentials.yml")
+        "roles", "state", "apps", "profiles", "default.credentials.yml",
+        *sorted({str(p.relative_to(REPO)).split("/")[0] for p in nos_identity.default_layers()}))
 
 
 def test_an_override_is_named_and_never_printed(tmp_path):
