@@ -78,6 +78,7 @@ REFUSED = {
     # as surveyed), so the chain is complete and the layer derivation walks it.
     # A parallel service edge would be padding, which this graph refuses.
     ("bookstack", "authentik"): "SSO — carried by the authentik provider chain",
+    ("jupyterhub", "authentik"): "SSO — carried by the authentik provider chain",
     # dolibarr joined the class 2026-09-21 (native_oidc flip: post.yml writes
     # the MAIN_AUTHENTICATION_OIDC_*_URL consts pointing at authentik_domain)
     ("dolibarr", "authentik"): "SSO — carried by the authentik provider chain",

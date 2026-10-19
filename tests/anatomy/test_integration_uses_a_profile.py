@@ -24,6 +24,7 @@ ALLOWED_OVERRIDES = {
     "install_cortex": "operator 2026-10-01: KEAP + cortex ride the Linux leg",
     "install_pulse": "host organ; bonus lanes skip host rows, this is its only blocking lane",
     "install_backup": "host organ; bonus lanes skip host rows, this is its only blocking lane",
+    "install_jupyterhub": "Linux-only host service (SystemdSpawner); this is the only Linux leg",
 }
 
 
