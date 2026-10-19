@@ -701,11 +701,14 @@ jobs:
         # nginx: hidden_fees/39). Overrides: thalamus fails on systemd (macOS-only);
         # cortex rides this leg (operator 2026-10-01); pulse + backup are host organs
         # no bonus lane converges. test_integration_uses_a_profile.
+        # test-users + jupyterhub: the unix realm (logins, 0700 homes) and the
+        # Hub's systemd units run on the only Linux leg; Ollama stays off (models).
         run: >-
           ansible-playbook main.yml
           -e allow_weak_prefix=true
           -e @profiles/core.yml
-          -e '{"install_thalamus": false, "install_cortex": true, "install_pulse": true, "install_backup": true}'
+          -e @profiles/test-users.yml
+          -e '{"install_thalamus": false, "install_cortex": true, "install_pulse": true, "install_backup": true, "install_jupyterhub": true}'
           -e ansible_python_interpreter="${{ steps.python-setup.outputs.python-path }}"
         env:
           ANSIBLE_FORCE_COLOR: '1'
