@@ -596,6 +596,9 @@ receptor_socket: "{{ ansible_facts['env']['HOME'] }}/.nos/keap-identity.sock"
 # only after you approve its cell diff (roles/pazny.thalamus). Needs install_receptor: it
 # reads the receptor's identity map. Off until the operator proves it live.
 install_thalamus: false
+# Linux builds the thalamus in this image (roles/pazny.thalamus/tasks/linux.yml):
+# tag AND digest, so a re-pushed tag cannot change the compiler.
+thalamus_rust_image: "rust:1.90-bookworm@sha256:3914072ca0c3b8aad871db9169a651ccfce30cf58303e5d6f2db16d1d8a7e58f"
 # The face's door into thalamus serve (src/relay.rs): loopback only, opened with install_face, read by
 # the plist and the face compose env. 8097: free, beside cortex 8098 and Bone 8099.
 thalamus_relay_port: 8097
@@ -1091,6 +1094,11 @@ llm_cell_recommended_params_b: 8
 # 0.35.0 on 2026-09-30: TOO-FRESH (2 days), adopted by operator decision —
 # /v1/systemone decision models (dtt local-decision-tev1) need >= 0.35.
 ollama_version: "0.35.0"
+# Linux archives of that pin, by architecture (roles/pazny.ollama/tasks/linux.yml).
+# Advance together with ollama_version — the digest, not the release page, is the trust.
+ollama_linux_sha256:
+  arm64: "cb627d332b1fe5055bd5485ca10d595da8429e447648209e375390ec3bd09374"
+  amd64: "1c114a6b220c5efca2ef2b1e5f01d1e535e26f6cd6d1678c8489325d2835e525"
 
 # Where host daemons meet containers. macOS: loopback (Docker Desktop's
 # host.docker.internal reaches it). Linux: docker0's address, because Linux
@@ -1702,6 +1710,14 @@ openwebui_port: 3004             # Internal container port 8080 → host 3004
 # docker0:jupyterhub_port, Traefik serves jupyter.<tld>.
 jupyterhub_domain: "jupyter{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 jupyterhub_port: 8010
+# Pins: the Hub, Lab and kernel share one root-owned venv every user can exec.
+jupyterhub_version: "6.0.0"
+jupyterlab_version: "4.6.3"
+jupyterhub_ipykernel_version: "7.3.0"
+jupyterhub_oauthenticator_version: "17.4.0"
+jupyterhub_systemdspawner_version: "1.0.2"
+# The proxy fronts every notebook on the host network: tag AND digest.
+jupyterhub_chp_image: "quay.io/jupyterhub/configurable-http-proxy:5.2.0@sha256:522738d5285e4be758da5023194cbc95249efdadaa62a0998c8ed1aa2890b2da"
 # REM-176, the THIRD consecutive supersession of this component: REM-101 moved
 # it 0.8.12 → 0.9.6, REM-138 0.9.6 → 0.10.2, this one 0.10.2 → 0.11.0. Each was
 # correct when written and stale within weeks, which is the argument for
