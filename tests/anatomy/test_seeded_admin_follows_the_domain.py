@@ -45,7 +45,10 @@ ENV.filters.update(quote=lambda s: shlex.quote(str(s)), bool=bool, to_json=str)
 
 
 def _vars(domain: str) -> dict:
-    layers = [REPO / "default.config.yml", REPO / "roles/pazny.dolibarr/defaults/main.yml"]
+    import sys
+    sys.path.insert(0, str(REPO / "tools"))
+    import nos_identity  # the one spelling of the default layers (test_config_d_is_one_layer_set)
+    layers = [*nos_identity.default_layers(), REPO / "roles/pazny.dolibarr/defaults/main.yml"]
     raw = {}
     for f in layers:
         raw.update({k: v for k, v in (yaml.safe_load(f.read_text()) or {}).items()

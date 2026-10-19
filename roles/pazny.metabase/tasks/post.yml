@@ -132,7 +132,7 @@
     timeout: 10
   register: _mb_email_moved
   when: _mb_session_moved.status | default(0) == 200
-  changed_when: true
+  changed_when: _mb_email_moved.status | default(0) == 200
   failed_when: false
   no_log: true
 
