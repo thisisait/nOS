@@ -70,6 +70,9 @@ CANNOT_SEE = ("cannot see", "can't see", "can not see", "unable to see", "not ab
               "nemohu číst", "nemůžu číst", "nedokážu přečíst", "nemohu přečíst",
               "není vidět", "nemám k dispozici", "nemám údaje", "nemám informace",
               "nothing found", "found nothing", "nic jsem nenašel", "nic nenašel", "nic nenašla")
+NOT_IN_MEMORY = ("not in our", "isn't in our", "not in the knowledge", "not in my memory", "not in memory",
+                 "does not cover", "doesn't cover", "not covered", "does not contain", "doesn't contain", "no entry",
+                 "neobsahuje", "nepokrývá", "není v naší", "není v paměti", "není ve znalost", "žádný záznam")
 # "can't directly read", "am not able to check": a refusal with a word or two between.
 CANNOT_RE = re.compile(r"\b(cannot|can't|can not|unable to|not able to)(\s+\w+){0,2}\s+(see|read|access|check|view|answer|tell|know)\b")
 # A verdict next to the disclaimer is a guess ("I can't see any failures, all green"), not cannot-see.
@@ -565,6 +568,17 @@ def check(name: str, arg, got: dict, now: float) -> bool:
         tables = {(spec.get("query") or spec).get("table") for w in widgets for spec in (w.get("spec") or {}).values()}
         return (len(widgets) >= arg.get("widgets", 1) and set(arg.get("kinds", [])) <= kinds and set(arg.get("lens", [])) <= lens
                 and prefilled and (not arg.get("tables") or tables <= set(arg["tables"])))
+    if name == "cites_node":  # every named node: drawn by search_memory (Iris hears names, not ids) and said
+        drawn = {str(i.get("text", "")).split(" · ", 1)[-1].lower() for r in got["renders"]
+                 if r.get("by") == "search_memory" and r["component"].get("kind") == "list"
+                 for i in r["component"].get("props", {}).get("items", [])}
+        low = text.lower()
+        return all(n.lower() in drawn and re.search(rf"(?<!\w){re.escape(n.lower())}(?!\w)", low)
+                   for n in ([arg] if isinstance(arg, str) else arg))
+    if name == "says_not_in_memory":  # out of corpus said, and none of `forbid` (the model's own answer) beside it
+        low = text.lower().replace("’", "'")
+        forbid = arg.get("forbid", []) if isinstance(arg, dict) else []
+        return any(p in low for p in CANNOT_SEE + NOT_IN_MEMORY) and not any(f.lower() in low for f in forbid)
     if name == "not_blank":
         return bool(text.strip()) and text.strip() != BLANK
     raise ValueError(f"unknown check {name!r}")
