@@ -155,7 +155,7 @@ posts, restarts or renders something.
 
 ### Agents and the loop
 
-- `iris-bench.py` — Score Iris from the thalamus wire alone (cases in `state/fixtures/iris-bench.yml`): tools, kinds, count = matched, sourced charts, time, cannot-see, no proposal; rejects every approval, writes only `state/fixtures/iris-bench/last-run.json`; NOS_LIVE=1 or `--offline --sock` (fake).
+- `iris-bench.py` — Score Iris from the thalamus wire alone (cases in `state/fixtures/iris-bench.yml`): tools, kinds, count = matched, sourced charts, time, cannot-see, no proposal; rejects every approval, writes only `~/.nos/bench/iris-bench/last-run.json` (or `--out`); NOS_LIVE=1 or `--offline --sock` (fake).
 - `oneshot-poc.py` — One-shot PoC: a small model answers a battery of constrained questions, a compiler turns them into a thalamus tool plan, a dry run validates it against `state/fixtures/oneshot/thalamus-tools.json` and the iris-bench checks; traces every question; offline fakes, Ollama only on NOS_LIVE=1.
   - Local Clef-flash on a Mac (16 GB+), **operator-run, third-party code: review it first**:
     1. `pip install "mlx-vlm>=0.7.4,<0.8" huggingface_hub` (in a venv of your own)

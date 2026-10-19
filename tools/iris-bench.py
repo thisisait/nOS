@@ -60,7 +60,9 @@ import yaml
 
 REPO = Path(__file__).resolve().parents[1]
 CASES = REPO / "state/fixtures/iris-bench.yml"
-OUT = REPO / "state/fixtures/iris-bench/last-run.json"
+# the repo is not the running system: the record lands where pipeline-exercise's does, never in git
+OUT = (Path(os.environ.get("NOS_LOOP_STATE_DIR") or os.environ.get("STATE_DIR") or Path.home() / ".nos").expanduser()
+       / "bench" / "iris-bench" / "last-run.json")
 SOCK = Path.home() / ".nos/thalamus.sock"
 BLANK = "(Iris gave no answer.)"
 CANNOT_SEE = ("cannot see", "can't see", "can not see", "unable to see", "not able to see", "have no tool",

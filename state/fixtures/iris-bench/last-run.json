@@ -1,7 +1,0 @@
-{
-  "ran_at": null,
-  "sock": null,
-  "model_uri": [],
-  "cases": [],
-  "note": "never run live: NOS_LIVE=1 tools/iris-bench.py overwrites this with the scored run"
-}

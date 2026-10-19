@@ -1809,9 +1809,9 @@
     "effector:iris-bench": {
       "kind": "effector",
       "source": "tools/iris-bench.py",
-      "title": "Score Iris from the thalamus wire alone (cases in `state/fixtures/iris-bench.yml`): tools, kinds, count = matched, sourced charts, time, cannot-see, no proposal; rejects every approval, writes only `state/fixtures/iris-bench/last-run.json`; NOS_LIVE=1 or `--offline --sock` (fake).",
+      "title": "Score Iris from the thalamus wire alone (cases in `state/fixtures/iris-bench.yml`): tools, kinds, count = matched, sourced charts, time, cannot-see, no proposal; rejects every approval, writes only `~/.nos/bench/iris-bench/last-run.json` (or `--out`); NOS_LIVE=1 or `--offline --sock` (fake).",
       "anchor": "02.02.04",
-      "description": "Effector tools/iris-bench.py: Score Iris from the thalamus wire alone (cases in `state/fixtures/iris-bench.yml`): tools, kinds, count = matched, sourced charts, time, cannot-see, no proposal; rejects every approval, writes only `state/fixtures/iris-bench/last-run.json`; NOS_LIVE=1 or `--offline --sock` (fake)."
+      "description": "Effector tools/iris-bench.py: Score Iris from the thalamus wire alone (cases in `state/fixtures/iris-bench.yml`): tools, kinds, count = matched, sourced charts, time, cannot-see, no proposal; rejects every approval, writes only `~/.nos/bench/iris-bench/last-run.json` (or `--out`); NOS_LIVE=1 or `--offline --sock` (fake)."
     },
     "effector:keap-apply-view": {
       "kind": "effector",
