@@ -20,6 +20,40 @@
     nos_pkg_manager != 'apt'
     or 'nvidia.com/gpu=all' not in (_vllm_cdi.stdout | default(''))
 
+# ── The image must fit the host's driver (spark1, 2026-10-19) ───────────────
+# NGC 26.09 is built for driver >= 615 and the DGX Spark ships 580: the
+# container started, printed "compatibility mode is UNAVAILABLE" and sat in
+# health "starting" until the converge's health-wait gave up. Compare the CUDA
+# the image was built for with the CUDA the driver serves, before compose.
+- name: "[pazny.vllm] The image is here"
+  ansible.builtin.command: "{{ nos_docker_bin | default('docker') }} pull -q {{ vllm_image }}"
+  register: _vllm_pull
+  changed_when: "'Downloaded newer image' in _vllm_pull.stdout"
+
+- name: "[pazny.vllm] CUDA the image needs, CUDA the driver serves"
+  ansible.builtin.shell: |
+    set -o pipefail
+    img=$({{ nos_docker_bin | default('docker') }} image inspect --format '{{ '{{' }}range .Config.Env{{ '}}' }}{{ '{{' }}println .{{ '}}' }}{{ '{{' }}end{{ '}}' }}' {{ vllm_image | quote }} \
+          | sed -n 's/^CUDA_VERSION=\([0-9]*\.[0-9]*\).*/\1/p' | head -1)
+    host=$(nvidia-smi | sed -n 's/.*CUDA Version: \([0-9]*\.[0-9]*\).*/\1/p' | head -1)
+    echo "${img:-?} ${host:-?}"
+  args:
+    executable: /bin/bash
+  register: _vllm_cuda
+  changed_when: false
+
+- name: "[pazny.vllm] Refuse an image built for a newer driver"
+  ansible.builtin.assert:
+    that: >-
+      (_vllm_cuda.stdout.split()[0] == '?') or (_vllm_cuda.stdout.split()[1] == '?')
+      or (_vllm_cuda.stdout.split()[0] is version(_vllm_cuda.stdout.split()[1], '<='))
+    fail_msg: >-
+      {{ vllm_image }} is built for CUDA {{ _vllm_cuda.stdout.split()[0] }}, and this
+      host's driver serves CUDA {{ _vllm_cuda.stdout.split()[1] }} (nvidia-smi). The
+      container would start and never become healthy. Pick an image built for CUDA
+      <= {{ _vllm_cuda.stdout.split()[1] }} (e.g. a -cu129 tag) or update the driver.
+    quiet: true
+
 - name: "[pazny.vllm] Data directories"
   ansible.builtin.file:
     path: "{{ item }}"

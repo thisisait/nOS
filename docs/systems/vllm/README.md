@@ -10,7 +10,7 @@
 |---|---|
 | **Toggle** | `install_vllm: false` (Linux + NVIDIA GPU visible to Docker via CDI) |
 | **Role** | `roles/pazny.vllm` — compose service `vllm` in the `iiab` stack |
-| **Image** | `vllm_image` (NGC `nvcr.io/nvidia/vllm`, tag **and** digest) |
+| **Image** | `vllm_image` (tag **and** digest; its CUDA must not exceed the driver's — the role checks) |
 | **Model** | `vllm_model` @ `vllm_model_revision` (a pinned Hugging Face snapshot), served as `vllm_served_model_name` |
 | **API** | `http://127.0.0.1:{{ vllm_port }}/v1` (host), `http://vllm:8000/v1` (shared_net); key `vllm_api_key` |
 | **Backend row** | `vllm` in `state/habitat/llm-backends.yml` (local, EU) |

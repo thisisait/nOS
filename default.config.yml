@@ -1726,10 +1726,13 @@ jupyterhub_systemdspawner_version: "1.0.2"
 # The proxy fronts every notebook on the host network: tag AND digest.
 jupyterhub_chp_image: "quay.io/jupyterhub/configurable-http-proxy:5.2.0@sha256:522738d5285e4be758da5023194cbc95249efdadaa62a0998c8ed1aa2890b2da"
 # vLLM (roles/pazny.vllm): ONE resident model behind an OpenAI-compatible API,
+# The image's CUDA must not exceed what the host driver serves (the role refuses
+# otherwise): NGC 26.09 needs driver >= 615, the DGX Spark ships 580 (CUDA 13.0),
+# so the upstream -cu129 build (CUDA 12.9, sm_120 cubins run on GB10's sm_121).
 # beside Ollama (which keeps every other model on demand). Linux + NVIDIA only.
 # The weights are a pinned Hugging Face snapshot fetched in the background; the
 # service is rendered once a reader finds it complete, then runs offline.
-vllm_image: "nvcr.io/nvidia/vllm:26.09-py3@sha256:557747337846eecf34486866f3d992383c6f8af869fdb0e365b5093fcaee02c2"
+vllm_image: "vllm/vllm-openai:v0.31.0-cu129@sha256:ff29e51a9457f191deb332b96fa6440584fa941aa2a548449b604e2b1e5e1eeb"
 vllm_model: "Qwen/Qwen3.5-35B-A3B-FP8"
 vllm_model_revision: "9d1823d2dee688a6b25e77009dc727688c44936e"
 # The id clients ask for. Ollama-shaped (name:tag-<N>b) so the cell size floor
