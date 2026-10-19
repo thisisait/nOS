@@ -15,6 +15,18 @@ retries:
 
 sequence:
   # Phase 1 — admin user bootstrap (idempotent: detect → create OR reconverge)
+  # tenant_domain moved: the one admin with the same local part is the old
+  # account — move its email before the probe, or create mints a second admin.
+  - id: move_admin_email
+    runner: docker_exec
+    container: freescout
+    compose_project: b2b
+    cmd: php artisan tinker
+    stdin: |
+      $e="{{ freescout_admin_email | default(default_admin_email) }}";
+      if(!App\User::where("email",$e)->exists()){$r=App\User::where("role",App\User::ROLE_ADMIN)->where("email","like","{{ (freescout_admin_email | default(default_admin_email)).split('@')[0] }}@%")->get();
+      if($r->count()==1){$u=$r->first(); $u->email=$e; $u->save(); echo "MOVED";}}
+
   - id: check_admin_exists
     runner: docker_exec
     container: freescout

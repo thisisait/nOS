@@ -30,6 +30,26 @@
   delay: 10
   failed_when: false
 
+# tenant_domain moved: the admin is admin@<old domain>, the probe below found
+# nobody and minted a second admin. The one admin with the same local part is
+# that account — move its email first (same shape as open_webui, 2026-10-19).
+- name: "[pazny.freescout Post] Move the admin to the declared email"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p b2b
+    exec -T -w /www/html freescout
+    php artisan tinker
+  args:
+    stdin: |
+      $e="{{ freescout_admin_email }}";
+      if(!App\User::where("email",$e)->exists()){$r=App\User::where("role",App\User::ROLE_ADMIN)->where("email","like","{{ freescout_admin_email.split('@')[0] }}@%")->get();
+      if($r->count()==1){$u=$r->first(); $u->email=$e; $u->save(); echo "MOVED";}}
+    executable: /bin/bash
+  register: _fs_user_move
+  changed_when: "'MOVED' in (_fs_user_move.stdout | default(''))"
+  failed_when: false
+  check_mode: false
+  when: _fs_ready.status | default(0) in [200, 302, 500]
+
 - name: "[pazny.freescout Post] Check if admin user exists"
   # pipefail twice, on purpose: the INNER one is the real fix — the pipe lives in
   # the container, so only a container-side shell can protect it (verified: the
