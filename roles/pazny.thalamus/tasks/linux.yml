@@ -69,7 +69,7 @@
 
 - name: "[pazny.thalamus] iris is the same shell"
   ansible.builtin.file:
-    src: /usr/local/bin/thalamus
+    src: thalamus   # relative: a sibling link survives a bind mount
     dest: /usr/local/bin/iris
     state: link
   become: true
