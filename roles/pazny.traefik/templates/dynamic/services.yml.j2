@@ -163,6 +163,25 @@ http:
 {% endif %}
 {% endfor %}
 
+{# ── A bare IP lands on the face (2026-10-19) ─────────────────────────────── #}
+{# Traefik routes by name, so http(s)://<host ip> answered 404 — the address #}
+{# a LAN visitor tries first. It now redirects to the face; a client that    #}
+{# cannot resolve the name still needs ~/.nos/hosts-snippet.txt.            #}
+{% if traefik_bare_ip_redirect | default(true) | bool and install_face | default(false) | bool %}
+{# Two routers: a router with tls matches only TLS connections, so http needs its own. #}
+{% for _ep, _tls in [('web', none), ('websecure', {})] %}
+    bare-ip-to-face-{{ _ep }}:
+      rule: "HostRegexp(`^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+$`)"
+      entryPoints: ["{{ _ep }}"]
+      priority: 20
+      service: "noop@internal"
+      middlewares: ["bare-ip-to-face@file"]
+{% if _tls is not none %}
+      tls: {}
+{% endif %}
+{% endfor %}
+{% endif %}
+
 {# ── REM-194: SSO-gated Traefik dashboard (api@internal) ─────────────────── #}
 {# The dashboard/API is NO LONGER anonymous on :8080 (api.insecure:false). This #}
 {# router is the ONLY way in, and it is gated by authentik@file. It is NOT the  #}

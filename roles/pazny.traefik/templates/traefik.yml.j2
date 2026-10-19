@@ -42,6 +42,9 @@ entryPoints:
           to: websecure
           scheme: https
           permanent: true
+          # Below the bare-IP router (dynamic/services.yml), so http://<ip>
+          # goes straight to the face instead of to a certificate warning.
+          priority: 10
   websecure:
     address: ":443"
 {% if traefik_forwarded_trusted_ips | default([]) | length > 0 %}

@@ -4,6 +4,13 @@
 
 http:
   middlewares:
+    # A bare host IP → the face (services.yml bare-ip-to-face).
+    bare-ip-to-face:
+      redirectRegex:
+        regex: ".*"
+        replacement: "https://{{ face_domain | default('os.' ~ tenant_domain) }}/"
+        permanent: false
+
     # ── Authentik forward-auth ────────────────────────────────────────────
     # A19 (2026-05-23): the embedded outpost runs INSIDE the authentik-server
     # container (internal :9000). Traefik reaches it DIRECTLY on shared_net —
