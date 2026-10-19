@@ -20,12 +20,18 @@ services:
 {% endif %}
     volumes:
       - {{ n8n_data_dir }}:/home/node/.n8n
+{% if nos_container_user | default('') | length > 0 %}
+    # The image's /home/node is uid 1000's; n8n writes $N8N_USER_FOLDER/.cache next
+    # to .n8n, so that one dir is a tmpfs this uid owns (spark1 2026-10-19).
+    tmpfs:
+      - "/home/node/.cache:uid={{ nos_container_user.split(':')[0] }},gid={{ nos_container_user.split(':')[1] | default(nos_container_user.split(':')[0]) }},mode=0700"
+{% endif %}
     environment:
       N8N_HOST: "{{ n8n_domain | default('n8n' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
       N8N_PORT: "5678"
 {% if nos_container_user | default('') | length > 0 %}
-      # A uid with no passwd row in the image has HOME=/, and n8n then creates
-      # /.n8n (EACCES, restart loop — spark1 2026-10-19). Name the mounted dir's parent.
+      # A uid with no passwd row in the image has HOME=/, so n8n made /.n8n
+      # (EACCES, restart loop — spark1 2026-10-19). Name the mounted dir's parent.
       N8N_USER_FOLDER: "/home/node"
 {% endif %}
 {% if not (nos_kernel_ipv6 | default(true)) %}
