@@ -25,6 +25,43 @@
     _ollama_asset: "ollama-linux-{{ _ollama_arch }}.tar.zst"
     _ollama_sha256: "{{ ollama_linux_sha256[_ollama_arch] }}"
 
+# A shared host may already run an ollama nOS did not install. Ours is known by
+# its unit's header (templates/ollama.service.j2); anything else is refused
+# unless the operator opts in, because what follows replaces it.
+- name: "[Ollama] Who installed the ollama on this host"
+  ansible.builtin.shell: |
+    for p in /usr/local/bin/ollama /usr/local/lib/ollama /etc/systemd/system/ollama.service; do
+      if [ -e "$p" ]; then echo "$p"; fi
+    done
+    if grep -qs 'roles/pazny.ollama' /etc/systemd/system/ollama.service; then echo NOS_UNIT; fi
+  register: _ollama_linux_found
+  changed_when: false
+  check_mode: false
+
+- name: "[Ollama] Not over an install nOS did not make (ollama_linux_take_over)"
+  ansible.builtin.fail:
+    msg: >-
+      An ollama nOS did not install is on this host ({{ _ollama_linux_found.stdout_lines | join(', ') }}).
+      Converging would replace it: delete /usr/local/lib/ollama and unpack
+      v{{ ollama_version }}, rewrite /etc/systemd/system/ollama.service, restart
+      it (dropping every loaded model) and move its bind to ollama_bind_host
+      ({{ ollama_bind_host }}:11434). Models in {{ ollama_models_dir }} are kept.
+      Set ollama_linux_take_over: true in config.yml to allow it, or install_ollama: false.
+  when:
+    - _ollama_linux_found.stdout_lines | length > 0
+    - "'NOS_UNIT' not in _ollama_linux_found.stdout_lines"
+    - not (ollama_linux_take_over | bool)
+
+- name: "[Ollama] Taking over the existing install (ollama_linux_take_over)"
+  ansible.builtin.debug:
+    msg: >-
+      Replacing {{ _ollama_linux_found.stdout_lines | join(', ') }} with v{{ ollama_version }},
+      a nOS unit and a bind on {{ ollama_bind_host }}:11434; models in {{ ollama_models_dir }} are kept.
+  when:
+    - _ollama_linux_found.stdout_lines | length > 0
+    - "'NOS_UNIT' not in _ollama_linux_found.stdout_lines"
+    - ollama_linux_take_over | bool
+
 - name: "[Ollama] zstd is present (the release archive is .tar.zst)"
   ansible.builtin.apt:
     name: zstd

@@ -5,6 +5,10 @@
 # launchd label this role starts (bootout when install_ollama is declared false).
 ollama_launchd_label: "com.ollama.agent"                # templates/ollama-agent.plist.j2
 
+# Linux: an ollama nOS did not install (no nOS unit header) is refused, not
+# replaced. true lets the converge replace its runners, unit and bind (config.yml).
+ollama_linux_take_over: false
+
 # MLX is Ollama's default backend on Apple Silicon since 0.20.
 ollama_max_loaded_models: 1      # 1 for MoE 30B (dense); 2 if you use 20B/14B
 ollama_num_parallel: 2           # Max concurrent inference requests
