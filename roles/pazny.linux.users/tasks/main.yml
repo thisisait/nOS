@@ -60,6 +60,25 @@
   no_log: true
   become: true
 
+# append keeps unrelated groups (sudo, docker, video …); a tier change must
+# still LEAVE the old tier's group, or a downgraded person keeps the higher
+# tier on the host while the identity map says the lower one.
+- name: "[unix] Read the tier groups' members"
+  ansible.builtin.getent:
+    database: group
+
+- name: "[unix] Leave every tier group that is not the person's tier"
+  ansible.builtin.command: "gpasswd -d {{ item.0.name }} {{ item.1 }}"
+  loop: "{{ _unix_people | product(_unix_tier_group.values() | unique | list) | list }}"
+  loop_control:
+    label: "{{ item.0.name }} ∉ {{ item.1 }}"
+  when:
+    - item.1 != _unix_tier_group[item.0.tier]
+    - item.0.name in (ansible_facts['getent_group'][item.1][2] | default('')).split(',')
+  changed_when: true
+  no_log: false
+  become: true
+
 - name: "[unix] Read the logins back (their homes)"
   ansible.builtin.getent:
     database: passwd

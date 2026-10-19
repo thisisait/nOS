@@ -8,24 +8,10 @@ use thalamus::binding::{self, Decision};
 use thalamus::ledger::Ledger;
 use thalamus::serve::{self, Server, IDENTITY_MAP};
 
-/// THALAMUS_SOCKET names the socket for both modes; unset keeps ~/.nos/thalamus.sock. A
-/// shared Linux host sets it outside every (0700) home so each login's shell finds the one
-/// daemon; THALAMUS_SOCKET_SHARED=1 then opens it 0666 — the peer's uid still has to be in
-/// the identity map, so a wider mode admits no one the map does not name.
-/// Without THALAMUS_SOCKET a shell that is not a login shell (an editor's terminal,
-/// `bash -c`) never read /etc/profile.d, so the shared host socket is the fallback
-/// when the home one does not exist (spark1, 2026-10-19).
-pub const SHARED_SOCKET: &str = "/run/nos/thalamus.sock";
-
+/// THALAMUS_SOCKET for both modes; THALAMUS_SOCKET_SHARED=1 opens it 0666 — the peer's uid
+/// still has to be in the identity map, so a wider mode admits no one the map does not name.
 fn socket_path(home: &std::path::Path) -> PathBuf {
-    if let Some(p) = std::env::var("THALAMUS_SOCKET").ok().filter(|s| !s.is_empty()) {
-        return PathBuf::from(p);
-    }
-    let own = home.join(".nos/thalamus.sock");
-    if !own.exists() && std::path::Path::new(SHARED_SOCKET).exists() {
-        return PathBuf::from(SHARED_SOCKET);
-    }
-    own
+    serve::socket_path(std::env::var("THALAMUS_SOCKET").ok().as_deref(), home, std::path::Path::new(serve::SHARED_SOCKET))
 }
 
 fn serve_main(args: &[String]) -> Result<(), String> {
@@ -143,7 +129,25 @@ fn serve_main(args: &[String]) -> Result<(), String> {
             std::thread::spawn(move || thalamus::relay::run(l, door));
         }
         Ok(None) => eprintln!("thalamus: relay closed (no THALAMUS_RELAY_SECRET)"),
-        Err(e) => eprintln!("thalamus: relay FAILED 127.0.0.1:{port}: {e}"),
+        // The socket keeps serving, and the door is retried: on Linux it binds docker0's
+        // address, which exists only once Docker is up — a boot-order race, not a fault.
+        Err(e) => {
+            let host = std::env::var("THALAMUS_RELAY_HOST").unwrap_or_else(|_| "127.0.0.1".into());
+            eprintln!("thalamus: relay FAILED {host}:{port}: {e} — retrying every 5 s");
+            if let Some(p) = relay_port {
+                let srv = srv.clone();
+                std::thread::spawn(move || loop {
+                    std::thread::sleep(std::time::Duration::from_secs(5));
+                    if let Ok(Some(l)) = thalamus::relay::bind(&relay_secret, p) {
+                        let at = l.local_addr().map(|a| a.to_string()).unwrap_or_else(|_| format!("?:{p}"));
+                        eprintln!("thalamus: relay bound {at}");
+                        let door = Arc::new(thalamus::relay::Relay::new(srv, relay_secret));
+                        thalamus::relay::run(l, door);
+                        return;
+                    }
+                });
+            }
+        }
     }
     serve::run(listener, srv);
     Ok(())

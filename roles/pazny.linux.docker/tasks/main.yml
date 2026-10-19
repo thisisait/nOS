@@ -108,6 +108,13 @@
       delay: 2
       until: _docker_info.rc == 0
 
+    # Facts were gathered before Docker existed: docker0 (and a daemon.json
+    # `bip` that moved it) is known only after this. nos_docker_host_ip reads
+    # the fact, and Ollama, Wing and the Hub bind what it says.
+    - name: "[linux.docker] Refresh network facts now that docker0 exists"
+      ansible.builtin.setup:
+        gather_subset: ['!all', '!min', 'network']
+
     - name: "[linux.docker] Print install summary"
       ansible.builtin.debug:
         msg: |
