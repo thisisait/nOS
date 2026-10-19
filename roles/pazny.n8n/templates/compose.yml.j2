@@ -23,6 +23,11 @@ services:
     environment:
       N8N_HOST: "{{ n8n_domain | default('n8n' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
       N8N_PORT: "5678"
+{% if nos_container_user | default('') | length > 0 %}
+      # A uid with no passwd row in the image has HOME=/, and n8n then creates
+      # /.n8n (EACCES, restart loop — spark1 2026-10-19). Name the mounted dir's parent.
+      N8N_USER_FOLDER: "/home/node"
+{% endif %}
 {% if not (nos_kernel_ipv6 | default(true)) %}
       # n8n binds "::" by default; a kernel without IPv6 makes that fatal
       # ("n8n's address '::' is not available") — cloud lane, 2026-09-26.
