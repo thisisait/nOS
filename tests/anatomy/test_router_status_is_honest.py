@@ -8,13 +8,20 @@ absence as agreement: reporting "forwards match" or "UPnP off" as if measured
 when the router was never asked. This gate pins the two ways that could
 happen: the missing-file case reporting a false green, and the declared
 config leaking into the report as if it were a measurement.
+
+The tool probes the gateway (5 s timeout off-LAN), so the real tree is read by
+ONE subprocess run; the human output is rendered in-process from that run's report.
 """
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import pathlib
 import subprocess
+import sys
+
+import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 TOOL = REPO / "tools" / "router-status.py"
@@ -27,9 +34,13 @@ def run(*args: str) -> subprocess.CompletedProcess:
     )
 
 
-def test_the_tool_exists_and_exits_zero() -> None:
-    result = run("--json")
-    assert result.returncode == 0, (
+@pytest.fixture(scope="module")
+def json_run() -> subprocess.CompletedProcess:
+    return run("--json")
+
+
+def test_the_tool_exists_and_exits_zero(json_run) -> None:
+    assert json_run.returncode == 0, (
         "router-status.py must exit 0 like every other *-status.py reader — "
         "it reports, it does not gate"
     )
@@ -68,14 +79,14 @@ def test_missing_declared_file_reports_unknown_not_green() -> None:
     assert result.returncode == 0
 
 
-def test_measured_config_is_always_null() -> None:
+def test_measured_config_is_always_null(json_run) -> None:
     """The declared forwards/toggles must never be reported as measured.
 
     There is no credentialed path into this router (docstring, and
     docs/router-as-estate-fact.md §2/§4) — so `measured_config` staying `None`
     is not a TODO, it is the honest answer until that changes.
     """
-    payload = json.loads(run("--json").stdout)
+    payload = json.loads(json_run.stdout)
     assert payload["measured_config"] is None, (
         "measured_config went non-null — either a real measurement path was "
         "added (update this gate and the doctrine doc) or the reader started "
@@ -84,8 +95,14 @@ def test_measured_config_is_always_null() -> None:
     assert "declared_config" in payload and payload["declared_config"] is not None
 
 
-def test_human_output_labels_forwards_as_declared_not_measured() -> None:
-    out = run().stdout
+def test_human_output_labels_forwards_as_declared_not_measured(json_run, monkeypatch, capsys) -> None:
+    spec = importlib.util.spec_from_file_location("router_status", TOOL)
+    tool = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(tool)
+    monkeypatch.setattr(tool, "collect", lambda: json.loads(json_run.stdout))
+    monkeypatch.setattr(sys, "argv", ["router-status.py"])
+    assert tool.main() == 0
+    out = capsys.readouterr().out
     assert "declared" in out and "measured" in out, (
         "the human-readable output must visibly distinguish declared intent "
         "from measured fact — collapsing them is the exact defect this gate exists to catch"
