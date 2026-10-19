@@ -868,3 +868,12 @@ fn hybrid_an_edit_turn_makes_no_plan_call_and_the_ledger_says_tools() {
     assert_eq!(route.len(), 1, "{ev:?}");
     assert_eq!((&route[0]["route"], &route[0]["intent"]), (&json!("tools"), &Value::Null), "{}", route[0]);
 }
+
+#[test]
+fn a_json_schema_server_is_planned_constrained() {
+    use thalamus::cortex_plan::Engine;
+    // Ollama GGUF and vLLM both honour response_format json_schema; anything else is free text.
+    assert_eq!(Engine::of("ollama"), Engine::JsonSchema);
+    assert_eq!(Engine::of("vllm"), Engine::JsonSchema);
+    assert_eq!(Engine::of("mistral-eu"), Engine::Free);
+}

@@ -64,13 +64,14 @@
       OPENAI_API_CONFIGS: "{{ _cfgs | combine({(_urls | length) | string: {'enable': true}}) }}"
   vars:
     _vllm_url: "http://vllm:{{ vllm_container_port }}/v1"
-    _urls: "{{ _vllm_owui_cfg.json.OPENAI_API_BASE_URLS | default([]) }}"
-    _keys: "{{ _vllm_owui_cfg.json.OPENAI_API_KEYS | default([]) }}"
-    _cfgs: "{{ _vllm_owui_cfg.json.OPENAI_API_CONFIGS | default({}) }}"
+    # default(x, true): Open WebUI answers JSON null for an unset list.
+    _urls: "{{ _vllm_owui_cfg.json.OPENAI_API_BASE_URLS | default([], true) | list }}"
+    _keys: "{{ _vllm_owui_cfg.json.OPENAI_API_KEYS | default([], true) | list }}"
+    _cfgs: "{{ _vllm_owui_cfg.json.OPENAI_API_CONFIGS | default({}, true) }}"
   register: _vllm_owui_update
   when:
     - _vllm_owui_cfg.json is defined
-    - _vllm_url not in (_vllm_owui_cfg.json.OPENAI_API_BASE_URLS | default([]))
+    - _vllm_url not in (_vllm_owui_cfg.json.OPENAI_API_BASE_URLS | default([], true) | list)
   changed_when: true
   no_log: true
 
