@@ -19,3 +19,7 @@ A bare host IP redirects here when the landing is installed (to the face otherwi
 **Landing vs apex.** Apex is the signed public projection for strangers; the landing is
 a signpost for the people who use this estate. Both claim the root domain, so the role
 refuses to run beside apex.
+
+**Open decision (operator).** The page is unauthenticated (`none`), so anyone on the LAN
+can fetch `/nos-root-ca.crt`, and the page invites them to trust it. Decide whether an
+unauthenticated page should hand LAN visitors the CA, or whether it moves behind sign-in.
