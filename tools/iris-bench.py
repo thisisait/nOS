@@ -372,7 +372,8 @@ def read_plan(ledger: str, session):
         return None
     # serve's refused() may write a result with no tool_use: the estate failed before a plan existed
     use, res = use or {}, res or {}
-    return {k: use.get(k) for k in ("source", "engine", "constrained", "grammar_sha256", "primer_sha256", "catalogue")} | {
+    return {k: use.get(k) for k in ("source", "engine", "constrained", "grammar_sha256", "primer_sha256", "catalogue",
+                                    "catalogue_digest", "catalogue_tables")} | {
         "valid": res.get("valid"), "errors": res.get("errors"), "registry_hash": res.get("registry_hash"),
         "fell_back": "plan" not in res, "fallback": res.get("fallback"), "fallback_kind": res.get("fallback_kind"),
         "table": res.get("table")}
@@ -1002,7 +1003,7 @@ def main(argv: list[str] | None = None) -> int:
     run["provenance"] = provenance(uri_models(run["model_uri"]), argv=argv) | {"plan": a.plan}
     plans = [r["pipeline"] for r in results if isinstance(r["pipeline"], dict)]
     run["plan_path"] = a.plan
-    for k in ("engine", "grammar_sha256", "primer_sha256", "registry_hash", "catalogue"):
+    for k in ("engine", "grammar_sha256", "primer_sha256", "registry_hash", "catalogue", "catalogue_digest"):
         seen = sorted({p[k] for p in plans if p.get(k)})
         run[k] = seen[0] if len(seen) == 1 else seen or None  # read from the ledger, never guessed
     out = Path(a.out)

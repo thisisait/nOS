@@ -1963,7 +1963,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
             o.messages.push(json!({"role": "user", "content": format!("[thalamus] cortex plan refused: {why}; answer with the tools")}));
             None
         };
-        let catalogue = match self.catalogue(who, c.rich_catalogue) {
+        let (catalogue, catalogue_tables) = match self.catalogue(who, c.rich_catalogue, text) {
             Ok(c) => c,
             Err(why) => return refused(o, format!("the table catalogue is unreadable ({why})"), "infra", json!({})),
         };
@@ -2012,7 +2012,8 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
             let (primer_sha, grammar_sha) = cortex_plan::fingerprint(engine, gbnf.as_deref());
             let mut asked = json!({"source": source, "engine": engine.name(), "constrained": engine != Engine::Free,
                                    "primer_sha256": primer_sha, "grammar_sha256": grammar_sha,
-                                   "catalogue": if c.rich_catalogue { "rich" } else { "lean" }});
+                                   "catalogue": if c.rich_catalogue { "rich" } else { "lean" },
+                                   "catalogue_digest": &cortex_plan::sha256_hex(&catalogue)[..16], "catalogue_tables": catalogue_tables});
             if let Some(d) = &downgrade {
                 asked["downgraded_from"] = json!(Engine::JsonSchema.name());
                 asked["downgrade"] = json!(d);
@@ -2063,28 +2064,44 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
     }
 
     /// Each table this scope shows (the septum hides the rest), its columns as KEAP holds them; at most 12.
-    fn catalogue_tables(&self, who: &Person) -> Result<Vec<CatalogueTable>, String> {
+    /// With the person's turn: the tables it names first (id or title, then a column label; folded), then
+    /// KEAP's order (measured 2026-10-18: a named table past the 12th made a bare get).
+    fn catalogue_tables(&self, who: &Person, turn: Option<&str>) -> Result<Vec<CatalogueTable>, String> {
+        let shown = self.tables(who)?.into_iter().filter(|(id, _)| self.hidden(who, id).is_none());
+        let Some(turn) = turn else {
+            return Ok(shown.take(12).map(|t| self.catalogue_table(who, t)).collect());
+        };
+        // ponytail: a label needs every shown table's schema, one read each per plan; cache per session if slow.
+        let said = format!("-{}-", turn.split_whitespace().map(uid::fold).filter(|w| !w.is_empty()).collect::<Vec<_>>().join("-"));
+        let named = |n: &str| Some(uid::fold(n)).filter(|f| !f.is_empty()).is_some_and(|f| said.contains(&format!("-{f}-")));
+        let mut all: Vec<CatalogueTable> = shown.map(|t| self.catalogue_table(who, t)).collect();
+        all.sort_by_key(|t| if named(&t.id) || named(&t.title) { 0 } else if t.columns.iter().filter_map(|c| c.label.as_deref()).any(named) { 1 } else { 2 });
+        all.truncate(12);
+        Ok(all)
+    }
+
+    fn catalogue_table(&self, who: &Person, (id, title): (String, String)) -> CatalogueTable {
         // ponytail: 12 tables, one schema read each, every turn; cache per session if the primer gets slow.
         // The wire caps a name at 200 chars: KEAP's longer ones are cut, never refused whole.
         let clip = |s: &str| s.chars().take(200).collect::<String>();
-        Ok(self.tables(who)?.into_iter().filter(|(id, _)| self.hidden(who, id).is_none()).take(12).map(|(id, title)| {
-            let columns = self.table_info_any(who, &id).map(|(_, i)| i.pointer("/data/schema/columns").and_then(Value::as_array).into_iter().flatten()
-                .filter_map(|c| Some(CatalogueColumn {
-                    key: clip(c["key"].as_str().filter(|k| !k.trim().is_empty())?),
-                    label: c["label"].as_str().filter(|l| !l.trim().is_empty()).map(clip),
-                    kind: clip(c["kind"].as_str().filter(|k| !k.trim().is_empty()).unwrap_or("text")),
-                    options: c["options"].as_array().map(|o| o.iter().filter_map(Value::as_str).take(200).map(clip).collect()),
-                })).take(120).collect())
-                .unwrap_or_default();
-            let title = if title.trim().is_empty() { id.clone() } else { title };
-            CatalogueTable { id: clip(&id), title: clip(&title), columns }
-        }).collect())
+        let columns = self.table_info_any(who, &id).map(|(_, i)| i.pointer("/data/schema/columns").and_then(Value::as_array).into_iter().flatten()
+            .filter_map(|c| Some(CatalogueColumn {
+                key: clip(c["key"].as_str().filter(|k| !k.trim().is_empty())?),
+                label: c["label"].as_str().filter(|l| !l.trim().is_empty()).map(clip),
+                kind: clip(c["kind"].as_str().filter(|k| !k.trim().is_empty()).unwrap_or("text")),
+                options: c["options"].as_array().map(|o| o.iter().filter_map(Value::as_str).take(200).map(clip).collect()),
+            })).take(120).collect())
+            .unwrap_or_default();
+        let title = if title.trim().is_empty() { id.clone() } else { title };
+        CatalogueTable { id: clip(&id), title: clip(&title), columns }
     }
 
-    /// The plan call's table lines: each table this scope shows, its id, title and column key:kind; rich adds
-    /// a column's label and options (measured 2026-10-18 alongside a 85->70/283 drop: the A/B decides).
-    fn catalogue(&self, who: &Person, rich: bool) -> Result<String, String> {
-        Ok(self.catalogue_tables(who)?.iter().map(|t| {
+    /// The plan call's table lines and their table ids: each table this scope shows (the turn's named ones
+    /// first), its id, title and column key:kind; rich adds a column's label and options (measured
+    /// 2026-10-18 alongside a 85->70/283 drop: the A/B decides).
+    fn catalogue(&self, who: &Person, rich: bool, turn: &str) -> Result<(String, Vec<String>), String> {
+        let tables = self.catalogue_tables(who, Some(turn))?;
+        Ok((tables.iter().map(|t| {
             let cols: Vec<String> = t.columns.iter().map(|c| {
                 let mut s = format!("{}:{}", c.key, c.kind);
                 if rich {
@@ -2098,12 +2115,12 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                 s
             }).collect();
             format!("- {} \"{}\": {}", t.id, t.title, cols.join(", "))
-        }).collect::<Vec<_>>().join("\n"))
+        }).collect::<Vec<_>>().join("\n"), tables.into_iter().map(|t| t.id).collect()))
     }
 
     /// The person's catalogue to the shell, for its marks; one it cannot read is said, never sent empty.
     fn catalogue_to(&self, who: &Person, out: &mut dyn Write, o: &Open) {
-        match self.catalogue_tables(who) {
+        match self.catalogue_tables(who, None) {
             Ok(tables) => send(out, &ToShell::Catalogue { session: o.session.clone(), tables }),
             Err(why) => refuse(out, &format!("the catalogue is unreadable ({why}), so nothing is marked")),
         }
