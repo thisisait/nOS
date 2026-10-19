@@ -4,8 +4,8 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 553,
-    "edges": 551,
+    "nodes": 554,
+    "edges": 553,
     "nodes_pulse": 43,
     "nodes_judge": 5,
     "nodes_gateset": 5,
@@ -20,7 +20,7 @@
     "nodes_backend": 8,
     "nodes_repo": 4,
     "nodes_tofu": 1,
-    "nodes_authentik": 60,
+    "nodes_authentik": 61,
     "nodes_table": 41,
     "nodes_doctrine": 26,
     "nodes_faceapp": 8,
@@ -32,7 +32,7 @@
     "nodes_article": 26,
     "nodes_organ_system": 13,
     "nodes_tissue": 1,
-    "edges_data": 242,
+    "edges_data": 244,
     "edges_trigger": 71,
     "edges_temporal": 5,
     "edges_mutex": 21,
@@ -717,6 +717,17 @@
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
       "description": "Authentik native_oidc client 'nos-jellyfin' (RBAC tier 4) — gates service:jellyfin; provider+application managed by OpenTofu from the committed registry"
+    },
+    "authentik:jupyterhub": {
+      "kind": "authentik",
+      "source": "state/tofu-authentik-services.yml",
+      "mode": "native_oidc",
+      "tier": 3,
+      "client_id": "nos-jupyterhub",
+      "service": "jupyterhub",
+      "managed_by": "tofu:authentik-state",
+      "anchor": "02.02.08",
+      "description": "Authentik native_oidc client 'nos-jupyterhub' (RBAC tier 3) — gates service:jupyterhub; provider+application managed by OpenTofu from the committed registry"
     },
     "authentik:keap": {
       "kind": "authentik",
@@ -3816,7 +3827,7 @@
       "layer": "L1",
       "layer_basis": {
         "height": 3,
-        "dependents": 44,
+        "dependents": 45,
         "upstreams": 2
       }
     },
@@ -5728,6 +5739,14 @@
       "evidence": "derived"
     },
     {
+      "from": "authentik:jupyterhub",
+      "to": "service:jupyterhub",
+      "kind": "data",
+      "via": "SSO gate (mode=native_oidc) — provider+application applied by tofu from the registry row",
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
+    },
+    {
       "from": "authentik:keap",
       "to": "service:keap",
       "kind": "data",
@@ -6407,6 +6426,14 @@
     {
       "from": "service:authentik",
       "to": "authentik:jellyfin",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:jupyterhub",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting",
