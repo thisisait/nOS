@@ -169,16 +169,21 @@ http:
 {# cannot resolve the name still needs ~/.nos/hosts-snippet.txt.            #}
 {% if traefik_bare_ip_redirect | default(true) | bool and install_face | default(false) | bool %}
 {# Two routers: a router with tls matches only TLS connections, so http needs its own. #}
-{% for _ep, _tls in [('web', none), ('websecure', {})] %}
-    bare-ip-to-face-{{ _ep }}:
+    bare-ip-to-face-web:
+      rule: "HostRegexp(`^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+$`)"
+      entryPoints: ["web"]
+      priority: 20
+      service: "noop@internal"
+      middlewares: ["bare-ip-to-face@file"]
+{# Every websecure router gets its origin-pull twin through _doors, like the rest. #}
+{% for _sfx, _ep, _tls in _doors %}
+    bare-ip-to-face-websecure{{ _sfx }}:
       rule: "HostRegexp(`^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+$`)"
       entryPoints: ["{{ _ep }}"]
       priority: 20
       service: "noop@internal"
       middlewares: ["bare-ip-to-face@file"]
-{% if _tls is not none %}
-      tls: {}
-{% endif %}
+      tls: {{ _tls | to_json }}
 {% endfor %}
 {% endif %}
 
