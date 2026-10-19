@@ -1729,7 +1729,7 @@ jupyterhub_chp_image: "quay.io/jupyterhub/configurable-http-proxy:5.2.0@sha256:5
 # beside Ollama (which keeps every other model on demand). Linux + NVIDIA only.
 # The weights are a pinned Hugging Face snapshot fetched in the background; the
 # service is rendered once a reader finds it complete, then runs offline.
-vllm_image: "nvcr.io/nvidia/vllm:26.09-py3@sha256:VLLM_DIGEST_PENDING"
+vllm_image: "nvcr.io/nvidia/vllm:26.09-py3@sha256:557747337846eecf34486866f3d992383c6f8af869fdb0e365b5093fcaee02c2"
 vllm_model: "Qwen/Qwen3.5-35B-A3B-FP8"
 vllm_model_revision: "9d1823d2dee688a6b25e77009dc727688c44936e"
 # The id clients ask for. Ollama-shaped (name:tag-<N>b) so the cell size floor
