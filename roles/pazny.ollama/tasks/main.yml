@@ -545,7 +545,12 @@
   check_mode: false
   when: ollama_pull_models | length > 0
 
-- name: "[Ollama] Pull a configured tier model the host lacks"
+# ASYNC (2026-10-19): a multi-GB pull on a slow uplink held the whole converge
+# for a quarter of an hour on spark1 while nothing after it needed the model.
+# The pull is started and left running (poll: 0); ollama finishes it on its own.
+# Its arrival is a reader's job, not this task's: `tools/job_readiness.py
+# --verify` (the verify play) fails on a configured model still missing.
+- name: "[Ollama] Pull a configured tier model the host lacks (in the background)"
   ansible.builtin.command: "ollama pull {{ item }}"
   environment:
     PATH: "{{ homebrew_prefix }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
@@ -557,7 +562,14 @@
   vars:
     _have: "{{ (_ollama_have.stdout_lines | default([]))[1:] | map('regex_replace', '\\s.*$', '') | list }}"
   register: _ollama_pulled
-  changed_when: _ollama_pulled.rc == 0
-  failed_when: false
-  timeout: 3600
+  async: 7200
+  poll: 0
+  changed_when: true
   when: ollama_pull_models | length > 0
+
+- name: "[Ollama] Say which pulls are still running"
+  ansible.builtin.debug:
+    msg: >-
+      Pulling in the background: {{ _ollama_pulled.results | default([]) | map(attribute='item') | join(', ') }}.
+      `ollama list` shows them when done; the verify play refuses a configured model still missing.
+  when: (_ollama_pulled.results | default([]) | length) > 0
