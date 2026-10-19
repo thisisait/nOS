@@ -16,8 +16,11 @@
     NOS_FIRST_LOGIN: >-
       {% set out = [] %}{% for i in nos_identities + (nos_synthetic_identities | default([])
       if (nos_test_users_enabled | default(false) | bool) else []) if 'authentik' in (i.realms | default([])) %}{%
-      set _ = out.append({'name': i.name, 'tier': i.tier, 'realms': i.realms | default(['authentik']),
-                          'password': lookup('vars', i.password_var)}) %}{%
+      set e = {'name': i.name, 'tier': i.tier, 'realms': i.realms | default(['authentik']),
+               'password': lookup('vars', i.password_var)} %}{%
+      if (nos_operator_owns_password | default(false)) and i.name == nos_primary_admin %}{%
+      set _ = e.update({'own_password': true}) %}{% endif %}{%
+      set _ = out.append(e) %}{%
       endfor %}{% for i in nos_extra_identities | default([]) %}{%
       set _ = out.append({'name': i.name, 'tier': i.tier, 'realms': i.realms | default(['authentik']),
                           'password': nos_extra_identity_passwords[i.name],
