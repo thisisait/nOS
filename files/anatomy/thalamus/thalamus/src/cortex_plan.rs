@@ -11,12 +11,6 @@ pub const REGISTRY_HASH: &str = "cx1:8250d05e5e32afb7";
 const OPS: [&str; 9] = ["eq", "neq", "in", "contains", "lt", "gt", "between", "before", "after"];
 /// The opcodes the mapper carries: the JSON-schema engine's enum.
 const MAPPED: [&str; 8] = ["get", "filter", "rank", "aggregate", "show", "insert", "update", "delete"];
-/// The params plan() reads, per opcode; the organ leaves a db: stage's params open, so any other is refused here.
-/// dry_run, commit and idempotency_key are read as nothing on purpose: the card is the gate.
-const READS: [(&str, &[&str]); 8] = [("get", &["limit", "fields"]), ("filter", &["where", "q"]), ("rank", &["by", "dir", "limit"]),
-    ("aggregate", &["op", "by", "y"]), ("show", &["kind", "chart", "x", "y", "title", "unit"]),
-    ("insert", &["set", "dry_run", "commit", "idempotency_key"]), ("update", &["set", "dry_run", "commit", "idempotency_key"]),
-    ("delete", &["dry_run", "commit", "idempotency_key"])];
 /// The v3 params the mapper reads (registry v3), each with its JSON type.
 const PARAMS: [(&str, &str); 14] = [("limit", "integer"), ("fields", "string"), ("where", "string"), ("q", "string"),
     ("by", "string"), ("dir", "string"), ("op", "string"), ("y", "string"), ("kind", "string"), ("chart", "string"),
@@ -289,6 +283,16 @@ pub fn plan(source: Option<&str>, stages: &[Stage]) -> Result<Plan, String> {
     if let Some(s) = source.filter(|s| !matches!(*s, "@input" | "@user")) {
         return Err(format!("source {s} has no thalamus mapping"));
     }
+    // what each opcode takes is its ast_schema() branch, so the closed schema and this guard cannot drift;
+    // the organ leaves a db: stage's params open and free text skips the schema, so a foreign one is refused
+    // here, never dropped. A write's dry_run, commit and idempotency_key are read as nothing: the card is the gate.
+    let schema = ast_schema();
+    let takes = |op: &str| -> Vec<String> {
+        schema.pointer("/properties/stages/items/anyOf").and_then(Value::as_array).into_iter().flatten()
+            .find(|b| b.pointer("/properties/op/const") == Some(&json!(op)))
+            .and_then(|b| b.pointer("/properties/params/properties").and_then(Value::as_object))
+            .map(|m| m.keys().cloned().collect()).unwrap_or_default()
+    };
     let mut p = Plan::default();
     for s in stages {
         if let Some(end) = p.show.as_ref().map(|_| "show").or(p.write.as_ref().map(|w| w.0.as_str())) {
@@ -297,10 +301,10 @@ pub fn plan(source: Option<&str>, stages: &[Stage]) -> Result<Plan, String> {
         if !MAPPED.contains(&s.op.as_str()) {
             return Err(format!("{}() has no thalamus mapping", s.op));
         }
-        let reads = READS.iter().find(|(o, _)| *o == s.op).map_or(&[][..], |r| r.1);
-        if let Some(k) = s.params.keys().find(|k| !reads.contains(&k.as_str())) {
-            return Err(format!("{}() has no param `{k}` the thalamus reads; it reads {}", s.op,
-                               reads.iter().filter(|r| !matches!(**r, "dry_run" | "commit" | "idempotency_key")).copied().collect::<Vec<_>>().join(", ")));
+        let (own, write) = (takes(&s.op), matches!(s.op.as_str(), "insert" | "update" | "delete"));
+        if let Some(k) = s.params.keys().find(|k| !own.contains(k) && !(write && matches!(k.as_str(), "dry_run" | "commit" | "idempotency_key"))) {
+            let it = if own.is_empty() { "none".to_string() } else { own.join(", ") };
+            return Err(format!("{}() takes no {k}=: it would be dropped, not run; it takes {it}", s.op));
         }
         if let Some(o) = &s.operand {
             match o.split_once(':') {
