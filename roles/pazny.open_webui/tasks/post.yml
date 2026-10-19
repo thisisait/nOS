@@ -55,13 +55,23 @@
         cur.execute('UPDATE auth SET password=? WHERE email=?', (hashed, email))
         print('RECONVERGED')
     else:
-        print('SKIP')
+        # tenant_domain moved (spark1 2026-10-19): the admin's email is
+        # admin@<old tld>. One admin with the same local part is that row.
+        local = email.split('@')[0]
+        rows = cur.execute(\"SELECT id FROM user WHERE role='admin' AND email LIKE ?\", (local + '@%',)).fetchall()
+        if len(rows) == 1:
+            uid = rows[0][0]
+            cur.execute('UPDATE user SET email=? WHERE id=?', (email, uid))
+            cur.execute('UPDATE auth SET email=?, password=? WHERE id=?', (email, hashed, uid))
+            print('MOVED')
+        else:
+            print('SKIP')
     db.commit()
     db.close()
     "
   register: _owui_admin
   when: _owui_ready.status | default(0) == 200
-  changed_when: "('SEEDED' in (_owui_admin.stdout | default('')) ) or ('RECONVERGED' in (_owui_admin.stdout | default('')))"
+  changed_when: "('SEEDED' in (_owui_admin.stdout | default('')) ) or ('RECONVERGED' in (_owui_admin.stdout | default(''))) or ('MOVED' in (_owui_admin.stdout | default('')))"
   failed_when: false
   check_mode: false
   no_log: true
