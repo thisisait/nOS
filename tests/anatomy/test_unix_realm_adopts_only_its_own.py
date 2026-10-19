@@ -42,7 +42,8 @@ def _run(tmp_path, gecos, adopted):
     }]
     pb = tmp_path / "p.yml"
     pb.write_text(yaml.safe_dump(play))
-    env = {**os.environ, "ANSIBLE_STDOUT_CALLBACK": "json", "ANSIBLE_NOCOLOR": "1"}
+    # The default callback: `json` left ansible-core for a collection CI lacks ("Could not load 'json'").
+    env = {**os.environ, "ANSIBLE_STDOUT_CALLBACK": "default", "ANSIBLE_NOCOLOR": "1"}
     r = subprocess.run(["ansible-playbook", "-i", "localhost,", str(pb)],
                        capture_output=True, text=True, env=env, stdin=subprocess.DEVNULL)
     return r.returncode, r.stdout + r.stderr
