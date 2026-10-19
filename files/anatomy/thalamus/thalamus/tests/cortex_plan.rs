@@ -776,7 +776,18 @@ const NEVER_CORTEX: [&str; 3] = ["injection", "cannot-see", "edit-row"];
 /// cortex intent is recalled at 0.9 or more, and no injection, cannot-see or edit-row turn plans.
 #[test]
 fn the_route_recalls_the_cortex_intents_and_never_plans_the_losing_kinds() {
-    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../state/fixtures/iris-route/prompts.yml");
+    route_matrix("prompts.yml", 0.9);
+}
+
+/// The same matrix on prompts route() was not tuned on: tools/assay-gen.py under a new seed, every
+/// case whose text is in prompts.yml dropped (state/fixtures/iris-route/holdout.yml). Recall 0.85.
+#[test]
+fn the_route_holds_on_prompts_it_was_not_tuned_on() {
+    route_matrix("holdout.yml", 0.85);
+}
+
+fn route_matrix(fixture: &str, floor: f64) {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../state/fixtures/iris-route").join(fixture);
     let doc: Value = serde_yaml_ng::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
     let intents: Vec<String> = INTENTS.iter().map(|s| s.to_string()).collect();
     // kind -> (routed intent or "tools" -> n)
@@ -791,16 +802,16 @@ fn the_route_recalls_the_cortex_intents_and_never_plans_the_losing_kinds() {
             wrong.push(format!("{kind} -> {got}: {} {:?}", c["turns"], routes.iter().map(|r| &r.2).collect::<Vec<_>>()));
         }
     }
-    eprintln!("route confusion (kind: routed -> n):");
+    eprintln!("route confusion on {fixture} (kind: routed -> n):");
     m.iter().for_each(|(k, v)| eprintln!("  {k:<14} {v:?}"));
     wrong.iter().for_each(|w| eprintln!("  miss {w}"));
     for k in INTENTS {
         let row = &m[k];
         let recall = row.get(k).copied().unwrap_or(0) as f64 / row.values().sum::<usize>() as f64;
-        assert!(recall >= 0.9, "{k}: recall {recall:.2} < 0.9: {row:?}");
+        assert!(recall >= floor, "{fixture} {k}: recall {recall:.2} < {floor}: {row:?}");
     }
     for k in NEVER_CORTEX {
-        assert_eq!(m[k].keys().collect::<Vec<_>>(), vec!["tools"], "{k} is never planned: {:?}", m[k]);
+        assert_eq!(m[k].keys().collect::<Vec<_>>(), vec!["tools"], "{fixture} {k} is never planned: {:?}", m[k]);
     }
 }
 
