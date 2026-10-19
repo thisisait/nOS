@@ -1,0 +1,9 @@
+# {{ ansible_managed }} — roles/pazny.ollama (Linux loopback door)
+[Unit]
+Description=Ollama on loopback for host consumers (nOS)
+
+[Socket]
+ListenStream=127.0.0.1:11434
+
+[Install]
+WantedBy=sockets.target
