@@ -114,6 +114,7 @@ traefik_auth_modes:
   # — kept only so the manifest↔auth-mode gate has something to read.
   traefik: none             # dashboard is NOT routed; see traefik_skip_ids
   offline_maps: none        # public tile server (no Authentik provider entry exists)
+  landing: none             # the estate's signpost at the root domain: static, no data, no session
   apex: none                # public-by-design static page at the ROOT domain; the
                             # real gate is upstream of routing: roles/pazny.apex
                             # refuses to build/serve while the apex ruling is
@@ -297,6 +298,13 @@ traefik_auth_none_justification:
   offline_maps: >-
     Public tile server by design — read-only, no user data, no Authentik provider
     entry exists for it.
+  landing: >-
+    The estate's front door at the root domain: a static page listing the
+    services this estate routes (their own login pages are the gate) and a
+    short how-to, plus the hosts line and the PUBLIC half of the local root
+    CA a client needs before it can even reach the Authentik login. Gating it
+    behind that login would hide the instructions for reaching the login.
+    No application, no database, no session — a pinned read-only nginx.
   apex: >-
     The public anatomy page at the root domain — anonymous BY DESIGN, and the
     only surface in the estate whose purpose is to be read by strangers. What
@@ -424,6 +432,7 @@ traefik_forwarded_trusted_ips:
   - "172.16.0.0/12"     # docker bridge networks (Linux)
 traefik_container_upstreams:
   apex:          { port: 80 }   # gated_net only (SEC-02 posture; calibre-web precedent)
+  landing:       { port: 80 }   # gated_net only (SEC-02 posture; calibre-web precedent)
   grafana:       { port: 3000 }
   gitea:         { port: 3000 }
   gitlab:        { port: 80 }

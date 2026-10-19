@@ -1,0 +1,5 @@
+---
+- name: Restart landing
+  ansible.builtin.command: "{{ docker_bin | default('docker') }} restart iiab-landing-1"
+  changed_when: true
+  failed_when: false

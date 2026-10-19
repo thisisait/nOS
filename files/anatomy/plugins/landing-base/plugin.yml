@@ -1,0 +1,52 @@
+# =============================================================================
+# landing-base — service plugin (2026-10-19, shared Linux workstation)
+#
+# The estate's signpost at the root domain. No SSO by design (it explains how
+# to reach the SSO); no data, no session. Its cards are the wing-base harvest.
+# =============================================================================
+
+name: landing-base
+version: 0.1.0
+description: |
+  Wiring layer for the landing page: GDPR record, notification routing, the
+  e2e probe that the root domain answers.
+upstream: https://nginx.org
+license: BSD-2-Clause
+
+type:
+  - service
+
+requires:
+  role: pazny.landing
+  feature_flag: install_landing
+  variables:
+    - landing_domain
+    - landing_port
+    - tenant_domain
+
+gdpr:
+  purpose: |
+    Shows visitors of the root domain which services this estate runs and how
+    to reach them. Serves static files; records no personal data (nginx keeps
+    the standard access log under the host's log retention).
+  legal_basis: legitimate_interests
+  data_categories:
+    - access_logs
+  data_subjects:
+    - visitors
+  retention_days: 14
+  processors: []
+  eu_residency: true
+
+notification:
+  on_critical: [wing-inbox]
+  on_high:     [wing-inbox]
+  on_medium:   []
+  on_low:      []
+  on_info:     []
+
+e2e:
+  probes:
+    - name: root-domain-answers-unauthenticated
+      url: https://{{ landing_domain }}/
+      expect: {status: [200]}

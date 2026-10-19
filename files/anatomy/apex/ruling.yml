@@ -364,6 +364,8 @@ nodes:
   # JupyterHub (2026-10-19, Linux workstations). WITHHELD until the operator
   # authors its speaks: sentence — the published set stays as ruled.
   "service:jupyterhub": withheld
+  # Landing (2026-10-19): the estate's own signpost. WITHHELD from the public page.
+  "service:landing": withheld
   "service:open_webui":    { publish: wits, speaks: "a chat room with the house's own models" }
   "service:mcp_gateway":   { publish: wits, speaks: "one socket where minds plug into tools" }
 

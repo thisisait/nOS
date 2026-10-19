@@ -744,6 +744,7 @@ install_face: true               # nOS face – unified web-desktop shell (Svelt
 # The pazny.apex role FAILS THE CONVERGE while the ruling is not SIGNED, so
 # flipping this on before signing produces a loud refusal, not a page.
 install_apex: false              # apex – public anatomy page at the root domain [Docker, static nginx; requires SIGNED apex ruling]
+install_landing: false           # landing – signpost + how-to at the root domain for the estate's own people [Docker, static nginx]; not with install_apex
 
 # ── Knowledge / cortex ────────────────────────────────────────────────────────
 install_keap: true               # KEAP – knowledge explorer & preserver (taxonomy, content links, agent API) [Docker]
@@ -2489,6 +2490,14 @@ face_ask_model: ""
 # host_alias deliberately does not apply — an aliased host publishes no apex.
 apex_domain: "{{ tenant_domain | default('dev.local') }}"
 apex_port: 8061                                # loopback publish (container binds 80)
+# The front door at the root domain (roles/pazny.landing): a card per routed
+# service plus a short how-to. Same root domain as apex — one or the other.
+landing_domain: "{{ tenant_domain | default('dev.local') }}"
+landing_port: 8062
+landing_version: "{{ apex_version }}"   # the same pinned nginx (tag + digest)
+landing_title: "nOS on {{ inventory_hostname_short | default(ansible_facts['hostname']) }}"
+landing_host_note: ""                   # one host-specific paragraph (config.yml)
+landing_contact: ""                     # who to ask, as text (config.yml)
 # nginx stable-alpine. The tag says what we meant, the digest says what we get
 # (mcp_gateway precedent). Digest is the multi-arch INDEX (arm64 + amd64).
 # Asked at the source registry (Docker Hub library/nginx), 2026-08-17.

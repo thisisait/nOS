@@ -351,6 +351,24 @@ services:
       identity model. The pazny.apex role refuses to build or serve while the
       ruling is unsigned.
 
+  - id: landing
+    software_owner: self
+    category: web
+    stack: iiab
+    install_flag: install_landing
+    version_var: landing_version
+    version_source: docker_image
+    image: nginx
+    container_name: iiab-landing-1
+    domain_var: landing_domain
+    port_var: landing_port
+    oidc: none
+    rbac_tier: 4
+    notes: >-
+      The estate's signpost at the ROOT domain for its own people: a card per
+      routed service (the wing-base hub-card harvest) and a short how-to.
+      Static files only; not with apex, which claims the same domain.
+
   - id: nextcloud
     software_owner: symbiont
     category: collaboration

@@ -1,0 +1,14 @@
+# {{ ansible_managed }} — roles/pazny.landing
+server {
+    listen 80;
+    server_name _;
+    server_tokens off;
+    root /usr/share/nginx/html;
+    index index.html;
+    add_header Cache-Control "no-cache";
+    location / {
+        try_files $uri $uri/ =404;
+    }
+    location = /nos-root-ca.pem { default_type application/x-pem-file; }
+    location = /hosts.txt { default_type text/plain; }
+}

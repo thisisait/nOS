@@ -1,0 +1,79 @@
+<!doctype html>
+{# {{ ansible_managed }} — roles/pazny.landing #}
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ landing_title }}</title>
+<style>
+:root { --bg:#f7f7f8; --fg:#1c1c1f; --muted:#5d5d66; --card:#fff; --line:#e3e3e8; --accent:#5b4bd6; }
+@media (prefers-color-scheme: dark) { :root { --bg:#141417; --fg:#ececf1; --muted:#a3a3ad; --card:#1d1d22; --line:#2e2e36; --accent:#a99cff; } }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; }
+main { max-width:980px; margin:0 auto; padding:32px 16px 64px; }
+h1 { font-size:1.9rem; margin:0 0 4px; } h2 { font-size:1.2rem; margin:40px 0 12px; }
+.sub { color:var(--muted); margin:0 0 8px; }
+.note { border-left:3px solid var(--accent); padding:8px 14px; background:var(--card); margin:16px 0; }
+.grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px; }
+a.card { display:block; padding:14px 16px; border:1px solid var(--line); border-radius:10px; background:var(--card); color:inherit; text-decoration:none; }
+a.card:hover { border-color:var(--accent); }
+.card b { display:block; } .card span { color:var(--muted); font-size:.9rem; }
+.tier { float:right; font-size:.75rem; color:var(--muted); }
+ol, ul { padding-left:1.3rem; } li { margin:4px 0; }
+code { background:var(--card); border:1px solid var(--line); border-radius:4px; padding:1px 5px; font-size:.9em; }
+pre { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:10px 12px; overflow-x:auto; }
+footer { margin-top:48px; color:var(--muted); font-size:.85rem; }
+</style>
+</head>
+<body>
+<main>
+<h1>{{ landing_title }}</h1>
+<p class="sub">{{ tenant_domain }} — a self-hosted nOS estate. Everything below runs on this machine; your data stays here.</p>
+{% if landing_host_note | default('') | length > 0 %}
+<div class="note">{{ landing_host_note }}</div>
+{% endif %}
+
+<h2>Services</h2>
+<div class="grid">
+{% for c in _landing_cards %}
+  <a class="card" href="{{ c.url }}"><span class="tier">tier {{ c.tier }}</span><b>{{ c.title }}</b><span>{{ c.description }}</span></a>
+{% endfor %}
+</div>
+<p class="sub">Tier 1 is admin, 3 is everyone with an account; a service above your tier refuses you by design.</p>
+
+<h2>Getting in</h2>
+<ol>
+{% if tenant_domain_is_local | default(true) | bool %}
+  <li><b>Names.</b> If <code>auth.{{ tenant_domain }}</code> does not open, your computer cannot resolve this estate's names yet: add <a href="/hosts.txt">this line</a> to your hosts file (Windows: <code>C:\Windows\System32\drivers\etc\hosts</code>, as administrator; macOS/Linux: <code>/etc/hosts</code>). A corporate proxy may also need these names excluded.</li>
+  <li><b>Certificate.</b> Import <a href="/nos-root-ca.pem">the estate's root CA</a> as a trusted root (Windows: <code>certutil -user -addstore Root nos-root-ca.pem</code>; Firefox has its own store: Settings → Certificates → Import).</li>
+{% endif %}
+  <li><b>Sign in</b> at <a href="https://{{ authentik_domain }}">{{ authentik_domain }}</a> with the account you were given. Change your password there first: <a href="https://{{ authentik_domain }}/if/user/#/settings">your settings</a>. One sign-in opens every service above.</li>
+</ol>
+
+{% if (nos_extra_identities | default([]) | selectattr('realms', 'defined') | selectattr('realms', 'contains', 'unix') | list | length) > 0 or (nos_test_users_enabled | default(false) | bool) %}
+<h2>Working on the machine</h2>
+<ul>
+  <li><b>SSH</b> as your own login: <code>ssh &lt;login&gt;@{{ ansible_facts['default_ipv4']['address'] | default(tenant_domain) }}</code>. Your home directory is private (no one else can read it); editor remotes (VS Code, JetBrains) work over the same SSH.</li>
+{% if install_thalamus | default(false) | bool %}
+  <li><b>Iris</b>, the assistant, in any terminal on the machine: type <code>iris</code>. It answers as you and works on the tables you can see.</li>
+{% endif %}
+{% if install_jupyterhub | default(false) | bool %}
+  <li><b>Notebooks</b> at <a href="https://{{ jupyterhub_domain }}">{{ jupyterhub_domain }}</a>: press <i>Start My Server</i>. It runs as your own login, in your home directory, with its own memory and CPU limit.</li>
+{% endif %}
+{% if install_ollama | default(false) | bool %}
+  <li><b>Local models</b>: chat at <a href="https://{{ openwebui_domain }}">{{ openwebui_domain }}</a>; from code, an OpenAI-compatible API on the machine at <code>{{ ollama_url }}/v1</code>{% if install_vllm | default(false) | bool %} and the shared fast model at <code>http://127.0.0.1:{{ vllm_port }}/v1</code>{% endif %}.</li>
+{% endif %}
+  <li><b>GPU</b>: <code>nvidia-smi</code> shows who is using it. It is shared — free memory you no longer need (stop idle notebook kernels).</li>
+</ul>
+{% endif %}
+
+<h2>Good to know</h2>
+<ul>
+  <li>Nothing here is in a public cloud; backups and models stay on this machine.</li>
+  <li>Something broken or missing? {{ landing_contact | default('Ask the operator of this machine.') }}</li>
+</ul>
+
+<footer>nOS — This is AIT · this page is generated on every converge from the services that are actually installed.</footer>
+</main>
+</body>
+</html>
