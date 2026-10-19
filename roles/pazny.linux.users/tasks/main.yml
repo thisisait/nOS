@@ -1,0 +1,76 @@
+---
+# ==============================================================================
+# The `unix` realm — host logins from the roster, never from who happens to run
+# the converge. Creates and updates; never deletes (a person's home is data).
+# A synthetic login whose switch is off is LOCKED, not removed, and
+# tools/identity-status.py names it lingering.
+# ==============================================================================
+
+- name: "[unix] Who the roster says exists as a host login"
+  ansible.builtin.set_fact:
+    _unix_people: >-
+      {%- set out = [] -%}
+      {%- for i in nos_identities | default([]) if 'unix' in (i.realms | default([])) -%}
+        {%- set _ = out.append({'name': i.name, 'tier': i.tier | int, 'password': lookup('vars', i.password_var, default=''), 'active': true}) -%}
+      {%- endfor -%}
+      {%- for i in nos_synthetic_identities | default([]) if 'unix' in (i.realms | default([])) -%}
+        {%- set _ = out.append({'name': i.name, 'tier': i.tier | int, 'password': lookup('vars', i.password_var, default=''), 'active': nos_test_users_enabled | default(false) | bool}) -%}
+      {%- endfor -%}
+      {%- for i in nos_extra_identities | default([]) if 'unix' in (i.realms | default([])) -%}
+        {%- set _ = out.append({'name': i.name, 'tier': i.tier | int, 'password': (nos_extra_identity_passwords | default({}))[i.name] | default(''), 'active': true}) -%}
+      {%- endfor -%}
+      {{ out }}
+    _unix_tier_group: "{{ dict(authentik_rbac_tiers | map(attribute='tier') | zip(authentik_rbac_tiers | map(attribute='groups') | map('last'))) }}"
+  no_log: true
+
+- name: "[unix] Every login has a password to start with"
+  ansible.builtin.assert:
+    that: (item.password | length) > 0
+    fail_msg: >-
+      {{ item.name }} is declared in the unix realm but its password resolves
+      empty — a host login nobody can sign in to is not an account.
+    quiet: true
+  loop: "{{ _unix_people }}"
+  loop_control:
+    label: "{{ item.name }}"
+  no_log: true
+
+- name: "[unix] The tier groups"
+  ansible.builtin.group:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ _unix_tier_group.values() | unique | list }}"
+  become: true
+
+# The salt is derived from the name, so the same password hashes the same way
+# on every run and `update_password: always` does not churn.
+- name: "[unix] The logins"
+  ansible.builtin.user:
+    name: "{{ item.name }}"
+    groups: ["{{ _unix_tier_group[item.tier] }}"]
+    append: true
+    shell: "{{ linux_users_shell }}"
+    create_home: true
+    password: "{{ item.password | password_hash('sha512', (item.name | hash('sha256'))[:16]) }}"
+    update_password: "{{ linux_users_update_password }}"
+    password_lock: "{{ not item.active }}"
+  loop: "{{ _unix_people }}"
+  loop_control:
+    label: "{{ item.name }} (tier {{ item.tier }}{{ '' if item.active else ', locked' }})"
+  no_log: true
+  become: true
+
+- name: "[unix] Read the logins back (their homes)"
+  ansible.builtin.getent:
+    database: passwd
+
+- name: "[unix] Each home is its owner's alone"
+  ansible.builtin.file:
+    path: "{{ ansible_facts['getent_passwd'][item.name][4] }}"
+    state: directory
+    owner: "{{ item.name }}"
+    mode: "{{ linux_users_home_mode }}"
+  loop: "{{ _unix_people }}"
+  loop_control:
+    label: "{{ item.name }}"
+  become: true

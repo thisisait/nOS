@@ -1,0 +1,18 @@
+---
+# pazny.linux.users — the `unix` realm (ssot/doctrine/identity.md).
+#
+# Every declared identity whose realms name `unix` is a host login on Linux:
+# nos_identities, nos_synthetic_identities (while nos_test_users_enabled), and
+# nos_extra_identities that list it. The login's tier group is the RBAC tier's
+# own group (authentik_rbac_tiers[].groups[-1]: nos-admins, nos-managers,
+# nos-users, nos-guests), so a host login and an SSO session carry one tier.
+
+# Home mode. 0700: another person's files are not readable by default — the
+# data-separation boundary JupyterHub's notebooks also run inside.
+linux_users_home_mode: "0700"
+linux_users_shell: /bin/bash
+
+# The password is the identity's declared one, set when the login is CREATED.
+# An existing login keeps its own (an operator account that predates nOS is
+# not reset under them); `always` makes the config the truth on every run.
+linux_users_update_password: on_create

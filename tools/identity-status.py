@@ -46,7 +46,7 @@ sys.path.insert(0, str(REPO / "tools"))
 from nos_identity import SYNTHETIC_FLAG, default_config, synthetic_identities  # noqa: E402
 
 OK, MISSING, UNDECLARED, UNKNOWN = "ok", "MISSING", "UNDECLARED", "?"
-REALMS = ("authentik", "gitea", "woodpecker")
+REALMS = ("authentik", "gitea", "woodpecker", "unix")
 
 
 def _yaml(path: Path) -> dict:
@@ -191,7 +191,32 @@ def realm_accounts(merged: dict, secrets: dict) -> dict[str, list[str] | None]:
     else:
         out["woodpecker"] = None
         out["_woodpecker_agents"] = None
+
+    out["unix"] = unix_logins(merged)
     return out
+
+
+def unix_logins(merged: dict) -> list[str] | None:
+    """The unix realm's holdings: members of the RBAC tier groups that
+    roles/pazny.linux.users manages (authentik_rbac_tiers[].groups[-1]). The
+    host's other accounts are not the realm's, so they are never UNDECLARED.
+    None off Linux — macOS host accounts are not nOS's to make."""
+    if not sys.platform.startswith("linux"):
+        return None
+    import grp
+    import pwd
+
+    tiers = merged.get("authentik_rbac_tiers") or []
+    names = {str((t.get("groups") or [""])[-1]) for t in tiers if isinstance(t, dict)}
+    held: set[str] = set()
+    for name in filter(None, names):
+        try:
+            g = grp.getgrnam(name)
+        except KeyError:
+            continue
+        held.update(g.gr_mem)
+        held.update(p.pw_name for p in pwd.getpwall() if p.pw_gid == g.gr_gid)
+    return sorted(held)
 
 
 def _declared_wing_scopes(name: str) -> str | None:

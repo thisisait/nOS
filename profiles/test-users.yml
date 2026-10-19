@@ -28,12 +28,15 @@
 nos_test_users_enabled: true
 
 # Two at tier 3 so isolation has a peer to fail against.
+# `unix`: on a Linux host each is also a login (roles/pazny.linux.users), home
+# 0700 — the ssh/notebook data-separation test runs as bob against carol.
+# Inert on macOS, where host accounts are not nOS's to make.
 nos_synthetic_identities:
-  - {name: alice, kind: synthetic, tier: 2, email: "alice@{{ tenant_domain | default('dev.local') }}", realms: [authentik],
+  - {name: alice, kind: synthetic, tier: 2, email: "alice@{{ tenant_domain | default('dev.local') }}", realms: [authentik, unix],
      password_var: nos_test_alice_password}
-  - {name: bob, kind: synthetic, tier: 3, email: "bob@{{ tenant_domain | default('dev.local') }}", realms: [authentik],
+  - {name: bob, kind: synthetic, tier: 3, email: "bob@{{ tenant_domain | default('dev.local') }}", realms: [authentik, unix],
      password_var: nos_test_bob_password}
-  - {name: carol, kind: synthetic, tier: 3, email: "carol@{{ tenant_domain | default('dev.local') }}", realms: [authentik],
+  - {name: carol, kind: synthetic, tier: 3, email: "carol@{{ tenant_domain | default('dev.local') }}", realms: [authentik, unix],
      password_var: nos_test_carol_password}
-  - {name: dave, kind: synthetic, tier: 4, email: "dave@{{ tenant_domain | default('dev.local') }}", realms: [authentik],
+  - {name: dave, kind: synthetic, tier: 4, email: "dave@{{ tenant_domain | default('dev.local') }}", realms: [authentik, unix],
      password_var: nos_test_dave_password}
