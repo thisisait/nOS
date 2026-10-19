@@ -21,7 +21,8 @@ import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 PORTED_DAEMONS = ["bone", "pulse", "wing"]
-DARWIN_GATED_AGENTS = ["pazny.openclaw", "pazny.ollama", "pazny.hermes"]
+# pazny.ollama left this list 2026-10-19: it has a Linux branch (tasks/linux.yml).
+DARWIN_GATED_AGENTS = ["pazny.openclaw", "pazny.hermes"]
 
 
 def _tasks(role: str) -> list:
