@@ -286,9 +286,11 @@ fn the_socket_path_prefers_env_then_home_then_the_shared_socket() {
     // dir(): bind()'s process-wide umask can make a racing mkdir 0600 (no x bit).
     let d = dir("sockpath");
     let home = d.join("home");
-    std::fs::create_dir_all(home.join(".nos")).unwrap();
-    for p in [&home, &home.join(".nos")] {
-        std::fs::set_permissions(p, std::fs::Permissions::from_mode(0o700)).unwrap();
+    // One level at a time, each chmod'ed before the next is made inside it: a level
+    // born 0600 under a racing bind() has no x bit to create its child through.
+    for p in [home.clone(), home.join(".nos")] {
+        std::fs::create_dir(&p).unwrap();
+        std::fs::set_permissions(&p, std::fs::Permissions::from_mode(0o700)).unwrap();
     }
     let shared = d.join("shared.sock");
     let own = home.join(".nos/thalamus.sock");

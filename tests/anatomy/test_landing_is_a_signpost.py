@@ -29,10 +29,10 @@ def test_cards_are_the_routed_harvest():
 
 def test_it_refuses_to_share_the_root_domain_with_apex():
     first = _tasks()[0]
-    assert "install_apex" in first["ansible.builtin.assert"]["that"]
+    assert "ansible.builtin.fail" in first and "install_apex" in first["when"]
 
 
 def test_only_the_public_half_of_the_ca_is_served():
-    ca = next(t for t in _tasks() if "nos-root-ca.pem" in str(t.get("ansible.builtin.copy", {}).get("dest", "")))
+    ca = next(t for t in _tasks() if "nos-root-ca.crt" in str(t.get("ansible.builtin.copy", {}).get("dest", "")))
     src = ca["ansible.builtin.copy"]["src"]
     assert src.endswith("rootCA.pem") and "key" not in src.lower()

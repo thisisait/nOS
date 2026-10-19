@@ -352,7 +352,7 @@ services:
       ruling is unsigned.
 
   - id: landing
-    software_owner: self
+    software_owner: symbiont
     category: web
     stack: iiab
     install_flag: install_landing

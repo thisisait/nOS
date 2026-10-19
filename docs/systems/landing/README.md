@@ -10,7 +10,7 @@
 | **Toggle** | `install_landing: false` (on in `profiles/workstation.yml`); not together with `install_apex` |
 | **Role** | `roles/pazny.landing` — pinned nginx (`landing_version` = `apex_version`), read-only |
 | **Cards** | the wing-base hub-card harvest (`~/wing/app/data/hub-cards.json`), i.e. every enabled plugin's `ui-extension.hub_card` |
-| **Also serves** | `/hosts.txt` (the hosts line a client needs for a local TLD) and `/nos-root-ca.pem` (the PUBLIC half of the local root CA) |
+| **Also serves** | `/hosts.txt` (the hosts line a client needs for a local TLD) and `/nos-root-ca.crt` (the PUBLIC half of the local root CA) |
 | **Host text** | `landing_title`, `landing_host_note`, `landing_contact` in `config.yml` |
 | **Edge** | `traefik_auth_modes.landing: none` (justified in `roles/pazny.traefik/vars/main.yml`) |
 

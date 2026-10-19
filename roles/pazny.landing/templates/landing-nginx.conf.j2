@@ -9,6 +9,6 @@ server {
     location / {
         try_files $uri $uri/ =404;
     }
-    location = /nos-root-ca.pem { default_type application/x-pem-file; }
+    location = /nos-root-ca.crt { default_type application/x-x509-ca-cert; }
     location = /hosts.txt { default_type text/plain; }
 }

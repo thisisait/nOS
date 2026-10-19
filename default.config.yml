@@ -2495,7 +2495,7 @@ apex_port: 8061                                # loopback publish (container bin
 landing_domain: "{{ tenant_domain | default('dev.local') }}"
 landing_port: 8062
 landing_version: "{{ apex_version }}"   # the same pinned nginx (tag + digest)
-landing_title: "nOS on {{ inventory_hostname_short | default(ansible_facts['hostname']) }}"
+landing_title: "nOS — {{ tenant_domain | default('dev.local') }}"
 landing_host_note: ""                   # one host-specific paragraph (config.yml)
 landing_contact: ""                     # who to ask, as text (config.yml)
 # nginx stable-alpine. The tag says what we meant, the digest says what we get

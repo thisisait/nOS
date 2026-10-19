@@ -7,10 +7,12 @@
 # strangers; this is a signpost for the estate's own people. One of the two.
 # ==============================================================================
 
+# A fail with its condition in `when`, so the profile builder carries it as a
+# contradiction (tools/profile-builder/rules.py reads fail/when, not assert/that).
 - name: "[pazny.landing] Not together with the apex page (same root domain)"
-  ansible.builtin.assert:
-    that: not (install_apex | default(false) | bool)
-    fail_msg: "install_landing and install_apex both claim the root domain; turn one off."
+  ansible.builtin.fail:
+    msg: "install_landing and install_apex both claim the root domain; turn one off."
+  when: install_apex | default(false) | bool
 
 - name: "[pazny.landing] Read the harvested service cards"
   ansible.builtin.slurp:
@@ -54,7 +56,7 @@
 - name: "[pazny.landing] The CA a client imports (public half only)"
   ansible.builtin.copy:
     src: "{{ stacks_dir }}/shared-certs/rootCA.pem"
-    dest: "{{ landing_web_root }}/nos-root-ca.pem"
+    dest: "{{ landing_web_root }}/nos-root-ca.crt"
     remote_src: true
     mode: '0644'
   failed_when: false
