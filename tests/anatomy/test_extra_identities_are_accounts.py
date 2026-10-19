@@ -177,8 +177,10 @@ def test_the_first_login_walk_carries_them_with_tier_and_password():
     ctx["lookup"] = lp.vars_lookup(ctx)
     walked = {x["name"]: x for x in json.loads(lp._jinja_env().from_string(task["environment"]["NOS_FIRST_LOGIN"]).render(**ctx))}
     for p in PEOPLE:
+        # realms (2026-10-19): an app may admit only one realm (jupyterhub: unix);
+        # an extra person who names none is authentik-only.
         assert walked[p["name"]] == {"name": p["name"], "tier": p["tier"], "password": f"pw-{p['name']}",
-                                     "own_password": True}
+                                     "realms": p.get("realms", ["authentik"]), "own_password": True}
     assert "own_password" not in walked["akadmin"], "a system account's refused login stays a failure"
     assert "akadmin" in walked, "positive control: the declared roster is still walked"
 
