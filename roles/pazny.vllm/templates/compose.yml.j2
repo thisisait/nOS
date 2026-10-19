@@ -20,13 +20,17 @@ services:
       - {{ vllm_data_dir }}/hf:/hf
     environment:
       HF_HOME: /hf
+      # The snapshot sits at /hf/models--<org>--<name> (the fetch's cache_dir).
+      # Model CONFIG is resolved through the hub cache, not --download-dir, so
+      # without this the offline start looks in /hf/hub and finds nothing.
+      HF_HUB_CACHE: /hf
       HOME: /tmp
       # Exactly the pinned revision, never a fetch at start.
       HF_HUB_OFFLINE: "1"
       VLLM_API_KEY: "{{ vllm_api_key }}"
+    # Explicit: NGC images start a wrapper script, upstream ones `vllm serve`.
+    entrypoint: ["vllm", "serve"]
     command:
-      - vllm
-      - serve
       - "{{ vllm_model }}"
       - --revision
       - "{{ vllm_model_revision }}"
