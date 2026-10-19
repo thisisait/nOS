@@ -169,6 +169,10 @@ fn binding(name: &str, local: bool) -> Binding {
 }
 
 fn rig(name: &str, b: Binding, models: Vec<String>, cortex: Option<String>) -> Rig {
+    rig_cx(name, b, models, cortex.map(|url| Cortex { url, token: "cx-ro-token".into(), rich_catalogue: false }))
+}
+
+fn rig_cx(name: &str, b: Binding, models: Vec<String>, cortex: Option<Cortex>) -> Rig {
     let d = PathBuf::from(format!("/tmp/thc-{}-{name}", std::process::id()));
     let _ = std::fs::remove_dir_all(&d);
     for p in [d.clone(), d.join("state"), d.join("state/keap-tables")] {
@@ -200,7 +204,7 @@ fn rig(name: &str, b: Binding, models: Vec<String>, cortex: Option<String>) -> R
         log: Mutex::new(Box::new(std::io::sink())),
         picks: vec![],
         floors: None,
-        cortex: cortex.map(|url| Cortex { url, token: "cx-ro-token".into() }),
+        cortex,
         data: d.clone(),
     };
     let sock = d.join("t.sock");
@@ -687,4 +691,29 @@ fn a_plan_row_names_the_table_it_resolved() {
     let ev = tools(&rig, &session);
     let last = ev.iter().rev().find(|(t, _)| t.ends_with("tool_result:cortex_plan")).unwrap();
     assert_eq!(last.1["table"], json!({"said": "Todos", "id": "todos", "title": "Todos"}), "{ev:?}");
+    // The plan's catalogue: lean (key:kind) unless NOS_CORTEX_CATALOGUE=rich; the row says which (iris-bench reads it).
+    let prompt = |r: &Rig| models_said(r)[0]["messages"][0]["content"].as_str().unwrap().to_string();
+    let used = |r: &Rig, s: &str| tools(r, s).into_iter().find(|(t, _)| t.ends_with("tool_use:cortex_plan")).unwrap().1["catalogue"].clone();
+    assert!(prompt(&rig).contains("- todos \"Todos\": title:text, status:select, amount:number, track:text\n"), "{}", prompt(&rig));
+    assert_eq!(used(&rig, &session), "lean");
+    let (organ_url, _) = organ(known(&all));
+    let rich = rig_cx("tablerich", binding("ollama", true), vec![say(&json!({"stages": c["stages"]}).to_string()), say("done")],
+                      Some(Cortex { url: organ_url, token: "cx-ro-token".into(), rich_catalogue: true }));
+    let (s2, _) = turn(&rich, None, "todos by amount");
+    assert!(prompt(&rich).contains("status:select \"Status\" (open|done)"), "{}", prompt(&rich));
+    assert_eq!(used(&rich, &s2), "rich");
+    // The shell's catalogue (its marks) is rich either way.
+    let s = UnixStream::connect(&rig.sock).unwrap();
+    s.set_read_timeout(Some(std::time::Duration::from_secs(10))).unwrap();
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    (&s).write_all(encode(&ToThalamus::Catalogue).as_bytes()).unwrap();
+    let tables = loop {
+        match next(&mut r) {
+            Some(ToShell::Catalogue { tables, .. }) => break tables,
+            Some(_) => continue,
+            None => panic!("no catalogue"),
+        }
+    };
+    let status = tables.iter().find(|t| t.id == "todos").unwrap().columns.iter().find(|c| c.key == "status").unwrap();
+    assert_eq!((status.label.as_deref(), status.options.as_deref()), (Some("Status"), Some(&["open".to_string(), "done".into()][..])));
 }
