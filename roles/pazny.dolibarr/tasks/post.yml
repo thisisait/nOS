@@ -49,6 +49,29 @@
   no_log: true   # CLIENT_SECRET in argv
   when: install_dolibarr | default(false) | bool
 
+# tenant_domain moved: the SSO admin's login is admin@<old domain>, the INSERT
+# below minted a second admin and left the old one active. Move the one admin
+# with the same local part first (derived tables: MariaDB refuses a subquery on
+# the UPDATE's own table).
+- name: "[pazny.dolibarr Post] Move the SSO admin to the declared login"
+  ansible.builtin.command:
+    argv:
+      - docker
+      - exec
+      - -i
+      - "{{ mariadb_container | default('infra-mariadb-1') }}"
+      - sh
+      - -c
+      - >-
+        mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" {{ dolibarr_db_name }} -e
+        "UPDATE llx_user SET login='{{ dolibarr_sso_admin_login }}'
+         WHERE admin=1 AND login LIKE '{{ dolibarr_sso_admin_login.split('@')[0] }}@%'
+           AND (SELECT n FROM (SELECT COUNT(*) n FROM llx_user WHERE login='{{ dolibarr_sso_admin_login }}') a) = 0
+           AND (SELECT n FROM (SELECT COUNT(*) n FROM llx_user
+                WHERE admin=1 AND login LIKE '{{ dolibarr_sso_admin_login.split('@')[0] }}@%') b) = 1"
+  changed_when: false   # the reader below asserts the effect
+  when: install_dolibarr | default(false) | bool
+
 - name: "[pazny.dolibarr Post] Ensure the SSO admin user (login == email claim)"
   ansible.builtin.command:
     argv:
