@@ -283,9 +283,13 @@ fn a_shared_0666_socket_still_refuses_a_peer_the_map_does_not_name() {
 
 #[test]
 fn the_socket_path_prefers_env_then_home_then_the_shared_socket() {
-    let d = std::env::temp_dir().join(format!("thal-sockpath-{}", std::process::id()));
+    // dir(): bind()'s process-wide umask can make a racing mkdir 0600 (no x bit).
+    let d = dir("sockpath");
     let home = d.join("home");
     std::fs::create_dir_all(home.join(".nos")).unwrap();
+    for p in [&home, &home.join(".nos")] {
+        std::fs::set_permissions(p, std::fs::Permissions::from_mode(0o700)).unwrap();
+    }
     let shared = d.join("shared.sock");
     let own = home.join(".nos/thalamus.sock");
     assert_eq!(serve::socket_path(Some("/x/y.sock"), &home, &shared), std::path::PathBuf::from("/x/y.sock"));
