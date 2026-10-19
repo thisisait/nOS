@@ -147,6 +147,8 @@ def _build_substitutions() -> dict[str, str]:
         "{{ keap_port }}":                _env("NOS_KEAP_PORT"),
         "{{ keap_agent_token_rw }}":      "secret:keap_agent_token_rw",
         "{{ keap_agent_token_ro }}":      "secret:keap_agent_token_ro",
+        # The model server's address: loopback on macOS, docker0 on Linux.
+        "{{ ollama_url }}":               _env("NOS_OLLAMA_URL"),
         # A declared env token MISSING here is stored as literal braces and
         # 401s silently at run time — curator-sweep shipped that way
         # 2026-07-14 (env is outside the SEC-8 validator, so no 400). Gate:

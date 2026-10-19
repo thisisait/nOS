@@ -164,7 +164,7 @@ pulse:
         # WING_EVENTS_HMAC_SECRET precedent); Ansible pre-renders the values.
         KEAP_API_URL: "http://127.0.0.1:{{ keap_port }}"
         KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw }}"
-        OLLAMA_URL: "http://127.0.0.1:11434"
+        OLLAMA_URL: "{{ ollama_url }}"
         # S2 fan-out: a SECOND target, not a moved one. Empty until the organ
         # is installed, and the job then behaves exactly as it did. Distinct
         # env NAMES holding distinct SECRETS is deliberate — one name meaning
@@ -201,7 +201,7 @@ pulse:
         KEAP_API_URL: "http://127.0.0.1:{{ keap_port }}"
         KEAP_AGENT_TOKEN_RO: "{{ keap_agent_token_ro }}"
         KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw }}"
-        OLLAMA_URL: "http://127.0.0.1:11434"
+        OLLAMA_URL: "{{ ollama_url }}"
 
     # Cortex consolidator (the "dream" sweep, 04:15 — opens the night
     # shift): walks raw data piles (Nextcloud files, ~/keap/inbox drop dir,

@@ -38,7 +38,7 @@ cortex_log_dir: "{{ ansible_facts['env']['HOME'] }}/cortex/log"
 # Host Ollama (MLX) — NOT consumed by the C1 daemon (validate reads no
 # embedder); recorded here because the C2 embed-sync Pulse job and the recall
 # gate are specified against it (design §3). Kept so the variable has one home.
-cortex_ollama_url: "http://127.0.0.1:11434"
+cortex_ollama_url: "{{ ollama_url | default('http://127.0.0.1:11434') }}"
 
 # Generate + ingest the nOS self-model at materialise time (env CORTEX_SELFMODEL).
 # Off only for a deliberately spine-only store (the onto1 digest state).

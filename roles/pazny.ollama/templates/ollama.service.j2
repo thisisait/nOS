@@ -1,0 +1,24 @@
+# {{ ansible_managed }} — roles/pazny.ollama (Linux system unit)
+[Unit]
+Description=Ollama model server (nOS)
+After=network-online.target docker.service
+# The bind address is docker0's; it exists once Docker is up.
+Wants=docker.service
+
+[Service]
+ExecStart=/usr/local/bin/ollama serve
+User=ollama
+Group=ollama
+Restart=always
+RestartSec=3
+Environment="OLLAMA_HOST={{ ollama_bind_host }}:11434"
+Environment="OLLAMA_MODELS={{ ollama_models_dir }}"
+Environment="OLLAMA_MAX_LOADED_MODELS={{ ollama_max_loaded_models }}"
+Environment="OLLAMA_NUM_PARALLEL={{ ollama_num_parallel }}"
+Environment="OLLAMA_KEEP_ALIVE={{ ollama_keep_alive }}"
+Environment="OLLAMA_FLASH_ATTENTION={{ ollama_flash_attention }}"
+Environment="OLLAMA_KV_CACHE_TYPE={{ ollama_kv_cache_type }}"
+Environment="OLLAMA_CONTEXT_LENGTH={{ ollama_context_length }}"
+
+[Install]
+WantedBy=multi-user.target

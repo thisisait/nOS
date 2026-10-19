@@ -1,0 +1,117 @@
+---
+# ==============================================================================
+# OLLAMA ON LINUX — the release tarball at the pin, a system unit, the GPU.
+#
+# The upstream install.sh is a moving target (it installs whatever is latest),
+# so the pin decides here exactly as it does on the Mac: the archive for
+# ollama_version is fetched, verified against the release's own sha256sum.txt,
+# and unpacked into /usr/local — the layout install.sh produces, so a host that
+# was installed by hand converges without a reinstall. The CUDA runners ship
+# inside the archive (lib/ollama/cuda_v*), so a GPU host needs only its driver.
+#
+# SYSTEM unit, not systemd --user: the model server is shared by every person
+# on a multi-user host, and models are host weight, not anyone's data.
+# Bound to ollama_bind_host (docker0 on Linux): containers reach it via
+# host.docker.internal, host tools via ollama_url, the LAN not at all — the
+# API has no authentication.
+# ==============================================================================
+
+- name: "[Ollama] Linux archive name for this architecture"
+  ansible.builtin.set_fact:
+    _ollama_asset: "ollama-linux-{{ 'arm64' if ansible_facts['architecture'] in ['aarch64', 'arm64'] else 'amd64' }}.tar.zst"
+
+- name: "[Ollama] zstd is present (the release archive is .tar.zst)"
+  ansible.builtin.apt:
+    name: zstd
+    state: present
+  become: true
+
+- name: "[Ollama] Read the installed binary's version"
+  # `ollama --version` names the SERVER when one answers and the client only in a
+  # warning; the client line is the installed binary, so it wins when present.
+  ansible.builtin.shell: |
+    set -o pipefail
+    [ -x /usr/local/bin/ollama ] || exit 0
+    out=$(OLLAMA_HOST={{ ollama_bind_host }}:11434 /usr/local/bin/ollama --version 2>&1)
+    cli=$(printf '%s\n' "$out" | sed -nE 's/.*client version is ([0-9.]+).*/\1/p')
+    srv=$(printf '%s\n' "$out" | sed -nE 's/.*ollama version is ([0-9.]+).*/\1/p')
+    echo "${cli:-$srv}"
+  args:
+    executable: /bin/bash
+  register: _ollama_linux_installed
+  changed_when: false
+  failed_when: false
+
+- name: "[Ollama] Fetch the pinned release archive (sha256 from the release)"
+  ansible.builtin.get_url:
+    url: "https://github.com/ollama/ollama/releases/download/v{{ ollama_version }}/{{ _ollama_asset }}"
+    dest: "/var/cache/nos-ollama-{{ ollama_version }}-{{ _ollama_asset }}"
+    checksum: "sha256:https://github.com/ollama/ollama/releases/download/v{{ ollama_version }}/sha256sum.txt"
+    mode: '0644'
+  become: true
+  when: (_ollama_linux_installed.stdout | default('') | trim) != ollama_version
+
+- name: "[Ollama] Unpack the pin into /usr/local (old runners removed first)"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    rm -rf /usr/local/lib/ollama
+    tar --zstd -xf "/var/cache/nos-ollama-{{ ollama_version }}-{{ _ollama_asset }}" -C /usr/local
+    rm -f "/var/cache/nos-ollama-{{ ollama_version }}-{{ _ollama_asset }}"
+  args:
+    executable: /bin/bash
+  become: true
+  register: _ollama_linux_unpacked
+  changed_when: true
+  when: (_ollama_linux_installed.stdout | default('') | trim) != ollama_version
+
+- name: "[Ollama] Read the host's groups (render exists only with a GPU driver)"
+  ansible.builtin.getent:
+    database: group
+
+- name: "[Ollama] System account ollama (home = the model store)"
+  ansible.builtin.user:
+    name: ollama
+    system: true
+    shell: /bin/false
+    home: /usr/share/ollama
+    create_home: true
+    groups: "{{ ['video', 'render'] | select('in', ansible_facts['getent_group']) | list }}"
+    append: true
+  become: true
+
+- name: "[Ollama] Models directory"
+  ansible.builtin.file:
+    path: "{{ ollama_models_dir }}"
+    state: directory
+    owner: ollama
+    group: ollama
+    mode: '0755'
+  become: true
+
+- name: "[Ollama] System unit"
+  ansible.builtin.template:
+    src: ollama.service.j2
+    dest: /etc/systemd/system/ollama.service
+    mode: '0644'
+  become: true
+  register: _ollama_linux_unit
+
+- name: "[Ollama] Running, enabled, restarted when the binary or the unit changed"
+  ansible.builtin.systemd_service:
+    name: ollama
+    state: "{{ 'restarted' if (_ollama_linux_unpacked.changed | default(false) or _ollama_linux_unit.changed) else 'started' }}"
+    enabled: true
+    daemon_reload: "{{ _ollama_linux_unit.changed }}"
+  become: true
+
+# Read back what RUNS, not what was unpacked: a server that did not restart is
+# still the old binary (the Mac's keg-vs-daemon lesson, one platform over).
+- name: "[Ollama] The daemon answers at the pin"
+  ansible.builtin.uri:
+    url: "{{ ollama_url }}/api/version"
+    return_content: true
+  register: _ollama_linux_api
+  retries: 30
+  delay: 2
+  until: (_ollama_linux_api.json.version | default('')) == ollama_version
+  changed_when: false
