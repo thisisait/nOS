@@ -46,9 +46,16 @@ hardening_ufw_allowed_services:
 # Those daemons bind the docker0 address so containers reach them via
 # host.docker.internal and the LAN does not; with incoming=deny, ufw would
 # drop the container side too. Empty `to` disables the rule.
+# Only the daemons' ports: a LAN that happens to sit in 172.16/12 could route
+# to the docker0 address too, so the address alone is not a container boundary.
 hardening_ufw_from_containers:
   from: "172.16.0.0/12"
   to: "{{ nos_docker_host_ip | default('172.17.0.1') }}"
+  ports:
+    - 11434                                   # ollama
+    - "{{ jupyterhub_port | default(8010) }}"  # jupyterhub proxy
+    - "{{ wing_port | default(9000) }}"        # wing
+    - "{{ thalamus_relay_port | default(8097) }}"  # thalamus relay (face)
 hardening_fail2ban_bantime_seconds: 7200
 hardening_fail2ban_findtime_seconds: 600
 hardening_fail2ban_maxretry: 4

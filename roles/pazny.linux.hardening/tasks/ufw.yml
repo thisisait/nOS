@@ -22,12 +22,23 @@
     comment: "{{ item.comment | default(item.port | string) }}"
   loop: "{{ hardening_ufw_allowed_services }}"
 
-- name: "[hardening.ufw] Containers reach the host daemons on docker0"
+- name: "[hardening.ufw] Containers reach the host daemons on docker0 (their ports only)"
+  community.general.ufw:
+    rule: allow
+    proto: tcp
+    from_ip: "{{ hardening_ufw_from_containers.from }}"
+    to_ip: "{{ hardening_ufw_from_containers.to }}"
+    to_port: "{{ item | string }}"
+    comment: "containers -> host daemon :{{ item }} (docker0)"
+  loop: "{{ hardening_ufw_from_containers.ports | default([]) }}"
+  when: (hardening_ufw_from_containers.to | default('')) | length > 0
+
+- name: "[hardening.ufw] Drop the earlier any-port container rule"
   community.general.ufw:
     rule: allow
     from_ip: "{{ hardening_ufw_from_containers.from }}"
     to_ip: "{{ hardening_ufw_from_containers.to }}"
-    comment: "containers -> host daemons (docker0)"
+    delete: true
   when: (hardening_ufw_from_containers.to | default('')) | length > 0
 
 - name: "[hardening.ufw] Enable + start"

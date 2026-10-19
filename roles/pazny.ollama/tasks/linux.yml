@@ -18,7 +18,12 @@
 
 - name: "[Ollama] Linux archive name for this architecture"
   ansible.builtin.set_fact:
-    _ollama_asset: "ollama-linux-{{ 'arm64' if ansible_facts['architecture'] in ['aarch64', 'arm64'] else 'amd64' }}.tar.zst"
+    _ollama_arch: "{{ 'arm64' if ansible_facts['architecture'] in ['aarch64', 'arm64'] else 'amd64' }}"
+
+- name: "[Ollama] The archive and the digest the config pins for it"
+  ansible.builtin.set_fact:
+    _ollama_asset: "ollama-linux-{{ _ollama_arch }}.tar.zst"
+    _ollama_sha256: "{{ ollama_linux_sha256[_ollama_arch] }}"
 
 - name: "[Ollama] zstd is present (the release archive is .tar.zst)"
   ansible.builtin.apt:
@@ -46,7 +51,9 @@
   ansible.builtin.get_url:
     url: "https://github.com/ollama/ollama/releases/download/v{{ ollama_version }}/{{ _ollama_asset }}"
     dest: "/var/cache/nos-ollama-{{ ollama_version }}-{{ _ollama_asset }}"
-    checksum: "sha256:https://github.com/ollama/ollama/releases/download/v{{ ollama_version }}/sha256sum.txt"
+    # The digest lives beside the pin (default.config.yml), not on the release
+    # page: whoever can replace the archive there can replace its sha256sum.txt.
+    checksum: "sha256:{{ _ollama_sha256 }}"
     mode: '0644'
   become: true
   when: (_ollama_linux_installed.stdout | default('') | trim) != ollama_version

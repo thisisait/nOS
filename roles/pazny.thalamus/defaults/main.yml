@@ -52,7 +52,7 @@ thalamus_binding_env:
 # login's shell where it is; `iris` is the shell.
 thalamus_shared_socket_dir: /run/nos   # src/main.rs SHARED_SOCKET is this dir + thalamus.sock
 thalamus_shared_socket: "{{ thalamus_shared_socket_dir }}/thalamus.sock"
-# Built in a pinned container: no Rust toolchain on the host, the same compiler every run.
-thalamus_rust_image: "rust:1.90-bookworm"
+# Built in a pinned container (thalamus_rust_image, default.config.yml): no Rust
+# toolchain on the host, the same compiler every run.
 thalamus_build_cache: "{{ ansible_facts['env']['HOME'] }}/.cache/nos-thalamus-build"
 thalamus_unit_name: "eu.thisisait.nos.thalamus"

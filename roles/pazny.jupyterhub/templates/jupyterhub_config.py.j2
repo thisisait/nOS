@@ -1,5 +1,6 @@
 # {{ ansible_managed }} — roles/pazny.jupyterhub
 # Secrets arrive as environment (EnvironmentFile, root 0600), never in this file.
+import grp
 import os
 import pwd
 
@@ -41,12 +42,29 @@ c.GenericOAuthenticator.allowed_groups = {{ (authentik_rbac_tiers | selectattr('
 c.GenericOAuthenticator.admin_groups = {{ (authentik_rbac_tiers | selectattr('tier', 'equalto', 1) | first).groups | list | to_json }}
 
 
-def _has_a_login(authenticator, handler, auth_model):
-    """An SSO identity without a Linux login (realm `unix`) has nowhere to run."""
+# The unix realm's logins are the members of the RBAC tier groups
+# (roles/pazny.linux.users). Any other passwd row — root, system accounts, an
+# operator account nOS did not make — is not a person who may have notebooks,
+# whatever an SSO username claims.
+UNIX_REALM_GROUPS = {{ authentik_rbac_tiers | map(attribute='groups') | map('last') | list | to_json }}
+
+
+def _in_the_unix_realm(name):
     try:
-        pwd.getpwnam(auth_model["name"])
+        p = pwd.getpwnam(name)
     except KeyError:
-        authenticator.log.warning("refused %s: no Linux login (realm unix)", auth_model["name"])
+        return False
+    if p.pw_uid < 1000:
+        return False
+    held = {g.gr_name for g in grp.getgrall() if name in g.gr_mem}
+    held |= {g.gr_name for g in grp.getgrall() if g.gr_gid == p.pw_gid}
+    return bool(held & set(UNIX_REALM_GROUPS))
+
+
+def _has_a_login(authenticator, handler, auth_model):
+    """An SSO identity without a unix-realm login has nowhere to run."""
+    if not _in_the_unix_realm(auth_model["name"]):
+        authenticator.log.warning("refused %s: no unix-realm login", auth_model["name"])
         return None
     return auth_model
 

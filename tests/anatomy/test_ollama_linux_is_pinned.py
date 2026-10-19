@@ -3,8 +3,8 @@
 roles/pazny.ollama/tasks/linux.yml replaced `curl install.sh | sh` (which
 installs whatever is latest) on the DGX. Three things keep it honest:
 
-- the archive URL carries ollama_version and get_url verifies the release's
-  own sha256sum.txt — no unpinned or unverified binary lands;
+- the archive URL carries ollama_version and get_url verifies a sha256 the
+  config pins per architecture — no unpinned or unverified binary lands;
 - the unit binds ollama_bind_host, which on Linux is docker0's address, never
   0.0.0.0 — the API has no authentication;
 - the readback asks the RUNNING daemon for the pin, not the unpacked file.
@@ -32,7 +32,11 @@ def test_the_archive_is_the_pin_and_verified():
     assert len(fetch) == 1, "exactly one download of the release archive"
     args = fetch[0]["ansible.builtin.get_url"]
     assert "v{{ ollama_version }}" in args["url"]
-    assert args["checksum"].startswith("sha256:") and "sha256sum.txt" in args["checksum"]
+    # The digest is pinned beside the version, not fetched from the release page
+    # (whoever can replace the archive there can replace its sha256sum.txt too).
+    assert args["checksum"] == "sha256:{{ _ollama_sha256 }}"
+    pins = ni.default_config()["ollama_linux_sha256"]
+    assert set(pins) == {"arm64", "amd64"} and all(len(v) == 64 for v in pins.values())
     shells = " ".join(str(t.get("ansible.builtin.shell", "")) for t in _tasks())
     assert "install.sh" not in shells and "| sh" not in shells
 
