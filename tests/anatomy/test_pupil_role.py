@@ -50,7 +50,9 @@ def test_the_role_reaches_the_pupil_statically_after_the_thalamus_is_signed():
     top = yaml.safe_load((ROLE / "tasks" / "main.yml").read_text())
     mac = next(t for t in top if t.get("ansible.builtin.import_tasks") == "macos.yml")
     assert mac["when"] == "nos_service_manager == 'launchd'", "the pupil (codesign, Tauri) stays macOS-only"
-    assert "pupil" not in (ROLE / "tasks" / "linux.yml").read_text()
+    linux = yaml.safe_load((ROLE / "tasks" / "linux.yml").read_text())
+    imports = [t.get("ansible.builtin.import_tasks") or t.get("ansible.builtin.include_tasks") for t in linux]
+    assert "pupil.yml" not in imports, "linux.yml must not build the pupil (no codesign, no Tauri bundle)"
 
 
 def test_the_install_path_is_fixed_in_role_defaults_only():

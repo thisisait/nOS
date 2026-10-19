@@ -89,3 +89,26 @@ def test_systemd_user_abstraction_present():
     assert (base / "tasks" / "ensure_unit.yml").is_file()
     assert (base / "templates" / "service.j2").is_file()
     assert (base / "templates" / "timer.j2").is_file()
+
+
+def test_ollama_takes_exactly_its_platform_branch():
+    """pazny.ollama left DARWIN_GATED_AGENTS (2026-10-19) — this replaces that check.
+
+    main.yml imports it on homebrew or apt hosts only; inside, the Linux path is
+    the apt-gated include and every launchd/homebrew task carries its own gate.
+    """
+    play = yaml.safe_load((REPO / "main.yml").read_text())
+    hits = [n for n in _walk(play)
+            if isinstance(n.get("ansible.builtin.import_role"), dict)
+            and n["ansible.builtin.import_role"].get("name") == "pazny.ollama"]
+    assert len(hits) == 1
+    whens = [str(w) for w in _as_list(hits[0].get("when", []))]
+    assert "nos_pkg_manager in ['homebrew', 'apt']" in whens, whens
+    tasks = _tasks("ollama")
+    inc = [t for t in tasks if t.get("ansible.builtin.include_tasks") == "linux.yml"]
+    assert len(inc) == 1 and "nos_pkg_manager == 'apt'" in str(inc[0].get("when")), inc
+    for t in tasks:
+        body = " ".join(str(k) for k in t)
+        if any(m in body for m in ("community.general.homebrew",)) or "launchctl" in str(t):
+            assert any(g in str(t.get("when", "")) for g in ("homebrew", "launchd")), \
+                f"ollama: a macOS-only task is not platform-gated: {t.get('name')}"
