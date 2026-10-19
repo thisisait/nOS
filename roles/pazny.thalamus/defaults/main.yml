@@ -45,3 +45,14 @@ thalamus_binding_env:
   # The size floors src/binding.rs judges a local model by (refuse / warn); empty = not judged there.
   NOS_LLM_MIN_PARAMS_B: "{{ llm_cell_min_params_b | default('') }}"
   NOS_LLM_RECOMMENDED_PARAMS_B: "{{ llm_cell_recommended_params_b | default('') }}"
+# ── Linux (tasks/linux.yml) ───────────────────────────────────────────────────
+# One daemon for every login on the host: the socket lives outside the (0700)
+# homes and is opened 0666 — serve still names the peer by SO_PEERCRED and
+# refuses a uid the identity map does not list. /etc/profile.d tells each
+# login's shell where it is; `iris` is the shell.
+thalamus_shared_socket_dir: /run/nos
+thalamus_shared_socket: "{{ thalamus_shared_socket_dir }}/thalamus.sock"
+# Built in a pinned container: no Rust toolchain on the host, the same compiler every run.
+thalamus_rust_image: "rust:1.90-bookworm"
+thalamus_build_cache: "{{ ansible_facts['env']['HOME'] }}/.cache/nos-thalamus-build"
+thalamus_unit_name: "eu.thisisait.nos.thalamus"

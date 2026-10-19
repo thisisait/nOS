@@ -6,6 +6,13 @@
 {%- for u in nos_extra_identities | default([]) -%}
 {%- set _ = ns.logins.update({u.name: {'username': u.name, 'groups': [(authentik_rbac_tiers | selectattr('tier', 'equalto', u.tier | int) | first).groups | last]}}) -%}
 {%- endfor -%}
+{#- The unix realm (roles/pazny.linux.users): each declared login of its own name, so
+    every person with a host login reaches Iris as themselves. Synthetics only while on. -#}
+{%- for u in (nos_identities | default([])) + ((nos_synthetic_identities | default([])) if nos_test_users_enabled | default(false) else []) -%}
+{%- if 'unix' in (u.realms | default([])) -%}
+{%- set _ = ns.logins.update({u.name: {'username': u.name, 'groups': [(authentik_rbac_tiers | selectattr('tier', 'equalto', u.tier | int) | first).groups | last]}}) -%}
+{%- endif -%}
+{%- endfor -%}
 {%- set op = nos_identities | selectattr('name', 'equalto', nos_primary_admin) | first -%}
 {%- set _ = ns.logins.update({ansible_facts['user_id']: {'username': nos_primary_admin, 'groups': [(authentik_rbac_tiers | selectattr('tier', 'equalto', op.tier | int) | first).groups | last]}}) -%}
 {{ {'logins': nos_identity_map or ns.logins} | to_nice_json }}

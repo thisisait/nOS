@@ -1,0 +1,119 @@
+---
+# ==============================================================================
+# THALAMUS ON LINUX — one daemon, every login's Iris. The operator's systemd
+# --user unit (the Linux organ pattern: bone, pulse, wing); the shell is the
+# same binary in /usr/local/bin as `thalamus` and `iris`.
+# ==============================================================================
+
+- name: "[pazny.thalamus] Runtime directories"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: "{{ thalamus_home }}", mode: '0755' }
+    - { path: "{{ thalamus_home }}/bin", mode: '0755' }
+    - { path: "{{ thalamus_log_dir }}", mode: '0700' }
+    - { path: "{{ thalamus_data_dir }}", mode: '0700' }
+    - { path: "{{ thalamus_build_cache }}/target", mode: '0755' }
+    - { path: "{{ thalamus_build_cache }}/registry", mode: '0755' }
+
+# /run is a tmpfs: tmpfiles.d recreates the socket dir on every boot, owned by the
+# daemon's user, before its unit starts.
+- name: "[pazny.thalamus] The shared socket directory survives a reboot"
+  ansible.builtin.copy:
+    content: "d {{ thalamus_shared_socket_dir }} 0755 {{ ansible_facts['user_id'] }} {{ ansible_facts['user_id'] }} -\n"
+    dest: /etc/tmpfiles.d/nos-thalamus.conf
+    mode: '0644'
+  become: true
+  register: _thalamus_tmpfiles
+
+- name: "[pazny.thalamus] Create it now"
+  ansible.builtin.command: systemd-tmpfiles --create /etc/tmpfiles.d/nos-thalamus.conf
+  become: true
+  when: _thalamus_tmpfiles is changed
+  changed_when: true
+
+- name: "[pazny.thalamus] Build in the pinned Rust container (only when the source moved)"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    C={{ thalamus_build_cache | quote }}
+    {{ nos_docker_bin | default('docker') }} run --rm -u "$(id -u):$(id -g)" \
+      -e CARGO_HOME=/cargo -e CARGO_TARGET_DIR=/target \
+      -v "$C/registry:/cargo" -v "$C/target:/target" \
+      -v {{ (playbook_dir ~ '/files/anatomy/thalamus') | quote }}:/src:ro -w /src/thalamus \
+      {{ thalamus_rust_image | quote }} cargo build --release --locked
+    install -m 0755 "$C/target/release/thalamus" {{ thalamus_bin | quote }}
+  args:
+    executable: /bin/bash
+  register: _thalamus_build
+  when: _thalamus_src_sha.stdout != (_thalamus_built_sha.stdout | default(''))
+  changed_when: true
+
+- name: "[pazny.thalamus] Record the hash the binary was built from"
+  ansible.builtin.copy:
+    content: "{{ _thalamus_src_sha.stdout }}"
+    dest: "{{ thalamus_bin }}.source-sha256"
+    mode: '0644'
+  when: _thalamus_build is not skipped
+
+# The operator's home is 0700 under the unix realm: other logins exec this copy.
+- name: "[pazny.thalamus] The shell for every login: thalamus and iris"
+  ansible.builtin.copy:
+    src: "{{ thalamus_bin }}"
+    dest: /usr/local/bin/thalamus
+    remote_src: true
+    mode: '0755'
+  become: true
+
+- name: "[pazny.thalamus] iris is the same shell"
+  ansible.builtin.file:
+    src: /usr/local/bin/thalamus
+    dest: /usr/local/bin/iris
+    state: link
+  become: true
+
+- name: "[pazny.thalamus] Every login's shell finds the one daemon"
+  ansible.builtin.copy:
+    content: |
+      # {{ ansible_managed }} — roles/pazny.thalamus (Linux)
+      export THALAMUS_SOCKET={{ thalamus_shared_socket }}
+    dest: /etc/profile.d/nos-thalamus.sh
+    mode: '0644'
+  become: true
+
+- name: "[pazny.thalamus] The daemon's environment (0600: the KEAP proxy secret and model keys)"
+  ansible.builtin.template:
+    src: thalamus.env.j2
+    dest: "{{ thalamus_home }}/thalamus.env"
+    mode: '0600'
+  no_log: true
+  register: _thalamus_env
+
+- name: "[pazny.thalamus] systemd --user unit"
+  ansible.builtin.include_role:
+    name: pazny.linux.systemd_user
+    tasks_from: ensure_unit
+  vars:
+    su_name: "{{ thalamus_unit_name }}"
+    su_description: "nOS thalamus — Iris for every login (shared socket, peer-named)"
+    su_exec_start: "{{ thalamus_bin }} serve --data-dir {{ thalamus_data_dir }}"
+    su_working_dir: "{{ thalamus_home }}"
+    su_environment_file: "{{ thalamus_home }}/thalamus.env"
+    su_restart_sec: 30
+
+# The unit file did not change when only the binary or the env did.
+- name: "[pazny.thalamus] Restart on a new binary or environment"
+  ansible.builtin.systemd_service:
+    name: "{{ thalamus_unit_name }}"
+    scope: user
+    state: restarted
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
+  when: (_thalamus_build is changed) or (_thalamus_env is changed)
+
+- name: "[pazny.thalamus] Verify — the shared socket accepts"
+  ansible.builtin.wait_for:
+    path: "{{ thalamus_shared_socket }}"
+    timeout: 30
+  tags: ['verify']

@@ -8,6 +8,15 @@ use thalamus::binding::{self, Decision};
 use thalamus::ledger::Ledger;
 use thalamus::serve::{self, Server, IDENTITY_MAP};
 
+/// THALAMUS_SOCKET names the socket for both modes; unset keeps ~/.nos/thalamus.sock. A
+/// shared Linux host sets it outside every (0700) home so each login's shell finds the one
+/// daemon; THALAMUS_SOCKET_SHARED=1 then opens it 0666 — the peer's uid still has to be in
+/// the identity map, so a wider mode admits no one the map does not name.
+fn socket_path(home: &std::path::Path) -> PathBuf {
+    std::env::var("THALAMUS_SOCKET").ok().filter(|s| !s.is_empty()).map(PathBuf::from)
+        .unwrap_or_else(|| home.join(".nos/thalamus.sock"))
+}
+
 fn serve_main(args: &[String]) -> Result<(), String> {
     let home = PathBuf::from(std::env::var("HOME").map_err(|_| "HOME is not set")?);
     let repo = PathBuf::from(std::env::var("NOS_REPO_ROOT").map_err(|_| "NOS_REPO_ROOT is not set")?);
@@ -55,8 +64,9 @@ fn serve_main(args: &[String]) -> Result<(), String> {
         Ok(other) => Err(format!("iris has no model: {other:?}")),
         Err(why) => Err(why),
     };
-    let sock = home.join(".nos/thalamus.sock");
-    let listener = serve::bind(&sock).map_err(|e| format!("{}: {e}", sock.display()))?;
+    let sock = socket_path(&home);
+    let shared = std::env::var("THALAMUS_SOCKET_SHARED").is_ok_and(|v| v == "1");
+    let listener = serve::bind(&sock, if shared { 0o666 } else { 0o600 }).map_err(|e| format!("{}: {e}", sock.display()))?;
     let keap_url = std::env::var("KEAP_URL").unwrap_or_else(|_| "http://127.0.0.1:8091".into());
     eprintln!("thalamus: {} -> {keap_url} (map ~/{IDENTITY_MAP})", sock.display());
     // One line tools/thalamus-status.py reads from launchd's stderr log; the why stays on it.
@@ -134,7 +144,7 @@ fn main() -> ExitCode {
             Err(why) => eprintln!("thalamus serve: {why}"),
         },
         None => match std::env::var("HOME") {
-            Ok(home) => match thalamus::shell::run(&PathBuf::from(home).join(".nos/thalamus.sock")) {
+            Ok(home) => match thalamus::shell::run(&socket_path(&PathBuf::from(home))) {
                 Ok(()) => return ExitCode::SUCCESS,
                 Err(why) => eprintln!("thalamus: {why}"),
             },

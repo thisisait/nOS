@@ -195,7 +195,7 @@ fn rig_deciders(name: &str, map: serde_json::Value, (keap_url, keap): (String, S
         data: d.clone(),
     };
     let sock = d.join("t.sock");
-    let listener = serve::bind(&sock).unwrap();
+    let listener = serve::bind(&sock, 0o600).unwrap();
     let srv = Arc::new(srv);
     let run = srv.clone();
     std::thread::spawn(move || serve::run(listener, run));

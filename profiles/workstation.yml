@@ -20,8 +20,11 @@ install_openwebui: true         # chat, native OIDC
 install_n8n: true               # automation; CE has no OIDC, so the edge gates it
 install_jupyterhub: true        # notebooks as the person's own login (SystemdSpawner)
 
-# Thalamus (Iris at the terminal) has no systemd unit yet; core.yml turns it on.
-install_thalamus: false
+# Iris for every login: one thalamus daemon, a socket every ssh session shares
+# (roles/pazny.thalamus tasks/linux.yml); `iris` in any shell. The receptor
+# renders the identity map that names each login's person.
+install_thalamus: true
+install_receptor: true
 
 # ── People reach the box by ssh ──────────────────────────────────────────────
 # pazny.linux.hardening's server default is keys only and no forwarding. On a
