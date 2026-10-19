@@ -31,6 +31,7 @@ c.GenericOAuthenticator.scope = ["openid", "profile", "email"]
 c.GenericOAuthenticator.username_claim = "preferred_username"
 c.GenericOAuthenticator.login_service = "Authentik"
 c.GenericOAuthenticator.claim_groups_key = "groups"
+c.GenericOAuthenticator.manage_groups = True   # claim_groups_key requires it (oauthenticator 17)
 # RBAC tier 3 and above may use notebooks; tier 1 administers the Hub.
 c.GenericOAuthenticator.allowed_groups = {{ (authentik_rbac_tiers | selectattr('tier', 'equalto', 3) | first).groups | list | to_json }}
 c.GenericOAuthenticator.admin_groups = {{ (authentik_rbac_tiers | selectattr('tier', 'equalto', 1) | first).groups | list | to_json }}
