@@ -1136,7 +1136,7 @@ def test_the_ratchets_match_measured_reality():
     )
 
 
-def test_the_pytest_ratchet_is_remeasured_against_collection():
+def test_the_pytest_ratchet_is_remeasured_against_collection(pytestconfig):
     """A ratchet that only compares committed numbers decays as the suite grows.
 
     The gate above pins `min_work` to `MEASURED_WORK`, and both live in this
@@ -1157,16 +1157,21 @@ def test_the_pytest_ratchet_is_remeasured_against_collection():
     pytest cannot have it directly — collection is not a committed artifact —
     but it can be forced to re-derive.
     """
-    proc = subprocess.run(
-        [sys.executable, "-m", "pytest", "tests/anatomy", "--collect-only", "-q"],
-        cwd=REPO, capture_output=True, text=True, timeout=600,
-    )
-    match = re.search(r"(\d+)\s+tests? collected", proc.stdout)
-    assert match, (
-        "could not read a collection count from pytest; this gate has gone "
-        f"blind rather than green.\nstdout tail: {proc.stdout[-500:]}"
-    )
-    collected = int(match.group(1))
+    import _shard
+    session = _shard.collected_under(pytestconfig, "tests/anatomy")  # this run's own collection
+    if session is not None:
+        collected = len(session)
+    else:
+        proc = subprocess.run(
+            [sys.executable, "-m", "pytest", "tests/anatomy", "--collect-only", "-q"],
+            cwd=REPO, capture_output=True, text=True, timeout=600,
+        )
+        match = re.search(r"(\d+)\s+tests? collected", proc.stdout)
+        assert match, (
+            "could not read a collection count from pytest; this gate has gone "
+            f"blind rather than green.\nstdout tail: {proc.stdout[-500:]}"
+        )
+        collected = int(match.group(1))
     assert collected > 1000, f"collection returned {collected} — the run is broken, not the ratchet"
 
     recorded = MEASURED_WORK["pytest-anatomy"]

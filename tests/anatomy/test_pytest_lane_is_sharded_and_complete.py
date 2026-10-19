@@ -2,9 +2,10 @@
 
 One serial pytest job set the whole CI wall-clock (17-25 min, 2026-10-15). It is
 split across a matrix of runners by `tests/_shard.py` (NOS_PYTEST_SHARD=k/N,
-whole files, balanced by test count). A split that loses a file is a quiet green,
-so this gate partitions the real anatomy collection with the CI's own N, and
-drives the real conftest hook per shard. The required check keeps its name on
+whole files, balanced by tests/_weights.json). A split that loses a file is a quiet
+green, so this gate partitions the real anatomy collection with the CI's own N, and
+drives the real conftest hook per shard. The anatomy collection is read from this
+session when it collected all of tests/anatomy, else from a --collect-only subprocess. The required check keeps its name on
 an aggregate job that is red unless every shard was green.
 """
 from __future__ import annotations
@@ -78,13 +79,14 @@ def test_the_required_check_is_an_aggregate_of_every_shard():
     assert re.search(r"needs\.pytest\.result\s*\}\}\"?\s*=\s*\"?success", runs), "the aggregate must fail unless needs.pytest.result is success"
 
 
-def test_the_shards_collect_every_anatomy_test_exactly_once():
+def test_the_shards_collect_every_anatomy_test_exactly_once(pytestconfig):
     n = _shard_count()
     assert SHARD_MODULE.is_file(), "tests/_shard.py (the split) does not exist"
     spec = importlib.util.spec_from_file_location("_nos_shard", SHARD_MODULE)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-    full = _collect("tests/anatomy", None)
+    import _shard
+    full = _shard.collected_under(pytestconfig, "tests/anatomy") or _collect("tests/anatomy", None)
     assert len(full) > 1000, f"anatomy collected only {len(full)} tests"
     plan = mod.assign(full, n)
     _exactly_once(full, [[x for x in full if plan[x.split("::")[0]] == k] for k in range(1, n + 1)])

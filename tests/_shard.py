@@ -46,8 +46,27 @@ def assign(nodeids, n: int, weights: dict | None = None) -> dict[str, int]:
     return plan
 
 
+COLLECTED: list[str] | None = None  # this session's whole collection, before the shard cut
+
+
+def collected_under(config, rel: str) -> list[str] | None:
+    """Nodeids this session collected under `rel`, or None when it did not collect all of it
+    (a narrower path, -k/-m/--deselect/--lf/--ignore): the caller then collects in a subprocess."""
+    o = config.option
+    if COLLECTED is None or any(getattr(o, a, None) for a in ("keyword", "markexpr", "deselect", "lf", "ignore", "ignore_glob")):
+        return None
+    target = (config.rootpath / rel).resolve()
+    here = config.invocation_params.dir
+    if not any("::" not in a and (target == (here / a).resolve() or (here / a).resolve() in target.parents)
+               for a in config.args):
+        return None
+    return [n for n in COLLECTED if n.startswith(rel.rstrip("/") + "/")]
+
+
 @pytest.hookimpl(trylast=True)
 def pytest_collection_modifyitems(config, items):
+    global COLLECTED
+    COLLECTED = [i.nodeid for i in items]
     spec = os.environ.pop(ENV, "").strip()  # read once: a pytest a test spawns must not inherit it
     if not spec:
         return
