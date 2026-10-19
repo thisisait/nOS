@@ -69,6 +69,82 @@
   changed_when: _n8n_setup.status | default(0) == 200
   no_log: true
 
+# ── The owner's email moved with tenant_domain (spark1, 2026-10-19) ─────────
+# n8n_admin_email derives from default_admin_email → tenant_domain, so a domain
+# change left an owner the current login cannot name and /rest/owner/setup
+# refuses (400, owner exists). Read the owner's email from n8n's own database
+# (read-only), log in as that email with the declared password, and move the
+# email through n8n's API — no direct write to its database.
+- name: "[pazny.n8n Post] Read the owner's email n8n holds (read-only)"
+  ansible.builtin.command:
+    argv:
+      - python3
+      - -c
+      - |
+        import sqlite3, sys
+        db = sqlite3.connect("file:" + sys.argv[1] + "?mode=ro", uri=True)
+        row = db.execute("SELECT email FROM user WHERE roleSlug = 'global:owner' AND email IS NOT NULL").fetchone()
+        print(row[0] if row else "")
+      - "{{ n8n_data_dir }}/database.sqlite"
+  register: _n8n_owner_email
+  changed_when: false
+  failed_when: false
+  when:
+    - _n8n_ready.status | default(0) == 200
+    - _n8n_login_new.status | default(0) == 401
+    - _n8n_setup.status | default(0) == 400
+
+- name: "[pazny.n8n Post] Log in under the owner's previous email"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ n8n_port | default(5678) }}/rest/login"
+    method: POST
+    body_format: json
+    body:
+      emailOrLdapLoginId: "{{ _n8n_owner_email.stdout | trim }}"
+      password: "{{ n8n_admin_password | default(nos_derived_secrets.n8n) }}"
+    status_code: [200, 401]
+    timeout: 10
+  register: _n8n_login_moved
+  when:
+    - (_n8n_owner_email.stdout | default('') | trim) not in ['', (n8n_admin_email | default(default_admin_email))]
+  changed_when: false
+  no_log: true
+
+- name: "[pazny.n8n Post] Move the owner to the declared email (n8n API)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ n8n_port | default(5678) }}/rest/me"
+    method: PATCH
+    body_format: json
+    headers:
+      Cookie: "{{ _n8n_login_moved.cookies_string | default('') }}"
+    body:
+      email: "{{ n8n_admin_email | default(default_admin_email) }}"
+      firstName: "{{ n8n_admin_firstname | default('Admin') }}"
+      lastName: "{{ n8n_admin_lastname | default('nOS') }}"
+      currentPassword: "{{ n8n_admin_password | default(nos_derived_secrets.n8n) }}"
+    status_code: [200]
+    timeout: 10
+  register: _n8n_email_moved
+  when: _n8n_login_moved.status | default(0) == 200
+  changed_when: true
+  no_log: true
+
+# The move is proven by the login a reader makes AFTER it, not by the PATCH's 200.
+- name: "[pazny.n8n Post] Login under the declared email after the move"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ n8n_port | default(5678) }}/rest/login"
+    method: POST
+    body_format: json
+    body:
+      emailOrLdapLoginId: "{{ n8n_admin_email | default(default_admin_email) }}"
+      password: "{{ n8n_admin_password | default(nos_derived_secrets.n8n) }}"
+    status_code: [200, 401]
+    timeout: 10
+  register: _n8n_login_after_move
+  when: _n8n_email_moved.status | default(0) == 200
+  changed_when: false
+  no_log: true
+
 - name: "[pazny.n8n Post] Login with previous password (for reconverge)"
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ n8n_port | default(5678) }}/rest/login"
@@ -84,6 +160,7 @@
     - _n8n_ready.status | default(0) == 200
     - _n8n_login_new.status | default(0) != 200
     - _n8n_setup.status | default(0) != 200
+    - _n8n_login_after_move.status | default(0) != 200
   changed_when: false
   failed_when: false
   no_log: true
@@ -116,6 +193,7 @@
       - >-
         _n8n_login_new.status | default(0) == 200
         or _n8n_setup.status | default(0) == 200
+        or _n8n_login_after_move.status | default(0) == 200
         or _n8n_pw_reset.status | default(0) in [200, 204]
     fail_msg: >-
       n8n owner is unreachable by every leg: current-password login,
