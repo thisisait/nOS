@@ -63,3 +63,24 @@ def test_the_loopback_door_is_loopback_only_and_forwards_to_the_server():
     svc = (ROLE / "templates" / "nos-ollama-loopback.service.j2").read_text()
     assert "ListenStream=127.0.0.1:11434" in sock
     assert "systemd-socket-proxyd {{ ollama_bind_host }}:11434" in svc
+
+
+def test_a_foreign_install_is_not_taken_over_by_default():
+    """A shared host may run an ollama nOS did not install (install.sh, another
+    team). linux.yml replaces /usr/local/lib/ollama, rewrites the unit, restarts
+    and moves the bind — so it must refuse first unless ollama_linux_take_over."""
+    tasks = _tasks()
+    defaults = yaml.safe_load((ROLE / "defaults" / "main.yml").read_text())
+    assert defaults.get("ollama_linux_take_over") is False
+    guard = next((i for i, t in enumerate(tasks) if "ansible.builtin.fail" in t
+                  and "ollama_linux_take_over" in str(t.get("when", ""))), None)
+    assert guard is not None, "nothing refuses a foreign ollama install"
+    msg = str(tasks[guard]["ansible.builtin.fail"])
+    for what in ("/usr/local/lib/ollama", "ollama.service", "ollama_bind_host"):
+        assert what in msg, f"the refusal must say what would be replaced: {what}"
+    first_write = next(i for i, t in enumerate(tasks)
+                       if "rm -rf" in str(t.get("ansible.builtin.shell", ""))
+                       or "ansible.builtin.template" in t or "ansible.builtin.get_url" in t)
+    assert guard < first_write, "the refusal comes after the takeover began"
+    unit = (ROLE / "templates" / "ollama.service.j2").read_text()
+    assert "roles/pazny.ollama" in unit.splitlines()[0], "the marker an own install is known by"
