@@ -29,7 +29,8 @@ def _git(*args, cwd=REPO) -> str:
 def checkout(tmp_path):
     wt = tmp_path / "wt"
     _git("worktree", "add", "-q", "--detach", str(wt), "HEAD")
-    shutil.copy2(REPO / LOOP_REL, wt / LOOP_REL)  # the code under test, not HEAD's
+    for rel in (LOOP_REL, "tools/loops/vision-bench.py"):  # the code under test, not HEAD's
+        shutil.copy2(REPO / rel, wt / rel)
     try:
         yield wt
     finally:
