@@ -170,6 +170,16 @@ tofu_authentik_services:
   client_secret: '{{ nos_derived_secrets.oidc_jellyfin }}'
   redirect_uris:
   - https://{{ jellyfin_domain | default('media' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/sso/OID/redirect/Authentik
+- slug: jupyterhub
+  name: JupyterHub
+  mode: native_oidc
+  tier: 3
+  enabled: '{{ install_jupyterhub | default(false) }}'
+  external_host: https://{{ jupyterhub_domain }}/hub/oauth_login
+  client_id: nos-jupyterhub
+  client_secret: '{{ nos_derived_secrets.oidc_jupyterhub }}'
+  redirect_uris:
+  - https://{{ jupyterhub_domain }}/hub/oauth_callback
 - slug: keap
   name: "KEAP \u2014 Knowledge Explorer"
   mode: header_oidc

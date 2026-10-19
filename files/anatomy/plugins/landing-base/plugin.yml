@@ -46,6 +46,7 @@ notification:
   on_info:     []
 
 e2e:
+  enabled: "{{ install_landing | default(false) }}"
   probes:
     - name: root-domain-answers-unauthenticated
       url: https://{{ landing_domain }}/
