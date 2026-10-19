@@ -1,27 +1,48 @@
 """NOS_PYTEST_SHARD=k/N keeps only shard k of N, split by whole test file.
 
-Files go greedily (most tests first, ties by path) to the lightest shard, so
-every runner computes the same plan from the same checkout. Pinned by
+Files go greedily (heaviest first, ties by path) to the lightest shard, so
+every runner computes the same plan from the same checkout. A file weighs its
+measured seconds from tests/_weights.json; a file with no record weighs
+`per_test_default` seconds per test. Pinned by
 tests/anatomy/test_pytest_lane_is_sharded_and_complete.py.
+
+Refresh the weights from one or more `pytest --durations=0` logs:
+    python3 -m pytest tests -q -p no:cacheprovider --durations=0 > /tmp/d.log
+    python3 tests/_shard.py /tmp/d.log
 """
 from __future__ import annotations
 
+import json
 import os
+import pathlib
 import re
-from collections import Counter
+import sys
+from collections import Counter, defaultdict
 
 import pytest
 
 ENV = "NOS_PYTEST_SHARD"
+WEIGHTS = pathlib.Path(__file__).with_name("_weights.json")
+# ponytail: weights measured on the dev host; refresh from CI shard logs when the shard walls drift apart.
+FLOOR_S = 0.5  # files cheaper than this are not recorded; they weigh per_test_default per test
 
 
-def assign(nodeids, n: int) -> dict[str, int]:
-    # ponytail: balanced by test COUNT; weigh by recorded durations once CI keeps a junit artifact.
+def _weights() -> dict:
+    try:
+        return json.loads(WEIGHTS.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}  # no weights = balanced by count (per_test_default 1)
+
+
+def assign(nodeids, n: int, weights: dict | None = None) -> dict[str, int]:
+    w = _weights() if weights is None else weights
+    files, per_test = w.get("files", {}), w.get("per_test_default", 1.0)
     counts = Counter(nid.split("::")[0] for nid in nodeids)
-    load, plan = [0] * n, {}
-    for path, c in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])):
+    cost = {p: files.get(p, c * per_test) for p, c in counts.items()}
+    load, plan = [0.0] * n, {}
+    for path in sorted(cost, key=lambda p: (-cost[p], p)):
         k = load.index(min(load))
-        plan[path], load[k] = k + 1, load[k] + c
+        plan[path], load[k] = k + 1, load[k] + cost[path]
     return plan
 
 
@@ -40,3 +61,26 @@ def pytest_collection_modifyitems(config, items):
         (keep if plan[i.nodeid.split("::")[0]] == k else drop).append(i)
     config.hook.pytest_deselected(items=drop)
     items[:] = keep
+
+
+DURATION = re.compile(r"^\s*([\d.]+)s (?:setup|call|teardown)\s+(\S+?\.py)::")
+
+
+def refresh(logs: list[str]) -> dict:
+    """Sum every setup/call/teardown line per file; record files >= FLOOR_S."""
+    per_file = defaultdict(float)
+    for log in logs:
+        for line in pathlib.Path(log).read_text(encoding="utf-8", errors="replace").splitlines():
+            if m := DURATION.match(line):
+                per_file[m[2]] += float(m[1])
+    assert per_file, f"no --durations lines in {logs}: run pytest with --durations=0"
+    return {
+        "_doc": "per-file seconds for tests/_shard.py; refresh: python3 tests/_shard.py <durations.log>...",
+        "per_test_default": 0.01,  # 2026-10-19: 5869 tests in unrecorded files ran 57 s
+        "files": {p: round(s, 1) for p, s in sorted(per_file.items()) if s >= FLOOR_S},
+    }
+
+
+if __name__ == "__main__":
+    WEIGHTS.write_text(json.dumps(refresh(sys.argv[1:]), indent=1, sort_keys=True) + "\n", encoding="utf-8")
+    print(f"wrote {WEIGHTS}")
