@@ -170,7 +170,7 @@ fn binding(name: &str, local: bool) -> Binding {
 }
 
 fn rig(name: &str, b: Binding, models: Vec<String>, cortex: Option<String>) -> Rig {
-    rig_cx(name, b, models, cortex.map(|url| Cortex { url, token: "cx-ro-token".into(), rich_catalogue: false }), vec![])
+    rig_cx(name, b, models, cortex.map(|url| Cortex { url, token: "cx-ro-token".into(), rich_catalogue: false, intents: None }), vec![])
 }
 
 /// A rig whose KEAP holds `extra` tables after the fixture's three.
@@ -709,7 +709,7 @@ fn a_plan_row_names_the_table_it_resolved() {
     assert_eq!(used(&rig, &session), "lean");
     let (organ_url, _) = organ(known(&all));
     let rich = rig_cx("tablerich", binding("ollama", true), vec![say(&json!({"stages": c["stages"]}).to_string()), say("done")],
-                      Some(Cortex { url: organ_url, token: "cx-ro-token".into(), rich_catalogue: true }), vec![]);
+                      Some(Cortex { url: organ_url, token: "cx-ro-token".into(), rich_catalogue: true, intents: None }), vec![]);
     let (s2, _) = turn(&rich, None, "todos by amount");
     assert!(prompt(&rich).contains("status:select \"Status\" (open|done)"), "{}", prompt(&rich));
     assert_eq!(used(&rich, &s2), "rich");
@@ -743,7 +743,7 @@ fn a_table_the_turn_names_is_in_the_plan_catalogue_even_when_13th() {
     extra.push((table("whs-stock", "Skladové zásoby", json!([{"key": "bin", "label": "Regál", "kind": "text"},
         {"key": "qty", "label": "Qty", "kind": "number"}])), json!([])));
     let plan = say(&json!({"stages": c["stages"]}).to_string());
-    let cx = || Some(Cortex { url: organ_url.clone(), token: "cx-ro-token".into(), rich_catalogue: false });
+    let cx = || Some(Cortex { url: organ_url.clone(), token: "cx-ro-token".into(), rich_catalogue: false, intents: None });
     let catalogue = |r: &Rig| models_said(r)[0]["messages"][0]["content"].as_str().unwrap().split_once("Tables:\n").unwrap().1.to_string();
     let row = |r: &Rig, s: &str| tools(r, s).into_iter().find(|(t, _)| t.ends_with("tool_use:cortex_plan")).unwrap().1;
     // by its title (diacritics folded), by a column label, by its id
@@ -765,4 +765,77 @@ fn a_table_the_turn_names_is_in_the_plan_catalogue_even_when_13th() {
     let r = row(&rig, &session);
     let ids: Vec<&str> = r["catalogue_tables"].as_array().unwrap().iter().filter_map(Value::as_str).collect();
     assert_eq!((ids.len(), ids[0], ids[11]), (12, "todos", "filler-09"), "{ids:?}");
+}
+
+const INTENTS: [&str; 4] = ["chart", "kpi", "top-n", "insert-row"];
+/// Kinds where cortex lost to tools (nos-assay 2026-10-18/19): never planned, whatever the words.
+const NEVER_CORTEX: [&str; 3] = ["injection", "cannot-see", "edit-row"];
+
+/// iris_plan: hybrid routes a turn by its own words before any model call. The 284 standard-tier
+/// prompts of nos-assay (frozen in state/fixtures/iris-route/prompts.yml) against their kinds: each
+/// cortex intent is recalled at 0.9 or more, and no injection, cannot-see or edit-row turn plans.
+#[test]
+fn the_route_recalls_the_cortex_intents_and_never_plans_the_losing_kinds() {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../state/fixtures/iris-route/prompts.yml");
+    let doc: Value = serde_yaml_ng::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
+    let intents: Vec<String> = INTENTS.iter().map(|s| s.to_string()).collect();
+    // kind -> (routed intent or "tools" -> n)
+    let mut m: std::collections::BTreeMap<String, std::collections::BTreeMap<String, usize>> = Default::default();
+    let mut wrong = vec![];
+    for c in doc["cases"].as_array().unwrap() {
+        let kind = c["kind"].as_str().unwrap();
+        let routes: Vec<_> = c["turns"].as_array().unwrap().iter().map(|t| cortex_plan::route(t.as_str().unwrap(), &intents)).collect();
+        let got = routes.iter().find_map(|(r, i, _)| (*r == "cortex").then(|| i.unwrap())).unwrap_or("tools");
+        *m.entry(kind.into()).or_default().entry(got.into()).or_default() += 1;
+        if (INTENTS.contains(&kind) || NEVER_CORTEX.contains(&kind) || got != "tools") && got != kind {
+            wrong.push(format!("{kind} -> {got}: {} {:?}", c["turns"], routes.iter().map(|r| &r.2).collect::<Vec<_>>()));
+        }
+    }
+    eprintln!("route confusion (kind: routed -> n):");
+    m.iter().for_each(|(k, v)| eprintln!("  {k:<14} {v:?}"));
+    wrong.iter().for_each(|w| eprintln!("  miss {w}"));
+    for k in INTENTS {
+        let row = &m[k];
+        let recall = row.get(k).copied().unwrap_or(0) as f64 / row.values().sum::<usize>() as f64;
+        assert!(recall >= 0.9, "{k}: recall {recall:.2} < 0.9: {row:?}");
+    }
+    for k in NEVER_CORTEX {
+        assert_eq!(m[k].keys().collect::<Vec<_>>(), vec!["tools"], "{k} is never planned: {:?}", m[k]);
+    }
+}
+
+fn hybrid_rig(name: &str, models: Vec<String>) -> Rig {
+    let (organ_url, _) = organ(known(&cases()));
+    rig_cx(name, binding("ollama", true), models, Some(Cortex { url: organ_url, token: "cx-ro-token".into(), rich_catalogue: false,
+        intents: Some(INTENTS.iter().map(|s| s.to_string()).collect()) }), vec![])
+}
+
+#[test]
+fn hybrid_a_chart_turn_plans_and_the_ledger_says_cortex() {
+    let all = cases();
+    let c = all.iter().find(|c| c["name"] == "a title and labels resolve, rank orders and cuts").unwrap();
+    let rig = hybrid_rig("hy-chart", vec![say(&json!({"stages": c["stages"]}).to_string()), say("done")]);
+    let (session, got) = turn(&rig, None, "Nakresli sloupcový graf todos podle status");
+    assert!(matches!(got.last(), Some(ToShell::Text { text, .. }) if text == "done"), "{got:?}");
+    let said = models_said(&rig);
+    assert!(said[0].get("tools").is_none() && said.len() == 2, "one plan call, then the answer: {said:?}");
+    let ev = tools(&rig, &session);
+    let route: Vec<&Value> = ev.iter().filter(|(t, _)| t == "agent_tool_result:route").map(|e| &e.1).collect();
+    assert_eq!(route.len(), 1, "one route row per turn: {ev:?}");
+    assert_eq!((&route[0]["route"], &route[0]["intent"]), (&json!("cortex"), &json!("chart")), "{}", route[0]);
+    assert!(route[0]["matched"].as_array().is_some_and(|m| !m.is_empty()), "the words it matched: {}", route[0]);
+    assert!(ev.iter().any(|(t, v)| t == "agent_tool_result:cortex_plan" && v["valid"] == true), "the plan ran: {ev:?}");
+}
+
+#[test]
+fn hybrid_an_edit_turn_makes_no_plan_call_and_the_ledger_says_tools() {
+    let rig = hybrid_rig("hy-edit", vec![say("done")]);
+    let (session, _) = turn(&rig, None, "Nastav řádku Review status na done.");
+    let said = models_said(&rig);
+    assert!(said.len() == 1 && said[0].get("tools").is_some(), "no plan call: the turn is plain tool calling: {said:?}");
+    let ev = tools(&rig, &session);
+    assert!(ev.iter().all(|(t, _)| !t.ends_with(":cortex_plan")), "{ev:?}");
+    let route: Vec<&Value> = ev.iter().filter(|(t, _)| t == "agent_tool_result:route").map(|e| &e.1).collect();
+    assert_eq!(route.len(), 1, "{ev:?}");
+    assert_eq!((&route[0]["route"], &route[0]["intent"]), (&json!("tools"), &Value::Null), "{}", route[0]);
 }
