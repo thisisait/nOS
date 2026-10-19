@@ -22,7 +22,8 @@
 # daemon's user, before its unit starts.
 - name: "[pazny.thalamus] The shared socket directory survives a reboot"
   ansible.builtin.copy:
-    content: "d {{ thalamus_shared_socket_dir }} 0755 {{ ansible_facts['user_id'] }} {{ ansible_facts['user_id'] }} -\n"
+    # Numeric ids: a login's primary group need not share its name (LDAP/SSSD, `users`).
+    content: "d {{ thalamus_shared_socket_dir }} 0755 {{ ansible_facts['user_uid'] }} {{ ansible_facts['user_gid'] }} -\n"
     dest: /etc/tmpfiles.d/nos-thalamus.conf
     mode: '0644'
   become: true
@@ -112,8 +113,17 @@
     XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
   when: (_thalamus_build is changed) or (_thalamus_env is changed)
 
+# A connect, not a file test: a crashed daemon leaves its socket file behind.
 - name: "[pazny.thalamus] Verify — the shared socket accepts"
-  ansible.builtin.wait_for:
-    path: "{{ thalamus_shared_socket }}"
-    timeout: 30
+  ansible.builtin.command:
+    argv:
+      - python3
+      - -c
+      - "import socket,sys; s=socket.socket(socket.AF_UNIX); s.settimeout(3); s.connect(sys.argv[1])"
+      - "{{ thalamus_shared_socket }}"
+  register: _thalamus_accepts
+  retries: 15
+  delay: 2
+  until: _thalamus_accepts.rc == 0
+  changed_when: false
   tags: ['verify']

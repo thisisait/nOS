@@ -26,12 +26,15 @@ def _tasks() -> list[dict]:
 
 
 def test_people_come_from_the_roster_only():
-    src = (ROLE / "tasks" / "main.yml").read_text()
+    who = next(t for t in _tasks() if "_unix_people" in (t.get("ansible.builtin.set_fact") or {}))
+    expr = who["ansible.builtin.set_fact"]["_unix_people"]
     for roster in ("nos_identities", "nos_synthetic_identities", "nos_extra_identities"):
-        assert roster in src, f"{roster} is not read — its unix-realm people get no login"
-    assert "'unix' in" in src
-    for inherited in ("ansible_user_id", "ansible_facts['user_id']", "ansible_env.USER"):
-        assert inherited not in src, f"{inherited}: a login derived from who runs the converge"
+        assert roster in expr, f"{roster} is not read — its unix-realm people get no login"
+    assert expr.count("'unix' in") == 3, "every roster is filtered by the unix realm"
+    for t in _tasks():                       # task bodies, not comments
+        body = yaml.safe_dump(t)
+        for inherited in ("ansible_user_id", "ansible_facts['user_id']", "ansible_env.USER"):
+            assert inherited not in body, f"{t.get('name')}: a login derived from who runs the converge"
 
 
 def test_no_login_is_ever_removed():
@@ -50,9 +53,22 @@ def test_homes_are_private_and_hashes_stable():
     assert "password_hash('sha512', (item.name | hash('sha256'))" in users[0]["password"]
 
 
+def _walk(node):
+    if isinstance(node, dict):
+        yield node
+        for v in node.values():
+            yield from _walk(v)
+    elif isinstance(node, list):
+        for v in node:
+            yield from _walk(v)
+
+
 def test_the_role_runs_on_linux_after_the_passwords():
-    main = (REPO / "main.yml").read_text()
-    at = main.index("name: pazny.linux.users")
-    assert main.index("nos_extra_identity_passwords:") < at, "role runs before the passwords exist"
-    block = main[at:at + 400]
-    assert "ansible_os_family in ['Debian']" in block
+    play = yaml.safe_load((REPO / "main.yml").read_text())
+    tasks = [n for n in _walk(play) if "name" in n]
+    names = [n["name"] for n in tasks]
+    at = next(i for i, n in enumerate(tasks)
+              if (n.get("ansible.builtin.include_role") or {}).get("name") == "pazny.linux.users")
+    exposed = names.index("[Identities] Expose the extra people's passwords")
+    assert exposed < at, "the role runs before the passwords exist"
+    assert "ansible_os_family in ['Debian']" in tasks[at]["when"]

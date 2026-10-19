@@ -28,7 +28,7 @@ the agent's or anyone's — is caught before it costs anything. Both are the poi
 
 - nOS is an Ansible playbook that turns one Mac (Apple Silicon) or Ubuntu 24.04 host into a self-hosted Agentic Home Lab.
 - This repo is the SOURCE. The running estate lives elsewhere on the host and changes only when the operator runs a converge.
-- Each service is an organ: one role, one compose override, one row in state/manifest.yml (77 rows).
+- Each service is an organ: one role and one row in state/manifest.yml (77 rows); a container service also renders one compose override, a host-native one a launchd or systemd unit.
 - All data stays on the machine. Sign-in goes through Authentik; work is tracked in KEAP tables, not in prose files.
 - When this page and a reader disagree, the reader is right. Ask it (section 4).
 

@@ -195,6 +195,23 @@ fn entry(entry: &Value) -> Option<Person> {
 }
 
 /// Binds the socket 0600 from birth: no window where another uid may connect.
+/// The host-wide socket a shared Linux host serves every login on (roles/pazny.thalamus).
+pub const SHARED_SOCKET: &str = "/run/nos/thalamus.sock";
+
+/// Where serve listens and the shell connects. `env` is THALAMUS_SOCKET: set and non-empty,
+/// it wins. Otherwise ~/.nos/thalamus.sock — unless that does not exist and `shared` does:
+/// a shell that is not a login shell (an editor terminal, `bash -c`) never read profile.d.
+pub fn socket_path(env: Option<&str>, home: &Path, shared: &Path) -> PathBuf {
+    if let Some(p) = env.filter(|s| !s.is_empty()) {
+        return PathBuf::from(p);
+    }
+    let own = home.join(".nos/thalamus.sock");
+    if !own.exists() && shared.exists() {
+        return shared.to_path_buf();
+    }
+    own
+}
+
 pub fn bind(path: &Path, mode: u32) -> std::io::Result<UnixListener> {
     // Only a stale socket is removed; any other file at the path is not ours to delete.
     if let Ok(m) = std::fs::symlink_metadata(path) {

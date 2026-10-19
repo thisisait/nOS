@@ -145,6 +145,11 @@ thread_local! {
 }
 
 thread_local! {
+    /// The next rig's socket mode: 0600 as on macOS, 0666 as a shared Linux host serves it.
+    static SOCK_MODE: std::cell::Cell<u32> = const { std::cell::Cell::new(0o600) };
+}
+
+thread_local! {
     /// The next rig's model base_url ends in /v1, as ollama's does, so serve can find its /api/ps.
     static V1: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
@@ -195,7 +200,7 @@ fn rig_deciders(name: &str, map: serde_json::Value, (keap_url, keap): (String, S
         data: d.clone(),
     };
     let sock = d.join("t.sock");
-    let listener = serve::bind(&sock, 0o600).unwrap();
+    let listener = serve::bind(&sock, SOCK_MODE.with(|m| m.get())).unwrap();
     let srv = Arc::new(srv);
     let run = srv.clone();
     std::thread::spawn(move || serve::run(listener, run));
@@ -256,6 +261,41 @@ const SCHEMA: &str = r#"{"success": true, "data": {"id": "todos", "title": "Todo
 /// A query's KEAP answers (schema, then rows), then `rest`.
 fn shown_then(rest: &[&str]) -> Vec<String> {
     [SCHEMA, ROWS].iter().chain(rest).map(|b| b.to_string()).collect()
+}
+
+#[test]
+fn a_shared_0666_socket_still_refuses_a_peer_the_map_does_not_name() {
+    // 0666 is safe only because the map, not the mode, decides (roles/pazny.thalamus linux.yml).
+    SOCK_MODE.with(|m| m.set(0o666));
+    let rig = rig("shared-unmapped", serde_json::json!({"logins": {"someone-else": {"username": "bob", "groups": []}}}), ROWS,
+        vec![answer("never")]);
+    SOCK_MODE.with(|m| m.set(0o600));
+    use std::os::unix::fs::PermissionsExt;
+    let mode = std::fs::metadata(&rig.sock).unwrap().permissions().mode() & 0o777;
+    assert_eq!(mode, 0o666, "the shared socket is world-connectable by design");
+    let mut r = BufReader::new(connect(&rig.sock));
+    match next(&mut r) {
+        Some(ToShell::Refused { reason, .. }) => assert!(reason.contains("identity map"), "{reason}"),
+        other => panic!("an unmapped peer must be refused on a shared socket too, got {other:?}"),
+    }
+    assert!(rig.model.lock().unwrap().is_empty(), "an unmapped peer reached the model");
+}
+
+#[test]
+fn the_socket_path_prefers_env_then_home_then_the_shared_socket() {
+    let d = std::env::temp_dir().join(format!("thal-sockpath-{}", std::process::id()));
+    let home = d.join("home");
+    std::fs::create_dir_all(home.join(".nos")).unwrap();
+    let shared = d.join("shared.sock");
+    let own = home.join(".nos/thalamus.sock");
+    assert_eq!(serve::socket_path(Some("/x/y.sock"), &home, &shared), std::path::PathBuf::from("/x/y.sock"));
+    assert_eq!(serve::socket_path(Some(""), &home, &shared), own, "an empty env is unset");
+    assert_eq!(serve::socket_path(None, &home, &shared), own, "neither exists: the home socket");
+    std::fs::write(&shared, b"").unwrap();
+    assert_eq!(serve::socket_path(None, &home, &shared), shared, "no home socket, a shared one: the shared");
+    std::fs::write(&own, b"").unwrap();
+    assert_eq!(serve::socket_path(None, &home, &shared), own, "the home socket wins when it exists");
+    let _ = std::fs::remove_dir_all(&d);
 }
 
 #[test]
