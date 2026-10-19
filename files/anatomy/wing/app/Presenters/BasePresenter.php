@@ -16,6 +16,30 @@ abstract class BasePresenter extends Presenter
 {
 	protected string $activeTab = 'overview';
 
+	/**
+	 * Templates live in app/Templates/ (capital T). Nette's default lookup is
+	 * app/templates/ — the same directory on a case-insensitive macOS volume,
+	 * a missing one on Linux, where every HTML page then 404'd ("missing
+	 * template") while the JSON API answered (spark1, 2026-10-19).
+	 */
+	public function formatTemplateFiles(): array
+	{
+		[, $presenter] = \Nette\Application\Helpers::splitName($this->getName());
+		$dir = dirname(__DIR__) . '/Templates';
+		return ["$dir/$presenter/{$this->view}.latte", "$dir/$presenter.{$this->view}.latte"];
+	}
+
+	public function formatLayoutTemplateFiles(): array
+	{
+		if (preg_match('#/|\\\\#', (string) $this->layout)) {
+			return [$this->layout];   // an explicit path, as Nette honours it
+		}
+		[, $presenter] = \Nette\Application\Helpers::splitName($this->getName());
+		$layout = $this->layout ?: 'layout';
+		$dir = dirname(__DIR__) . '/Templates';
+		return ["$dir/$presenter/@$layout.latte", "$dir/@$layout.latte"];
+	}
+
 	// W4 (2026-05-17): @inject populates every BasePresenter subclass without
 	// touching constructors. Used by beforeRender() to populate the top-nav
 	// unread/pending badges. Public-with-@inject is the Nette idiom for
