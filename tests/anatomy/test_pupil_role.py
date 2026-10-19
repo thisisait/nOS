@@ -41,13 +41,16 @@ def _render(text: str, **ctx) -> str:
 
 def test_the_role_reaches_the_pupil_statically_after_the_thalamus_is_signed():
     """import_tasks, not include_tasks: --tags thalamus reaches a static import, not a dynamic one."""
-    main = yaml.safe_load((ROLE / "tasks" / "main.yml").read_text())
+    main = [*yaml.safe_load((ROLE / "tasks" / "main.yml").read_text()), *yaml.safe_load((ROLE / "tasks" / "macos.yml").read_text())]  # macos.yml: the launchd flow
     names = [t.get("name", "").lower() for t in main]
     at = next(i for i, t in enumerate(main) if t.get("ansible.builtin.import_tasks") == "pupil.yml")
     assert names.index("[pazny.thalamus] sign the binary with it (same identity every build)") < at, \
         "the pupil is signed with the identity minted above it"
-    assert main[0]["ansible.builtin.fail"] and "launchd" in str(main[0]["when"]), \
-        "Linux is refused before the pupil (no systemd unit, no codesign): the stated skip"
+    # 2026-10-19: Linux is no longer refused; it takes linux.yml, which builds no pupil.
+    top = yaml.safe_load((ROLE / "tasks" / "main.yml").read_text())
+    mac = next(t for t in top if t.get("ansible.builtin.import_tasks") == "macos.yml")
+    assert mac["when"] == "nos_service_manager == 'launchd'", "the pupil (codesign, Tauri) stays macOS-only"
+    assert "pupil" not in (ROLE / "tasks" / "linux.yml").read_text()
 
 
 def test_the_install_path_is_fixed_in_role_defaults_only():
@@ -198,7 +201,7 @@ def test_the_source_hash_covers_what_vite_borrows_from_the_face():
 
 def test_the_pupil_comes_after_the_thalamus_is_serving():
     """A failed pupil build (npm, tauri) must not hold back the daemon's plist and bootstrap."""
-    main = yaml.safe_load((ROLE / "tasks" / "main.yml").read_text())
+    main = [*yaml.safe_load((ROLE / "tasks" / "main.yml").read_text()), *yaml.safe_load((ROLE / "tasks" / "macos.yml").read_text())]  # macos.yml: the launchd flow
     at = next(i for i, t in enumerate(main) if t.get("ansible.builtin.import_tasks") == "pupil.yml")
     for needle in ("render launchd plist", "bootstrap launchd job", "flush handlers"):
         before = next(i for i, t in enumerate(main) if needle in t.get("name", "").lower())

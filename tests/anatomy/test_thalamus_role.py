@@ -31,7 +31,7 @@ READER = REPO / "tools" / "thalamus-status.py"
 
 
 def _tasks() -> list[dict]:
-    return yaml.safe_load((ROLE / "tasks" / "main.yml").read_text())
+    return [*yaml.safe_load((ROLE / "tasks" / "main.yml").read_text()), *yaml.safe_load((ROLE / "tasks" / "macos.yml").read_text())]  # macos.yml: the launchd flow
 
 
 def _plist(**over) -> dict:
@@ -418,7 +418,7 @@ def test_the_cell_backend_choice_rides_the_binding_env():
 def test_a_host_without_rustup_gets_a_toolchain_before_the_build():
     """Live 2026-10-14, a fresh client: ~/.cargo/bin/cargo did not exist (rustup never installed), so the
     build died with 'No such file or directory'. The role finds cargo or installs Homebrew's rust first."""
-    tasks = yaml.safe_load((ROLE / "tasks" / "main.yml").read_text())
+    tasks = [*yaml.safe_load((ROLE / "tasks" / "main.yml").read_text()), *yaml.safe_load((ROLE / "tasks" / "macos.yml").read_text())]  # macos.yml: the launchd flow
     names = [t.get("name", "").lower() for t in tasks]
     find = next(i for i, n in enumerate(names) if "find a rust toolchain" in n)
     brew = next(i for i, n in enumerate(names) if "install homebrew's rust" in n)
@@ -452,7 +452,7 @@ def _run_sign(tmp, task_yml, ctx):
 def test_a_sign_that_cannot_reach_the_key_says_the_one_command(tmp_path):
     """Live 2026-10-14 on a client over SSH: codesign answered errSecInternalComponent — the key's partition
     list never allowed codesign without the GUI prompt SSH cannot show. The task names the fix."""
-    tasks = yaml.safe_load((ROLE / "tasks" / "main.yml").read_text())
+    tasks = [*yaml.safe_load((ROLE / "tasks" / "main.yml").read_text()), *yaml.safe_load((ROLE / "tasks" / "macos.yml").read_text())]  # macos.yml: the launchd flow
     t = next(x for x in tasks if "sign the binary with it" in x.get("name", "").lower())
     ctx = {"_thalamus_signing": {"stdout_lines": ["ABCDEF0123"]}, "thalamus_bin": str(tmp_path / "thalamus"),
            "thalamus_launchd_label": "eu.thisisait.nos.thalamus", "thalamus_signing_keychain": "/k/login.keychain-db"}
