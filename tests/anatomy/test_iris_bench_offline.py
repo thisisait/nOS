@@ -815,7 +815,7 @@ def _found(*nodes, by="search_knowledge"):
     return dict(_show("list", {"title": "Knowledge", "ordered": True, "items": items}), by=by)
 
 
-def _read(i, name):
+def _node_read(i, name):
     tree = {"focus": i, "hidden": 0, "nodes": [{"id": i, "name": name}]}
     return dict(_show("knowledge_tree", tree), by="read_node")
 
@@ -828,7 +828,7 @@ def test_cites_node_judges_by_id_once_ids_reach_the_model():
     said = "Rust has no garbage collector [02.02.03.01.03]."
     assert check("cites_node", rust, _got(said, renders=[hit]), noon)
     assert check("cites_node", "Rust", _got(said, renders=[hit]), noon), "a name resolves to its drawn id"
-    assert check("cites_node", rust, _got(said, renders=[_read(rust, "Rust")]), noon), "read_node drew it"
+    assert check("cites_node", rust, _got(said, renders=[_node_read(rust, "Rust")]), noon), "read_node drew it"
     assert not check("cites_node", rust, _got("Rust has no garbage collector.", renders=[hit]), noon), "named, the id not cited"
     assert not check("cites_node", "Rust", _got("Rust has no garbage collector.", renders=[hit]), noon), "ids drawn: the name is not enough"
     assert not check("cites_node", rust, _got(said, renders=[]), noon), "an id from model memory"
