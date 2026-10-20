@@ -13,396 +13,36 @@
   "services": [
 {# Membership is the installed set — nos_identity.installed via filter nos_installed,
    the services-status derivation. A row has a card (domain/url) when Traefik routes
-   it. _meta below is display metadata only (name, description, health_url), keyed
-   by manifest id. Gate: tests/anatomy/test_service_registry_is_the_installed_set.py #}
-{% set _meta = {} %}
-{% set _ = _meta.update({'grafana': {
-  "name": "Grafana",
-  "category": "observability",
-  "port": grafana_port | default(3000),
-  "type": "docker",
-  "stack": "observability",
-  "description": "Monitoring and dashboards"
-}}) %}
-{% set _ = _meta.update({'wordpress': {
-  "name": "WordPress",
-  "category": "web",
-  "port": wordpress_port | default(8084),
-  "type": "docker",
-  "stack": "iiab",
-  "description": "CMS and blog"
-}}) %}
-{% set _ = _meta.update({'nextcloud': {
-  "name": "Nextcloud",
-  "category": "cloud",
-  "port": nextcloud_port | default(8085),
-  "type": "docker",
-  "stack": "iiab",
-  "description": "Cloud storage and files"
-}}) %}
-{% set _ = _meta.update({'n8n': {
-  "name": "n8n",
-  "category": "automation",
-  "port": n8n_port | default(5678),
-  "type": "docker",
-  "stack": "iiab",
-  "description": "Workflow automation"
-}}) %}
-{% set _ = _meta.update({'kiwix': {
-  "name": "Kiwix",
-  "category": "knowledge",
-  "port": kiwix_port | default(8888),
-  "type": "docker",
-  "stack": "iiab",
-  "description": "Offline Wikipedia and encyclopedias"
-}}) %}
-{% set _ = _meta.update({'jellyfin': {
-  "name": "Jellyfin",
-  "category": "media",
-  "port": jellyfin_port | default(8096),
-  "health_url": "http://127.0.0.1:" ~ (jellyfin_port | default(8096)) ~ "/health",
-  "type": "docker",
-  "stack": "iiab",
-  "description": "Media server (movies, shows, music)"
-}}) %}
-{% set _ = _meta.update({'gitea': {
-  "name": "Gitea",
-  "category": "devops",
-  "port": gitea_port | default(3003),
-  "type": "docker",
-  "stack": "devops",
-  "description": "Self-hosted Git server"
-}}) %}
-{% set _ = _meta.update({'gitlab': {
-  "name": "GitLab",
-  "category": "devops",
-  "port": gitlab_http_port | default(8929),
-  "type": "docker",
-  "stack": "devops",
-  "description": "DevOps platform"
-}}) %}
-{% set _ = _meta.update({'woodpecker': {
-  "name": "Woodpecker CI",
-  "category": "devops",
-  "port": woodpecker_port | default(8060),
-  "type": "docker",
-  "stack": "devops",
-  "description": "CI/CD pipeline"
-}}) %}
-{% set _ = _meta.update({'open_webui': {
-  "name": "Open WebUI",
-  "category": "ai",
-  "port": openwebui_port | default(3004),
-  "type": "docker",
-  "stack": "iiab",
-  "description": "Chat UI for Ollama LLMs"
-}}) %}
-{% set _ = _meta.update({'portainer': {
-  "name": "Portainer",
-  "category": "infra",
-  "port": portainer_port | default(9002),
-  "type": "docker",
-  "stack": "infra",
-  "description": "Docker management UI"
-}}) %}
-{% set _ = _meta.update({'erpnext': {
-  "name": "ERPNext",
-  "category": "b2b",
-  "port": erpnext_port | default(8082),
-  "type": "docker",
-  "stack": "b2b",
-  "description": "CRM/ERP system (Frappe framework)"
-}}) %}
-{% set _ = _meta.update({'freescout': {
-  "name": "FreeScout",
-  "category": "b2b",
-  "port": freescout_port | default(8090),
-  "type": "docker",
-  "stack": "b2b",
-  "description": "Helpdesk and ticketing"
-}}) %}
-{% set _ = _meta.update({'outline': {
-  "name": "Outline",
-  "category": "b2b",
-  "port": outline_port | default(3005),
-  "type": "docker",
-  "stack": "b2b",
-  "description": "Team wiki and knowledge base"
-}}) %}
-{% set _ = _meta.update({'metabase': {
-  "name": "Metabase",
-  "category": "data",
-  "port": metabase_port | default(3002),
-  "type": "docker",
-  "stack": "data",
-  "description": "Business Intelligence dashboards"
-}}) %}
-{% set _ = _meta.update({'superset': {
-  "name": "Apache Superset",
-  "category": "data",
-  "port": superset_port | default(8089),
-  "type": "docker",
-  "stack": "data",
-  "description": "Data exploration and visualization"
-}}) %}
-{% set _ = _meta.update({'qgis_server': {
-  "name": "QGIS Server",
-  "category": "engineering",
-  "port": qgis_port | default(8071),
-  "type": "docker",
-  "stack": "engineering",
-  "description": "GIS map server"
-}}) %}
-{% set _ = _meta.update({'bluesky_pds': {
-  "name": "Bluesky PDS",
-  "category": "identity",
-  "port": bluesky_pds_port | default(2583),
-  "type": "docker",
-  "stack": "infra",
-  "description": "AT Protocol Personal Data Server"
-}}) %}
-{% set _ = _meta.update({'authentik': {
-  "name": "Authentik",
-  "category": "iam",
-  "port": authentik_port | default(9000),
-  "type": "docker",
-  "stack": "infra",
-  "description": "SSO / Identity Provider (OIDC, SAML, LDAP)"
-}}) %}
-{% set _ = _meta.update({'infisical': {
-  "name": "Infisical",
-  "category": "iam",
-  "port": infisical_port | default(8075),
-  "type": "docker",
-  "stack": "infra",
-  "description": "Secrets vault (REST API, CLI, SDK)"
-}}) %}
-{% set _ = _meta.update({'vaultwarden': {
-  "name": "Vaultwarden",
-  "category": "iam",
-  "port": vaultwarden_port | default(8062),
-  "type": "docker",
-  "stack": "iiab",
-  "description": "Bitwarden-compatible password vault"
-}}) %}
-{% set _ = _meta.update({'paperclip': {
-  "name": "Paperclip",
-  "category": "ai",
-  "port": paperclip_port | default(3006),
-  "type": "docker",
-  "stack": "devops",
-  "description": "Multi-agent orchestration (OpenClaw, Claude Code)"
-}}) %}
-{% set _ = _meta.update({'wing': {
-  "name": "Wing",
-  "category": "security",
-  "port": 443,
-  "type": "php",
-  "stack": "native",
-  "description": "Security Research Dashboard (Nette + SQLite)"
-}}) %}
-{% set _ = _meta.update({'offline_maps': {
-  "name": "Tileserver GL",
-  "category": "maps",
-  "port": maps_port | default(8070),
-  "type": "docker",
-  "stack": "iiab",
-  "description": "Offline maps"
-}}) %}
-{% set _ = _meta.update({'ntfy': {
-  "name": "ntfy",
-  "category": "notifications",
-  "port": ntfy_port | default(2586),
-  "type": "docker",
-  "stack": "iiab",
-  "version": ntfy_version | default('v2.21.0'),
-  "description": "Self-hosted push notifications (pub/sub)"
-}}) %}
-{% set _ = _meta.update({'miniflux': {
-  "name": "Miniflux",
-  "category": "knowledge",
-  "port": miniflux_port | default(3011),
-  "type": "docker",
-  "stack": "iiab",
-  "version": miniflux_version | default('2.2.19'),
-  "description": "Minimalist RSS/Atom reader"
-}}) %}
-{% set _ = _meta.update({'code_server': {
-  "name": "code-server",
-  "category": "devops",
-  "port": code_server_port | default(3009),
-  "type": "docker",
-  "stack": "devops",
-  "version": code_server_version | default('4.115.0-ls332'),
-  "description": "VS Code in the browser (browser IDE)"
-}}) %}
-{% set _ = _meta.update({'hedgedoc': {
-  "name": "HedgeDoc",
-  "category": "b2b",
-  "port": hedgedoc_port | default(3012),
-  "type": "docker",
-  "stack": "b2b",
-  "version": hedgedoc_version | default('1.10.7'),
-  "description": "Real-time collaborative markdown editor"
-}}) %}
-{% set _ = _meta.update({'bookstack': {
-  "name": "BookStack",
-  "category": "b2b",
-  "port": bookstack_port | default(3013),
-  "type": "docker",
-  "stack": "b2b",
-  "version": bookstack_version | default('v26.03.3-ls256'),
-  "description": "Wiki platform (shelf/book/chapter/page)"
-}}) %}
-{% set _ = _meta.update({'firefly': {
-  "name": "Firefly III",
-  "category": "b2b",
-  "port": firefly_port | default(3014),
-  "type": "docker",
-  "stack": "b2b",
-  "version": firefly_version | default('version-6.2.21'),
-  "description": "Personal finance and accounting"
-}}) %}
-{% set _ = _meta.update({'onlyoffice': {
-  "name": "ONLYOFFICE",
-  "category": "b2b",
-  "port": onlyoffice_port | default(3015),
-  "type": "docker",
-  "stack": "b2b",
-  "version": onlyoffice_version | default('9.3.1.2'),
-  "description": "Document Server (embeddable editor backend)"
-}}) %}
-{% set _ = _meta.update({'nodered': {
-  "name": "Node-RED",
-  "category": "automation",
-  "port": nodered_port | default(1880),
-  "type": "docker",
-  "stack": "iiab",
-  "version": nodered_version | default('4.0.9'),
-  "description": "Low-code flow-based automation"
-}}) %}
-{% set _ = _meta.update({'influxdb': {
-  "name": "InfluxDB",
-  "category": "observability",
-  "port": influxdb_port | default(8086),
-  "type": "docker",
-  "stack": "observability",
-  "version": influxdb_version | default('2.7.12'),
-  "description": "Time-series database (OSS 2.x)"
-}}) %}
-{% set _ = _meta.update({'dnsmasq': {
-  "name": "dnsmasq",
-  "category": "network",
-  "port": dnsmasq_port | default(53),
-  "type": "homebrew",
-  "description": "DNS resolver (*." ~ (dnsmasq_dev_domain | default('dev.local')) ~ ")"
-}}) %}
-{% set _ = _meta.update({'mariadb': {
-  "name": "MariaDB",
-  "category": "database",
-  "port": mariadb_port | default(3306),
-  "health_url": "tcp://127.0.0.1:" ~ (mariadb_port | default(3306)),
-  "type": "docker",
-  "stack": "infra",
-  "description": "Relational database"
-}}) %}
-{% set _ = _meta.update({'postgresql': {
-  "name": "PostgreSQL",
-  "category": "database",
-  "port": postgresql_port | default(5432),
-  "health_url": "tcp://127.0.0.1:" ~ (postgresql_port | default(5432)),
-  "type": "docker",
-  "stack": "infra",
-  "description": "Relational database (Outline, Metabase, Superset)"
-}}) %}
-{% set _ = _meta.update({'redis': {
-  "name": "Redis (Docker)",
-  "category": "cache",
-  "port": redis_port | default(6379),
-  "health_url": "tcp://127.0.0.1:" ~ (redis_port | default(6379)),
-  "type": "docker",
-  "stack": "infra",
-  "description": "In-memory cache (shared across stacks)"
-}}) %}
-{% set _ = _meta.update({'prometheus': {
-  "name": "Prometheus",
-  "category": "observability",
-  "port": prometheus_port | default(9090),
-  "health_url": "http://127.0.0.1:" ~ (prometheus_port | default(9090)) ~ "/-/healthy",
-  "type": "docker",
-  "stack": "observability",
-  "description": "Metrics and alerting"
-}}) %}
-{% set _ = _meta.update({'loki': {
-  "name": "Loki",
-  "category": "observability",
-  "port": loki_port | default(3100),
-  "health_url": "http://127.0.0.1:" ~ (loki_port | default(3100)) ~ "/ready",
-  "type": "docker",
-  "stack": "observability",
-  "description": "Log aggregation"
-}}) %}
-{% set _ = _meta.update({'tempo': {
-  "name": "Tempo",
-  "category": "observability",
-  "port": tempo_http_port | default(3200),
-  "health_url": "http://127.0.0.1:" ~ (tempo_http_port | default(3200)) ~ "/ready",
-  "type": "docker",
-  "stack": "observability",
-  "description": "Distributed tracing"
-}}) %}
-{% set _ = _meta.update({'alloy': {
-  "name": "Alloy",
-  "category": "observability",
-  "port": alloy_ui_port | default(12345),
-  "health_url": "http://127.0.0.1:" ~ (alloy_ui_port | default(12345)) ~ "/-/ready",
-  "type": "homebrew",
-  "description": "Metrics and logs collector"
-}}) %}
-{% set _ = _meta.update({'ollama': {
-  "name": "Ollama",
-  "category": "ai",
-  "port": 11434,
-  "health_url": "http://127.0.0.1:11434/api/version",
-  "type": "homebrew",
-  "description": "LLM inference engine"
-}}) %}
-{% set _ = _meta.update({'uptime_kuma': {
-  "name": "Uptime Kuma",
-  "category": "monitoring",
-  "port": uptime_kuma_port | default(3001),
-  "health_url": "http://127.0.0.1:" ~ (uptime_kuma_port | default(3001)),
-  "type": "docker",
-  "stack": "iiab",
-  "description": "Availability monitoring"
-}}) %}
-{% set _ = _meta.update({'calibre_web': {
-  "name": "Calibre-Web",
-  "category": "knowledge",
-  "port": calibreweb_port | default(8083),
-  "health_url": "http://127.0.0.1:" ~ (calibreweb_port | default(8083)),
-  "type": "docker",
-  "stack": "iiab",
-  "description": "eBook server"
-}}) %}
-{% set _ = _meta.update({'homeassistant': {
-  "name": "Home Assistant",
-  "category": "iot",
-  "port": homeassistant_port | default(8123),
-  "health_url": "http://127.0.0.1:" ~ (homeassistant_port | default(8123)),
-  "type": "docker",
-  "stack": "iiab",
-  "description": "Home automation"
-}}) %}
-{% set _ = _meta.update({'rustfs': {
-  "name": "RustFS",
-  "category": "storage",
-  "port": rustfs_api_port | default(9010),
-  "health_url": "http://127.0.0.1:" ~ (rustfs_api_port | default(9010)) ~ "/health",
-  "type": "docker",
-  "stack": "iiab",
-  "description": "S3-compatible object storage"
-}}) %}
+   it. Display fields (name, icon, description, rbac_tier, backend) join from each
+   plugin's hub_card (filter nos_hub_cards); _meta below is only what a hub_card
+   cannot give: a loopback health_url, and name/description for rows with no card.
+   Gates: test_service_registry_is_the_installed_set.py, test_one_service_directory.py #}
+{% set _cards = playbook_dir | nos_hub_cards %}
+{% set _meta = {
+  'jellyfin': {"health_url": "http://127.0.0.1:" ~ (jellyfin_port | default(8096)) ~ "/health"},
+  'bluesky_pds': {"name": "Bluesky PDS", "description": "AT Protocol Personal Data Server"},
+  'dnsmasq': {"name": "dnsmasq", "description": "DNS resolver (*." ~ (dnsmasq_dev_domain | default('dev.local')) ~ ")"},
+  'mariadb': {"name": "MariaDB", "description": "Relational database",
+              "health_url": "tcp://127.0.0.1:" ~ (mariadb_port | default(3306))},
+  'postgresql': {"name": "PostgreSQL", "description": "Relational database (Outline, Metabase, Superset)",
+                 "health_url": "tcp://127.0.0.1:" ~ (postgresql_port | default(5432))},
+  'redis': {"name": "Redis (Docker)", "description": "In-memory cache (shared across stacks)",
+            "health_url": "tcp://127.0.0.1:" ~ (redis_port | default(6379))},
+  'prometheus': {"name": "Prometheus", "description": "Metrics and alerting",
+                 "health_url": "http://127.0.0.1:" ~ (prometheus_port | default(9090)) ~ "/-/healthy"},
+  'loki': {"name": "Loki", "description": "Log aggregation",
+           "health_url": "http://127.0.0.1:" ~ (loki_port | default(3100)) ~ "/ready"},
+  'tempo': {"name": "Tempo", "description": "Distributed tracing",
+            "health_url": "http://127.0.0.1:" ~ (tempo_http_port | default(3200)) ~ "/ready"},
+  'alloy': {"name": "Alloy", "description": "Metrics and logs collector",
+            "health_url": "http://127.0.0.1:" ~ (alloy_ui_port | default(12345)) ~ "/-/ready"},
+  'ollama': {"name": "Ollama", "description": "LLM inference engine",
+             "health_url": "http://127.0.0.1:11434/api/version"},
+  'uptime_kuma': {"health_url": "http://127.0.0.1:" ~ (uptime_kuma_port | default(3001))},
+  'calibre_web': {"health_url": "http://127.0.0.1:" ~ (calibreweb_port | default(8083))},
+  'homeassistant': {"health_url": "http://127.0.0.1:" ~ (homeassistant_port | default(8123))},
+  'rustfs': {"health_url": "http://127.0.0.1:" ~ (rustfs_api_port | default(9010)) ~ "/health"},
+} %}
 {% set _rows = (lookup('file', playbook_dir ~ '/state/manifest.yml') | from_yaml).services %}
 {% set _skip = (lookup('file', playbook_dir ~ '/roles/pazny.traefik/vars/main.yml') | from_yaml).traefik_skip_ids %}
 {% set _flags = {} %}
@@ -419,7 +59,10 @@
 {%     set _host = lookup('vars', r.domain_var, default=(r.id | replace('_', '-')) ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) %}
 {%     set _ = _svc.update({"tier": 1, "domain": _host, "url": "https://" ~ _host}) %}
 {%   endif %}
-{%   set _ = _services.append(_svc | combine(_meta.get(r.id, {}))) %}
+{%   set _ver = lookup('vars', r.version_var, default='') if r.version_var is defined else '' %}
+{%   if _ver is string and _ver %}{% set _ = _svc.update({"version": _ver}) %}{% endif %}
+{%   if r.rbac_tier is defined %}{% set _ = _svc.update({"rbac_tier": r.rbac_tier}) %}{% endif %}
+{%   set _ = _services.append(_svc | combine(_cards.get(r.id, {}), _meta.get(r.id, {}))) %}
 {% endfor %}
 {# ── Host nginx + exporters: install_nginx, no manifest row ───────────── #}
 {% if install_nginx | default(true) %}

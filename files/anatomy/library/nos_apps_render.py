@@ -253,9 +253,11 @@ def _registry_entry(app_name, record, fqdn):
     """
     meta = record.get("meta") or {}
     return {
+        "id": "app_" + app_name,   # = _wing_system's id
         "name": app_name,
         "category": meta.get("category", "app"),
         "tier": 2,
+        "rbac_tier": _rbac_tier(record),   # the directory page shows tier 3-4
         "enabled": True,
         "toggle_var": "install_app_" + app_name,
         "domain": fqdn,

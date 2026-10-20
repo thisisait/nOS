@@ -1,6 +1,3 @@
 ---
 # pazny.landing — install flag, domain, port and pins live in default.config.yml.
 landing_web_root: "{{ stacks_dir }}/iiab/landing-www"
-# The cards come from the plugin harvest wing-base already writes for Wing's hub
-# (ui-extension.hub_card of every enabled plugin) — one list, not a second one.
-landing_hub_cards: "{{ wing_home | default(ansible_facts['env']['HOME'] ~ '/wing') }}/app/data/hub-cards.json"

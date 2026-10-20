@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Presenters\Api;
 
+use App\Model\HubCardRepository;
 use App\Model\SystemRepository;
 
 /**
  * GET /api/v1/hub/systems         — list all systems (flat, with filters) [PUBLIC]
  * GET /api/v1/hub/systems?tree=1  — tree (hierarchy with children) [PUBLIC]
+ * GET /api/v1/hub/systems?listed=1 — the /hub tiles (face dock) [PUBLIC]
  * GET /api/v1/hub/systems/{id}    — single system detail [PUBLIC]
  * GET /api/v1/hub/health          — probe all systems with a URL [PUBLIC]
  * POST /api/v1/hub/systems        — upsert a system [BEARER required]
@@ -40,6 +42,9 @@ final class HubPresenter extends BaseApiPresenter
 
 	/** @inject */
 	public SystemRepository $systems;
+
+	/** @inject */
+	public HubCardRepository $cards;
 
 	public function startup(): void
 	{
@@ -99,6 +104,13 @@ final class HubPresenter extends BaseApiPresenter
 		}
 
 		$data = $this->systems->list($filters);
+		// ?listed=1 — what /hub lists (isListed + hub_card overlay), for the face
+		// dock. The bare list stays the whole inventory (health, cortex svc:).
+		if ($req->getQuery('listed')) {
+			$data['systems'] = \App\Presenters\HubPresenter::listed(
+				$data['systems'], $this->cards->bySlug(), \App\Presenters\HubPresenter::backendOnlySlugs());
+			$data['total'] = count($data['systems']);
+		}
 		$data['stats'] = $this->systems->stats();
 		$this->sendSuccess($data);
 	}

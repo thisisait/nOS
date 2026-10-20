@@ -1,7 +1,7 @@
 ---
 # ==============================================================================
 # pazny.landing — the estate's front door at the root domain (tenant_domain).
-# A static page: a card per routed service (the wing-base hub-card harvest),
+# A static page: a card per public routed service (service-registry.json),
 # then a short how-to for the people who use this host. No application, no
 # session, no data. Not the apex page: apex is a signed public projection for
 # strangers; this is a signpost for the estate's own people. One of the two.
@@ -13,12 +13,6 @@
   ansible.builtin.fail:
     msg: "install_landing and install_apex both claim the root domain; turn one off."
   when: install_apex | default(false) | bool
-
-- name: "[pazny.landing] Read the harvested service cards"
-  ansible.builtin.slurp:
-    src: "{{ landing_hub_cards }}"
-  register: _landing_cards_raw
-  failed_when: false
 
 # A card whose host Traefik does not route would be a link to a 404 (the
 # Traefik dashboard is off by default): keep only routed hosts, read back from
@@ -33,13 +27,17 @@
   changed_when: false
   failed_when: false
 
-- name: "[pazny.landing] The cards, routed only, sorted by tier then title"
+# The one list (templates/service-registry.json.j2), public rows only: a routed
+# url, not `backend`, RBAC tier 3-4 (a page anyone can open shows nothing an
+# account below tier 3 could not). Gate: tests/anatomy/test_one_service_directory.py
+- name: "[pazny.landing] The cards: public, routed only, sorted by category then name"
   ansible.builtin.set_fact:
     _landing_cards: >-
-      {{ (((_landing_cards_raw.content | b64decode | from_json).cards | default([]))
-          if (_landing_cards_raw.content | default('', true) | length > 0) else [])
+      {{ (lookup('template', playbook_dir ~ '/templates/service-registry.json.j2') | from_json).services
+         | selectattr('url', 'defined') | rejectattr('backend', 'defined')
+         | selectattr('rbac_tier', 'defined') | selectattr('rbac_tier', 'in', [3, 4])
          | selectattr('url', 'search', '^https://(' ~ (_landing_routed.stdout_lines | map('regex_escape') | join('|')) ~ ')(/|$)')
-         | sort(attribute='title') | sort(attribute='tier', reverse=true) | list }}
+         | sort(attribute='name') | sort(attribute='category') | list }}
 
 - name: "[pazny.landing] Web root"
   ansible.builtin.file:

@@ -189,7 +189,10 @@ export const userstate = {
 export async function hubSystems(): Promise<unknown> {
 	const h: Record<string, string> = {};
 	if (WING_EDGE()) h['x-wing-edge-token'] = WING_EDGE();
-	return asJson(await fetch(HUB_URL(), { headers: h }));
+	// ?listed=1: Wing's /hub filter + hub_card overlay, so the dock lists what /hub lists.
+	const u = new URL(HUB_URL());
+	u.searchParams.set('listed', '1');
+	return asJson(await fetch(u, { headers: h }));
 }
 
 // ── Wing API, AS the end user (files/anatomy/contracts/face-wing.yml) ─────────

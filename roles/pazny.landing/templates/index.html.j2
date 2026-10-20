@@ -36,10 +36,10 @@ footer { margin-top:48px; color:var(--muted); font-size:.85rem; }
 <h2>Services</h2>
 <div class="grid">
 {% for c in _landing_cards %}
-  <a class="card" href="{{ c.url }}"><span class="tier">tier {{ c.tier }}</span><b>{{ c.title }}</b><span>{{ c.description }}</span></a>
+  <a class="card" data-id="{{ c.id }}" data-icon="{{ c.icon | default('') }}" href="{{ c.url }}"><span class="tier">{{ c.category }}</span><b>{{ c.name }}</b><span>{{ c.description | default('') }}</span></a>
 {% endfor %}
 </div>
-<p class="sub">Tier 1 is admin, 3 is everyone with an account; a service above your tier refuses you by design.</p>
+<p class="sub">The services open to everyone with an account. Your operator can show you the others your role reaches.</p>
 
 <h2>Getting in</h2>
 <ol>

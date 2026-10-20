@@ -23,6 +23,7 @@ interface RawSystem {
 	domain_url?: string;
 	description?: string;
 	tier?: number | string;
+	card_tier?: number;
 	rbac_tier?: string;
 	has_web_ui?: number | boolean;
 	enabled?: number | boolean;
@@ -47,6 +48,7 @@ function publicUrl(s: RawSystem): string {
 
 /** Numeric RBAC tier: from a `tier-N` string, a bare number, else 3 (user). */
 function tierOf(s: RawSystem): number {
+	if (typeof s.card_tier === 'number') return s.card_tier; // Wing ?listed=1 hub_card overlay
 	if (typeof s.tier === 'number') return s.tier;
 	const m = /(\d)/.exec(s.rbac_tier ?? String(s.tier ?? ''));
 	return m ? Number(m[1]) : 3;

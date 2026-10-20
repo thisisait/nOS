@@ -59,7 +59,7 @@ final class HubPresenter extends BasePresenter
 	private const BACKEND_NON_PLUGIN_FLOOR = ['nginx'];
 
 	/** @var list<string>|null memoised union of harvested slugs + the floor */
-	private ?array $backendOnly = null;
+	private static ?array $backendOnly = null;
 
 	/**
 	 * Backend-only slugs: the plugin-harvested `kind: backend` list (from
@@ -69,10 +69,10 @@ final class HubPresenter extends BasePresenter
 	 *
 	 * @return list<string>
 	 */
-	private function backendOnlySlugs(): array
+	public static function backendOnlySlugs(): array
 	{
-		if ($this->backendOnly !== null) {
-			return $this->backendOnly;
+		if (self::$backendOnly !== null) {
+			return self::$backendOnly;
 		}
 		$dir = getenv('WING_DATA_DIR') ?: dirname(__DIR__, 2) . '/data';
 		$path = rtrim($dir, '/') . '/backend-slugs.json';
@@ -86,10 +86,36 @@ final class HubPresenter extends BasePresenter
 		// No sidecar (or empty) → fall back to the full hardcoded list so the
 		// gate never weakens; sidecar present → harvested + non-plugin floor.
 		$base = $harvested === [] ? self::BACKEND_ONLY_SLUGS : $harvested;
-		$this->backendOnly = array_values(array_unique(
+		self::$backendOnly = array_values(array_unique(
 			array_merge($base, self::BACKEND_NON_PLUGIN_FLOOR)
 		));
-		return $this->backendOnly;
+		return self::$backendOnly;
+	}
+
+	/**
+	 * The /hub rows, card-overlaid: isListed() rows only, each with its hub_card
+	 * icon + tier. Shared with Api\HubPresenter (?listed=1, the face dock) so
+	 * both surfaces list the same ids. Gate: test_one_service_directory.py.
+	 *
+	 * @param list<array<string, mixed>> $systems
+	 * @param array<string, array<string, mixed>> $cardsBySlug
+	 * @return list<array<string, mixed>>
+	 */
+	public static function listed(array $systems, array $cardsBySlug, array $backendOnly): array
+	{
+		$kept = [];
+		foreach ($systems as $sys) {
+			if (!self::isListed($sys, $backendOnly)) {
+				continue;
+			}
+			$slug = strtolower(str_replace('_', '-', (string) ($sys['id'] ?? '')));
+			if (isset($cardsBySlug[$slug])) {
+				$sys['icon'] = $cardsBySlug[$slug]['icon'] ?? null;
+				$sys['card_tier'] = $cardsBySlug[$slug]['tier'] ?? null;
+			}
+			$kept[] = $sys;
+		}
+		return $kept;
 	}
 
 	/** A /hub tile: installed (registry-enabled), a public host, a browser UI. */
@@ -111,23 +137,11 @@ final class HubPresenter extends BasePresenter
 		// (postgresql/redis/mariadb/dnsmasq — no domain_url, only ip_url) and
 		// backend services without a root UI. Render-time only; no DB write.
 		$cardsBySlug = $this->cards->bySlug();
-		$backendOnly = $this->backendOnlySlugs();
+		$backendOnly = self::backendOnlySlugs();
 		$isClickable = static fn(array $sys): bool => self::isListed($sys, $backendOnly);
 
 		foreach ($byStack as $stack => $systems) {
-			$kept = [];
-			foreach ($systems as $sys) {
-				if (!$isClickable($sys)) {
-					continue;
-				}
-				$slug = strtolower(str_replace('_', '-', (string) ($sys['id'] ?? '')));
-				if (isset($cardsBySlug[$slug])) {
-					$sys['icon'] = $cardsBySlug[$slug]['icon'] ?? null;
-					$sys['card_tier'] = $cardsBySlug[$slug]['tier'] ?? null;
-				}
-				$kept[] = $sys;
-			}
-			$byStack[$stack] = $kept;
+			$byStack[$stack] = self::listed($systems, $cardsBySlug, $backendOnly);
 		}
 		// Drop now-empty stacks so the template doesn't show empty sections.
 		$byStack = array_filter($byStack, static fn(array $s): bool => count($s) > 0);
