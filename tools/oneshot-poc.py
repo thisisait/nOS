@@ -85,7 +85,7 @@ CARD = {"propose_row_edit": "row_diff_approval", "propose_row_insert": "row_diff
         "propose_row_delete": "row_diff_approval", "propose_table_create": "table_schema_approval",
         "propose_column_add": "column_add_approval"}
 DRAWS = {"query_rows": "table_results", "red_status": "red_status", "approvals_awaiting": "approvals_list",
-         "search_memory": "list", "nos_guide": "list", "estate_services": "table", "list_tables": "table",
+         "search_knowledge": "list", "read_node": "knowledge_tree", "nos_guide": "list", "estate_services": "table", "list_tables": "table",
          "inbox": "inbox_list", "offer_dashboard": "dashboard"}
 REF = re.compile(r"^\$step(\d+)\.rows\[0\]\.__id$")
 FORMAT_MODE = "auto"                   # --format-mode: auto | constrained | unconstrained

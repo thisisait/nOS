@@ -57,6 +57,9 @@
              hybrid plans only a turn whose intent is in NOS_IRIS_INTENTS. -->
         <key>NOS_IRIS_PLAN</key>
         <string>{{ iris_plan | default('tools') }}</string>
+        <!-- iris_knowledge_tree_max: the most nodes read_node's knowledge tree draws (src/serve.rs knowledge_tree). -->
+        <key>NOS_IRIS_KNOWLEDGE_TREE_MAX</key>
+        <string>{{ iris_knowledge_tree_max | default(50) }}</string>
 {% if iris_plan | default('tools') in ['cortex', 'hybrid'] and install_cortex | default(false) | bool %}
 {% if iris_plan == 'hybrid' %}
         <key>NOS_IRIS_INTENTS</key>

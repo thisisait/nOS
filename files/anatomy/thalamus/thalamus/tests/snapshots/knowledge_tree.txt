@@ -1,0 +1,10 @@
+Rust in our knowledge
+  02 Formal Sciences (4 under it)
+    02.02 Computer Science (6 under it)
+      02.02.03.01 Systems Languages (5 under it)
+        > 02.02.03.01.03 Rust (1 under it) — Memory-safe through ownership and b
+          02.02.03.01.03.01 Ownership
+        02.02.03.01.02 Zig
+  3 more not drawn
+
+

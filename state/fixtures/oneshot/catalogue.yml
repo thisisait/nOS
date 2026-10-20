@@ -6,7 +6,7 @@ systems:   # system -> the tools that reach it; the triage asks one yes/no per s
                propose_column_add, show, list_tables, offer_dashboard]
   estate_red: [red_status]
   estate_services: [estate_services]
-  memory: [search_memory]
+  memory: [search_knowledge, read_node]
   inbox: [inbox]
   approvals: [approvals_awaiting]
   guide: [nos_guide]

@@ -2,7 +2,7 @@
 //! what the person typed or pressed, and renders only the closed component vocabulary.
 //! Whatever it cannot decode is shown as a refusal (decode_to_shell), never dropped.
 
-use nos_contract::renderers::{Choice, Component, Delta, LensOp, RowOp, SchemaColumn, Step, Tone, TreeNode, WhenOp};
+use nos_contract::renderers::{Choice, Component, Delta, KnowledgeTree, LensOp, RowOp, SchemaColumn, Step, Tone, TreeNode, WhenOp};
 use nos_contract::wire::{decode_to_shell, encode, ControlView, Decision, ModelOption, Scope, ToShell, ToThalamus, WidgetSpec};
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::layout::{Constraint, Layout, Rect};
@@ -323,6 +323,7 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
                         let what = k.y.as_ref().map_or(op.clone(), |y| format!("{op} of {y}"));
                         format!("  kpi: {} ({what}, table {})", w.title, k.query.table)
                     }
+                    WidgetSpec::Knowledge(k) => format!("  knowledge: {} (node {})", w.title, k.node),
                 }));
             }
             out.extend(d.dropped.iter().map(|x| warn(format!("  left out: {} — {}", x.title, x.why))));
@@ -348,6 +349,23 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
                     Step::Note { note, over } => format!("  note {}: {note}", over.join(", ")),
                     Step::Phase { phase } => format!("  == {phase} =="),
                 }));
+            }
+        }
+        // One indented line a node, under its parent; the focus marked, the cap's rest said.
+        Component::KnowledgeTree(k) => {
+            out.extend(k.title.clone().map(head));
+            fn walk(k: &KnowledgeTree, parent: Option<&str>, depth: usize, out: &mut Vec<Line<'static>>) {
+                for n in k.nodes.iter().filter(|n| n.parent.as_deref() == parent && depth < k.nodes.len()) {
+                    let mark = if n.id == k.focus { "> " } else { "" };
+                    let kids = n.child_count.map(|c| format!(" ({c} under it)")).unwrap_or_default();
+                    let text = n.text.as_deref().map(|t| format!(" — {t}")).unwrap_or_default();
+                    out.push(Line::from(format!("{}{mark}{} {}{kids}{text}", "  ".repeat(depth + 1), n.id, n.name)));
+                    walk(k, Some(&n.id), depth + 1, out);
+                }
+            }
+            walk(k, None, 0, &mut out);
+            if k.hidden > 0 {
+                out.push(Line::styled(format!("  {} more not drawn", k.hidden), Style::new().fg(Color::DarkGray)));
             }
         }
         // A terminal draws no diagram; every node and edge is said as text.

@@ -111,6 +111,9 @@ fn serve_main(args: &[String]) -> Result<(), String> {
         floors,
         cortex,
         data,
+        // iris_knowledge_tree_max; the contract carries at most KNOWLEDGE_MAX.
+        tree_max: std::env::var("NOS_IRIS_KNOWLEDGE_TREE_MAX").ok().and_then(|v| v.trim().parse().ok())
+            .unwrap_or(50usize).clamp(1, nos_contract::renderers::KNOWLEDGE_MAX),
     };
     let srv = Arc::new(srv);
     // One line tools/thalamus-status.py reads: bound iff the secret is set. A failed bind keeps the socket serving.

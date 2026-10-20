@@ -111,7 +111,7 @@ A table Iris creates while working for a client is that client's (the create's
 ledger result names it). Both shells show the scope on the turn and on the card; a
 switch is refused while a card waits. An insert or edit whose row would be another
 client's (or personal) names whose in its title and warning (after a misnamed-row
-warning, joined) and is written only on a second approve. `search_memory` for a
+warning, joined) and is written only on a second approve. `search_knowledge` for a
 client keeps the shared taxonomy only: a capture, note or object is the person's (or
 its hit does not say whose), so it is dropped and the result says "hidden by scope: n";
 on personal data nothing is dropped (KEAP 2.1.0 search returns no DataTable rows).
