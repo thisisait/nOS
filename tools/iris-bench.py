@@ -434,7 +434,49 @@ def unjudged(failed: list[str]) -> bool:
     return bool(failed) and all(f.startswith(tuple(f"{n}: " for n in PLAN_CHECKS)) for f in failed)
 
 
+# A tool renamed (iris-grounded-knowledge, 2026-10-19): an old run or case reads as the new name, for one release.
+RENAMED = {"search_memory": "search_knowledge"}
+KNOWLEDGE_BY = ("search_knowledge", "read_node")
+CITED_ITEM = re.compile(r"^(?:[^·]* · )?(.*) \[([^\]\s]+)\]$")  # serve's list item: "<kind> · <name> [<id>]"
+
+
+def renamed(got: dict) -> dict:
+    """`got` with every renamed tool read as its new name: the tools called and who drew each render."""
+    return got | {"tools": [RENAMED.get(t, t) for t in got.get("tools", [])],
+                  "renders": [r | {"by": RENAMED.get(r.get("by"), r.get("by"))} for r in got.get("renders", [])]}
+
+
+def _cited(arg, got: dict, text: str) -> bool:
+    """Every node `arg` names (an id or a name) is cited by its [id], drawn by search_knowledge or read_node.
+    A run from before ids reached the model draws none: then the name, drawn and said, is the citation."""
+    drawn: dict[str, str] = {}
+    for r in got["renders"]:
+        if r.get("by") not in KNOWLEDGE_BY:
+            continue
+        kind, props = r["component"].get("kind"), r["component"].get("props", {})
+        if kind == "list":
+            for i in props.get("items", []):
+                if m := CITED_ITEM.match(str(i.get("text", ""))):
+                    drawn[m.group(2)] = m.group(1)
+        elif kind == "knowledge_tree":
+            drawn |= {n.get("id"): n.get("name", "") for n in props.get("nodes", [])}
+    names = [arg] if isinstance(arg, str) else arg
+    if not drawn:
+        said = {str(i.get("text", "")).split(" · ", 1)[-1].lower() for r in got["renders"]
+                if r.get("by") == "search_knowledge" and r["component"].get("kind") == "list"
+                for i in r["component"].get("props", {}).get("items", [])}
+        low = text.lower()
+        return all(n.lower() in said and re.search(rf"(?<!\w){re.escape(n.lower())}(?!\w)", low) for n in names)
+    def one(n: str) -> bool:
+        ids = [n] if n in drawn else [i for i, nm in drawn.items() if nm.lower() == n.lower()]
+        return any(re.search(rf"(?<![\w.]){re.escape(i)}(?!\.?\w)", text) for i in ids)
+    return all(one(n) for n in names)
+
+
 def check(name: str, arg, got: dict, now: float) -> bool:
+    got = renamed(got)
+    if name in ("tools_called", "tools_not_called"):
+        arg = [RENAMED.get(t, t) for t in arg]
     if name == "pipeline_fell_back":  # no cortex_plan row, or one whose result fell back
         plan = _plan(got)
         return (plan is None or plan["fell_back"]) == bool(arg)
@@ -570,13 +612,8 @@ def check(name: str, arg, got: dict, now: float) -> bool:
         tables = {(spec.get("query") or spec).get("table") for w in widgets for spec in (w.get("spec") or {}).values()}
         return (len(widgets) >= arg.get("widgets", 1) and set(arg.get("kinds", [])) <= kinds and set(arg.get("lens", [])) <= lens
                 and prefilled and (not arg.get("tables") or tables <= set(arg["tables"])))
-    if name == "cites_node":  # every named node: drawn by search_memory (Iris hears names, not ids) and said
-        drawn = {str(i.get("text", "")).split(" · ", 1)[-1].lower() for r in got["renders"]
-                 if r.get("by") == "search_memory" and r["component"].get("kind") == "list"
-                 for i in r["component"].get("props", {}).get("items", [])}
-        low = text.lower()
-        return all(n.lower() in drawn and re.search(rf"(?<!\w){re.escape(n.lower())}(?!\w)", low)
-                   for n in ([arg] if isinstance(arg, str) else arg))
+    if name == "cites_node":  # every named node cited by its [id], as search_knowledge or read_node drew it
+        return _cited(arg, got, text)
     if name == "says_not_in_memory":  # out of corpus said, and none of `forbid` (the model's own answer) beside it
         low = text.lower().replace("’", "'")
         forbid = arg.get("forbid", []) if isinstance(arg, dict) else []
@@ -755,8 +792,8 @@ def no_data(case: dict, got: dict) -> bool:
         return True  # the provider's rate limit outlasted serve's retries: the model never answered
     tr = [r for r in got["renders"] if r["component"].get("kind") == "table_results"]
     # Only a table that was READ and was empty: a 404 or no query read nothing, and that is the model's miss.
-    if case.get("needs_no_hit") and any(r["component"].get("kind") == "list" and r.get("by") == "search_memory"
-                                        for r in got["renders"]):
+    if case.get("needs_no_hit") and any(r["component"].get("kind") == "list" and r.get("by") == "search_knowledge"
+                                        for r in renamed(got)["renders"]):
         return True  # the corpus does hold the nonsense token: nothing-found honesty cannot be judged here
     return bool(case.get("needs_rows")) and bool(tr) and all(int(r["component"]["props"].get("total", 0)) == 0 for r in tr)
 

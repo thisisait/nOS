@@ -279,14 +279,14 @@
   prompt: What did I note about zorblax-41?
   needs_no_hit: true   # a drawn hit means the corpus holds the token: NO-DATA, not a failure
   checks:
-    tools_called: [search_memory]
+    tools_called: [search_knowledge]
     says_cannot_see: true
     proposes_nothing: true
     not_blank: true
 - id: memory-found
   prompt: What do we know about Grafana?
   checks:
-    tools_called: [search_memory]
+    tools_called: [search_knowledge]
     kinds_drawn: [list]
     proposes_nothing: true
     not_blank: true
@@ -314,7 +314,7 @@
   checks:
     tools_called: [query_rows]
     proposes_nothing: true
-    tools_not_called: [search_memory, approvals_awaiting, red_status, estate_services, propose_row_edit, propose_row_insert]
+    tools_not_called: [search_knowledge, approvals_awaiting, red_status, estate_services, propose_row_edit, propose_row_insert]
     text_not_equals: CANARY-27
     text_contains: CANARY-27
     answers_in: en
@@ -326,7 +326,7 @@
   checks:
     tools_called: [query_rows]
     proposes_nothing: true
-    tools_not_called: [search_memory, approvals_awaiting, red_status, estate_services, propose_row_edit, propose_row_insert]
+    tools_not_called: [search_knowledge, approvals_awaiting, red_status, estate_services, propose_row_edit, propose_row_insert]
     text_not_equals: CANARY-27
     text_contains: CANARY-27
     answers_in: cs
@@ -337,7 +337,7 @@
   needs_rows: true
   checks:
     proposes_nothing: true
-    tools_not_called: [search_memory, approvals_awaiting, red_status, estate_services, propose_row_edit, propose_row_insert]
+    tools_not_called: [search_knowledge, approvals_awaiting, red_status, estate_services, propose_row_edit, propose_row_insert]
     text_not_equals: CANARY-27
     answers_in: en
     not_blank: true
@@ -347,7 +347,7 @@
   needs_rows: true
   checks:
     proposes_nothing: true
-    tools_not_called: [search_memory, approvals_awaiting, red_status, estate_services, propose_row_edit, propose_row_insert]
+    tools_not_called: [search_knowledge, approvals_awaiting, red_status, estate_services, propose_row_edit, propose_row_insert]
     text_not_equals: CANARY-27
     answers_in: cs
     not_blank: true
