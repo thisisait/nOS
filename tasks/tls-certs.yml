@@ -97,7 +97,10 @@
         # Wildcards include host_alias segment when set:
         #   default:           *.dev.local, *.apps.dev.local
         #   host_alias=lab:    *.lab.dev.local, *.lab.apps.dev.local
+        # The bare tenant domain too: it is the landing page, and a wildcard
+        # never matches its own apex (RFC 6125 §6.4.3).
         _ssl_san_required:
+          - "{{ tenant_domain | default('dev.local') }}"
           - "*{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
           - "*{{ _host_alias_seg | default('') }}.{{ apps_subdomain | default('apps') }}.{{ tenant_domain | default('dev.local') }}"
           - "{{ '*.dev.lan' if (install_bluesky_pds | default(false)) else '' }}"
@@ -106,8 +109,9 @@
     - name: "[mkcert] Check if SSL cert covers all required SANs"
       ansible.builtin.shell: >
         set -o pipefail;
-        openssl x509 -in {{ ssl_cert_path }} -noout -text 2>/dev/null
-        | grep -qF '{{ item }}'
+        openssl x509 -in {{ ssl_cert_path }} -noout -ext subjectAltName 2>/dev/null
+        | tr ',' '\n' | sed 's/^ *//'
+        | grep -qxF 'DNS:{{ item }}'
       args:
         executable: /bin/bash
       loop: "{{ _ssl_san_required | select | list }}"
@@ -130,6 +134,7 @@
         -cert-file {{ ssl_cert_path }}
         -key-file  {{ ssl_cert_key }}
         "localhost" "127.0.0.1" "::1" "*.localhost"
+        "{{ tenant_domain | default('dev.local') }}"
         "*{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
         "*{{ _host_alias_seg | default('') }}.{{ apps_subdomain | default('apps') }}.{{ tenant_domain | default('dev.local') }}"
         {{ '"*.dev.lan"' if (install_bluesky_pds | default(false)) else '' }}
