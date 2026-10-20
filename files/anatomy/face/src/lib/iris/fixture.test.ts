@@ -35,6 +35,7 @@ const PROPS: Record<string, string[]> = {
 	timeline: ['items', 'title'],
 	graph: ['edges', 'nodes', 'title'],
 	sequence: ['participants', 'steps', 'title'],
+	knowledge_tree: ['focus', 'hidden', 'nodes', 'title'],
 	form: ['fields', 'form', 'omitted', 'prefill', 'table', 'title'],
 	choice: ['id', 'multi', 'options', 'question', 'suggested'],
 	dashboard: ['dropped', 'lens', 'name', 'widgets'],
@@ -46,6 +47,7 @@ const OPTIONAL: Record<string, string[]> = {
 	row_diff_approval: ['lines', 'read_from', 'row_id', 'warning'],
 	table_schema_approval: ['description'],
 	form: ['prefill'],
+	knowledge_tree: ['title'],
 	kpi: ['delta', 'delta_label', 'source', 'unit']
 };
 
