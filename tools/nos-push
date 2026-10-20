@@ -38,24 +38,39 @@ REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 SKIP_SYNC=0
 STRICT=0
+DRY_RUN=0
 REMOTE=""
 GIT_ARGS=()
+REFSPECS=()
 for arg in "$@"; do
 	case "$arg" in
 		--skip-sync) SKIP_SYNC=1 ;;
 		--strict) STRICT=1 ;;
+		-n|--dry-run) DRY_RUN=1; GIT_ARGS+=("$arg") ;;
 		-*) GIT_ARGS+=("$arg") ;;
-		*) [ -z "$REMOTE" ] && REMOTE="$arg"; GIT_ARGS+=("$arg") ;;
+		*) if [ -z "$REMOTE" ]; then REMOTE="$arg"; else REFSPECS+=("$arg"); fi
+		   GIT_ARGS+=("$arg") ;;
 	esac
 done
 REMOTE="${REMOTE:-origin}"  # git push's first positional argument is the remote
 
+# Push the checkout you stand in, not the one this script lives in: run as
+# <main>/tools/nos-push from a worktree, `git -C $REPO_DIR` pushed main's
+# HEAD:dev — "Everything up-to-date", exit 0, nothing landed (2026-10-20).
+# REPO_DIR still supplies the mirror-sync config below.
+PUSH_DIR="$(git rev-parse --show-toplevel 2>/dev/null || echo "$REPO_DIR")"
+BRANCH="$(git -C "$PUSH_DIR" symbolic-ref -q --short HEAD || true)"
+if [ "${#REFSPECS[@]}" -eq 0 ]; then
+	[ -n "$BRANCH" ] || { echo "→ nos-push refused: detached HEAD and no refspec — name it: tools/nos-push $REMOTE HEAD:<branch>"; exit 2; }
+	REFSPECS=("$BRANCH")
+fi
+
 # 0. Score what this push carries (ssot/doctrine/session-threat-model.md).
 if [ "$STRICT" -eq 1 ]; then
-	python3 "$SCRIPT_DIR/prepush-score.py" --remote "$REMOTE" --strict \
+	python3 "$SCRIPT_DIR/prepush-score.py" --repo "$PUSH_DIR" --remote "$REMOTE" --strict \
 		|| { echo "→ push refused by prepush-score --strict"; exit 3; }
 else
-	python3 "$SCRIPT_DIR/prepush-score.py" --remote "$REMOTE" \
+	python3 "$SCRIPT_DIR/prepush-score.py" --repo "$PUSH_DIR" --remote "$REMOTE" \
 		|| echo "→ prepush-score failed (advisory) — pushing anyway"
 fi
 
@@ -64,14 +79,31 @@ fi
 #    rejects as "bad repository". Branch on array size to avoid it.
 if [ "${#GIT_ARGS[@]}" -gt 0 ]; then
 	echo "→ git push ${GIT_ARGS[*]}"
-	git -C "$REPO_DIR" push "${GIT_ARGS[@]}"
+	git -C "$PUSH_DIR" push "${GIT_ARGS[@]}"
 else
 	echo "→ git push"
-	git -C "$REPO_DIR" push
+	git -C "$PUSH_DIR" push
 fi
-PUSH_STATUS=$?
-if [ $PUSH_STATUS -ne 0 ]; then
-	exit $PUSH_STATUS
+
+# 1b. Success is the remote ref, not git's exit code: ls-remote each refspec's
+#     destination and compare it to the sha its source names here.
+landed() { # $1=refspec
+	local spec="${1#+}" src dst want got
+	src="${spec%%:*}"; dst="${spec#*:}"
+	[ -n "$src" ] || return 0  # `:branch` is a delete
+	[ "$dst" = HEAD ] && dst="$BRANCH"
+	[ -n "$dst" ] || { echo "→ nos-push: '$1' from a detached HEAD names no branch — use HEAD:<branch>"; return 1; }
+	want=$(git -C "$PUSH_DIR" rev-parse -q --verify "$src") || { echo "→ nos-push: cannot resolve '$src'"; return 1; }
+	got=$(git -C "$PUSH_DIR" ls-remote "$REMOTE" "$dst" \
+		| awk -v d="$dst" '$2==d || $2=="refs/heads/"d || $2=="refs/tags/"d {print $1; exit}')
+	[ "$got" = "$want" ] && return 0
+	echo "→ PUSH DID NOT LAND: $REMOTE $dst is ${got:-absent}, meant $want ($src)"
+	return 1
+}
+if [ "$DRY_RUN" -eq 0 ]; then
+	ok=1
+	for spec in "${REFSPECS[@]}"; do landed "$spec" || ok=0; done
+	[ "$ok" -eq 1 ] || { echo "→ mirror-sync NOT run: the push is unverified"; exit 4; }
 fi
 
 if [ "$SKIP_SYNC" -eq 1 ]; then
