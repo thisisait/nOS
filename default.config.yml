@@ -1517,7 +1517,7 @@ prometheus_version: "v3.13.2"   # synced to role default (cleared version-pin sh
 loki_version: "3.7.6"           # synced to role default (cleared version-pin shadow) [swept 3.7.2 2026-08-06]
 
 # Gitea Docker
-gitea_version: "1.27.3"                 # REM-244: 2026-08-29 advisory wave (20 of 22 name 1.27.2). 1.27.3 same day. Prior REM-213: 1.27.2. Prior REM-099: 1.25.x EOL. [swept 1.27.2 2026-09-16]
+gitea_version: "28.1.0"                 # REM-294: applied live 2026-10-20 via recipe gitea-1.27-to-28 (upgrades/gitea.yml). Prior REM-244: 1.27.3.
 
 # ── Grafana ───────────────────────────────────────────────────────────────────
 grafana_admin_user: "admin"

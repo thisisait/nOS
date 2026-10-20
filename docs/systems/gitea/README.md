@@ -104,7 +104,7 @@ ansible-playbook main.yml -K --tags upgrade -e upgrade_service=gitea \
   -e upgrade_recipe_id=gitea-1.27-to-28                           # apply
 ```
 
-Name the recipe id: in scan mode `gitea-1.27-current` sorts first and bounces the
+Applied 2026-10-20: the estate runs 28.1.0 and the at-target entry is `gitea-28-current`. Before that, name the recipe id: in scan mode `gitea-1.27-current` sorted first and bounced the
 container once for nothing. Optional rehearsal on cloned data: a coexistence track
 (`coexistence_supported: true`, port 3013). Afterwards, the promoting MR moves
 `gitea_version` to 28.1.0 and turns `gitea-1.27-current` into `gitea-28-current`, or the

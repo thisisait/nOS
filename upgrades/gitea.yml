@@ -398,9 +398,9 @@ recipes:
         tag: "{{ recipe.from_version_resolved }}"
         wait: true
 
-  - id: "gitea-1.27-current"
-    from_regex: "^1\\.27\\."
-    to: "1.27.3"           # == installed
+  - id: "gitea-28-current"
+    from_regex: "^28\\."
+    to: "28.1.0"           # == installed (REM-294, applied 2026-10-20)
     severity: security
     changelog_url: "https://blog.gitea.com/"
     notes: |
