@@ -1806,7 +1806,7 @@ portainer_port: 9002                   # 9000/9001 reserved for RustFS (S3 API +
   # (STS, 2026-08-27) now does. Tag verified pullable on Docker Hub before
   # pinning — the queue records VERSIONS, and a version is not always a tag
   # (node-red's recorded 4.1.13 has no plain tag at all).
-portainer_version: "2.45.0"             # STS line; also carries the CVE-2025-68121 Go-TLS sweep
+portainer_version: "2.45.2"             # STS; REM-295 bind-mount bypass fixes (LTS 2.39 unpatched)
 portainer_admin_password: "{{ nos_derived_secrets.portainer }}"
 # Repair an admin-password DRIFT (admin exists but neither the current nor
 # previous prefix logs in — left by an interrupted/partial provisioning). true =
