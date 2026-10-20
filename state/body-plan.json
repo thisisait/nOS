@@ -7,10 +7,10 @@
     "genome": 22,
     "cell": 17,
     "tissue": 1,
-    "organ": 82,
+    "organ": 83,
     "organ system": 13,
     "organism": 0,
-    "habitat": 8,
+    "habitat": 9,
     "sense": 80,
     "limb": 118,
     "memory": 41,
@@ -18,7 +18,7 @@
     "reflex": 43,
     "heartbeat": 1,
     "internal": 76,
-    "edges": 434
+    "edges": 435
   },
   "nodes": {
     "agent:conductor": {
@@ -462,6 +462,10 @@
       "kind": "backend"
     },
     "backend:openclaw": {
+      "level": "habitat",
+      "kind": "backend"
+    },
+    "backend:vllm": {
       "level": "habitat",
       "kind": "backend"
     },
@@ -1878,6 +1882,10 @@
       "kind": "service"
     },
     "service:vaultwarden": {
+      "level": "organ",
+      "kind": "service"
+    },
+    "service:vllm": {
       "level": "organ",
       "kind": "service"
     },
@@ -3903,6 +3911,11 @@
       "from": "service:vaultwarden",
       "to": "organ_system:vault",
       "kind": "part_of"
+    },
+    {
+      "from": "service:vllm",
+      "to": "backend:vllm",
+      "kind": "data"
     },
     {
       "from": "service:watchtower",
