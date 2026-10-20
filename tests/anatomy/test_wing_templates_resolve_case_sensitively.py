@@ -19,5 +19,7 @@ def test_the_directory_is_spelt_as_the_presenter_names_it():
         body = re.search(rf"function {fn}\(\): array\s*\{{(.*?)\n\t\}}", base, re.S)
         assert body, f"BasePresenter does not override {fn} — Nette would look in app/templates/"
         assert "'/Templates'" in body.group(1), f"{fn} must name app/Templates exactly"
-    assert (WING / "Templates").is_dir() and not (WING / "templates").exists()
+    # The listing's spelling, not exists(): on a case-insensitive macOS volume `templates` always exists.
+    names = {p.name for p in WING.iterdir()}
+    assert "Templates" in names and "templates" not in names, sorted(names)
     assert (WING / "Templates" / "@layout.latte").is_file()
