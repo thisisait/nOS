@@ -809,6 +809,46 @@ def test_cites_node_needs_the_name_drawn_by_search_memory_and_said():
     assert not check("cites_node", "Go", _got("Gossip Protocols is the node.", renders=[_memory("Gossip Protocols")]), noon)
 
 
+def _found(*nodes, by="search_knowledge"):
+    """search_knowledge's list as serve draws it now: "<kind> · <name> [<id>]" (iris-grounded-knowledge)."""
+    items = [{"text": f"taxonomy · {n} [{i}]", "detail": f"{n}: what KEAP holds."} for i, n in nodes]
+    return dict(_show("list", {"title": "Knowledge", "ordered": True, "items": items}), by=by)
+
+
+def _read(i, name):
+    tree = {"focus": i, "hidden": 0, "nodes": [{"id": i, "name": name}]}
+    return dict(_show("knowledge_tree", tree), by="read_node")
+
+
+def test_cites_node_judges_by_id_once_ids_reach_the_model():
+    """Iris hears node ids now: a cited node is its [id] in the text, the id drawn by search_knowledge or read_node;
+    a case may name the id or the node's name. A run from before the rename (search_memory, names only) still judges by name."""
+    check, noon, rust = _bench().check, 0.0, "02.02.03.01.03"
+    hit = _found((rust, "Rust"), ("02.02.03.01.04", "Go"))
+    said = "Rust has no garbage collector [02.02.03.01.03]."
+    assert check("cites_node", rust, _got(said, renders=[hit]), noon)
+    assert check("cites_node", "Rust", _got(said, renders=[hit]), noon), "a name resolves to its drawn id"
+    assert check("cites_node", rust, _got(said, renders=[_read(rust, "Rust")]), noon), "read_node drew it"
+    assert not check("cites_node", rust, _got("Rust has no garbage collector.", renders=[hit]), noon), "named, the id not cited"
+    assert not check("cites_node", "Rust", _got("Rust has no garbage collector.", renders=[hit]), noon), "ids drawn: the name is not enough"
+    assert not check("cites_node", rust, _got(said, renders=[]), noon), "an id from model memory"
+    assert not check("cites_node", rust, _got(said, renders=[_found((rust, "Rust"), by="show")]), noon), "show drew it"
+    assert not check("cites_node", "Go", _got(said, renders=[hit]), noon), "Go drawn, not cited"
+    old = _memory("Rust")  # by search_memory, no ids: the name fallback
+    assert check("cites_node", "Rust", _got("Rust: no garbage collector.", tools=["search_memory"], renders=[old]), noon)
+
+
+def test_an_old_run_reads_search_memory_as_search_knowledge():
+    """The rename keeps old runs and old cases judgeable: search_memory maps to search_knowledge both ways."""
+    check, noon = _bench().check, 0.0
+    assert check("tools_called", ["search_knowledge"], _got(tools=["search_memory"]), noon)
+    assert check("tools_called", ["search_memory"], _got(tools=["search_knowledge"]), noon)
+    assert not check("tools_not_called", ["search_memory"], _got(tools=["search_knowledge"]), noon)
+    b = _bench()
+    case = next(c for c in CASES if c["id"] == "no-memory-hit")
+    assert b.no_data(case, _got("x", tools=["search_knowledge"], renders=[_found(("01", "x"))])), "the new name's hit is no data too"
+
+
 def test_says_not_in_memory_and_does_not_answer_from_its_own():
     """Out of corpus: Iris says the knowledge base does not hold it, and never answers from model memory."""
     check, noon = _bench().check, 0.0
