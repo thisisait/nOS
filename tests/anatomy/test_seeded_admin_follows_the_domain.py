@@ -37,8 +37,6 @@ SEEDS = {
     "wordpress": ("roles/pazny.wordpress/tasks/post.yml", "Reconverge admin password",
                   "Reconverge admin password", "--user_email"),
 }
-# Fixed on feat/linux-dgx-core (d7a8c34bb, 4b852b167); drop the mark once it lands.
-DGX = {"n8n", "open_webui"}
 
 ENV = jinja2.Environment(undefined=jinja2.ChainableUndefined)
 ENV.filters.update(quote=lambda s: shlex.quote(str(s)), bool=bool, to_json=str)
@@ -76,8 +74,7 @@ def _find(items: list[dict], key: str) -> dict | None:
     return next((t for t in items if key in str(t.get("name", t.get("id", "")))), None)
 
 
-@pytest.mark.parametrize("seed", [pytest.param(s, marks=pytest.mark.xfail(strict=True, reason="fix lives on feat/linux-dgx-core"))
-                                  if s in DGX else s for s in SEEDS])
+@pytest.mark.parametrize("seed", SEEDS)
 def test_the_seeded_admin_follows_the_domain(seed):
     path, lookup_key, move_key, needle = SEEDS[seed]
     items = _items(path)
