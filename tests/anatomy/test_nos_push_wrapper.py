@@ -49,7 +49,7 @@ def test_nos_push_does_not_skip_underlying_push():
 	wrapper."""
 	src = (REPO / "tools/nos-push").read_text()
 	# The git push command appears BEFORE any SKIP_SYNC short-circuit.
-	push_pos = src.find('git -C "$REPO_DIR" push')
+	push_pos = src.find('git -C "$PUSH_DIR" push')
 	skip_check = src.find('SKIP_SYNC" -eq 1 ')
 	assert 0 < push_pos < skip_check, (
 		"nos-push must `git push` before the --skip-sync gate so the "

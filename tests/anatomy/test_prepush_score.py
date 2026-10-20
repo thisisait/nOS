@@ -133,7 +133,7 @@ def test_a_failed_model_is_unavailable_not_a_number(repo, reply):
 def test_nos_push_scores_before_it_pushes():
     src = (REPO / "tools" / "nos-push").read_text()
     score = src.find("prepush-score.py")
-    push = src.find('git -C "$REPO_DIR" push')
+    push = src.find('git -C "$PUSH_DIR" push')
     assert 0 < score < push, "nos-push must run the scorer before git push"
     assert "--strict" in src
 
