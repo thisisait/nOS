@@ -45,6 +45,7 @@
 		onremove={() => c.onremove(item.id)}
 		onsubmit={c.onsubmit}
 		onexport={c.onexport}
+		onread={c.onread}
 	/>
 {:else if item.kind === 'board'}
 	{@const child = c.spaces.find((s) => s.id === item.board)}

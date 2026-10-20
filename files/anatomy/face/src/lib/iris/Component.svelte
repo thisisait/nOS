@@ -10,6 +10,7 @@
 	import Chart from './Chart.svelte';
 	import Form from './Form.svelte';
 	import Graph from './Graph.svelte';
+	import KnowledgeTree from './KnowledgeTree.svelte';
 	import Sequence from './Sequence.svelte';
 	import Markdown from './Markdown.svelte';
 	import Timeline from './Timeline.svelte';
@@ -32,7 +33,12 @@
 		(c.ref_display ? `, shown by ${c.ref_display}` : '');
 
 	// view: Před / Změny / Po of a component that marks a delta (delta.ts); the switch sets it.
-	let { component, view = $bindable('changes') }: { component: Component; view?: View } = $props();
+	// onread: a click on a knowledge node opens it (Iris places it as a knowledge widget); absent draws the tree only.
+	let {
+		component,
+		view = $bindable('changes'),
+		onread
+	}: { component: Component; view?: View; onread?: (id: string, name: string) => void } = $props();
 	// One name per switch: one group for the keyboard and a screen reader; two switches never merge.
 	const switchName = $props.id();
 	// A column whose text runs long reads as prose under its row, not as a column that starves the rest.
@@ -351,6 +357,9 @@
 	{:else if component.kind === 'graph'}
 		{#if component.props.title}<h3>{component.props.title}</h3>{/if}
 		<Graph graph={component.props} />
+	{:else if component.kind === 'knowledge_tree'}
+		{#if component.props.title}<h3>{component.props.title}</h3>{/if}
+		<KnowledgeTree tree={component.props} {onread} />
 	{:else if component.kind === 'sequence'}
 		{#if component.props.title}<h3>{component.props.title}</h3>{/if}
 		<Sequence sequence={component.props} />

@@ -9,7 +9,12 @@
 	import { toggle } from './chart/select';
 	import { IDENTITY, drag, key, wheel, type Zoom } from './chart/zoom';
 
-	let { graph }: { graph: GraphProps } = $props();
+	// focus: a node drawn as the one read; onpick: a click or Enter on a node, beside its selection.
+	let {
+		graph,
+		focus,
+		onpick
+	}: { graph: GraphProps; focus?: string; onpick?: (id: string) => void } = $props();
 
 	const arrow = $props.id();
 	let zoom: Zoom = $state(IDENTITY);
@@ -86,6 +91,7 @@
 		if (e.key === 'Enter' || e.key === ' ') {
 			e.preventDefault();
 			sel = toggle(sel, id);
+			onpick?.(id);
 		}
 	}
 </script>
@@ -141,11 +147,12 @@
 				<g
 					class="node tone-{n.tone ?? 'none'}"
 					class:sel={sel.includes(n.id)}
+					class:focus={n.id === focus}
 					class:dim={dim(n.id)}
 					tabindex="0"
 					role="button"
 					aria-pressed={sel.includes(n.id)}
-					onclick={() => (sel = toggle(sel, n.id))}
+					onclick={() => ((sel = toggle(sel, n.id)), onpick?.(n.id))}
 					onkeydown={(e) => nodeKey(e, n.id)}
 					onfocus={() => (focused = n.tip)}
 					onblur={() => (focused = '')}
@@ -214,6 +221,10 @@
 	}
 	.tone-bad rect {
 		stroke: var(--bad-ink);
+	}
+	.node.focus rect {
+		stroke: var(--accent);
+		stroke-width: 3;
 	}
 	.node.sel rect {
 		stroke: var(--accent);

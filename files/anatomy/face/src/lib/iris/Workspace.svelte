@@ -27,6 +27,7 @@
 		onremove: (id: string) => void;
 		onsubmit: (m: Submit) => void;
 		onexport?: (name: string, csv: string) => Promise<string>;
+		onread?: (id: string, name: string) => void;
 	};
 </script>
 
@@ -52,7 +53,8 @@
 		onremove,
 		onsubmit,
 		onlens,
-		onexport
+		onexport,
+		onread
 	}: Omit<CanvasCtx, 'lens'> & {
 		space: Space;
 		onview: (v: View) => void;
@@ -85,7 +87,8 @@
 		onrerun: (id) => onrerun(id),
 		onremove: (id) => onremove(id),
 		onsubmit: (m) => onsubmit(m),
-		onexport: (n, csv) => (onexport ? onexport(n, csv) : Promise.resolve('not saved'))
+		onexport: (n, csv) => (onexport ? onexport(n, csv) : Promise.resolve('not saved')),
+		onread: (id, name) => onread?.(id, name)
 	});
 
 	const nodeTypes = { item: CanvasItem };

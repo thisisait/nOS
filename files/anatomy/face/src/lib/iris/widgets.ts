@@ -75,7 +75,9 @@ export const tableOf = (s: WidgetSpec): string =>
 			? s.chart.query.table
 			: 'kpi' in s
 				? s.kpi.query.table
-				: s.form.table;
+				: 'knowledge' in s
+					? ''
+					: s.form.table;
 
 /** A write landed in `table`: the active widgets that read it re-run, the others go stale. A form never re-runs. */
 export function onTableChanged(

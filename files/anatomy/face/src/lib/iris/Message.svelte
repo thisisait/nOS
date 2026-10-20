@@ -16,9 +16,11 @@
 		msg,
 		onpin,
 		onchoose,
-		onplace
+		onplace,
+		onread
 	}: {
 		msg: ToShell;
+		onread?: (id: string, name: string) => void;
 		onpin?: (m: ToShell, fresh: boolean) => void;
 		onchoose?: (m: Extract<ToThalamus, { t: 'choice_reply' }>) => Promise<boolean>;
 		onplace?: (d: DashboardProps, here: boolean) => boolean;
@@ -64,7 +66,7 @@
 	{:else if msg.t === 'render' && msg.component.kind === 'dashboard'}
 		<DashboardCard dashboard={msg.component.props} {onplace} />
 	{:else if msg.t === 'render'}
-		<ComponentView component={msg.component} />
+		<ComponentView component={msg.component} {onread} />
 		{#if msg.pin}
 			{@render pins(msg)}
 			{#if grouped && !charted}

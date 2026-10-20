@@ -267,6 +267,9 @@
 	const added = (title: string, spec: WidgetSpec) =>
 		place(ws.placed(layout, widgets, newId(), title, spec, mid()));
 
+	// The person's click on a knowledge node: it opens as a widget the thalamus reads, without the model.
+	const opened = (node: string, name: string) => added(name, { knowledge: { node } });
+
 	const FULL = `no room for another board here (at most ${ws.MAX_SPACES}, ${ws.MAX_DEPTH} deep, ${ws.MAX_ITEMS} items a board)`;
 	const roomy = () => ws.addSpace(layout, 'probe', '', layout.active) !== layout;
 
@@ -618,6 +621,7 @@
 		onsubmit={submitted}
 		onlens={relens}
 		onexport={exported}
+		onread={opened}
 	/>
 </main>
 
@@ -646,7 +650,13 @@
 		{#each log as e}
 			{#if 'me' in e}<p class="me">{e.me}</p>
 			{:else if 'note' in e}<StatusNote kind="error" block={false}>{e.note}</StatusNote>
-			{:else}<Message msg={e.msg} onpin={pinned} onchoose={answered} onplace={placedOffer} />{/if}
+			{:else}<Message
+					msg={e.msg}
+					onpin={pinned}
+					onchoose={answered}
+					onplace={placedOffer}
+					onread={opened}
+				/>{/if}
 		{/each}
 	</div>
 	{#if q.pending[0]}

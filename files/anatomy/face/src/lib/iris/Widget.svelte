@@ -25,7 +25,8 @@
 		onrerun,
 		onremove,
 		onsubmit,
-		onexport
+		onexport,
+		onread
 	}: {
 		box: WidgetItem;
 		state: WidgetState | undefined;
@@ -37,6 +38,7 @@
 		onremove: () => void;
 		onsubmit: (m: Submit) => void;
 		onexport?: (name: string, csv: string) => Promise<string>;
+		onread?: (id: string, name: string) => void;
 	} = $props();
 
 	// `st`: a prop named state would make $state below read as a store.
@@ -85,7 +87,7 @@
 					/>
 				{/key}{/key}
 			{#if st.added}<p class="added">row {st.added} added</p>{/if}
-		{:else if st?.component}<ComponentView component={st.component} />{/if}
+		{:else if st?.component}<ComponentView component={st.component} {onread} />{/if}
 	</div>
 </article>
 

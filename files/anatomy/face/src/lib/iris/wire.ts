@@ -121,6 +121,7 @@ export type Component =
 			};
 	  }
 	| { kind: 'sequence'; props: { title?: string; participants: string[]; steps: SequenceStep[] } }
+	| { kind: 'knowledge_tree'; props: KnowledgeProps }
 	| { kind: 'form'; props: FormProps }
 	| { kind: 'choice'; props: ChoiceProps }
 	| { kind: 'dashboard'; props: DashboardProps }
@@ -129,6 +130,14 @@ export type Component =
 			kind: 'action_approval';
 			props: { app: string; action: string; params: Record<string, Value>; says: string };
 	  };
+
+/** The ontology around one node of our knowledge (renderers.rs KnowledgeTree, v10); `hidden`: what the cap left out. */
+export type KnowledgeProps = {
+	title?: string;
+	focus: string;
+	nodes: { id: string; name: string; parent?: string; child_count?: number; text?: string }[];
+	hidden: number;
+};
 
 /** One number serve computed from a table (renderers.rs Kpi); never the model's. */
 export type KpiProps = {
@@ -324,7 +333,8 @@ export type WidgetSpec =
 				y?: string;
 				unit?: string;
 			};
-	  };
+	  }
+	| { knowledge: { node: string } };
 
 export type Link = { state: 'connected' | 'closed'; reason: string | null };
 

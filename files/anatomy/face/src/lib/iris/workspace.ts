@@ -145,7 +145,7 @@ export function lensed(spec: WidgetSpec, lens: Lens[] = []): WidgetSpec {
 	const add = lens
 		.filter((c) => c.value !== '')
 		.map(({ column, op, value }) => ({ column, op, value }));
-	if (!add.length || 'form' in spec) return spec;
+	if (!add.length || 'form' in spec || 'knowledge' in spec) return spec;
 	if ('rows' in spec)
 		return {
 			rows: {
