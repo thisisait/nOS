@@ -28,7 +28,7 @@ the agent's or anyone's — is caught before it costs anything. Both are the poi
 
 - nOS is an Ansible playbook that turns one Mac (Apple Silicon) or Ubuntu 24.04 host into a self-hosted Agentic Home Lab.
 - This repo is the SOURCE. The running estate lives elsewhere on the host and changes only when the operator runs a converge.
-- Each service is an organ: one role and one row in state/manifest.yml (78 rows); a container service also renders one compose override, a host-native one a launchd or systemd unit.
+- Each service is an organ: one role and one row in state/manifest.yml (79 rows); a container service also renders one compose override, a host-native one a launchd or systemd unit.
 - All data stays on the machine. Sign-in goes through Authentik; work is tracked in KEAP tables, not in prose files.
 - When this page and a reader disagree, the reader is right. Ask it (section 4).
 
@@ -116,9 +116,9 @@ KEAP_API_URL=http://127.0.0.1:8091 KEAP_AGENT_TOKEN_RO=<keap_agent_token_ro> pyt
 ```
 
 - Local models (Ollama, OpenAI-compatible): `http://127.0.0.1:11434/v1`, no token. Models the register names: `hermes3:8b`, `qwen3:14b`.
-- Web: Traefik owns ports 80/443. A service with a `domain_var` in state/manifest.yml (56 of 78) answers at that variable, by default `<name>.{{ tenant_domain }}` with `tenant_domain: dev.local`. This host's value: `tools/estate-status.py --config tenant_domain`. The routed ids are those rows' `id`s.
+- Web: Traefik owns ports 80/443. A service with a `domain_var` in state/manifest.yml (56 of 79) answers at that variable, by default `<name>.{{ tenant_domain }}` with `tenant_domain: dev.local`. This host's value: `tools/estate-status.py --config tenant_domain`. The routed ids are those rows' `id`s.
 
-The public organ systems (the apex ruling publishes 13; 491 of 554 ruled nodes are withheld):
+The public organ systems (the apex ruling publishes 13; 493 of 556 ruled nodes are withheld):
 
 - The Gatehouse — Access is decided in one place. (4 parts)
 - The Spine — The estate governs and audits itself. (5 parts)
