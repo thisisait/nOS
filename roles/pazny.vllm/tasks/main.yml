@@ -86,7 +86,12 @@
     img=$({{ nos_docker_bin | default('docker') }} image inspect --format '{{ '{{' }}range .Config.Env{{ '}}' }}{{ '{{' }}println .{{ '}}' }}{{ '{{' }}end{{ '}}' }}' {{ vllm_image | quote }} \
           | sed -n 's/^CUDA_VERSION=\([0-9]*\.[0-9]*\).*/\1/p' | head -1)
     host=$(nvidia-smi | sed -n 's/.*CUDA Version: \([0-9]*\.[0-9]*\).*/\1/p' | head -1)
-    echo "${img:-?} ${host:-?}"
+    # The comparison is made here (sort -V), so the assert below is plain Jinja.
+    fits=unknown
+    if [ -n "$img" ] && [ -n "$host" ]; then
+      [ "$(printf '%s\n%s\n' "$img" "$host" | sort -V | tail -1)" = "$host" ] && fits=yes || fits=no
+    fi
+    echo "${img:-?} ${host:-?} ${fits}"
   args:
     executable: /bin/bash
   register: _vllm_cuda
@@ -94,9 +99,7 @@
 
 - name: "[pazny.vllm] Refuse an image built for a newer driver"
   ansible.builtin.assert:
-    that: >-
-      (_vllm_cuda.stdout.split()[0] == '?') or (_vllm_cuda.stdout.split()[1] == '?')
-      or (_vllm_cuda.stdout.split()[0] is version(_vllm_cuda.stdout.split()[1], '<='))
+    that: _vllm_cuda.stdout.split()[2] != 'no'
     fail_msg: >-
       {{ vllm_image }} is built for CUDA {{ _vllm_cuda.stdout.split()[0] }}, and this
       host's driver serves CUDA {{ _vllm_cuda.stdout.split()[1] }} (nvidia-smi). The
