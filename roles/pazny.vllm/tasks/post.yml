@@ -59,8 +59,8 @@
       Authorization: "Bearer {{ _vllm_owui_login.json.token }}"
     body:
       ENABLE_OPENAI_API: true
-      OPENAI_API_BASE_URLS: "{{ _urls + [_vllm_url] }}"
-      OPENAI_API_KEYS: "{{ _keys + [vllm_api_key] }}"
+      OPENAI_API_BASE_URLS: "{{ (_urls | list) + [_vllm_url] }}"
+      OPENAI_API_KEYS: "{{ (_keys | list) + [vllm_api_key] }}"
       OPENAI_API_CONFIGS: "{{ _cfgs | combine({(_urls | length) | string: {'enable': true}}) }}"
   vars:
     _vllm_url: "http://vllm:{{ vllm_container_port }}/v1"
