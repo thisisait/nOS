@@ -25,6 +25,7 @@ pub enum Component {
     Timeline(Timeline),
     Graph(Graph),
     Sequence(Sequence),
+    KnowledgeTree(KnowledgeTree),
     Form(Form),
     Choice(Choice),
     Dashboard(Dashboard),
@@ -304,6 +305,32 @@ impl Component {
                     }
                 }
                 Ok(())
+            }
+            Component::KnowledgeTree(k) => {
+                title(&k.title)?;
+                if k.nodes.is_empty() {
+                    return Err("a knowledge tree has no nodes".into());
+                }
+                most("knowledge tree nodes", k.nodes.len(), KNOWLEDGE_MAX)?;
+                let mut ids = std::collections::BTreeSet::new();
+                for n in &k.nodes {
+                    need_node_id(&n.id)?;
+                    if !ids.insert(n.id.as_str()) {
+                        return Err(format!("knowledge node id {:?} twice", n.id));
+                    }
+                    if n.name.trim().is_empty() {
+                        return Err(format!("knowledge node {:?} has no name", n.id));
+                    }
+                    cap("a knowledge node name", &n.name, 200)?;
+                    n.text.as_deref().map_or(Ok(()), |t| cap("a knowledge node text", t, 600))?;
+                }
+                if !ids.contains(k.focus.as_str()) {
+                    return Err(format!("knowledge focus {:?} is not a node of the tree", k.focus));
+                }
+                match k.nodes.iter().find(|n| n.parent.as_deref().is_some_and(|p| !ids.contains(p))) {
+                    Some(n) => Err(format!("knowledge node {:?} names a parent not in the tree", n.id)),
+                    None => Ok(()),
+                }
             }
             Component::Form(f) => {
                 if !crate::wire::is_uuid(&f.form) {
@@ -653,6 +680,43 @@ pub struct TimelineItem {
     /// Items that share a lane are drawn on one row of a time-scaled timeline; at most 40 chars.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lane: Option<String>,
+}
+
+/// The most nodes a knowledge tree carries; serve draws iris_knowledge_tree_max of them.
+pub const KNOWLEDGE_MAX: usize = 200;
+
+/// A KEAP taxonomy node id as a tree and a widget spec carry it: `[A-Za-z0-9._-]{1,128}`.
+pub fn need_node_id(id: &str) -> Result<(), String> {
+    let ok = (1..=128).contains(&id.len()) && id.bytes().all(|b| b.is_ascii_alphanumeric() || b"._-".contains(&b));
+    if ok { Ok(()) } else { Err(format!("knowledge node id {id:?} is not [A-Za-z0-9._-]{{1,128}}")) }
+}
+
+/// The ontology around one node of our knowledge (read_node, a knowledge widget): the parent chain, the
+/// node, its children and siblings, at most serve's cap; `hidden` is how many the cap left out.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct KnowledgeTree {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    pub focus: String,
+    pub nodes: Vec<KnowledgeNode>,
+    pub hidden: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct KnowledgeNode {
+    pub id: String,
+    pub name: String,
+    /// None: a top of the tree drawn.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parent: Option<String>,
+    /// How many children KEAP holds under it, drawn or not.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub child_count: Option<u32>,
+    /// The head of its description (the focus's).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text: Option<String>,
 }
 
 /// Things and the links between them, drawn as a layered diagram (one column per rank).

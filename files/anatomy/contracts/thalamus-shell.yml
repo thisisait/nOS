@@ -247,7 +247,7 @@ components:
       description head); hidden is how many the cap left out, said by both shells. Never in an approval. The pupil
       draws it as the graph's layered columns (parent -> child), the focus marked; a click on a node opens that node
       as a knowledge widget, read by the thalamus without the model; the terminal says one indented line a node
-: a render or approval_request carrying one is
+    # Crosses the wire only inside a `widget` message: a render or approval_request carrying one is
     # refused (wire.rs not_a_form).
     form: >-
       a widget form serve builds from the table's live schema (form_from_schema), never the model:

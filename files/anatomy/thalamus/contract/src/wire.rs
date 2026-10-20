@@ -211,6 +211,14 @@ pub enum WidgetSpec {
     Chart(ChartSpec),
     Form(FormSpec),
     Kpi(KpiSpec),
+    Knowledge(KnowledgeSpec),
+}
+
+/// The tree around one taxonomy node, read by serve as the person (v10).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct KnowledgeSpec {
+    pub node: String,
 }
 
 /// One total by serve: `op` of `y` over the query's rows (query_rows with op and no group_by).
@@ -459,6 +467,7 @@ pub fn check_spec(spec: &WidgetSpec) -> Result<(), String> {
             }
             &k.query.table
         }
+        WidgetSpec::Knowledge(k) => return crate::renderers::need_node_id(&k.node),
     };
     if table.is_empty() { Err("a widget spec names no table".into()) } else { Ok(()) }
 }
@@ -507,6 +516,7 @@ fn check_shell(m: &ToShell) -> Result<(), String> {
                 Component::Choice(_) => Err("a choice is asked in a render, never in an approval".into()),
                 Component::Dashboard(_) => Err("a dashboard is offered in a render, never in an approval".into()),
                 Component::Kpi(_) => Err("a kpi is drawn in a render or a widget, never in an approval".into()),
+                Component::KnowledgeTree(_) => Err("a knowledge tree is drawn in a render or a widget, never in an approval".into()),
                 _ => Ok(()),
             }
         }
@@ -565,8 +575,8 @@ fn check_shell(m: &ToShell) -> Result<(), String> {
             need_token(widget)?;
             match component {
                 Component::Chart(_) => component.check_allow_empty(),
-                Component::TableResults(_) | Component::Form(_) | Component::Kpi(_) => component.check(),
-                _ => Err("a widget carries table_results, a chart, a form or a kpi".into()),
+                Component::TableResults(_) | Component::Form(_) | Component::Kpi(_) | Component::KnowledgeTree(_) => component.check(),
+                _ => Err("a widget carries table_results, a chart, a form, a kpi or a knowledge tree".into()),
             }
         }
     }
