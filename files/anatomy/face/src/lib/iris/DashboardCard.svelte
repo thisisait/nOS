@@ -22,7 +22,15 @@
 		contains: 'contains'
 	};
 	const kind = (s: WidgetSpec) =>
-		'rows' in s ? 'rows' : 'chart' in s ? `${s.chart.chart} chart` : 'kpi' in s ? 'kpi' : 'knowledge' in s ? 'knowledge' : 'form';
+		'rows' in s
+			? 'rows'
+			: 'chart' in s
+				? `${s.chart.chart} chart`
+				: 'kpi' in s
+					? 'kpi'
+					: 'knowledge' in s
+						? 'knowledge'
+						: 'form';
 </script>
 
 <section class="dashboard">

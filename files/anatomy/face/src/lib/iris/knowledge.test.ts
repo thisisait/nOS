@@ -14,7 +14,13 @@ const chain = [
 	{ id: '02', name: 'Formal Sciences', child_count: 4 },
 	{ id: '02.02', name: 'Computer Science', parent: '02', child_count: 6 },
 	{ id: '02.02.03.01', name: 'Systems Languages', parent: '02.02', child_count: 60 },
-	{ id: RUST, name: 'Rust', parent: '02.02.03.01', child_count: 1, text: 'Memory-safe through ownership.' },
+	{
+		id: RUST,
+		name: 'Rust',
+		parent: '02.02.03.01',
+		child_count: 1,
+		text: 'Memory-safe through ownership.'
+	},
 	{ id: `${RUST}.01`, name: 'Ownership', parent: RUST }
 ];
 const siblings = Array.from({ length: 45 }, (_, i) => ({
@@ -27,7 +33,12 @@ const read: ToShell = {
 	session: S,
 	component: {
 		kind: 'knowledge_tree',
-		props: { title: 'Rust in our knowledge', focus: RUST, hidden: 16, nodes: [...chain, ...siblings] }
+		props: {
+			title: 'Rust in our knowledge',
+			focus: RUST,
+			hidden: 16,
+			nodes: [...chain, ...siblings]
+		}
 	},
 	pin: { knowledge: { node: RUST } }
 };
