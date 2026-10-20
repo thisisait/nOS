@@ -41,7 +41,21 @@ entries:
       groups:
         - !Find [authentik_core.group, [name, nos-admins]]
 
-  # ── The operator's own account (nos_identities) — admin from the first install
+  # ── The operator's own account (nos_identities) — admin from the first install.
+  # nos_operator_owns_password: the derived password is set ONCE (state: created)
+  # and the second entry keeps the rest true every run without a password.
+{% if nos_operator_owns_password | default(false) | bool %}
+  - model: authentik_core.user
+    state: created
+    identifiers:
+      username: "{{ nos_primary_admin }}"
+    attrs:
+      name: "{{ nos_primary_admin }}"
+      email: "{{ nos_operator_email }}"
+      password: "{{ nos_operator_password }}"
+      path: "users"
+      type: "internal"
+{% endif %}
   - model: authentik_core.user
     state: present
     identifiers:
@@ -49,7 +63,9 @@ entries:
     attrs:
       name: "{{ nos_primary_admin }}"
       email: "{{ nos_operator_email }}"
+{% if not (nos_operator_owns_password | default(false) | bool) %}
       password: "{{ nos_operator_password }}"
+{% endif %}
       is_active: true
       path: "users"
       type: "internal"

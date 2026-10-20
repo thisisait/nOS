@@ -222,7 +222,8 @@ nos_extra_identities: []
 # The operator's Authentik password is the derived one by default, and the
 # install's identity checks fail if it stops working. true = it is only the
 # INITIAL password, like an extra person's: a refusal means the operator set
-# their own (first-login and --tags verify then say so instead of failing).
+# their own (first-login and --tags verify then say so instead of failing), and
+# the 00-admin-groups blueprint stops re-applying it on every converge.
 nos_operator_owns_password: false
 
 # ── TLD class detection (drives mkcert vs ACME, dnsmasq vs real DNS) ─────────

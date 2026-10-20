@@ -48,7 +48,7 @@ def _tier_group(tier: int) -> str:
     return next(t for t in CFG["authentik_rbac_tiers"] if t["tier"] == tier)["groups"][-1]
 
 
-def _ctx(tmp: Path, people: list[dict], passwords: dict | None = None) -> dict:
+def _ctx(tmp: Path, people: list[dict], passwords: dict | None = None, **extra) -> dict:
     ctx = {"stacks_dir": str(tmp), "tenant_domain": "example.test", "nos_primary_admin": "op",
            "nos_operator_email": "op@example.test", "default_admin_email": "admin@example.test",
            "authentik_bootstrap_password": "pw-akadmin", "nos_operator_password": "pw-op",
@@ -57,6 +57,7 @@ def _ctx(tmp: Path, people: list[dict], passwords: dict | None = None) -> dict:
            "authentik_rbac_tiers": CFG["authentik_rbac_tiers"], "nos_test_users_enabled": False,
            "nos_extra_identities": people,
            "nos_extra_identity_passwords": {p["name"]: f"pw-{p['name']}" for p in people} if passwords is None else passwords}
+    ctx.update(extra)
     env = jinja2.Environment()
     rend = lambda i: {k: env.from_string(v).render(**ctx) if isinstance(v, str) else v for k, v in i.items()}  # noqa: E731
     ctx["nos_identities"] = [rend(i) for i in CFG["nos_identities"]]
@@ -71,9 +72,9 @@ class _Loader(yaml.SafeLoader):
 _Loader.add_constructor("!Find", lambda ld, n: ("Find", ld.construct_sequence(n, deep=True)))
 
 
-def _render_users(tmp: Path, people: list[dict], passwords: dict | None = None) -> dict:
+def _render_users(tmp: Path, people: list[dict], passwords: dict | None = None, **extra) -> dict:
     plugin = lp.Plugin.from_manifest_file(PLUGIN / "plugin.yml")
-    lp._run_actions(plugin, "pre_compose", [{"render_dir": "provisioning.blueprints"}], _ctx(tmp, people, passwords))
+    lp._run_actions(plugin, "pre_compose", [{"render_dir": "provisioning.blueprints"}], _ctx(tmp, people, passwords, **extra))
     doc = yaml.load((tmp / "infra/authentik/blueprints/00-admin-groups.yaml").read_text(), _Loader)
     out: dict = {}
     for e in doc["entries"]:
@@ -227,3 +228,17 @@ def test_a_persons_own_password_is_not_a_failure_but_the_initial_one_is_named(mo
     assert "petr: signs in with their own password" in out and "jana: still on the INITIAL password" in out
     monkeypatch.setenv("NOS_FIRST_LOGIN", json.dumps([{"name": "akadmin", "password": "x"}]))
     assert fl.main(["--auth-host", "auth.x"]) == 1
+
+
+def test_an_operator_who_owns_their_password_keeps_it(tmp_path):
+    """MEASURED 2026-10-20 (spark1): nos_operator_owns_password: true made first-login
+    and verify accept a refusal, but 00 still re-applied the derived password on every
+    converge, so the password the operator set the day before stopped working."""
+    derived = _render_users(tmp_path / "d", [])["op"]
+    assert [e["state"] for e in derived] == ["present"] and derived[0]["attrs"]["password"] == "pw-op", \
+        "positive control: by default the operator stays on the derived password"
+    create, keep = _render_users(tmp_path / "o", [], nos_operator_owns_password=True)["op"]
+    assert create["state"] == "created" and create["attrs"]["password"] == "pw-op", "the first install still sets it"
+    assert keep["state"] == "present" and "password" not in keep["attrs"], "a re-applied password undoes the operator's own"
+    assert keep["attrs"]["is_active"] is True
+    assert keep["attrs"]["groups"] == [("Find", ["authentik_core.group", ["name", "nos-admins"]])]
