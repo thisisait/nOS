@@ -1735,8 +1735,8 @@ jupyterhub_chp_image: "quay.io/jupyterhub/configurable-http-proxy:5.2.0@sha256:5
 # manifest is the only authoritative answer. arm64 present; 0.11.1 is 404, so
 # this is the top of the line as of 2026-08-07. Same-major, DB migration on
 # start (~minutes), and signup stays off per the pure-SSO doctrine.
-  # REM-245 patch bump. ghcr manifest verified 200 before pinning.
-openwebui_version: "0.11.1"
+  # REM-245 patch bump, then REM-270 0.11.1 -> 0.11.4 (ghcr manifest 200, arm64).
+openwebui_version: "0.11.4"
 openwebui_secret_key: "{{ nos_derived_secrets.openwebui }}"
 openwebui_enable_signup: false   # pure-SSO: public local signup OFF (was true →
                                  # public /auth/signup first-admin race). Users
