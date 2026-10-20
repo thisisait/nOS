@@ -57,12 +57,13 @@ def test_gitea_pin_clears_the_aug29_wave() -> None:
         f"gitea_version is {pin}; REM-244 needs >= 1.27.3"
     )
     recipe = GITEA_RECIPE.read_text(encoding="utf-8")
+    # The at-target entry follows the applied line: gitea-28-current since REM-294 (2026-10-20).
     at_target = re.search(
-        r'id: "gitea-1.27-current".*?to: "(\d+\.\d+\.\d+)"',
+        r'id: "gitea-28-current".*?to: "(\d+\.\d+\.\d+)"',
         recipe,
         re.S,
     )
-    assert at_target, "gitea-1.27-current left upgrades/gitea.yml"
+    assert at_target, "gitea-28-current left upgrades/gitea.yml"
     assert at_target.group(1) == pin, (
         f"recipe to={at_target.group(1)} but pin={pin} — a plain main.yml "
         "re-render would revert the applied hop (REM-178)"
