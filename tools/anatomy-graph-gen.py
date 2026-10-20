@@ -2195,12 +2195,19 @@ def main() -> int:
             # exactly that and the pin gate caught it on the next run.
             pin["graphSha256"] = hashlib.sha256(FACE_TARGET.read_bytes()).hexdigest()
             pin["pinnedAt"] = datetime.date.today().isoformat()
-            pin_path.write_text(json.dumps(pin, indent=2) + "\n", encoding="utf-8")
+            pin_path.write_text(pin_json(pin), encoding="utf-8")
             subprocess.run(["npx", "prettier", "--write", str(pin_path)],
                            cwd=face, capture_output=True, timeout=120)
             print(f"anatomy-graph: pin re-frozen ({pin['graphSha256'][:12]}…), "
                   "positions unchanged", file=sys.stderr)
     return 0
+
+
+# Below main() so the graph's line refs into this file do not move.
+def pin_json(pin: dict) -> str:
+    """The layout pin as UTF-8 (prettier formats it after): json.dumps' default
+    ensure_ascii turned the comment's § ≤ — into \\u escapes on every refreeze."""
+    return json.dumps(pin, indent="\t", ensure_ascii=False) + "\n"
 
 
 if __name__ == "__main__":
