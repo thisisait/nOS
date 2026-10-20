@@ -2,7 +2,7 @@
 # Protocol: ssot/doctrine/cross-repo-contracts.md §1 (spec + fixture + gates
 # over the same bytes). Both sides link one Rust crate (nos-contract), so the
 # gate is the crate decoding the fixture; one copy only, both sides cite this.
-contract_version: 9   # 9: resume workspace, clear, branch, stop, model_state; 8: catalogue (both ways), limbs, act, acted, action_approval; 7: resume, workspace_load, workspace_save, workspace, said, replay; 6: dashboard, kpi, working_for, model_options, model_pick; 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice, delta, sequence; 5: row_diff_approval op/title/read_from
+contract_version: 10   # 10: knowledge_tree, widget spec knowledge; 9: resume workspace, clear, branch, stop, model_state; 8: catalogue (both ways), limbs, act, acted, action_approval; 7: resume, workspace_load, workspace_save, workspace, said, replay; 6: dashboard, kpi, working_for, model_options, model_pick; 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice, delta, sequence; 5: row_diff_approval op/title/read_from
 fixture: files/anatomy/contracts/thalamus-shell.fixture.json
 
 producer:
@@ -38,14 +38,15 @@ wire:
     eq|neq, value}}}} (prefill and when are checked as the form's submit is, and copied onto the form
     it answers), {kpi: {query {table, q?, where?}, op count|sum|avg, y? number column, unit?}} (one total
     over the query's rows by the thalamus, as query_rows with op and no group_by; an avg over no number is
-    refused, never 0). trigger: click|restore|table_changed,
+    refused, never 0), {knowledge: {node}} (the tree around one taxonomy node, read by the thalamus as the
+    person from KEAP's /api/taxonomy-metadata/<node> and /api/graph). trigger: click|restore|table_changed,
     recorded with the spec in the ledger. A widget's rows never let the model propose an edit.
   pin: >-
     `render {session, component, pin?}`: `pin` is the widget spec (as above, and checked as a widget
     message's spec is: a table, and y for sum or avg) the person may place from that render with
     one click; only the thalamus sets it. A query_rows table carries {rows: its arguments}; a show
     chart carries {chart: ...} only when the model named its source and the thalamus drew KEAP's
-    aggregate in place of the model's numbers; a kpi render always carries {kpi: ...} (one without it, or
+    aggregate in place of the model's numbers; a knowledge_tree render carries {knowledge: {node: its focus}}; a kpi render always carries {kpi: ...} (one without it, or
     with another spec, is refused: its number is the thalamus's). The model never adds a widget; the person's click
     does, and the pupil stores the spec, never the rows. The terminal says "(pinnable in the pupil)".
   form_submit: >-
@@ -238,7 +239,15 @@ components:
       is refused), and an approval_request never carries a choice. The pupil draws native radios (checkboxes
       when multi) with the suggestion preselected and marked "navrženo", and sends choice_reply once on
       "Odpovědět"; the terminal numbers the options and answers with /choose 2 (or 1,3)
-    # Crosses the wire only inside a `widget` message: a render or approval_request carrying one is
+    knowledge_tree: >-
+      the ontology around one node of our knowledge (read_node, or a knowledge widget; v10): {title?, focus, nodes[{id,
+      name, parent?, child_count?, text?}], hidden}; ids [A-Za-z0-9._-]{1,128}, unique; focus names a node; a parent
+      names a node of the tree (none: a top); at most 200 nodes (serve draws iris_knowledge_tree_max, default 50: the
+      parent chain, the node, its children, then its siblings), a name 1-200 chars, a text at most 600 (the focus's
+      description head); hidden is how many the cap left out, said by both shells. Never in an approval. The pupil
+      draws it as the graph's layered columns (parent -> child), the focus marked; a click on a node opens that node
+      as a knowledge widget, read by the thalamus without the model; the terminal says one indented line a node
+: a render or approval_request carrying one is
     # refused (wire.rs not_a_form).
     form: >-
       a widget form serve builds from the table's live schema (form_from_schema), never the model:

@@ -198,6 +198,7 @@ fn rig_deciders(name: &str, map: serde_json::Value, (keap_url, keap): (String, S
         floors,
         cortex: None,
         data: d.clone(),
+        tree_max: 50,
     };
     let sock = d.join("t.sock");
     let listener = serve::bind(&sock, SOCK_MODE.with(|m| m.get())).unwrap();
@@ -1581,8 +1582,8 @@ fn the_tools_and_prompt_name_query_rows_and_bound_proposals() {
     let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[0].1).unwrap();
     let names: Vec<&str> = body["tools"].as_array().unwrap().iter().map(|t| t["function"]["name"].as_str().unwrap()).collect();
     assert_eq!(names, ["query_rows", "propose_row_edit", "propose_row_insert", "propose_row_delete", "propose_table_create", "propose_column_add", "show", "red_status", "list_tables",
-                       "estate_services", "nos_guide", "approvals_awaiting", "inbox", "search_memory", "offer_dashboard"]);
-    assert!(p.contains("call search_memory"), "{p}");
+                       "estate_services", "nos_guide", "approvals_awaiting", "inbox", "search_knowledge", "read_node", "offer_dashboard"]);
+    assert!(p.contains("call search_knowledge"), "{p}");
     assert!(p.contains("Before recommending software, call estate_services: prefer a service the estate already has."), "{p}");
     assert!(p.contains("call approvals_awaiting"), "{p}");
     assert!(p.contains("call inbox"), "{p}");
@@ -3860,6 +3861,106 @@ fn unreadable_memory_is_unknown_and_no_hit_is_no_render() {
     let (got, _) = tool_turn(&rig, "what did I note about zorblax-41?");
     assert_eq!(tool_result(&rig, 1)["items"], serde_json::json!([]), "{}", tool_result(&rig, 1));
     assert!(!got.iter().any(|m| matches!(m, ToShell::Render { component: Component::List(_), .. })), "{got:?}");
+}
+
+// --- iris-grounded-knowledge: search_knowledge finds, read_node reads, the answer cites the id ---
+
+const RUST: &str = "02.02.03.01.03";
+
+/// KEAP's GET /api/graph: a chain to Rust, one child, 60 siblings and a node of another branch.
+fn ontology() -> String {
+    let n = |id: &str, name: &str, parent: Option<&str>, kids: u32| serde_json::json!({"id": id, "name": name, "kind": "subcategory",
+        "parentId": parent, "level": id.split('.').count() - 1, "childCount": kids});
+    let mut nodes = vec![n("02", "Formal Sciences", None, 1), n("02.02", "Computer Science", Some("02"), 1),
+        n("02.02.03", "Programming Languages", Some("02.02"), 1), n("02.02.03.01", "Systems Languages", Some("02.02.03"), 61),
+        n(RUST, "Rust", Some("02.02.03.01"), 1), n("02.02.03.01.03.01", "Ownership", Some(RUST), 0), n("01", "Natural Sciences", None, 0)];
+    nodes.extend((10..70).map(|i| n(&format!("02.02.03.01.{i}"), &format!("Sibling {i}"), Some("02.02.03.01"), 0)));
+    serde_json::json!({"success": true, "data": {"nodes": nodes, "links": [], "objects": []}}).to_string()
+}
+
+/// KEAP's GET /api/taxonomy-metadata/<id>: the description and a long curated brief.
+fn rust_meta() -> String {
+    serde_json::json!({"success": true, "data": {"id": RUST, "updatedAt": 0, "data": {"brief": "Ownership. ".repeat(900)},
+        "description": "Rust is memory-safe through ownership and borrowing, without a garbage collector."}}).to_string()
+}
+
+#[test]
+fn search_knowledge_then_read_node_hands_the_model_ids_and_a_pinnable_tree() {
+    let rig = rig_n("know", mapped(), vec![memory(true, serde_json::json!([
+        {"kind": "taxonomy", "refId": RUST, "nodeId": RUST, "name": "Rust", "description": "x".repeat(400), "score": 0.03, "legs": ["lexical", "vector"]},
+        {"kind": "taxonomy", "refId": "02.02.03.01.10", "nodeId": "02.02.03.01.10", "name": "Sibling 10", "description": "d", "score": 0.01, "legs": ["graph"]}])),
+        rust_meta(), ontology(), rust_meta(), ontology()],
+        vec![call("search_knowledge", r#"{"q": "memory-safe systems language"}"#), call("read_node", &format!(r#"{{"id": "{RUST}"}}"#)),
+             answer(&format!("Rust: memory-safe through ownership, no garbage collector [{RUST}]."))]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "which systems language is memory-safe without a garbage collector?");
+    let session = session_of(&got);
+    let p = system_prompt(&rig);
+    assert!(p.contains("cites its id in brackets") && p.contains("not in our knowledge") && p.contains("never answer it from your own memory"), "{p}");
+
+    // The search: the model hears each hit's id, a relevance cue and the head of its text.
+    let found = tool_result(&rig, 1);
+    assert_eq!((&found["items"][0]["id"], &found["items"][0]["name"]), (&serde_json::json!(RUST), &serde_json::json!("Rust")), "{found}");
+    assert_eq!(found["items"][0]["description"].as_str().map(|d| d.chars().count()), Some(300), "{found}");
+    assert_eq!(found["items"][0]["matched_by"], serde_json::json!(["lexical", "vector"]), "{found}");
+    assert!(found["items"][1]["relevance"].as_str().is_some_and(|r| r.contains("neighbour")), "a graph-only hit is a neighbour: {found}");
+    assert!(got.iter().any(|m| matches!(m, ToShell::Render { component: Component::List(l), .. }
+        if l.items[0].text.ends_with(&format!("[{RUST}]")))), "the list draws the id the model cites: {got:?}");
+
+    // The read: the whole description, the brief bounded, the path, and a tree around the node, pinnable.
+    assert_eq!(keap_line(&rig, 1), format!("GET /api/taxonomy-metadata/{RUST} HTTP/1.1"));
+    assert_eq!(keap_line(&rig, 2), "GET /api/graph HTTP/1.1");
+    let read = tool_result(&rig, 2);
+    assert_eq!(read["id"], RUST, "{read}");
+    assert!(read["description"].as_str().is_some_and(|d| d.contains("garbage collector")), "{read}");
+    let text = read["description"].as_str().unwrap().len() + read["brief"].as_str().unwrap_or("").len();
+    assert!(text <= 4096 && read["brief"].as_str().is_some_and(|b| b.starts_with("Ownership.")), "bounded to 4 KB: {text}");
+    assert_eq!(read["path"], serde_json::json!(["Formal Sciences", "Computer Science", "Programming Languages", "Systems Languages"]), "{read}");
+    assert_eq!(read["cite"], format!("[{RUST}]"), "{read}");
+    let (tree, pin) = got.iter().find_map(|m| match m {
+        ToShell::Render { component: Component::KnowledgeTree(t), pin, .. } => Some((t.clone(), pin.clone())),
+        _ => None,
+    }).unwrap_or_else(|| panic!("no knowledge tree drawn: {got:?}"));
+    assert_eq!(tree.focus, RUST);
+    assert_eq!(tree.nodes.len(), 50, "iris_knowledge_tree_max caps it");
+    assert_eq!(tree.hidden, 16, "60 siblings, 44 drawn: the rest are said");
+    let ids: Vec<&str> = tree.nodes.iter().map(|n| n.id.as_str()).collect();
+    assert_eq!(&ids[..6], ["02", "02.02", "02.02.03", "02.02.03.01", RUST, "02.02.03.01.03.01"], "the chain, the node, its child first");
+    assert!(!ids.contains(&"01"), "another branch is not around the hit");
+    assert!(tree.nodes[4].text.as_deref().is_some_and(|t| t.contains("garbage collector")), "the focus carries its text");
+    let pin = pin.expect("a knowledge tree pins");
+    assert_eq!(serde_json::to_value(&pin).unwrap(), serde_json::json!({"knowledge": {"node": RUST}}));
+    assert!(matches!(got.last(), Some(ToShell::Text { text, .. }) if text.contains(&format!("[{RUST}]"))), "{got:?}");
+    let rec = recorded(&rig, &session, "read_node");
+    assert_eq!((&rec["id"], &rec["nodes"]), (&serde_json::json!(RUST), &serde_json::json!(50)), "the ledger keeps ids and counts: {rec}");
+    assert!(!rec.to_string().contains("Ownership."), "no free text in the ledger: {rec}");
+
+    // The pinned tree re-runs as the person, without the model.
+    let (_, w) = run_widget(&rig, "k1", serde_json::to_value(&pin).unwrap());
+    assert_eq!((&w["t"], &w["component"]["kind"], &w["component"]["props"]["focus"]),
+               (&serde_json::json!("widget"), &serde_json::json!("knowledge_tree"), &serde_json::json!(RUST)), "{w}");
+}
+
+#[test]
+fn an_absent_topic_is_said_not_in_our_knowledge_and_an_unknown_node_reads_nothing() {
+    let rig = rig_n("know-0", mapped(), vec![memory(true, serde_json::json!([])), r#"{"success": true, "data": null}"#.into()],
+        vec![call("search_knowledge", r#"{"q": "Haber process"}"#), call("read_node", r#"{"id": "99.99"}"#),
+             answer("That is not in our knowledge.")]);
+    let (got, _) = tool_turn(&rig, "what does our knowledge base say about the Haber process?");
+    let found = tool_result(&rig, 1);
+    assert_eq!(found["items"], serde_json::json!([]), "{found}");
+    assert!(found["said"].as_str().is_some_and(|s| s.contains("not in our knowledge")), "nothing found tells the model what to say: {found}");
+    let read = tool_result(&rig, 2);
+    assert!(read["error"].as_str().is_some_and(|e| e.contains("not in our knowledge")), "{read}");
+    assert!(!got.iter().any(|m| matches!(m, ToShell::Render { component: Component::List(_) | Component::KnowledgeTree(_), .. })), "{got:?}");
+    assert!(matches!(got.last(), Some(ToShell::Text { text, .. }) if text.contains("not in our knowledge")), "{got:?}");
+    for args in [r#"{}"#, r#"{"id": "a b"}"#, r#"{"id": "02", "q": "x"}"#] {
+        let rig = rig_n("know-bad", mapped(), vec![rust_meta()], vec![call("read_node", args), answer("x")]);
+        tool_turn(&rig, "x?");
+        assert!(tool_result(&rig, 1)["error"].is_string(), "{args}");
+        assert!(rig.keap.lock().unwrap().is_empty(), "{args} reached KEAP");
+    }
 }
 
 // --- propose_row_insert: a new row is a card the person decides, on a table they queried ---
