@@ -57,7 +57,7 @@ def test_gitea_pin_clears_the_aug29_wave() -> None:
         f"gitea_version is {pin}; REM-244 needs >= 1.27.3"
     )
     recipe = GITEA_RECIPE.read_text(encoding="utf-8")
-    # The at-target entry follows the applied line: gitea-28-current since REM-294 (2026-10-20).
+    # The at-target entry follows the applied line: gitea-28-current since the 28.1.0 hop (2026-10-20).
     at_target = re.search(
         r'id: "gitea-28-current".*?to: "(\d+\.\d+\.\d+)"',
         recipe,
