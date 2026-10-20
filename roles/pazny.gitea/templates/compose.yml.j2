@@ -67,7 +67,18 @@ services:
       # exact CI host rather than `*` or `private`, so every other destination
       # stays guarded. Adding a host here widens an SSRF boundary — do it for
       # named services the estate operates, never as a blanket.
-      GITEA__webhook__ALLOWED_HOST_LIST: "{{ gitea_webhook_allowed_hosts | default(woodpecker_domain | default('ci' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))) }}"
+{% set _gitea_egress_hosts = gitea_webhook_allowed_hosts | default(woodpecker_domain | default('ci' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))) %}
+{% if gitea_version is version('28.0.0', '>=') %}
+      # Gitea 28 (go-gitea#39426): one [security] list governs webhooks AND OAuth2;
+      # lax mode denies every non-public host not listed. auth.<tld> resolves to
+      # host-gateway (private), so it must be named or the Authentik login dies.
+{% if install_authentik | default(false) %}
+{% set _gitea_egress_hosts = _gitea_egress_hosts ~ ',' ~ (authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))) %}
+{% endif %}
+      GITEA__security__ALLOWED_HOST_LIST: "{{ _gitea_egress_hosts }}"
+{% else %}
+      GITEA__webhook__ALLOWED_HOST_LIST: "{{ _gitea_egress_hosts }}"
+{% endif %}
       GITEA__log__LEVEL: "Warn"
       # ── Prometheus metrics (Grafana observability epic) ────────────────────
       # Exposes /metrics with gitea_repositories / gitea_users /

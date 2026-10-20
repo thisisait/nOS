@@ -250,6 +250,154 @@ recipes:
           {{ gitea_data_dir }}/gitea/gitea.db
         allow_shell: true
 
+  - id: "gitea-1.27-to-28"
+    from_regex: "^1\\.27\\."
+    to: "28.1.0"
+    severity: breaking
+    changelog_url: "https://github.com/go-gitea/gitea/releases/tag/v28.1.0"
+    release_date: "2026-10-06"
+    notes: |
+      Gitea 1.27.x -> 28.1.0. Closes REM-294. 28 is the release after 1.27 (the
+      "1." prefix was dropped), so ONE hop: no intermediate version exists. The
+      only tested source is 1.27.3; take 1.27-current first if the estate is older.
+      28.1.0 itself lists no BREAKING items; every break below is 28.0.0's.
+
+      BREAKING, AND WHAT IT DOES HERE (release notes v28.0.0):
+        - go-gitea#39426 egress proxy. [security] ALLOWED_HOST_LIST now governs
+          webhooks AND OAuth2; EGRESS_MODE=lax (default) denies every non-public
+          host not listed. auth.<tld> is mapped to host-gateway (private), so the
+          Authentik token exchange is DENIED unless named = SSO lockout. The
+          [webhook] key is deprecated. apply.egress_allow_list adds the [security]
+          key to the rendered override; the role template renders it from the pin
+          (version-gated, tests/anatomy/test_gitea_28_egress_names_auth.py).
+          Lax lets PUBLIC webhook targets through (1.27 allowed only the CI host).
+          Wildcards in BLOCKED_* are now fatal at boot: pre.preflight_config refuses.
+        - go-gitea#38855 [actions] RUN_RETENTION_DAYS=400 deletes old Actions
+          runs. CI here is Woodpecker; nothing of ours is lost.
+        - [server] DOMAIN is ignored (derived from ROOT_URL): both are rendered
+          from gitea_domain, so no change. Self-registration "off by default" does
+          not apply: DISABLE_REGISTRATION=false and ALLOW_ONLY_EXTERNAL_REGISTRATION
+          are set explicitly. Git >= 2.25 required; the image ships 2.54.
+        - Schema goes forward (migration 343 -> 356 reported) and 1.27 REFUSES the
+          migrated DB: a tag revert alone does not roll back. Rollback stops the
+          container and restores data dir + sqlite snapshot BEFORE the tag revert.
+
+      COEXISTENCE: gitea is a nos_coexistence v1 service (cp_recursive of /data).
+      A track (3003+10) inherits the 1.27 env, so it rehearses this recipe's
+      in-place path on cloned data. It has no SSO (redirect URI is the primary
+      host); probe it over loopback with the admin's Basic auth.
+
+      SHADOW-PIN: gitea_version (default.config.yml) moves to 28.1.0 in the MR that
+      promotes this recipe, together with renaming gitea-1.27-current to an
+      at-target gitea-28-current (tests/anatomy/test_rem_high_pins_source.py pins
+      that pair). Until then a re-render reverts the applied hop.
+    coexistence_supported: true
+    coexistence_port_offset: 10
+    requires: { min_disk_free_gb: 2, service_healthy: true }
+    reset:
+      scope: container
+      estimated_sec: 300
+      affected_services: [gitea]
+      reason: >-
+        Single-app recreate: only devops-gitea-1 bounces. Embedded sqlite in the
+        data volume, no shared DB. First 28 boot runs ~13 forward-only schema
+        migrations; Woodpecker and the GitHub pull-mirror pause for the window.
+    pre:
+      - id: preflight_config
+        type: exec.shell
+        command: >-
+          ! docker exec devops-gitea-1 grep -nE
+          '^[[:space:]]*(BLOCKED_DOMAINS|BLOCKED_HOST_LIST)[[:space:]]*=.*[*]'
+          /data/gitea/conf/app.ini
+          || { echo "app.ini has a wildcard BLOCKED_* entry: Gitea 28 refuses to boot on it" >&2; exit 1; }
+        allow_shell: true
+      - id: backup_db
+        type: exec.shell
+        command: >-
+          mkdir -p ~/.nos/backups/{{ upgrade_id }}
+          && docker exec devops-gitea-1 sqlite3 /data/gitea/gitea.db
+          ".backup '/tmp/gitea-{{ upgrade_id }}.db'"
+          && docker exec devops-gitea-1 sqlite3 /tmp/gitea-{{ upgrade_id }}.db
+          "PRAGMA integrity_check" | grep -qx ok
+          && docker cp devops-gitea-1:/tmp/gitea-{{ upgrade_id }}.db
+          ~/.nos/backups/{{ upgrade_id }}/gitea.db
+          && docker exec devops-gitea-1 rm -f /tmp/gitea-{{ upgrade_id }}.db
+        allow_shell: true
+      - id: backup_data
+        type: backup.volume
+        src: "{{ gitea_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+      - id: backup_restorable
+        type: exec.shell
+        command: >-
+          test -s ~/.nos/backups/{{ upgrade_id }}/gitea.db
+          && tar -tzf ~/.nos/backups/pre-{{ upgrade_id }}.tar.gz | grep -q 'gitea/gitea.db$'
+        allow_shell: true
+    apply:
+      - id: egress_allow_list
+        type: exec.shell
+        command: >-
+          f="$HOME/stacks/devops/overrides/gitea.yml"
+          && cp "$f" "$HOME/.nos/backups/{{ upgrade_id }}/gitea.override.yml"
+          && { grep -q 'GITEA__security__ALLOWED_HOST_LIST' "$f"
+          || perl -0pi -e 's/^( *)GITEA__webhook__ALLOWED_HOST_LIST: "([^"]*)"\n/$&$1GITEA__security__ALLOWED_HOST_LIST: "$2,{{ authentik_domain }}"\n/m' "$f"; }
+          && grep -q 'GITEA__security__ALLOWED_HOST_LIST' "$f"
+        allow_shell: true
+      - id: bump_image_tag
+        type: compose.set_image_tag
+        stack: devops
+        service: gitea
+        tag: "{{ recipe.to }}"
+        # compose --wait gives ~2 min past start_period. An APPLY failure skips
+        # rollback (nos_migrate._apply_upgrade), so a 28 that never turns
+        # healthy here is restored from the pre-<upgrade_id> backups by hand.
+        wait: true
+    post:
+      - id: wait_healthy
+        type: http.wait
+        url: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/healthz"
+        expect_status: 200
+        timeout_sec: 600
+        interval_sec: 5
+      - id: version_is_target
+        type: exec.shell
+        command: >-
+          curl -fsS "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/v1/version"
+          | grep -q '"version":"{{ recipe.to }}"'
+        allow_shell: true
+      - id: oauth_source_kept
+        type: exec.shell
+        command: >-
+          docker exec -u git devops-gitea-1 gitea admin auth list | grep -qi authentik
+        allow_shell: true
+    rollback:
+      - id: stop_gitea
+        type: exec.shell
+        command: "docker stop devops-gitea-1"
+        allow_shell: true
+      - id: restore_data
+        type: backup.restore
+        dst: "{{ gitea_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+      - id: restore_db
+        type: exec.shell
+        command: >-
+          cp ~/.nos/backups/{{ upgrade_id }}/gitea.db
+          {{ gitea_data_dir }}/gitea/gitea.db
+        allow_shell: true
+      - id: restore_override
+        type: exec.shell
+        command: >-
+          cp ~/.nos/backups/{{ upgrade_id }}/gitea.override.yml
+          "$HOME/stacks/devops/overrides/gitea.yml"
+        allow_shell: true
+      - id: revert_image_tag
+        type: compose.set_image_tag
+        stack: devops
+        service: gitea
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: true
+
   - id: "gitea-1.27-current"
     from_regex: "^1\\.27\\."
     to: "1.27.3"           # == installed

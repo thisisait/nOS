@@ -12,15 +12,15 @@
 | **Stack** | `devops` |
 | **Toggle** | `install_gitea: true` (default `true`) |
 | **Compose** | `~/stacks/devops/docker-compose.yml` (role fragment: `~/stacks/devops/overrides/gitea.yml`) |
-| **Image** | `gitea/gitea:1.26.4` (`gitea_version`) |
+| **Image** | `gitea/gitea:<gitea_version>` (pin in `default.config.yml`; 1.27.3 until the 28 recipe is proven) |
 | **Data** | `{{ nos_data_root }}/platform/services/gitea/data` (default `~/nos/platform/services/gitea/data`) → `/data` |
 | **Mem / CPU** | `gitea_mem_limit` (default `1g`) / `1.0` |
 
 `nos_data_root` defaults to `~/nos` (`{{ HOME }}/nos`); `tasks/stacks/external-paths.yml`
 relocates `gitea_data_dir` to `{{ external_storage_root }}/gitea` when external storage is
 in play. The SQLite database, repositories, and LFS all live under that one `/data` mount.
-The pinned version is exactly `1.26.4` — 1.25.x went EOL (REM-099) and 1.26.3 carried a
-regression.
+Version history and the reason for every hop live in `upgrades/gitea.yml` (REM-099,
+REM-137, REM-244, REM-294).
 
 ## Authentication
 
@@ -69,3 +69,43 @@ regression.
   and, on local tenants, the mkcert root-CA mount so server-side OIDC discovery resolves)
 - Woodpecker CI (CI/CD — optional; authenticates via a Gitea OAuth2 app)
 - Mailpit (SMTP relay, only when `install_mailpit` — optional)
+
+## Upgrading to Gitea 28 (REM-294)
+
+Gitea dropped the `1.` prefix: **28.0.0 is the release after 1.27**, so 1.27.x → 28.1.0 is
+one hop (recipe `gitea-1.27-to-28` in `upgrades/gitea.yml`). It is staged, not applied:
+`gitea_version` stays 1.27.3 until the recipe has run on the estate.
+
+What changes for nOS ([v28.0.0 notes](https://github.com/go-gitea/gitea/releases/tag/v28.0.0),
+[go-gitea#39426](https://github.com/go-gitea/gitea/pull/39426)):
+
+- **Egress.** `[security] ALLOWED_HOST_LIST` now covers webhooks **and OAuth2**, and the
+  default `EGRESS_MODE=lax` denies every non-public host that is not listed. `auth.<tld>`
+  resolves to host-gateway (private), so without it the Authentik login is denied. The
+  template renders `ci.<tld>,auth.<tld>` there once `gitea_version >= 28`
+  (`tests/anatomy/test_gitea_28_egress_names_auth.py`); the recipe adds the same key to the
+  rendered override before the tag bump. `[webhook] ALLOWED_HOST_LIST` is deprecated.
+  Lax mode lets webhooks reach public hosts; 1.27 allowed only the CI host.
+- **Boot refusals.** A wildcard in `BLOCKED_DOMAINS`/`BLOCKED_HOST_LIST` stops 28 from
+  starting; the recipe's `preflight_config` refuses before anything changes.
+- **No way back by tag.** The schema moves forward and 1.27 refuses the migrated DB.
+  Rollback stops the container, restores the data dir and the sqlite snapshot, then
+  reverts the tag.
+- **No effect here:** `[server] DOMAIN` is now derived from `ROOT_URL` (both come from
+  `gitea_domain`); registration is set explicitly; Actions run retention (400 days) does
+  not touch Woodpecker; the image ships Git 2.54 (28 needs ≥ 2.25).
+
+To run it (operator):
+
+```bash
+ansible-playbook main.yml -K --tags upgrade -e upgrade_service=gitea \
+  -e upgrade_recipe_id=gitea-1.27-to-28 -e upgrade_dry_run=true   # plan only
+ansible-playbook main.yml -K --tags upgrade -e upgrade_service=gitea \
+  -e upgrade_recipe_id=gitea-1.27-to-28                           # apply
+```
+
+Name the recipe id: in scan mode `gitea-1.27-current` sorts first and bounces the
+container once for nothing. Optional rehearsal on cloned data: a coexistence track
+(`coexistence_supported: true`, port 3013). Afterwards, the promoting MR moves
+`gitea_version` to 28.1.0 and turns `gitea-1.27-current` into `gitea-28-current`, or the
+next converge re-renders 1.27.3.
