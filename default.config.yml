@@ -2642,7 +2642,7 @@ iiab_terminal_bin_path: "{{ homebrew_prefix }}/bin/iiab-terminal"
 # refuses ghcr blob storage (a Claude cloud session) flips this in
 # profiles/cloud-e2e.yml — docs/cloud-e2e.md §Registries.
 authentik_image: "ghcr.io/goauthentik/server"
-authentik_version: "2026.5.2"                      # supersedes 2025.12.4 CVE-2026-25227 pin; current latest (2026-05)
+authentik_version: "2026.5.7"                      # REM-283: same-minor patch, five 2026-09-09 HIGH GHSAs
 authentik_domain: "auth{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 authentik_port: 9003                               # 9000 = PHP-FPM, 9001 = RustFS, 9002 = Portainer
 # ADR-0001 Phase 0: opt-in OpenTofu Authentik drift detector (plan-only).
