@@ -1104,12 +1104,12 @@ llm_cell_recommended_params_b: 8
 # keg was already linked). Previous: 0.33.3 09-05, 0.33.2 09-03, 0.33.0 08-27.
 # 0.35.0 on 2026-09-30: TOO-FRESH (2 days), adopted by operator decision —
 # /v1/systemone decision models (dtt local-decision-tev1) need >= 0.35.
-ollama_version: "0.35.0"
+ollama_version: "0.40.6"
 # Linux archives of that pin, by architecture (roles/pazny.ollama/tasks/linux.yml).
 # Advance together with ollama_version — the digest, not the release page, is the trust.
 ollama_linux_sha256:
-  arm64: "cb627d332b1fe5055bd5485ca10d595da8429e447648209e375390ec3bd09374"
-  amd64: "1c114a6b220c5efca2ef2b1e5f01d1e535e26f6cd6d1678c8489325d2835e525"
+  arm64: "0a279d9428ad17b06fdb7dddf3b059b2c148433585fa3b30676a102fc459bb9f"
+  amd64: "c164ab8b1b28e2a247c29719b8e404c423c5b83ae64c3ab4e59d50c7ff7fc5e0"
 
 # Where host daemons meet containers. macOS: loopback (Docker Desktop's
 # host.docker.internal reaches it). Linux: docker0's address, because Linux
