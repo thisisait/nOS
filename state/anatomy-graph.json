@@ -4,20 +4,20 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 554,
-    "edges": 553,
+    "nodes": 556,
+    "edges": 554,
     "nodes_pulse": 43,
     "nodes_judge": 5,
     "nodes_gateset": 5,
     "nodes_weakness": 7,
     "nodes_daemon": 1,
-    "nodes_service": 78,
+    "nodes_service": 79,
     "nodes_lock": 1,
     "nodes_tool": 6,
     "nodes_tool_ro": 4,
     "nodes_token": 1,
     "nodes_token_ro": 2,
-    "nodes_backend": 8,
+    "nodes_backend": 9,
     "nodes_repo": 4,
     "nodes_tofu": 1,
     "nodes_authentik": 61,
@@ -32,7 +32,7 @@
     "nodes_article": 26,
     "nodes_organ_system": 13,
     "nodes_tissue": 1,
-    "edges_data": 244,
+    "edges_data": 245,
     "edges_trigger": 71,
     "edges_temporal": 5,
     "edges_mutex": 21,
@@ -43,14 +43,14 @@
     "edges_part_of": 109,
     "edges_service_dependency": 48,
     "services_survey_declared": 35,
-    "services_survey_not_surveyed": 39,
+    "services_survey_not_surveyed": 40,
     "services_survey_no_manifest": 4,
     "edges_service_dependency_unenforced": 25,
     "services_layer_L0": 4,
     "services_layer_L1": 5,
     "services_layer_L2": 26,
     "services_layer_L3": 0,
-    "services_layer_withheld": 43
+    "services_layer_withheld": 44
   },
   "warnings": [
     "union-kind cycle (feedback loop, review-not-refuse): pulse:cortex:cortex-corpus-diff -> pulse:cortex:cortex-fs-sync -> pulse:keap:keap-embed-sync -> pulse:cortex:cortex-corpus-diff"
@@ -1284,6 +1284,16 @@
       "is_default": false,
       "anchor": "02.02.09",
       "description": "LLM backend 'openclaw' — a permitted orchestrator row (protocol openai, eu_resident=True), armed by openclaw_backend_enabled"
+    },
+    "backend:vllm": {
+      "kind": "backend",
+      "source": "state/habitat/llm-backends.yml",
+      "protocol": "openai",
+      "eu_resident": true,
+      "enabled_flag": "install_vllm",
+      "is_default": false,
+      "anchor": "02.02.09",
+      "description": "LLM backend 'vllm' — a permitted orchestrator row (protocol openai, eu_resident=True), armed by install_vllm"
     },
     "backend:xai": {
       "kind": "backend",
@@ -4848,6 +4858,18 @@
       "layer": null,
       "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
+    "service:vllm": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "iiab",
+      "category": "ai",
+      "install_flag": "install_vllm",
+      "dependency_survey": "not-surveyed",
+      "anchor": "02.02.09",
+      "description": "Docker service 'vllm' (ai) in the iiab compose stack, toggled by install_vllm",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
+    },
     "service:watchtower": {
       "kind": "service",
       "source": "state/manifest.yml",
@@ -7221,6 +7243,14 @@
       "enforced_by": null,
       "unenforced": "No auto-enable block ties install_spacetimedb to install_nos_forum; the converge refuses the pair instead (main.yml \"[nos-forum] Refuse … without SpacetimeDB\"), so the operator turns SpacetimeDB on knowingly (BSL 1.1).",
       "evidence": "measured"
+    },
+    {
+      "from": "service:vllm",
+      "to": "backend:vllm",
+      "kind": "data",
+      "via": "`served_by: vllm` in state/habitat/llm-backends.yml",
+      "derived": "backend-server",
+      "evidence": "derived"
     },
     {
       "from": "service:wing",
