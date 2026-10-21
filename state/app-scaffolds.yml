@@ -1,0 +1,89 @@
+# The parts Iris's scaffold_app hands back (files/anatomy/thalamus/thalamus/src/serve.rs scaffold_app).
+# infra and backend are YAML text in which <name> (the app slug), <token> (the slug as a magic-token
+# suffix), <port> (the host port app_slots found free) and the runtime's <image>, <cport>, <health> and
+# <command> are replaced before it is parsed. Every part, filled with sample values and joined to a
+# meta + gdpr, passes nos_app_parser: tests/anatomy/test_app_scaffolds_parse.py.
+#
+# The image allow-list. Tags read from hub.docker.com/v2/repositories/library/<image>/tags on 2026-10-21:
+# nginx 1.30 is the stable (even) line, python 3.14 the newest line past its .0, node 24 the active LTS.
+runtimes:
+  static:
+    image: docker.io/library/nginx:1.30.6-alpine
+    port: 80
+    health: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+  python:
+    image: docker.io/library/python:3.14.8-slim
+    port: 8000
+    command: ["python", "/app/main.py"]
+    health: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
+  node:
+    image: docker.io/library/node:24.22.0-slim
+    port: 3000
+    command: ["node", "/app/server.js"]
+    health: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/healthz').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+
+# The service skeleton: loopback-only host port (Traefik is the edge), apps_net, a limit, a named volume.
+infra: |
+  meta:
+    ports: [<cport>]
+  compose:
+    services:
+      <name>:
+        image: "<image>"
+        container_name: <name>
+        restart: unless-stopped
+        ports:
+          - "127.0.0.1:<port>:<cport>"
+        volumes:
+          - <name>_data:/data
+        networks:
+          - apps_net
+        mem_limit: 256m
+        cpus: 0.5
+        healthcheck:
+          test: <health>
+          interval: 30s
+          timeout: 5s
+          retries: 5
+          start_period: 30s
+    volumes:
+      <name>_data: {}
+
+# Merged into the infra service of the same name: secrets and the URL are the runner's magic tokens, never typed.
+# The person arrives as the X-authentik-username header (forward-auth at the edge); the app has no login of its own.
+backend: |
+  compose:
+    services:
+      <name>:
+        command: <command>
+        environment:
+          - "APP_PUBLIC_URL=https://$SERVICE_FQDN_<token>/"
+          - "APP_SECRET_KEY=$SERVICE_BASE64_32_SECRET"
+          - "APP_PORT=<cport>"
+          - "APP_DATA_DIR=/data"
+          - "APP_USER_HEADER=X-authentik-username"
+        healthcheck:
+          test: <health>
+          interval: 30s
+          timeout: 5s
+          retries: 5
+          start_period: 30s
+
+# Not a manifest part: what a static frontend is and what it may talk to.
+frontend:
+  files:
+    - {path: index.html, holds: "the page; loads style.css and app.js, nothing from another origin"}
+    - {path: app.js, holds: "plain browser JavaScript; fetch() only relative URLs under /api/, its own backend"}
+    - {path: style.css, holds: "the look; no remote fonts or stylesheets"}
+  served_by: >-
+    without a backend, the static runtime (nginx) serves the three files at /; with one, the backend serves
+    them at / and its API under /api/, so the page and its API share one origin
+  may_call: ["its own backend, at a relative /api/ path"]
+  may_not_call:
+    - "the face BFF (/bff/...): it pins the person server-side for the face's own apps only"
+    - "KEAP (/api/..., /agent/v1) with any token: a token in a page is held by everyone who opens it"
+    - "another app's or service's URL"
+  instead:
+    - "view or edit a KEAP table: the face's TablesApp, no container and no token"
+    - "small per-person state: a face F1 app over user-state (ssot/doctrine/face-app-tiers.md), not a container"
+  delivery: "the files reach the app with propose_app_files, which is not built yet; until then only the manifest is proposed"

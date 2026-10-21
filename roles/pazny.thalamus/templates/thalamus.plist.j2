@@ -48,6 +48,9 @@
         <!-- Who sees the approvals and red-status controls: authentik_rbac_tiers tier 1. -->
         <key>NOS_TIER1_GROUPS</key>
         <string>{{ (authentik_rbac_tiers | selectattr('tier', 'equalto', 1) | first).groups | join(',') }}</string>
+        <!-- Who may ask for an app (propose_app, app_slots, scaffold_app): authentik_rbac_tiers tier 2. -->
+        <key>NOS_TIER2_GROUPS</key>
+        <string>{{ (authentik_rbac_tiers | selectattr('tier', 'equalto', 2) | first).groups | join(',') }}</string>
 {% if thalamus_decider_exes | default([]) | length %}
         <!-- Only these executables decide (defaults thalamus_decider_exes; src/serve.rs decider_refusal). -->
         <key>NOS_DECIDER_EXES</key>
