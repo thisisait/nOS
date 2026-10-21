@@ -41,6 +41,22 @@ def test_the_axes_name_what_the_two_runs_differ_on():
     assert bc.axes(a, _run({"x": False})) == []
 
 
+def test_the_catalogue_and_engine_are_axes_too():
+    a, b = _run({"x": True}), _run({"x": True})
+    b["catalogue"] = "rich"
+    assert bc.axes(a, b) == ["catalogue"]
+
+
+def test_flips_are_also_counted_per_case_kind():
+    a = _run({"c1": False, "c2": False, "k1": True})
+    b = _run({"c1": True, "c2": True, "k1": False}, plan="cortex")
+    for c, kind in zip(a["cases"] + b["cases"], ["chart", "chart", "kpi"] * 2):
+        c["kind"] = kind
+    r = bc.compare(a, b)["by_kind"]
+    assert (r["chart"]["a_only"], r["chart"]["b_only"]) == (0, 2)
+    assert (r["kpi"]["a_only"], r["kpi"]["b_only"]) == (1, 0)
+
+
 def test_a_no_data_case_on_either_side_is_left_out_not_counted():
     a = _run({"x": True, "y": False, "z": True}, no_data=("z",))
     b = _run({"x": False, "y": True, "z": False, "w": True}, plan="cortex")
