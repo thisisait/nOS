@@ -21,9 +21,9 @@ ANATOMY = REPO / "files/anatomy"
 PUPIL = ANATOMY / "pupil"
 FACE = ANATOMY / "face"
 # Tauri links webkit2gtk on Linux, which the CI image does not carry: the bridge lib builds without it.
+# The thalamus, contract and medulla crates share one workspace and one Cargo.lock (row medulla-skeleton).
 CRATES = {
-    "contract": (ANATOMY / "thalamus/contract", []),
-    "thalamus": (ANATOMY / "thalamus/thalamus", []),
+    "thalamus workspace": (ANATOMY / "thalamus", ["--workspace"]),
     "pupil bridge": (PUPIL / "src-tauri", ["--no-default-features"]),
 }
 
