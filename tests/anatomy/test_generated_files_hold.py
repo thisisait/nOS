@@ -97,3 +97,16 @@ def test_the_artifact_is_what_its_writer_writes(argv):
     assert got.returncode == 0, (
         f"{' '.join(argv)} says the committed file is not what it writes — rerun the "
         f"writer, never edit the file:\n{(got.stdout + got.stderr)[-1500:]}")
+
+
+def test_active_work_is_what_the_roadmap_projects():
+    """docs/active-work.md is a projection of the roadmap seed (rel-018 row
+    active-work-from-table). Not in state/generated.yml yet: the seed is private,
+    so without it the writer says UNKNOWN (rc 3) and this skips, never greens."""
+    got = subprocess.run([sys.executable, "tools/active-work-gen.py", "--check"], cwd=REPO,
+                         capture_output=True, text=True, timeout=120)
+    if got.returncode == 3:
+        pytest.skip(got.stdout.strip() or "roadmap seed unreachable: UNKNOWN")
+    assert got.returncode == 0, (
+        "docs/active-work.md is not what tools/active-work-gen.py writes — edit the "
+        f"roadmap rows and rerun the writer, never the file:\n{(got.stdout + got.stderr)[-1500:]}")
