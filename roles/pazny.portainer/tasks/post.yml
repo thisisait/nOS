@@ -429,7 +429,7 @@
       FAILED — PUT /api/settings returned HTTP {{ _portainer_oauth_put.status | default('?') }};
       live AuthMethod={{ _portainer_settings_verify.json.AuthenticationMethod | default('?') }} (1=internal, 3=OAuth2)
       {% endif %}
-  when: install_authentik | default(false)
+  when: install_authentik | default(false) | bool
 
 # ── Idempotent endpoint registration (gap-fill) ─────────────────────────────
 # When apps_runner brings up the Tier-2 `apps` Docker compose project, we want
@@ -497,4 +497,4 @@
       {% else %}
       FAILED — HTTP {{ _portainer_apps_ep.status | default('?') }}
       {% endif %}
-  when: install_portainer | default(false)
+  when: install_portainer | default(false) | bool

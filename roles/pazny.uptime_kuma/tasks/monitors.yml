@@ -290,12 +290,12 @@
 - name: "[pazny.uptime_kuma] Append MariaDB TCP monitor"
   ansible.builtin.set_fact:
     _kuma_spec_monitors: "{{ _kuma_spec_monitors + [{'name': 'MariaDB TCP', 'type': 'tcp', 'hostname': '127.0.0.1', 'port': mariadb_port | default(3306), 'interval': 60, 'maxretries': 2, 'tags': ['infra', 'db']}] }}"
-  when: install_mariadb | default(false)
+  when: install_mariadb | default(false) | bool
 
 - name: "[pazny.uptime_kuma] Append PostgreSQL TCP monitor"
   ansible.builtin.set_fact:
     _kuma_spec_monitors: "{{ _kuma_spec_monitors + [{'name': 'PostgreSQL TCP', 'type': 'tcp', 'hostname': '127.0.0.1', 'port': postgresql_port | default(5432), 'interval': 60, 'maxretries': 2, 'tags': ['infra', 'db']}] }}"
-  when: install_postgresql | default(false)
+  when: install_postgresql | default(false) | bool
 
 - name: "[pazny.uptime_kuma] Append Redis TCP monitor"
   ansible.builtin.set_fact:

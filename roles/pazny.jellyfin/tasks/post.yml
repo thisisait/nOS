@@ -189,7 +189,7 @@
     status_code: [200, 401]
     timeout: 10
   register: _jf_sso_auth
-  when: install_authentik | default(false) and _jf_ready.status | default(0) == 200
+  when: install_authentik | default(false) | bool and _jf_ready.status | default(0) == 200
   changed_when: false
   failed_when: false
   no_log: true

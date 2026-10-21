@@ -29,7 +29,7 @@
 # health-wait. The same signed release (MANIFEST.txt inside) now comes from the
 # plugin's GitHub release, checksum-pinned, once; Grafana finds it installed.
 - name: "[pazny.grafana] Provision the SQLite datasource plugin"
-  when: (install_wing | default(install_php | default(true))) or (install_keap | default(false))
+  when: (install_wing | default(install_php | default(true) | bool)) or (install_keap | default(false) | bool)
   vars:
     _gp_dir: "{{ grafana_data_dir | default(stacks_dir + '/observability/grafana/data') }}/plugins"
     _gp_plugin: "{{ _gp_dir }}/frser-sqlite-datasource"
@@ -108,7 +108,7 @@
     path: "{{ stacks_dir }}/observability/mysqld-exporter"
     state: directory
     mode: '0755'
-  when: install_mariadb | default(false)
+  when: install_mariadb | default(false) | bool
 
 - name: "[pazny.grafana] Render mysqld-exporter client TLS config"
   ansible.builtin.template:
@@ -120,7 +120,7 @@
   # main.yml) exists to catch — `docker compose up -d` is a no-op when only
   # mounted CONTENT changed. A handler here would be a second mechanism for one
   # outcome, and this estate has been bitten by that before.
-  when: install_mariadb | default(false)
+  when: install_mariadb | default(false) | bool
 
 - name: "[pazny.grafana] Render compose override fragment"
   ansible.builtin.template:

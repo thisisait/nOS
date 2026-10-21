@@ -369,7 +369,7 @@
     'Created' in (_wing_face_bff_token.stdout | default(''))
     or 'Updated' in (_wing_face_bff_token.stdout | default(''))
   no_log: true
-  when: install_face | default(false)
+  when: install_face | default(false) | bool
 
 # Iris's start_agent: the thalamus opens a session as the person who approved the card. Wing believes
 # X-Nos-User-* on this bearer for POST /agents/<name>/sessions alone (face-wing.yml, wire.thalamus).
@@ -497,7 +497,7 @@
     'Created' in (_wing_openclaw_token.stdout | default(''))
     or 'Updated' in (_wing_openclaw_token.stdout | default(''))
   no_log: true
-  when: install_openclaw | default(false)
+  when: install_openclaw | default(false) | bool
 
 # ── Pulse job registration via Wing API ──────────────────────────────────────
 # Plugin loader does not yet process pulse: blocks — jobs are registered here

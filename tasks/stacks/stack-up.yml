@@ -39,35 +39,35 @@
     src: "stacks/devops/docker-compose.yml.j2"
     dest: "{{ stacks_dir }}/devops/docker-compose.yml"
     mode: '0644'
-  when: install_gitea | default(false) or install_woodpecker | default(false) or install_gitlab | default(false) or install_paperclip | default(false) or install_code_server | default(false)
+  when: install_gitea | default(false) | bool or install_woodpecker | default(false) | bool or install_gitlab | default(false) | bool or install_paperclip | default(false) | bool or install_code_server | default(false) | bool
 
 - name: "[Stacks] Deploy b2b compose"
   ansible.builtin.template:
     src: "stacks/b2b/docker-compose.yml.j2"
     dest: "{{ stacks_dir }}/b2b/docker-compose.yml"
     mode: '0644'
-  when: install_erpnext | default(false) or install_freescout | default(false) or install_outline | default(false) or install_hedgedoc | default(false) or install_bookstack | default(false) or install_firefly | default(false) or install_dolibarr | default(false) or install_onlyoffice | default(false)
+  when: install_erpnext | default(false) | bool or install_freescout | default(false) | bool or install_outline | default(false) | bool or install_hedgedoc | default(false) | bool or install_bookstack | default(false) | bool or install_firefly | default(false) | bool or install_dolibarr | default(false) | bool or install_onlyoffice | default(false) | bool
 
 - name: "[Stacks] Deploy voip compose"
   ansible.builtin.template:
     src: "stacks/voip/docker-compose.yml.j2"
     dest: "{{ stacks_dir }}/voip/docker-compose.yml"
     mode: '0644'
-  when: install_mikopbx | default(false)
+  when: install_mikopbx | default(false) | bool
 
 - name: "[Stacks] Deploy engineering compose"
   ansible.builtin.template:
     src: "stacks/engineering/docker-compose.yml.j2"
     dest: "{{ stacks_dir }}/engineering/docker-compose.yml"
     mode: '0644'
-  when: install_qgis_server | default(false)
+  when: install_qgis_server | default(false) | bool
 
 - name: "[Stacks] Deploy data compose"
   ansible.builtin.template:
     src: "stacks/data/docker-compose.yml.j2"
     dest: "{{ stacks_dir }}/data/docker-compose.yml"
     mode: '0644'
-  when: install_metabase | default(false) or install_superset | default(false)
+  when: install_metabase | default(false) | bool or install_superset | default(false) | bool
 
 # ── Wave 2.2 per-role compose override renders ──────────────────────────────
 # Each role renders its fragment into {{ stacks_dir }}/<stack>/overrides/<svc>.yml.

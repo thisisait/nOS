@@ -51,7 +51,7 @@
     file_type: directory
     excludes: "SSO-Auth_{{ jellyfin_sso_plugin_version }}.0"
   register: _jf_sso_stale
-  when: install_authentik | default(false)
+  when: install_authentik | default(false) | bool
 
 - name: "[pazny.jellyfin] Remove stale SSO plugin versions (a bump must not leave the old dir)"
   # Jellyfin registers NEITHER when two versions of the same plugin GUID are
@@ -63,7 +63,7 @@
   loop: "{{ _jf_sso_stale.files | default([]) }}"
   loop_control:
     label: "{{ item.path | basename }}"
-  when: install_authentik | default(false)
+  when: install_authentik | default(false) | bool
   notify: Restart jellyfin
 
 - name: "[pazny.jellyfin] Ensure SSO plugin target directory exists"
@@ -71,13 +71,13 @@
     path: "{{ jellyfin_config_dir }}/plugins/SSO-Auth_{{ jellyfin_sso_plugin_version }}.0"
     state: directory
     mode: '0755'
-  when: install_authentik | default(false)
+  when: install_authentik | default(false) | bool
 
 - name: "[pazny.jellyfin] Check whether SSO plugin already installed"
   ansible.builtin.stat:
     path: "{{ jellyfin_config_dir }}/plugins/SSO-Auth_{{ jellyfin_sso_plugin_version }}.0/SSO-Auth.dll"
   register: _jf_sso_installed
-  when: install_authentik | default(false)
+  when: install_authentik | default(false) | bool
 
 - name: "[pazny.jellyfin] Download + unpack jellyfin-plugin-sso {{ jellyfin_sso_plugin_version }}"
   ansible.builtin.unarchive:
