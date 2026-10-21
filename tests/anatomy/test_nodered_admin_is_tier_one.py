@@ -2,7 +2,7 @@
 
 RBAC audit 2026-10-21: settings.js.j2 granted permissions '*' to every
 authenticated identity (verify() and users() both), so any Authentik user
-with tier-2 app access could edit flows and credential nodes. This renders
+with RBAC tier-2 access to Node-RED could edit flows and credential nodes. This renders
 the template and runs its adminAuth in node, so the gate reads behaviour.
 """
 from __future__ import annotations
