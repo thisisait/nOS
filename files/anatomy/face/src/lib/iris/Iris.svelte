@@ -267,8 +267,16 @@
 	const added = (title: string, spec: WidgetSpec) =>
 		place(ws.placed(layout, widgets, newId(), title, spec, mid()));
 
-	// The person's click on a knowledge node: it opens as a widget the thalamus reads, without the model.
-	const opened = (node: string, name: string) => added(name, { knowledge: { node } });
+	// The person's "Open in a new board" on a knowledge node: a board inside this one, named for the node,
+	// holding it as a widget the thalamus reads, without the model.
+	function opened(node: string, name: string) {
+		const fresh = ws.addSpace(layout, `ws${Date.now().toString(36)}`, name, layout.active, mid());
+		if (fresh === layout) return void (layoutNote = FULL);
+		place(ws.placed(fresh, widgets, newId(), name, { knowledge: { node } }));
+	}
+	// "Expand its children here": that widget's extra read, under its own token; route() files the answer.
+	const fetched = (widget: string, spec: WidgetSpec) =>
+		sendAll([{ t: 'widget', widget, spec, trigger: 'click' }]);
 
 	const FULL = `no room for another board here (at most ${ws.MAX_SPACES}, ${ws.MAX_DEPTH} deep, ${ws.MAX_ITEMS} items a board)`;
 	const roomy = () => ws.addSpace(layout, 'probe', '', layout.active) !== layout;
@@ -364,6 +372,22 @@
 	}
 	const inside = (id: string) =>
 		layout.workspaces.filter((s) => s.id !== id && ws.chain(layout, s.id).includes(id)).length;
+
+	// The open board's name being edited in its crumb (null: not editing); Enter saves, Escape or leaving cancels.
+	let naming: string | null = $state(null);
+	let pencil: HTMLButtonElement | undefined = $state();
+	const focused = (el: HTMLElement) => el.focus();
+	async function nameKey(e: KeyboardEvent) {
+		if (e.key === 'Escape') naming = null;
+		if (e.key !== 'Enter' || naming === null) return;
+		e.preventDefault();
+		const next = ws.rename(layout, space.id, naming);
+		if (next === layout) return void (layoutNote = 'not renamed: a board needs a name');
+		layout = next;
+		naming = layoutNote = null;
+		await tick();
+		pencil?.focus();
+	}
 
 	// Escape goes up one board, unless the person is typing or a question is open.
 	function escape(e: KeyboardEvent) {
@@ -577,8 +601,25 @@
 					<li>
 						{#if i < crumbs.length - 1}
 							<button class="ghost" onclick={() => showTab(id)}>{nameOf(id)}</button>
+						{:else if naming !== null}
+							<input
+								class="name"
+								aria-label="board name"
+								maxlength="40"
+								bind:value={naming}
+								onkeydown={nameKey}
+								onblur={() => (naming = null)}
+								use:focused
+							/>
 						{:else}
 							<span aria-current="page">{nameOf(id)}</span>
+							<button
+								class="ghost pencil"
+								aria-label="rename board"
+								title="rename this board"
+								bind:this={pencil}
+								onclick={() => (naming = nameOf(id))}
+							></button>
 						{/if}
 					</li>
 				{/each}
@@ -622,6 +663,7 @@
 		onlens={relens}
 		onexport={exported}
 		onread={opened}
+		onfetch={fetched}
 	/>
 </main>
 
@@ -737,6 +779,25 @@
 	}
 	.crumbs [aria-current] {
 		font-weight: 600;
+	}
+	/* The glyph is drawn, not text: the crumb reads as the name alone, the button by its label. */
+	.crumbs .pencil::before {
+		content: '✎';
+	}
+	.crumbs .pencil {
+		margin-left: 4px;
+		padding: 0 4px;
+		border: 0;
+	}
+	.crumbs .name {
+		width: 16ch;
+		font: inherit;
+		font-weight: 600;
+		color: var(--fg);
+		background: var(--glass);
+		border: 1px solid var(--accent);
+		border-radius: 6px;
+		padding: 0 4px;
 	}
 	.crumbs details {
 		position: relative;

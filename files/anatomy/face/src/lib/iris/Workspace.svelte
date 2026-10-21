@@ -9,7 +9,7 @@
 <script module lang="ts">
 	import type { Widgets } from './widgets';
 	import type { Box, Space } from './workspace';
-	import type { Lens } from './wire';
+	import type { Lens, WidgetSpec } from './wire';
 
 	type Submit = { form: string; widget: string; values: Record<string, string | number | boolean> };
 	/** What every CanvasItem reads; getters, so a new answer redraws without a new node. */
@@ -28,6 +28,8 @@
 		onsubmit: (m: Submit) => void;
 		onexport?: (name: string, csv: string) => Promise<string>;
 		onread?: (id: string, name: string) => void;
+		/** A widget's own extra read under `token` (a knowledge node expanded in place); never saved. */
+		onfetch?: (token: string, spec: WidgetSpec) => void;
 	};
 </script>
 
@@ -54,7 +56,8 @@
 		onsubmit,
 		onlens,
 		onexport,
-		onread
+		onread,
+		onfetch
 	}: Omit<CanvasCtx, 'lens'> & {
 		space: Space;
 		onview: (v: View) => void;
@@ -88,7 +91,8 @@
 		onremove: (id) => onremove(id),
 		onsubmit: (m) => onsubmit(m),
 		onexport: (n, csv) => (onexport ? onexport(n, csv) : Promise.resolve('not saved')),
-		onread: (id, name) => onread?.(id, name)
+		onread: (id, name) => onread?.(id, name),
+		onfetch: (token, spec) => onfetch?.(token, spec)
 	});
 
 	const nodeTypes = { item: CanvasItem };

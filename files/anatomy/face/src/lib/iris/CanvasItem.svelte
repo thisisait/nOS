@@ -1,11 +1,13 @@
 <!--
   One item on the canvas, as a Svelte Flow node: a live widget, an editable heading, a frame
-  (a titled rectangle behind the others), or a board card that opens its child on double-click. Every kind has a `.move` grip (the node's drag handle)
+  (a titled rectangle behind the others), or a board card that opens its child on double-click and
+  shows it in small (BoardPreview.svelte). Every kind has a `.move` grip (the node's drag handle)
   and a resize corner; pointer capture is on the corner only (face-wm-event-gotchas).
 -->
 <script lang="ts">
 	import { useSvelteFlow, type NodeProps } from '@xyflow/svelte';
 	import { getContext } from 'svelte';
+	import BoardPreview from './BoardPreview.svelte';
 	import Widget from './Widget.svelte';
 	import type { CanvasCtx } from './Workspace.svelte';
 	import { byPointer, type Box, type Item } from './workspace';
@@ -46,6 +48,8 @@
 		onsubmit={c.onsubmit}
 		onexport={c.onexport}
 		onread={c.onread}
+		sub={(t) => c.widgets[t]}
+		onfetch={c.onfetch}
 	/>
 {:else if item.kind === 'board'}
 	{@const child = c.spaces.find((s) => s.id === item.board)}
@@ -59,6 +63,13 @@
 			<strong>{child?.name ?? item.board}</strong>
 			<button class="grip" aria-label="remove board" onclick={() => c.onremove(item.id)}>×</button>
 		</header>
+		<BoardPreview
+			items={child?.items ?? []}
+			widgets={c.widgets}
+			spaces={c.spaces}
+			w={Math.max(0, item.w - 16)}
+			h={Math.max(0, item.h - 56)}
+		/>
 		<p>{n} {n === 1 ? 'item' : 'items'}</p>
 	</section>
 {:else}
@@ -110,7 +121,7 @@
 		white-space: nowrap;
 	}
 	.board p {
-		margin: 0 12px;
+		margin: 2px 12px 0;
 		color: var(--muted);
 		font-size: 11px;
 	}

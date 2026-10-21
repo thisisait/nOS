@@ -193,6 +193,12 @@ export function setText(l: Layout, id: string, text: string): Layout {
 	);
 }
 
+/** Board `id` named as the person typed it, trimmed to 40 chars; l when nothing is left. */
+export function rename(l: Layout, id: string, name: string): Layout {
+	const n = name.trim().slice(0, 40).trim();
+	return n ? patch(l, id, { name: n }) : l;
+}
+
 /** Where the person left board `tab`'s canvas; the same view is the same layout. */
 export function setView(l: Layout, tab: string, v: View): Layout {
 	const view = {
@@ -318,7 +324,7 @@ export function addSpace(l: Layout, id: string, name: string, parent?: string, c
 		id: `b-${id}`.slice(0, 64),
 		kind: 'board',
 		board: id,
-		...spot(up, 240, 96, c)
+		...spot(up, 320, 208, c)
 	};
 	const shown = withItem(l, up, card);
 	return { ...shown, active: id, workspaces: [...shown.workspaces, { ...space, parent: up.id }] };
