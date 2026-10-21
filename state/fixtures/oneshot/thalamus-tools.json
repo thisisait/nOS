@@ -1286,6 +1286,26 @@
   },
   {
     "function": {
+      "description": "Propose a small custom nOS app (apps/<name>.yml, run by the apps runner), only when the person asks for one. Tier 1 only. manifest: the app as JSON in the YAML's shape: meta {name [a-z][a-z0-9-]*, version, summary}; gdpr, the GDPR Article 30 record, every key: purpose, legal_basis (consent, contract, legal_obligation, vital_interests, public_task, or legitimate_interests, which also needs balancing_test and data_source from_subject|not_from_subject), data_categories[], data_subjects[], retention_days (days; -1 forever, never 0), processors[], transfers_outside_eu; compose {services, volumes?}. nOS's app parser checks it: a refusal lists its every error, fix them all before calling again. Accepted, the person sees the whole YAML; an approve writes a draft and never enables it: the operator copies it into apps/ and converges.",
+      "name": "propose_app",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "manifest": {
+            "description": "{meta, gdpr, compose, ...} as apps/<name>.yml holds them",
+            "type": "object"
+          }
+        },
+        "required": [
+          "manifest"
+        ],
+        "type": "object"
+      }
+    },
+    "type": "function"
+  },
+  {
+    "function": {
       "description": "Offer the person a dashboard of 2-8 widgets (one table, chart or kpi alone is query_rows or show, which the person pins); they place it on the tab they choose. Each widget is {title} and one of rows (query_rows arguments), chart ({query {table, q?, where?}, chart bar|line|pie, x, y?, op count|sum|avg}: show's source plus its chart), kpi ({query {table, q?, where?}, op count|sum|avg, y?, unit?}: one total on a tile) or form ({table, columns?, prefill? {column: value}, when? {column: {key, op eq|neq, value}}}: a form that adds a row; prefill is where the person's draft starts, when shows an optional field only while another field holds a value), and up to 4 lens filters {column, op, value} the tab applies to every rows, chart and kpi widget (an empty value: the person picks). Nothing runs and nothing is placed: the person sees the offer and may place it; you never see its rows. A widget that does not fit its table is left out and you are told why.",
       "name": "offer_dashboard",
       "parameters": {

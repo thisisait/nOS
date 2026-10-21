@@ -155,6 +155,11 @@ thread_local! {
 }
 
 thread_local! {
+    /// The next rig's data dir is <dir>/data, apart from its repo (as --data-dir is from NOS_REPO_ROOT live).
+    static DATA_APART: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+thread_local! {
     /// The rows serve offers for a session pick (W5) and the size floors; the next rig takes them.
     static PICKS: std::cell::RefCell<(Vec<thalamus::binding::Pick>, Option<(f64, f64)>)> = Default::default();
 }
@@ -202,7 +207,12 @@ fn rig_deciders(name: &str, map: serde_json::Value, (keap_url, keap): (String, S
         picks: picks.into_iter().map(|p| thalamus::binding::Pick { bound: p.bound.map(|b| Binding { base_url: model_url.clone(), ..b }), ..p }).collect(),
         floors,
         cortex: None,
-        data: d.clone(),
+        data: if DATA_APART.with(|a| a.take()) {
+            let p = d.join("data");
+            std::fs::create_dir(&p).unwrap();
+            std::fs::set_permissions(&p, std::fs::Permissions::from_mode(0o700)).unwrap();
+            p
+        } else { d.clone() },
         tree_max: 50,
         wing: WING.with(|w| w.take()),
     };
@@ -1588,7 +1598,7 @@ fn the_tools_and_prompt_name_query_rows_and_bound_proposals() {
     let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[0].1).unwrap();
     let names: Vec<&str> = body["tools"].as_array().unwrap().iter().map(|t| t["function"]["name"].as_str().unwrap()).collect();
     assert_eq!(names, ["query_rows", "propose_row_edit", "propose_row_insert", "propose_row_delete", "propose_table_create", "propose_column_add", "show", "red_status", "read_run", "start_agent", "list_tables",
-                       "estate_services", "nos_guide", "approvals_awaiting", "inbox", "search_knowledge", "read_node", "offer_dashboard"]);
+                       "estate_services", "nos_guide", "approvals_awaiting", "inbox", "search_knowledge", "read_node", "propose_app", "offer_dashboard"]);
     assert!(p.contains("call search_knowledge"), "{p}");
     assert!(p.contains("Before recommending software, call estate_services: prefer a service the estate already has."), "{p}");
     assert!(p.contains("call approvals_awaiting"), "{p}");
@@ -6893,4 +6903,113 @@ fn a_resumed_start_card_starts_what_it_showed() {
     assert!(said.contains(CHILD), "{said}");
     let body: serde_json::Value = serde_json::from_str(&seen.lock().unwrap()[0].1).unwrap();
     assert_eq!(body, serde_json::json!({"prompt": ASK_PROMPT, "parent": format!("thalamus:{session}")}));
+}
+
+// --- face-app-builder inc.1: propose_app — nOS's own parser is the check, the operator enables ---
+
+/// The rig's repo with the real parser (a link, never a copy) and one name of each kind already taken.
+fn app_rig(name: &str, map: serde_json::Value, model: Vec<String>) -> Rig {
+    DATA_APART.with(|a| a.set(true));
+    let rig = rig_n(name, map, vec![], model);
+    let repo = &rig.srv.repo;
+    let real = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../module_utils").canonicalize().unwrap();
+    // One level at a time, each chmod'ed: bind()'s process-wide umask can make a racing mkdir 0600 (dir()).
+    for d in ["files", "files/anatomy", "apps", "state", "roles", "roles/pazny.gitea"] {
+        std::fs::create_dir(repo.join(d)).unwrap();
+        std::fs::set_permissions(repo.join(d), std::fs::Permissions::from_mode(0o700)).unwrap();
+    }
+    std::os::unix::fs::symlink(real, repo.join("files/anatomy/module_utils")).unwrap();
+    std::fs::write(repo.join("apps/roundcube.yml"), "meta: {name: roundcube}\n").unwrap();
+    std::fs::write(repo.join("state/manifest.yml"), "services:\n  - id: next_cloud\n").unwrap();
+    rig
+}
+
+fn app_manifest(name: &str) -> serde_json::Value {
+    serde_json::json!({"meta": {"name": name, "version": "1.0.0", "summary": "A small notes app."},
+        "gdpr": {"purpose": "Keeps the operator's own notes.", "legal_basis": "contract", "data_categories": ["notes"],
+                 "data_subjects": ["operators"], "retention_days": 365, "processors": [], "transfers_outside_eu": false},
+        "compose": {"services": {name: {"image": "docker.io/library/nginx:1.27", "expose": ["80"]}}}})
+}
+
+fn propose_app(m: &serde_json::Value) -> String {
+    call("propose_app", &serde_json::json!({"manifest": m}).to_string())
+}
+
+fn app_card(got: &[ToShell]) -> Option<(String, String)> {
+    got.iter().find_map(|m| match m {
+        ToShell::ApprovalRequest { approval, component: Component::Markdown(md), .. } => Some((approval.clone(), md.text.clone())),
+        _ => None,
+    })
+}
+
+/// The YAML inside the card's one fence.
+fn fenced(card: &str) -> String {
+    let body = card.split_once("```yaml\n").expect("a yaml fence").1;
+    body.rsplit_once("```").expect("a closed fence").0.to_string()
+}
+
+#[test]
+fn propose_app_hands_the_parsers_own_errors_back_and_asks_nothing() {
+    let mut m = app_manifest("notes");
+    m["gdpr"].as_object_mut().unwrap().remove("retention_days");
+    m["gdpr"]["legal_basis"] = serde_json::json!("because");
+    let rig = app_rig("app-bad", admin(), vec![propose_app(&m), answer("x")]);
+    let (got, _) = tool_turn(&rig, "make me a notes app");
+    assert!(!got.iter().any(|g| matches!(g, ToShell::ApprovalRequest { .. })), "{got:?}");
+    let e = tool_result(&rig, 1)["error"].as_str().unwrap_or_default().to_string();
+    assert!(e.contains("gdpr.retention_days is required") && e.contains("gdpr.legal_basis 'because' not in"), "{e}");
+    assert!(!rig.srv.data.join("apps").exists(), "a refused manifest left a draft");
+}
+
+#[test]
+fn propose_app_asks_with_the_whole_yaml_and_approve_writes_exactly_it() {
+    let m = app_manifest("notes");
+    let rig = app_rig("app-ok", admin(), vec![propose_app(&m), answer("Proposed.")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "make me a notes app");
+    let (approval, card) = app_card(&got).unwrap_or_else(|| panic!("no card: {got:?}"));
+    let yaml = fenced(&card);
+    let back: serde_json::Value = serde_yaml_ng::from_str(&yaml).unwrap();
+    assert_eq!(back, m, "the card is the whole manifest, not a summary");
+    assert!(yaml.starts_with("meta:"), "meta leads, as in apps/_template.yml: {yaml}");
+    let draft = rig.srv.data.join("apps/notes.yml.draft");
+    assert!(card.contains(&draft.display().to_string()) && card.contains("operator"), "{card}");
+    assert!(!draft.exists(), "a proposal wrote before the person decided");
+    let heard = tool_result(&rig, 1);
+    assert_eq!(heard["draft"].as_str(), Some(&*draft.display().to_string()), "{heard}");
+
+    decide(&s, &approval, Decision::Approve);
+    let said = match next(&mut r) {
+        Some(ToShell::Text { text, .. }) => text,
+        other => panic!("the person hears nothing of the draft: {other:?}"),
+    };
+    assert!(said.contains("notes.yml.draft") && said.contains("not enabled"), "{said}");
+    assert_eq!(std::fs::read_to_string(&draft).unwrap(), yaml, "the draft is the bytes the person approved");
+    assert!(!rig.srv.repo.join("apps/notes.yml").exists() && !rig.srv.repo.join("apps/notes.yml.draft").exists(),
+            "the repo's apps/ is the operator's, never Iris's");
+}
+
+#[test]
+fn propose_app_reject_writes_nothing() {
+    let rig = app_rig("app-no", admin(), vec![propose_app(&app_manifest("notes")), answer("Proposed.")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "make me a notes app");
+    let (approval, _) = app_card(&got).unwrap_or_else(|| panic!("no card: {got:?}"));
+    decide(&s, &approval, Decision::Reject);
+    assert!(matches!(next(&mut r), Some(ToShell::Text { text, .. }) if text.starts_with("Rejected")));
+    assert!(!rig.srv.data.join("apps/notes.yml.draft").exists());
+}
+
+#[test]
+fn propose_app_refuses_a_taken_name_and_anyone_below_tier_one() {
+    for (name, map, app, want) in [("app-apps", admin(), "roundcube", "already"), ("app-row", admin(), "next-cloud", "already"),
+                                   ("app-role", admin(), "gitea", "already"), ("app-tier", mapped(), "notes", "tier 1")] {
+        let rig = app_rig(name, map, vec![propose_app(&app_manifest(app)), answer("x")]);
+        let (got, _) = tool_turn(&rig, "make me an app");
+        assert!(!got.iter().any(|g| matches!(g, ToShell::ApprovalRequest { .. })), "{name}: {got:?}");
+        let e = tool_result(&rig, 1)["error"].as_str().unwrap_or_default().to_string();
+        assert!(e.contains(want), "{name}: {e}");
+    }
 }
