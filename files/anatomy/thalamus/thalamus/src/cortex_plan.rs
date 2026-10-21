@@ -63,6 +63,13 @@ pub fn route(text: &str, intents: &[String]) -> (&'static str, Option<&'static s
     ("tools", None, vec![])
 }
 
+/// The person's words that name our knowledge ("our knowledge base", "naše znalostní báze"): such a turn
+/// searches first, by the thalamus (spark1 2026-10-21: Czech prompts skipped search_knowledge).
+pub fn names_knowledge(text: &str) -> Vec<String> {
+    text.split(|c: char| !c.is_alphanumeric()).map(nos_contract::uid::fold)
+        .filter(|w| w.starts_with("knowledge") || w.starts_with("znalost")).collect()
+}
+
 /// One stage of the flat AST: what the JSON-schema engine emits and the organ's AST is read into.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Stage {

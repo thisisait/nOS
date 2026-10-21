@@ -2102,6 +2102,13 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
             }
             _ => None,
         };
+        // A turn that names our knowledge searches it first, so the answer is grounded or said absent.
+        let named = cortex_plan::names_knowledge(text);
+        let planned = planned.or_else(|| (!named.is_empty()).then(|| {
+            let _ = self.record(o, Kind::ToolResult, Some("route"), json!({"route": "knowledge", "matched": named}));
+            json!({"role": "assistant", "content": null, "tool_calls": [{"id": "knowledge-1", "type": "function",
+                "function": {"name": "search_knowledge", "arguments": json!({"q": text}).to_string()}}]})
+        }));
         self.think_from(who, out, o, planned, face);
     }
 
