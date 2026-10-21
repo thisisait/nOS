@@ -79,3 +79,33 @@ def test_on_this_checkout_only_the_out_of_repo_point_is_unknown():
     assert rc == 0
     unknown = sorted(p["id"] for p in out.get("points", []) if p["status"] == "UNKNOWN")
     assert unknown == ["keap-internal"], f"a parser lost its literal: {unknown}"
+
+
+TIERS_BLOCK = (
+    "authentik_rbac_tiers:\n"
+    "  - {tier: 1, groups: [nos-providers, nos-admins]}\n"
+    "  - {tier: 2, groups: [nos-providers, nos-admins, nos-managers]}\n"
+    "  - {tier: 3, groups: [nos-providers, nos-admins, nos-managers, nos-users]}\n"
+    "  - {tier: 4, groups: [nos-providers, nos-admins, nos-managers, nos-users, nos-guests]}\n")
+
+
+def _scratch(tmp: pathlib.Path, files: dict[str, str]) -> dict[str, str]:
+    """A scratch root: the genome, the tier block, the planted files. Returns point -> status."""
+    assert TOOL.is_file(), "no reader prints the permission matrix: tools/rbac-status.py is missing"
+    for rel, text in {GENOME: (REPO / GENOME).read_text(encoding="utf-8"),
+                      "default.config.yml": TIERS_BLOCK, **files}.items():
+        (tmp / rel).parent.mkdir(parents=True, exist_ok=True)
+        (tmp / rel).write_text(text, encoding="utf-8")
+    rc, out = _run("--root", str(tmp))
+    assert rc == 0
+    return {p["id"]: p["status"] for p in out.get("points", [])}
+
+
+def test_a_const_over_several_lines_is_read_and_a_non_literal_is_unknown(tmp_path):
+    pts = _scratch(tmp_path, {
+        ENDUSER: "<?php\nfinal class EndUser\n{\n\tpublic const TOKEN_NAME = 'face-bff';\n"
+                 "\tpublic const THALAMUS = 'thalamus';\n\tpublic const OPERATOR_GROUPS = [\n"
+                 "\t\t'nos-providers',\n\t\t'nos-admins',\n\t];\n}\n",
+        "files/anatomy/face/src/lib/security/tier.ts": "export const WRITE_GROUPS = groupsFor(2);\n"})
+    assert pts.get("wing-enduser") == "ok", f"a correct multi-line OPERATOR_GROUPS reads as {pts.get('wing-enduser')}"
+    assert pts.get("face-write-groups") == "UNKNOWN", f"a non-literal const reads as {pts.get('face-write-groups')}"
