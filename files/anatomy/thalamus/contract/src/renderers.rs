@@ -26,6 +26,7 @@ pub enum Component {
     Graph(Graph),
     Sequence(Sequence),
     KnowledgeTree(KnowledgeTree),
+    Dendrogram(Dendrogram),
     Form(Form),
     Choice(Choice),
     Dashboard(Dashboard),
@@ -331,6 +332,60 @@ impl Component {
                     Some(n) => Err(format!("knowledge node {:?} names a parent not in the tree", n.id)),
                     None => Ok(()),
                 }
+            }
+            Component::Dendrogram(d) => {
+                title(&d.title)?;
+                if d.nodes.is_empty() {
+                    return Err("a run tree has no nodes".into());
+                }
+                most("run tree nodes", d.nodes.len(), DENDROGRAM_MAX)?;
+                let mut parent = BTreeMap::new();
+                for n in &d.nodes {
+                    let ok = (1..=128).contains(&n.id.len()) && n.id.bytes().all(|b| b.is_ascii_alphanumeric() || b"._-".contains(&b));
+                    if !ok {
+                        return Err(format!("run node id {:?} is not [A-Za-z0-9._-]{{1,128}}", n.id));
+                    }
+                    if parent.insert(n.id.as_str(), n.parent.as_deref()).is_some() {
+                        return Err(format!("run node id {:?} twice", n.id));
+                    }
+                    if n.name.trim().is_empty() {
+                        return Err(format!("run node {:?} has no name", n.id));
+                    }
+                    cap("a run node name", &n.name, 200)?;
+                    n.note.as_deref().map_or(Ok(()), |t| cap("a run node note", t, 600))?;
+                    for t in [&n.started, &n.ended].into_iter().flatten() {
+                        if !is_date(t) {
+                            return Err(format!("run node {:?}: {t:?} is not a date YYYY-MM-DD[THH:MM:SS(Z|+HH:MM)]", n.id));
+                        }
+                    }
+                    if let (Some(s), Some(e)) = (n.started.as_deref().and_then(instant), n.ended.as_deref().and_then(instant)) {
+                        if e < s {
+                            return Err(format!("run node {:?} ends before it starts", n.id));
+                        }
+                    }
+                }
+                let roots: Vec<&str> = parent.iter().filter(|(_, p)| p.is_none()).map(|(id, _)| *id).collect();
+                if roots.len() != 1 {
+                    return Err(format!("a run tree has exactly one root, not {}", roots.len()));
+                }
+                if roots[0] != d.root {
+                    return Err(format!("root {:?} is not the tree's parentless node {:?}", d.root, roots[0]));
+                }
+                if let Some(n) = d.nodes.iter().find(|n| n.parent.as_deref().is_some_and(|p| !parent.contains_key(p))) {
+                    return Err(format!("run node {:?} names a parent not in the tree", n.id));
+                }
+                // One root and every parent present: a node whose chain never reaches the root sits on a cycle.
+                for n in &d.nodes {
+                    let (mut at, mut steps) = (n.id.as_str(), 0);
+                    while let Some(Some(p)) = parent.get(at) {
+                        at = p;
+                        steps += 1;
+                        if steps > d.nodes.len() {
+                            return Err(format!("run node {:?} sits on a cycle", n.id));
+                        }
+                    }
+                }
+                Ok(())
             }
             Component::Form(f) => {
                 if !crate::wire::is_uuid(&f.form) {
@@ -717,6 +772,61 @@ pub struct KnowledgeNode {
     /// The head of its description (the focus's).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub text: Option<String>,
+}
+
+/// The most nodes an agent run's tree carries; serve cuts the rest and says how many in `hidden`.
+pub const DENDROGRAM_MAX: usize = 200;
+
+/// One agent run as a tree (read_run, iris-agent-dendrogram): the session at the root, its threads,
+/// turns, tool calls, approvals and grader iterations under it. Serve builds it, never the model.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Dendrogram {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    pub root: String,
+    pub nodes: Vec<RunNode>,
+    pub hidden: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RunNode {
+    pub id: String,
+    /// None: the root, and only the root.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parent: Option<String>,
+    pub kind: RunKind,
+    pub name: String,
+    pub status: RunStatus,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub started: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ended: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tokens: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RunKind {
+    Agent,
+    Thread,
+    Turn,
+    Tool,
+    Approval,
+    Iteration,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RunStatus {
+    Running,
+    Ok,
+    Bad,
+    Waiting,
 }
 
 /// Things and the links between them, drawn as a layered diagram (one column per rank).

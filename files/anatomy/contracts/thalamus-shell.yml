@@ -2,7 +2,7 @@
 # Protocol: ssot/doctrine/cross-repo-contracts.md §1 (spec + fixture + gates
 # over the same bytes). Both sides link one Rust crate (nos-contract), so the
 # gate is the crate decoding the fixture; one copy only, both sides cite this.
-contract_version: 10   # 10: knowledge_tree, widget spec knowledge; 9: resume workspace, clear, branch, stop, model_state; 8: catalogue (both ways), limbs, act, acted, action_approval; 7: resume, workspace_load, workspace_save, workspace, said, replay; 6: dashboard, kpi, working_for, model_options, model_pick; 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice, delta, sequence; 5: row_diff_approval op/title/read_from
+contract_version: 11   # 11: dendrogram; 10: knowledge_tree, widget spec knowledge; 9: resume workspace, clear, branch, stop, model_state; 8: catalogue (both ways), limbs, act, acted, action_approval; 7: resume, workspace_load, workspace_save, workspace, said, replay; 6: dashboard, kpi, working_for, model_options, model_pick; 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice, delta, sequence; 5: row_diff_approval op/title/read_from
 fixture: files/anatomy/contracts/thalamus-shell.fixture.json
 
 producer:
@@ -247,6 +247,14 @@ components:
       description head); hidden is how many the cap left out, said by both shells. Never in an approval. The pupil
       draws it as the graph's layered columns (parent -> child), the focus marked; a click on a node opens that node
       as a knowledge widget, read by the thalamus without the model; the terminal says one indented line a node
+    dendrogram: >-
+      one agent run as a tree (read_run; v11): {title?, root, nodes[{id, parent?, kind agent|thread|turn|tool|approval|iteration,
+      name, status running|ok|bad|waiting, started?, ended?, tokens?, note?}], hidden}; ids [A-Za-z0-9._-]{1,128}, unique;
+      exactly one node has no parent and root names it; every parent is a node of the tree and no chain cycles; at most
+      200 nodes (serve cuts the rest in order and hidden says how many), a name 1-200 chars, a note at most 600, started
+      and ended are dates (ended not before started). Serve builds it from Wing's agent_sessions, threads, iterations
+      and events by actor_action_id; the model never writes it. Never in an approval. The pupil draws it as the graph's
+      layered columns, status as tone (ok ok, running info, waiting warn, bad bad); the terminal says one indented line a node
     # Crosses the wire only inside a `widget` message: a render or approval_request carrying one is
     # refused (wire.rs not_a_form).
     form: >-
