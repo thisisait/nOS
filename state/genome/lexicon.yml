@@ -861,6 +861,18 @@ words:
     no_surface_reason: "planned: roadmap row face-terminal-organ-renderers; no vocabulary is published yet."
     not: [skill, plugin]
     counter_example: "a page of markup a model wrote (the vocabulary is closed; a model only chooses from it)"
+  dendrogram:
+    level: cross
+    proposed: true
+    means: >-
+      One agent run drawn as a branching tree: the session at the root, its threads, model turns,
+      tool calls, approvals and grader iterations under it, each with its status. The thalamus
+      builds it from Wing's record of the run (read_run); the model never writes it.
+    names:
+      - yaml_key: "files/anatomy/contracts/thalamus-shell.yml#components.vocabulary.dendrogram"
+      - path: files/anatomy/face/src/lib/iris/Dendrogram.svelte
+    not: [self, expression]
+    counter_example: "the lineage of the estate itself (that is self), or the knowledge tree around one KEAP node"
   Ears:
     level: proper-name
     means: The speech organ, which hears and speaks.

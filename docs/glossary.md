@@ -97,6 +97,8 @@ genome → cell → tissue → organ → organ system → organism → habitat.
   Counter-example: a chat transcript the app keeps (its history, not what it remembered).
 - **expression** (proposed, not yet ruled) — One component of the face's closed vocabulary: a renderer with a parameter schema that an agent chooses and fills with data during a conversation. The agent never writes markup. Not: skill, plugin.
   Counter-example: a page of markup a model wrote (the vocabulary is closed; a model only chooses from it).
+- **dendrogram** (proposed, not yet ruled) — One agent run drawn as a branching tree: the session at the root, its threads, model turns, tool calls, approvals and grader iterations under it, each with its status. The thalamus builds it from Wing's record of the run (read_run); the model never writes it. Not: self, expression.
+  Counter-example: the lineage of the estate itself (that is self), or the knowledge tree around one KEAP node.
 
 ## Plumbing (hidden from the body plan)
 
