@@ -460,6 +460,10 @@ const REPEATED: &str = "this exact call failed already in this turn and was not 
 const UNGROUNDED: &str = "[thalamus] your answer cites no node our knowledge handed you. Cite the [id] of each fact you took \
 from a hit; if no hit is the topic, say only that it is not in our knowledge, and add nothing you know from elsewhere.";
 
+/// What the model hears once when its answer leaves out a node it read; the ids follow.
+const UNCITED: &str = "[thalamus] you read these nodes and your answer does not cite them; cite the [id] of each one \
+you took a fact from, or say it did not answer the question:";
+
 /// A grounded answer cites an id a knowledge tool handed this turn, or says the topic is absent.
 /// ponytail: absence is a phrase match (EN/CS); a model that words it otherwise is asked once, then marked.
 fn grounded(text: &str, ids: &[String]) -> bool {
@@ -2401,6 +2405,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
         let (mut drew, mut unshown) = (false, None::<String>);
         // The ids a knowledge search or read handed this turn (None: neither ran), and whether the model was asked.
         let (mut knowledge, mut asked_ground) = (None::<Vec<String>>, false);
+        let mut read: Vec<String> = vec![]; // the nodes read_node handed: each one read is cited (combine-*)
         loop {
             if face.stopped(&o.session) {
                 return self.end_turn(out, o, &[], STOPPED, "Stopped.".into());
@@ -2421,6 +2426,12 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                 if ungrounded && !asked_ground {
                     asked_ground = true;
                     o.messages.push(json!({"role": "user", "content": UNGROUNDED}));
+                    continue;
+                }
+                let uncited: Vec<String> = read.iter().filter(|id| !text.contains(&format!("[{id}]"))).map(|id| format!("[{id}]")).collect();
+                if !ungrounded && !uncited.is_empty() && !asked_ground && !grounded(&text, &[]) {
+                    asked_ground = true;
+                    o.messages.push(json!({"role": "user", "content": format!("{UNCITED} {}", uncited.join(", "))}));
                     continue;
                 }
                 // Live 2026-10-13: a blank answer drew nothing, so the person could not tell it ended.
@@ -2688,6 +2699,9 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                     }
                 }
                 // A failed search is UNKNOWN, not absent: only what was handed binds the answer.
+                if let (Ok(v), "read_node") = (&result, name) {
+                    read.extend(v["id"].as_str().map(str::to_string).filter(|id| !read.contains(id)));
+                }
                 if let (Ok(v), "search_knowledge" | "search_memory" | "read_node") = (&result, name) {
                     handed_ids(v, knowledge.get_or_insert_with(Vec::new));
                 }
