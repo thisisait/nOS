@@ -66,6 +66,10 @@ gh api repos/:owner/:repo/rulesets/<id>            # expect the five rules above
    the violations and lets them through, so the signature rule has never been met.
    Either turn on commit signing (`commit.gpgsign`) or drop the rule.
 3. After the merge, re-sync `dev` to `master`, tag, and publish the GitHub release.
+4. In the same push as the tag, reduce that version's `RELEASE.md` heading to its dates
+   (`## v0.17-beta (2026-10-11 … 2026-10-17)`, no `DRAFT` or `in progress`) and name the
+   tag commit (8-char sha) in its section. Sections stay newest version first. Gate:
+   `tests/anatomy/test_release_notes_match_tags.py`.
 
 ## Frozen integration toolchain (`tools/ci-local.sh`)
 
