@@ -1,0 +1,6 @@
+---
+# Internals only. Included by pazny.thalamus (install_thalamus gates it); the toolchain, signing
+# and build-cache vars are still thalamus_* there. The bin dir is the thalamus's, so the plist path
+# and its 0700 dirs do not move during coexistence (ssot/doctrine/medulla.md §3).
+medulla_bin_dir: "{{ thalamus_home }}/bin"
+medulla_bin: "{{ medulla_bin_dir }}/medulla"

@@ -1,0 +1,97 @@
+---
+# pazny.medulla on macOS: build with cargo, sign for TCC, link `thalamus` to it.
+
+# rustup's cargo when the host has one; else Homebrew's rust (nOS installs no rustup). Live 2026-10-14:
+# a fresh client had neither, and the build died with "No such file or directory".
+- name: "[pazny.medulla] Find a Rust toolchain"
+  ansible.builtin.stat:
+    path: "{{ thalamus_cargo }}"
+  register: _thalamus_cargo_stat
+
+- name: "[pazny.medulla] Install Homebrew's rust when there is no cargo"
+  community.general.homebrew:
+    name: rust
+    state: present
+  when:
+    - nos_pkg_manager == 'homebrew'
+    - not (_thalamus_cargo_stat.stat.executable | default(false))
+
+- name: "[pazny.medulla] Use Homebrew's cargo"
+  ansible.builtin.set_fact:
+    thalamus_cargo: "{{ homebrew_prefix }}/bin/cargo"
+  when:
+    - nos_pkg_manager == 'homebrew'
+    - not (_thalamus_cargo_stat.stat.executable | default(false))
+
+# --locked: the workspace Cargo.lock dependabot watches is what ships. The target dir lives off the checkout.
+- name: "[pazny.medulla] Build and install the medulla binary"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    export CARGO_TARGET_DIR={{ thalamus_target_dir | quote }}
+    {{ thalamus_cargo | quote }} build --release --locked -p medulla --manifest-path {{ (playbook_dir ~ '/files/anatomy/thalamus/Cargo.toml') | quote }}
+    install -m 0755 "$CARGO_TARGET_DIR/release/medulla" {{ medulla_bin | quote }}
+  args:
+    executable: /bin/bash
+  register: _medulla_build
+  when: _medulla_src_sha.stdout != (_medulla_built_sha.stdout | default(''))
+  changed_when: true
+  notify: Restart thalamus
+
+- name: "[pazny.medulla] Record the hash the binary was built from"
+  ansible.builtin.copy:
+    content: "{{ _medulla_src_sha.stdout }}"
+    dest: "{{ medulla_bin }}.source-sha256"
+    mode: '0644'
+  when: _medulla_build is not skipped
+
+# The removable-volume grant (ledger under nos_data_root) binds to the designated requirement; the
+# linker's ad-hoc DR is the cdhash, so every rebuild re-asked. Minted once, operator-approved 2026-10-12;
+# untrusted on purpose: it signs only for TCC, never for Gatekeeper. Needs the login keychain unlocked.
+# Registered as _thalamus_signing: pazny.thalamus's pupil.yml signs the pupil with the same identity.
+- name: "[pazny.medulla] The local code-signing identity (minted once in the login keychain)"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    KC={{ thalamus_signing_keychain | quote }}
+    CN={{ thalamus_signing_cn | quote }}
+    if ! security find-certificate -c "$CN" "$KC" >/dev/null 2>&1; then
+      d=$(mktemp -d); trap 'rm -rf "$d"' EXIT
+      pw=$(/usr/bin/openssl rand -hex 16)
+      /usr/bin/openssl req -x509 -newkey rsa:2048 -nodes -days 3650 -subj "/CN=$CN" \
+        -addext "keyUsage=critical,digitalSignature" -addext "extendedKeyUsage=critical,codeSigning" \
+        -addext "basicConstraints=critical,CA:false" -keyout "$d/k.pem" -out "$d/c.pem" 2>/dev/null
+      /usr/bin/openssl pkcs12 -export -inkey "$d/k.pem" -in "$d/c.pem" -out "$d/id.p12" -passout "pass:$pw"
+      security import "$d/id.p12" -k "$KC" -P "$pw" -T /usr/bin/codesign >/dev/null
+      echo minted
+    fi
+    security find-certificate -c "$CN" -Z "$KC" | awk '/SHA-1 hash/ {print $3; exit}'
+  args:
+    executable: /bin/bash
+  register: _thalamus_signing
+  changed_when: "'minted' in _thalamus_signing.stdout"
+
+# The identifier stays the thalamus's label: the TCC grant names identifier + certificate.
+- name: "[pazny.medulla] Sign the binary with it (same identity every build)"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    H={{ _thalamus_signing.stdout_lines[-1] | quote }}
+    want="certificate leaf = H\"$(printf %s "$H" | tr 'A-F' 'a-f')\""
+    if codesign -d -r- {{ medulla_bin | quote }} 2>&1 | grep -qF "$want"; then echo same; exit 0; fi
+    out=$(codesign -f -s "$H" -i {{ thalamus_launchd_label | quote }} {{ medulla_bin | quote }} 2>&1) || { echo "$out" >&2; grep -q errSecInternalComponent <<<"$out" && { echo "codesign could not reach the signing key (errSecInternalComponent). Over SSH the keychain cannot ask
+      'allow codesign?'. Once, in this session (it asks the login password), then re-run:
+        security set-key-partition-list -S apple-tool:,apple:,codesign: -s {{ thalamus_signing_keychain | quote }}" >&2; exit 1; }; exit 1; }
+    echo signed
+  args:
+    executable: /bin/bash
+  register: _medulla_signed
+  changed_when: "'signed' in _medulla_signed.stdout"
+  when: _thalamus_signing.stdout_lines | default([]) | length > 0  # --check mints nothing
+  notify: Restart thalamus
+
+# Relative: launchd runs `thalamus`, the medulla dispatches on argv[0]. force: the old binary is a file.
+- name: "[pazny.medulla] thalamus is the medulla"
+  ansible.builtin.file:
+    src: medulla
+    dest: "{{ thalamus_bin }}"
+    state: link
+    force: true
+  notify: Restart thalamus

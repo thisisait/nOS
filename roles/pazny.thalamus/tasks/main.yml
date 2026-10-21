@@ -17,26 +17,6 @@
       == ansible_facts['env']['HOME'] ~ '/.nos/identity-map.yml'
     fail_msg: "receptor_identity_map is overridden; the thalamus reads only ~/.nos/identity-map.yml (src/serve.rs IDENTITY_MAP)."
 
-# Build only when the source differs from the one the binary was built from (Pulse's pattern).
-- name: "[pazny.thalamus] Hash the thalamus source"
-  ansible.builtin.shell: |
-    set -o pipefail
-    cd {{ (playbook_dir ~ '/files/anatomy/thalamus') | quote }}
-    find thalamus/src thalamus/Cargo.toml thalamus/Cargo.lock contract/src contract/Cargo.toml -type f \
-      | LC_ALL=C sort | xargs cat | shasum -a 256 | cut -d' ' -f1
-  args:
-    executable: /bin/bash
-  register: _thalamus_src_sha
-  changed_when: false
-  check_mode: false
-
-- name: "[pazny.thalamus] Read the hash the binary was built from"
-  ansible.builtin.command: cat {{ thalamus_bin }}.source-sha256
-  register: _thalamus_built_sha
-  changed_when: false
-  failed_when: false
-  check_mode: false
-
 # The vars behind the auth_secret (nos:<var>) of each row iris may bind that is ARMED here (its
 # enabled_flag true); a keyless row has none. The plist renders each value as NOS_SECRET_<VAR>
 # (src/main.rs): an unarmed row's key never reaches the thalamus.
