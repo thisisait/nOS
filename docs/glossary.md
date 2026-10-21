@@ -128,6 +128,7 @@ genome → cell → tissue → organ → organ system → organism → habitat.
 - **Face** — The web desktop.
 - **Hippocampus** — KEAP's door where an agent's memory is formed; it serves the CortexDB wire under /hippocampus and writes engrams. Not: Cortex, KEAP.
 - **Thalamus** — The Rust organ that relays each turn of a conversation to the organ that answers it and to Cortex. Cells act in it, and their organelles move into it from Wing's AgentKit one function at a time. Not: Cortex, Wing, organelles.
+- **Medulla** — The proposed one static Rust binary that runs the host organs as threads under its own identity, absorbing Thalamus, Pulse's scheduler, the host bridge and Wing's API one by one. Not: Thalamus, Wing, Bone.
 - **Pupil** — Iris's desktop window: a Tauri app that opens the Thalamus socket as the logged-in user and draws the same closed component vocabulary as the terminal shell. It holds no secret and opens no port. Not: Face, Thalamus.
 - **Receptor** — The host daemon that lets a host login reach KEAP's human door as a person: the kernel names the login, ~/.nos/identity-map.yml names the person, and the receptor sends KEAP that person's headers and the proxy secret. Not: Thalamus, Hippocampus.
 - **Ears** — The speech organ, which hears and speaks.

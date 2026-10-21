@@ -4,7 +4,7 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 558,
+    "nodes": 559,
     "edges": 555,
     "nodes_pulse": 43,
     "nodes_judge": 5,
@@ -29,7 +29,7 @@
     "nodes_skill": 13,
     "nodes_reader": 63,
     "nodes_effector": 111,
-    "nodes_article": 27,
+    "nodes_article": 28,
     "nodes_organ_system": 13,
     "nodes_tissue": 1,
     "edges_data": 246,
@@ -409,6 +409,13 @@
       "title": "The two loops — sequence doctrine",
       "anchor": "09",
       "description": "Constitution article ssot/doctrine/loops.md: The two loops — sequence doctrine"
+    },
+    "article:medulla": {
+      "kind": "article",
+      "source": "ssot/doctrine/medulla.md",
+      "title": "Medulla — one binary runs the estate under its own identity",
+      "anchor": "09",
+      "description": "Constitution article ssot/doctrine/medulla.md: Medulla — one binary runs the estate under its own identity"
     },
     "article:observability": {
       "kind": "article",
@@ -3454,9 +3461,9 @@
     "reader:estate-status": {
       "kind": "reader",
       "source": "tools/estate-status.py",
-      "title": "What is TRUE right now, across the three places a fact about nOS can live.",
+      "title": "What is TRUE right now, across the three places a fact about nOS can live; plus organ identity (language, runtime, run-as uid) per host organ (`--identity`).",
       "anchor": "02.02.04",
-      "description": "Reader tools/estate-status.py: What is TRUE right now, across the three places a fact about nOS can live."
+      "description": "Reader tools/estate-status.py: What is TRUE right now, across the three places a fact about nOS can live; plus organ identity (language, runtime, run-as uid) per host organ (`--identity`)."
     },
     "reader:face-wiring-report": {
       "kind": "reader",
