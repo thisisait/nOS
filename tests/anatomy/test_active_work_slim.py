@@ -36,7 +36,7 @@ def test_active_work_points_at_the_devlog():
 # --- the projection (row active-work-from-table, rel-018) --------------------
 # docs/active-work.md below its marker is tools/active-work-gen.py's output.
 # Status lives only in the PRIVATE seed, so CI cannot hold the statuses; it can
-# hold the shape and that every slug is a real one (state/roadmap/index.yml).
+# hold the shape: every line below the marker is what the writer prints.
 
 
 def _check(tools_dir: pathlib.Path, seed: pathlib.Path | None = None):
@@ -57,7 +57,7 @@ def test_active_work_is_what_the_roadmap_projects():
 
 
 def _scratch_repo(tmp_path: pathlib.Path, doc: str) -> pathlib.Path:
-    for rel in ("tools/active-work-gen.py", "tools/roadmap_seed_lib.py", "state/roadmap/index.yml"):
+    for rel in ("tools/active-work-gen.py", "tools/roadmap_seed_lib.py"):
         (tmp_path / rel).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(REPO / rel, tmp_path / rel)
     (tmp_path / "docs").mkdir()
@@ -78,4 +78,4 @@ def test_without_the_seed_a_hand_edit_is_red(tmp_path, line):
     text = ACTIVE_WORK.read_text(encoding="utf-8").rstrip("\n") + "\n" + line + "\n"
     got = _check(_scratch_repo(tmp_path, text), seed=tmp_path / "no-seed")
     assert got.returncode == 1, (
-        f"a line below the marker that is not a real row's projection must be red offline:\n{got.stdout}")
+        f"a line below the marker that is not a projection line in its section must be red offline:\n{got.stdout}")
