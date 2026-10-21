@@ -2696,13 +2696,11 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                         }
                         v
                     }),
-                    "app_slots" => self.app_slots(who, &args).map(|v| {
+                    "app_slots" => self.app_slots(who, &args).inspect(|v| {
                         let _ = self.record(o, Kind::ToolResult, Some(name), v.clone());
-                        v
                     }),
-                    "scaffold_app" => self.scaffold_app(who, &args).map(|v| {
+                    "scaffold_app" => self.scaffold_app(who, &args).inspect(|v| {
                         let _ = self.record(o, Kind::ToolResult, Some(name), json!({"kind": v["kind"], "runtime": v["runtime"]}));
-                        v
                     }),
                     "propose_app" if !o.pending.is_empty() =>Err("an approval is already waiting".to_string()),
                     "propose_app" => self.propose_app(who, &args).and_then(|(rec, card, draft)| {
