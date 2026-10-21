@@ -2,7 +2,7 @@
 
 authentik_rbac_tiers[0].groups is ["nos-providers", "nos-admins"]; `| last`
 keeps only nos-admins, so a provider was no GitLab admin, no tier-1 login in
-the receptor map, no member of the unix realm (ssot/doctrine/permissions.md §4).
+the receptor map, no member of the unix realm (the 2026-10-21 RBAC inventory).
 Each consumer is rendered with stock Jinja and must carry both groups.
 """
 
