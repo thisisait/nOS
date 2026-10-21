@@ -96,6 +96,7 @@ def test_an_old_doctrine_path_is_still_an_address():
 _BORN_IN_SSOT = {
     "sso.md": "carved from docs/sso-and-attribution.md, which stays the guide",
     "genome.md": "the shipped half of docs/idea/06-genome.md, which stays an idea",
+    "permissions.md": "born here 2026-10-21 from the RBAC inventory; no warehouse original",
 }
 
 
