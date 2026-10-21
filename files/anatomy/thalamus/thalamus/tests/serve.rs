@@ -6961,7 +6961,32 @@ fn app_rig(name: &str, map: serde_json::Value, model: Vec<String>) -> Rig {
     std::os::unix::fs::symlink(scaffolds, repo.join("state/app-scaffolds.yml")).unwrap();
     std::fs::write(repo.join("apps/roundcube.yml"), "meta: {name: roundcube}\n").unwrap();
     std::fs::write(repo.join("state/manifest.yml"), "services:\n  - id: next_cloud\n").unwrap();
+    reader(&rig, "app-slots.py", &slots(None)); // the parser's --estate asks it; every slot free unless a test says
     rig
+}
+
+/// app-slots.py answering every asked check free, or `taken` = (check, why) taken.
+fn slots(taken: Option<(&str, &str)>) -> String {
+    format!(r#"import json, sys
+a = sys.argv[1:]
+asked = {{k[2:]: a[i + 1] for i, k in enumerate(a) if k in ("--name", "--subdomain", "--port")}}
+taken = {taken}
+checks = {{k: {{"value": v, "free": not (taken and taken[0] == k), "why": taken[1] if taken and taken[0] == k else "free"}}
+          for k, v in asked.items()}}
+print(json.dumps({{"names_taken": [], "subdomains_taken": [], "ports_taken": [], "checks": checks, "free_port": 8100,
+    "sources": {{"manifest": "ok", "apps": "ok", "traefik": "ok", "listening": "ok"}}, "unknown": []}}))
+"#, taken = taken.map_or("None".to_string(), |(k, w)| format!("({k:?}, {w:?})")))
+}
+
+/// Operator 2026-10-21: the parser checks the estate too (the name, the subdomain free), not only the shape.
+#[test]
+fn propose_app_refuses_a_name_the_estate_already_holds() {
+    let rig = app_rig("app-taken", manager(), vec![propose_app(&app_manifest("notes")), answer("Taken.")]);
+    reader(&rig, "app-slots.py", &slots(Some(("name", "apps/notes.yml.draft holds it"))));
+    let (got, _) = tool_turn(&rig, "make me a notes app");
+    assert!(app_card(&got).is_none(), "a taken name reached a card");
+    let e = tool_result(&rig, 1)["error"].as_str().unwrap_or_default().to_string();
+    assert!(e.contains("name-taken") && e.contains("apps/notes.yml.draft"), "{e}");
 }
 
 fn app_manifest(name: &str) -> serde_json::Value {
