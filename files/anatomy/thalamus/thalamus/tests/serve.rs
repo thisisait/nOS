@@ -4061,6 +4061,23 @@ fn told(got: &[ToShell]) -> (Vec<String>, Vec<String>) {
     (texts, notes)
 }
 
+/// spark1 2026-10-21: Czech knowledge questions answered without search_knowledge, so grounding never ran.
+/// A turn that names our knowledge searches first, by the thalamus, whatever the model would have done.
+#[test]
+fn a_turn_that_names_our_knowledge_searches_first() {
+    let rig = rig_n("know-first", mapped(), vec![memory(true, serde_json::json!([]))],
+        vec![answer("Mpembův jev: horká voda zamrzne dřív."), answer("To v našich znalostech není.")]);
+    let (got, _) = tool_turn(&rig, "Co říká naše znalostní báze o Mpembově jevu?");
+    assert!(keap_line(&rig, 0).starts_with("GET /api/search/semantic?q=Co"), "{}", keap_line(&rig, 0));
+    let first: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[0].1).unwrap();
+    assert!(first["messages"].as_array().unwrap().iter().any(|m| m["role"] == "tool"), "the model hears the search first");
+    assert_eq!(told(&got).0, vec!["To v našich znalostech není.".to_string()], "{got:?}");
+    // No knowledge words, no search of the thalamus's own.
+    let rig = rig_n("know-not", mapped(), vec![], vec![answer("Hi.")]);
+    tool_turn(&rig, "hello, what can you do?");
+    assert!(rig.keap.lock().unwrap().is_empty());
+}
+
 /// Night 2026-10-21: 4 of 6 absent topics answered from the model's memory, 7 facts without their [id].
 /// KEAP's scores are rank fusion, never a relevance floor, so the answer is checked, not the hits.
 #[test]
