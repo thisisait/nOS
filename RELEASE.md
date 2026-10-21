@@ -2,13 +2,27 @@
 
 `nOS` is the open-source Ansible engine behind [**This is AIT — Agentic IT**](https://thisisait.eu): one command turns an Apple Silicon Mac or Ubuntu 24.04 host into a reproducible, self-hosted, self-managing cloud of 79 FOSS services behind one SSO.
 
-Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.16-beta`.
+Versioning is by git tag `v<semver>` cut from `master`. The latest tag is `v0.17-beta`.
 
 ---
 
-## v0.17-beta (2026-10-11 … 2026-10-17) — DRAFT
+## v0.18-beta — in progress
+
+Exit criteria, copied from roadmap row `rel-018` (EXIT, readers):
+
+- [ ] estate-status release gate green on a blank converge of the operator host + a second host
+- [ ] CI green on every lane at the release PR with no bypass
+- [ ] one live Iris journey: approve a sub-agent, its report returns, the tree shows parent and child
+- [ ] one loop proposed by Iris, filed by the operator, run by Pulse, analysed by Iris from its runs
+- [ ] estate-status --identity prints every host organ's runtime and uid
+- [ ] rbac-status prints the matrix
+
+---
+
+## v0.17-beta (2026-10-11 … 2026-10-17)
 
 > **Iris gets a body: a terminal, a window, and a wall between clients.**
+> Tagged `v0.17-beta` at `d195ed76` (2026-10-17).
 > 867 commits since `v0.16-beta` (579 files, +59.1k/−3.2k), measured with
 > `git log v0.16-beta..dev` at `30e96791`. Still `-beta`: the operator ruled
 > on 2026-10-16 that the maturity exit criteria (restore drill, UC13) are not
