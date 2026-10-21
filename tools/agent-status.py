@@ -157,16 +157,23 @@ RUN_EVENTS_MAX = 400
 
 def run(uuid: str) -> dict:
     """One run as Wing holds it, for the thalamus's read_run: the session, its threads, its grader
-    iterations and its events by actor_action_id. Free text (messages, tool output, grader
-    feedback) stays behind; only what a tree node says leaves."""
+    iterations and its events by actor_action_id, and the runs started under it (parent_ref = the uuid,
+    or thalamus:<uuid> when the uuid is an Iris session, which Wing does not hold). Free text (messages,
+    tool output, grader feedback) stays behind; only what a tree node says leaves."""
     conn, how = _connect()
     if conn is None:
         return {"error": f"wing.db UNKNOWN — {how}"}
     try:
         with conn:
+            # parent_ref came with iris-agent-dendrogram inc.2; a wing.db not yet migrated has no runs joined.
+            joined = any(r[1] == "parent_ref" for r in conn.execute("PRAGMA table_info(agent_sessions)"))
             one = conn.execute(
                 "SELECT uuid, agent_name, status, stop_reason, outcome_result, error_json IS NOT NULL AS errored,"
-                " started_at, ended_at, tokens_input, tokens_output FROM agent_sessions WHERE uuid = ?", (uuid,)).fetchone()
+                " started_at, ended_at, tokens_input, tokens_output" + (", parent_ref" if joined else "") +
+                " FROM agent_sessions WHERE uuid = ?", (uuid,)).fetchone()
+            children = [dict(r) for r in conn.execute(
+                "SELECT uuid, agent_name, status, stop_reason, started_at, ended_at, parent_ref FROM agent_sessions"
+                " WHERE parent_ref IN (?, ?) ORDER BY rowid LIMIT ?", (uuid, f"thalamus:{uuid}", RUN_EVENTS_MAX))] if joined else []
             threads = [dict(r) for r in conn.execute(
                 "SELECT uuid, parent_thread_uuid, agent_name, role, status, stop_reason, started_at, ended_at,"
                 " tokens_input, tokens_output FROM agent_threads WHERE session_uuid = ? ORDER BY id", (uuid,))]
@@ -190,7 +197,7 @@ def run(uuid: str) -> dict:
         events.append({"id": r["id"], "ts": r["ts"], "type": r["type"], "task": r["task"],
                        "tool_use_id": res.get("tool_use_id"), "is_error": res.get("is_error")})
     return {"session": dict(one) if one else None, "threads": threads, "iterations": iterations,
-            "events": events, "events_cut": len(rows) > RUN_EVENTS_MAX}
+            "events": events, "events_cut": len(rows) > RUN_EVENTS_MAX, "children": children}
 
 
 def main() -> int:
