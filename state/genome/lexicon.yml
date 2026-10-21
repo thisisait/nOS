@@ -824,6 +824,15 @@ words:
       - path: roles/pazny.thalamus/
       - path: files/anatomy/thalamus/
     not: [Cortex, Wing, organelles]
+  # 2026-10-21: name ruled by the operator; the organ is PROPOSED (ssot/doctrine/medulla.md).
+  Medulla:
+    level: proper-name
+    means: >-
+      The proposed one static Rust binary that runs the host organs as threads under its own
+      identity, absorbing Thalamus, Pulse's scheduler, the host bridge and Wing's API one by one.
+    names:
+      - path: ssot/doctrine/medulla.md
+    not: [Thalamus, Wing, Bone]
   # 2026-10-12: Iris's desktop window (name ruled the same day, pupil-definition §5).
   Pupil:
     level: proper-name
