@@ -35,7 +35,7 @@
   when: _thalamus_tmpfiles is changed
   changed_when: true
 
-# The build is the medulla's (row medulla-skeleton): one workspace binary, thalamus_bin links to it.
+# The build is the medulla's (row medulla-skeleton): one workspace binary, thalamus_bin is a copy of it.
 - name: "[pazny.thalamus] Build the medulla, which runs as thalamus"
   ansible.builtin.include_role:
     name: pazny.medulla
@@ -46,7 +46,7 @@
 # The operator's home is 0700 under the unix realm: other logins exec this copy.
 - name: "[pazny.thalamus] The shell for every login: thalamus and iris"
   ansible.builtin.copy:
-    src: "{{ thalamus_bin }}"   # remote_src copies the link's target; named thalamus, argv[0] picks its CLI
+    src: "{{ thalamus_bin }}"   # the medulla's bytes, named thalamus, argv[0] picks its CLI
     dest: /usr/local/bin/thalamus
     remote_src: true
     mode: '0755'

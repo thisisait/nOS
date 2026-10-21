@@ -3,7 +3,7 @@
 # nos_data_root) live in default.config.yml. The socket (~/.nos/thalamus.sock) is fixed in src/main.rs.
 thalamus_launchd_label: "eu.thisisait.nos.thalamus"
 thalamus_home: "{{ ansible_facts['env']['HOME'] }}/thalamus"
-# A link to the medulla in the same dir (pazny.medulla medulla_bin_dir); the plist and the unit run it.
+# A copy of the medulla in the same dir (pazny.medulla medulla_bin_dir); the plist and the unit run it.
 # Spelled without medulla_* vars: include_role keeps them private, and this is read before the include.
 thalamus_bin: "{{ thalamus_home }}/bin/thalamus"
 thalamus_log_dir: "{{ thalamus_home }}/log"

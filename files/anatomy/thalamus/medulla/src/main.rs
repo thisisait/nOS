@@ -1,5 +1,5 @@
 //! The medulla: one binary for the host organs (ssot/doctrine/medulla.md §1). Today it carries the
-//! thalamus only: `medulla thalamus <args>`, or run as `thalamus`/`iris` (the coexistence symlink).
+//! thalamus only: `medulla thalamus <args>`, or run as `thalamus`/`iris` (the coexistence copy, or a link).
 use std::process::ExitCode;
 
 fn main() -> ExitCode {

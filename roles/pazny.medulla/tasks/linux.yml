@@ -25,10 +25,11 @@
     mode: '0644'
   when: _medulla_build is not skipped
 
-# Relative: a sibling link survives a bind mount; the unit runs `thalamus`, argv[0] picks its CLI.
+# A copy, as on macOS: /proc/<pid>/exe resolves a link, and the unit runs `thalamus`.
 - name: "[pazny.medulla] thalamus is the medulla"
-  ansible.builtin.file:
-    src: medulla
+  ansible.builtin.copy:
+    src: "{{ medulla_bin }}"
     dest: "{{ thalamus_bin }}"
-    state: link
-    force: true
+    remote_src: true
+    mode: '0755'
+  ignore_errors: "{{ ansible_check_mode }}"  # --check builds nothing: a fresh host has no medulla to copy

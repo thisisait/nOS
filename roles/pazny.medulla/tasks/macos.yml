@@ -1,5 +1,5 @@
 ---
-# pazny.medulla on macOS: build with cargo, sign for TCC, link `thalamus` to it.
+# pazny.medulla on macOS: build with cargo, sign for TCC, copy it to `thalamus`.
 
 # rustup's cargo when the host has one; else Homebrew's rust (nOS installs no rustup). Live 2026-10-14:
 # a fresh client had neither, and the build died with "No such file or directory".
@@ -87,11 +87,13 @@
   when: _thalamus_signing.stdout_lines | default([]) | length > 0  # --check mints nothing
   notify: Restart thalamus
 
-# Relative: launchd runs `thalamus`, the medulla dispatches on argv[0]. force: the old binary is a file.
+# A copy, not a link: the kernel resolves a link (proc_pidpath), so launchd's exe would read
+# bin/medulla and the TCC entry and NOS_DECIDER_EXES name bin/thalamus. Same signed bytes, same path.
 - name: "[pazny.medulla] thalamus is the medulla"
-  ansible.builtin.file:
-    src: medulla
+  ansible.builtin.copy:
+    src: "{{ medulla_bin }}"
     dest: "{{ thalamus_bin }}"
-    state: link
-    force: true
+    remote_src: true
+    mode: '0755'
+  ignore_errors: "{{ ansible_check_mode }}"  # --check builds nothing: a fresh host has no medulla to copy
   notify: Restart thalamus

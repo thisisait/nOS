@@ -1,6 +1,6 @@
 ---
 # pazny.medulla — builds the one workspace binary (files/anatomy/thalamus: thalamus + contract +
-# medulla crates) and links `thalamus` to it, the path the thalamus plist/unit runs.
+# medulla crates) and copies it to `thalamus`, the path the thalamus plist/unit runs.
 # Included by pazny.thalamus after its runtime directories exist.
 
 # Build only when the source differs from the one the binary was built from (Pulse's pattern).

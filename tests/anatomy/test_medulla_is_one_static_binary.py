@@ -3,7 +3,7 @@
 WHY. ssot/doctrine/medulla.md §1: one static Rust binary runs the host organs, and its
 subcommands replace wing/bin/*.php. A binary that links libphp/libpython/libnode would
 bring back the host runtime it replaces. Roadmap row medulla-skeleton: during coexistence
-the plist still runs `thalamus`, a symlink to the medulla, so argv[0] picks the thalamus CLI.
+the plist still runs `thalamus`, a copy of the medulla, so argv[0] picks the thalamus CLI.
 """
 from __future__ import annotations
 
