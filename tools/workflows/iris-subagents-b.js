@@ -135,6 +135,9 @@ const RULES = `House rules (nOS; the repo's CLAUDE.md applies):
   line in tests/anatomy/test_ssot_index.py; a new reader: its tools/README §Readers line; a new lockfile: its
   dependabot entry) as a "test: GATE CHANGE ..." commit of that row, never left for the operator.
 - Expected-red is explicit per row: nothing else may be red on your branch; a reviewer refutes any other red lane.
+  A row that adds a graph node (reader, article, organ, tool) lists as expected-red everything a regenerate plus a
+  re-sign clears (apex projection/sign/serve, anatomy-graph, body-plan, IMPRINT, the face pin), because artifacts
+  are regenerated once by the integrator, not by the row.
 - Rows are the spec; the roadmap files under ${SEED} are their source. Config keys, sudo, converges, closures of
   roadmap rows and anything destructive are the operator's: leave them in operator_questions.`
 

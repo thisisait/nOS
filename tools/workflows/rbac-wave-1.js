@@ -27,7 +27,7 @@ const ROWS = [
   {
     "depends_on": [],
     "expected_red": [
-      "apex projection / anatomy-graph --check until the integrator regenerates (reader:rbac-status is a new node)"
+      "everything a regenerate plus a re-sign clears, measured: apex projection/sign/serve/rebuild/fonts, anatomy-graph --check, body-plan --check, test_imprint_is_rendered, the face layout pin (reader:rbac-status is a new graph node; the integrator regenerates, the operator signs)"
     ],
     "operator_decisions": [
       "doors and agents in the same genome as people (default yes, one file)"
@@ -66,6 +66,7 @@ const ROWS = [
       "roles/pazny.linux.users/tasks/main.yml",
       "roles/pazny.jupyterhub/templates/jupyterhub_config.py.j2",
       "tools/identity-status.py",
+      "tests/anatomy/test_receptor_relay.py (GATE CHANGE: its tier-1 pin ['nos-admins'] becomes both groups; own commit)",
       "tests/anatomy/test_tier_one_is_every_tier_one_group.py (new: renders each template with stock Jinja and asserts both nos-providers and nos-admins appear where tier 1 is meant)",
       "tests/anatomy/test_identity_status_*.py (GATE CHANGE if an expectation moves)"
     ],
@@ -132,6 +133,9 @@ const RULES = `House rules (nOS; the repo's CLAUDE.md applies):
   line in tests/anatomy/test_ssot_index.py; a new reader: its tools/README §Readers line; a new lockfile: its
   dependabot entry) as a "test: GATE CHANGE ..." commit of that row, never left for the operator.
 - Expected-red is explicit per row: nothing else may be red on your branch; a reviewer refutes any other red lane.
+  A row that adds a graph node (reader, article, organ, tool) lists as expected-red everything a regenerate plus a
+  re-sign clears (apex projection/sign/serve, anatomy-graph, body-plan, IMPRINT, the face pin), because artifacts
+  are regenerated once by the integrator, not by the row.
 - Rows are the spec; the roadmap files under ${SEED} are their source. Config keys, sudo, converges, closures of
   roadmap rows and anything destructive are the operator's: leave them in operator_questions.`
 
