@@ -15,15 +15,26 @@ import subprocess
 from pathlib import Path
 
 import pytest
+from _environment_contract import declared_tools
 
 ROOT = Path(__file__).resolve().parents[2]
 HEADING = re.compile(r"^## (v\d+\.\d+(?:\.\d+)?(?:-[\w.]+)?)\b(.*)$", re.M)
 
 
+def _unknown(why):
+    """An environment that declares git (CI) must answer; elsewhere UNKNOWN."""
+    if "git" in declared_tools():
+        pytest.fail(f"{why}, and NOS_TEST_PROVIDES declares git: this gate must run here")
+    pytest.skip(f"{why}: UNKNOWN, not green")
+
+
 def _tags():
     """{tag: commit sha} as origin holds them; annotated tags peeled."""
-    out = subprocess.run(["git", "ls-remote", "--tags", "origin", "v*"], cwd=ROOT,
-                         capture_output=True, text=True, check=True, timeout=60).stdout
+    try:
+        out = subprocess.run(["git", "ls-remote", "--tags", "origin", "v*"], cwd=ROOT,
+                             capture_output=True, text=True, check=True, timeout=60).stdout
+    except (subprocess.SubprocessError, OSError) as exc:
+        _unknown(f"origin tags unreadable ({type(exc).__name__})")
     tags = {}
     for line in out.splitlines():
         sha, ref = line.split("\t")
@@ -46,7 +57,7 @@ def _sections():
 def _tagged():
     tags = _tags()
     if not tags:
-        pytest.skip("origin lists no v* tags: UNKNOWN, not green")
+        _unknown("origin lists no v* tags")
     return [(v, h, body, tags[v]) for v, h, body in _sections() if v in tags]
 
 
