@@ -65,7 +65,7 @@ Each line here is a `reader:` node of the anatomy graph, a sense.
 - `ci-tier-status.py` — Has each bonus CI lane (one manifest stack) been green on GitHub within 7 days; RED when not, including no run; UNKNOWN when `gh` is unreadable.
 - `test-tiers.py` — Which CI tier (T0, core, a stack) owns each anatomy test, and each stack's bonus lane: install flags + trigger paths, derived from the manifest, profiles/core.yml and plugins; `--select` prints the workflow matrix.
 - `elsewhere-status.py` — Estate work happening OUTSIDE the control centre, and how to get to it.
-- `estate-status.py` — What is TRUE right now, across the three places a fact about nOS can live.
+- `estate-status.py` — What is TRUE right now, across the three places a fact about nOS can live; plus organ identity (language, runtime, run-as uid) per host organ (`--identity`).
 - `services-status.py` — What nOS offers: every manifest service, its resolved install flag (null when Jinja/undeclared) and hub_card description; Iris's estate_services catalogue. Exit 0; unreadable sources in `unknown`.
 - `nos-guide.py` — How do I do X with nOS: the top 3 doc passages (docs/systems, nos-cli, README, glossary, profile headers; cs/en) and, for a named service, the config.yml line and the derived `nos --tags` converge/verify; Iris's nos_guide. Runs nothing. Exit 0; unreadable sources in `unknown`.
 - `face-wiring-report.py` — nOS-face wiring report — the hard-doctrine linter for the web-desktop shell.

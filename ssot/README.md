@@ -48,6 +48,7 @@ than kept as a rule that only ever reports its own defeat.)
 | [genome.md](doctrine/genome.md) | the genome as shipped: lexicon, entity schema with its facets, genes, codegen; facts are data, capabilities are code | proposed |
 | [tissue.md](doctrine/tissue.md) | a tissue is one manifest of existing ids (cells, skills, tables, services, reflexes); Art. 30 inherited from its members; install = profile, remove through the ladder, export carries files not rows; accepted by a fixture | proposed |
 | [n8n-packs.md](../docs/doctrine/n8n-packs.md) | external HTTP pulls into KEAP DataTables: n8n is the runner, nOS the contract (pack graph, keap_write, one Pulse reader) | proposed |
+| [medulla.md](doctrine/medulla.md) | one static Rust binary runs the host organs as threads under its own identity; absorption order, one wing.db writer per table, whole-prefix strangler seam behind :9000; measured by the estate-status identity axis | proposed |
 | [ssot.md](doctrine/ssot.md) | address + INDEX map; in-force articles live under `ssot/doctrine/` | live |
 | table-naming.md | DB table / column naming conventions | planned |
 | taxonomy.md | taxonomy / ontology term definitions (KEAP taxonomy depth levels, node/pillar/block, relations — NOT the service `layer` L0–L3 axis, which layers.md owns) | planned |

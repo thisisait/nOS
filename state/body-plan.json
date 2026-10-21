@@ -14,7 +14,7 @@
     "sense": 81,
     "limb": 118,
     "memory": 41,
-    "law": 53,
+    "law": 54,
     "reflex": 43,
     "heartbeat": 1,
     "internal": 76,
@@ -146,6 +146,10 @@
       "kind": "article"
     },
     "article:loops": {
+      "level": "law",
+      "kind": "article"
+    },
+    "article:medulla": {
       "level": "law",
       "kind": "article"
     },

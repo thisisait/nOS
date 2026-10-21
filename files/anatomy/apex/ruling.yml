@@ -819,6 +819,8 @@ nodes:
   "article:tissue": withheld  # 2026-10-07: promoted from the warehouse, PROPOSED
   "article:virtiofs": withheld
   "article:workflows": withheld
+  # --- 2026-10-21 medulla-organ-identity-reader: the medulla article (PROPOSED). WITHHELD; published set unchanged; digest stale for apex-sign --confirm.
+  "article:medulla": withheld
   "doctrine:ssot/doctrine/foreign-properties.md#5.1": withheld
   "doctrine:ssot/doctrine/workflows.md#6": withheld
   "reader:agent-capability": withheld
