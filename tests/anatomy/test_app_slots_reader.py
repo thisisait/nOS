@@ -33,7 +33,7 @@ def rig(tmp_path):
     (repo / "state/manifest.yml").write_text(
         "services:\n  - id: next_cloud\n    domain_var: nextcloud_domain\n    port_var: nextcloud_port\n")
     (repo / "config.d").mkdir()
-    (repo / "config.d/10-test.yml").write_text(
+    (repo / "config.d" / "10-test.yml").write_text(  # a fixture layer the reader finds through nos_identity
         "tenant_domain: dev.local\nnextcloud_domain: \"cloud.{{ tenant_domain }}\"\nnextcloud_port: 8100\n")
     (repo / "roles/pazny.gitea").mkdir(parents=True)
     (repo / "apps").mkdir()

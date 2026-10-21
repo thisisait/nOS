@@ -62,8 +62,9 @@ def parsed(tmp_path: Path, manifest: dict) -> dict:
 def test_infra_part_parses(tmp_path, runtime):
     rec = parsed(tmp_path, merge(BASE, fill(S["infra"], runtime)))
     svc = rec["compose"]["services"][NAME]
-    assert svc["ports"] == [f"127.0.0.1:8123:{S['runtimes'][runtime]['port']}"], "loopback only: Traefik is the edge"
-    assert svc["networks"] == ["apps_net"] and svc["mem_limit"] and svc["cpus"]
+    # Operator 2026-10-21: exposed to Traefik over the network, no host port, no networks list (the runner's default).
+    assert svc["expose"] == [str(S["runtimes"][runtime]["port"])] and "ports" not in svc, "no host port by default"
+    assert "networks" not in svc and svc["mem_limit"] and svc["cpus"]
 
 
 @pytest.mark.parametrize("runtime", sorted(r for r in S["runtimes"] if "command" in S["runtimes"][r]))
