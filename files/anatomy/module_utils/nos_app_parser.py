@@ -254,9 +254,163 @@ def validate(record: Dict[str, Any], app_name: Optional[str] = None) -> None:
         violations.append("compose.services is required")
     elif not isinstance(compose["services"], dict) or not compose["services"]:
         violations.append("compose.services must be a non-empty mapping")
+    else:
+        violations.extend(standards_violations(record))
 
     if violations:
         raise AppParseError(name, violations)
+
+
+# ---------------------------------------------------------------------------
+# nOS standards for the compose block. Each refusal starts with its rule name
+# ("standard <rule>:") so whoever authored the manifest (often a model) can fix
+# it point by point. Gate: tests/apps/test_app_standards.py.
+
+# Docker's default capability set: cap_add may restore these after cap_drop ALL,
+# never exceed them (apps/openhuman.yml.draft drops ALL, re-adds CHOWN/SETUID/SETGID).
+DOCKER_DEFAULT_CAPS = frozenset((
+    "AUDIT_WRITE", "CHOWN", "DAC_OVERRIDE", "FOWNER", "FSETID", "KILL", "MKNOD",
+    "NET_BIND_SERVICE", "NET_RAW", "SETFCAP", "SETGID", "SETPCAP", "SETUID", "SYS_CHROOT",
+))
+
+# A service with no `networks:` gets apps_net + the Traefik network from the
+# runner (apps-compose-override.yml.j2). A declared list replaces that default,
+# so it must hold apps_net; gated_net alone is SEC-02's Traefik-only net for a
+# header-trust backend (apps/twofauth.yml). shared_net is the runner's own default.
+APP_NETWORKS = ("apps_net", "shared_net", "gated_net")
+
+_PLATFORM_SECRET_RE = re.compile(
+    r"^(KEAP_|WING_|BONE_|PULSE_|CORTEX_|INFISICAL_|AUTHENTIK_|NOS_|GLOBAL_PASSWORD)"
+    r"|_API_TOKEN$|_EDGE_TOKEN$", re.IGNORECASE)
+# ponytail: major.minor counts as a version (postgres has no patch level), so a
+# semver image's 7.2 still floats on patch; a registry lookup would close that.
+_VERSION_TAG_RE = re.compile(r"\d+\.\d+|\d{4}-?\d{2}-?\d{2}")
+_VOLUME_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
+
+
+def _strings(node: Any):
+    if isinstance(node, str):
+        yield node
+    elif isinstance(node, dict):
+        for k, v in node.items():
+            yield str(k)
+            yield from _strings(v)
+    elif isinstance(node, list):
+        for v in node:
+            yield from _strings(v)
+
+
+def _interpolations(text: str) -> List[str]:
+    """Each `$NAME` / `${...}` (as written) compose would interpolate that is not a magic token."""
+    out = []
+    i = 0
+    while True:
+        i = text.find("$", i)
+        if i < 0:
+            return out
+        if text.startswith("$$", i):
+            i += 2
+            continue
+        m = _TOKEN_RE.match(text, i)
+        if m:
+            i = m.end()
+            continue
+        b = re.match(r"\$\{[^}]*\}?|\$[A-Za-z_][A-Za-z0-9_]*|\$", text[i:])
+        out.append(b.group(0))
+        i += b.end()
+
+
+def _image_floats(image: str) -> bool:
+    if "@sha256:" in image:
+        return False
+    tail = image.rsplit("/", 1)[-1]
+    tag = tail.split(":", 1)[1] if ":" in tail else ""
+    return tag in ("", "latest") or not _VERSION_TAG_RE.search(tag)
+
+
+def _host_ports(svc: str, ports: Any, meta_ports: List[Any]) -> List[str]:
+    v = []
+    for p in ports or []:
+        if isinstance(p, dict):
+            ip, host = str(p.get("host_ip") or ""), p.get("published")
+        else:
+            s = str(p).split("/", 1)[0]
+            ip, _, rest = s.rpartition(":")
+            ip, _, host = ip.rpartition(":")  # "[ip:]host:container"; bare "C" has no host port
+        if ip != "127.0.0.1":
+            v.append("standard host-port-not-loopback: services.%s publishes %r on every "
+                     "interface, past Traefik and Authentik; bind it as \"127.0.0.1:<host>:<container>\" "
+                     "or drop ports: (Traefik reaches the container without one)" % (svc, p))
+        if host in (None, "") and ip != "127.0.0.1":
+            continue
+        try:
+            host = int(host)
+        except (TypeError, ValueError):
+            v.append("standard host-port-unparseable: services.%s port %r is not "
+                     "127.0.0.1:<host>:<container> with one host port" % (svc, p))
+            continue
+        if host not in meta_ports:
+            v.append("standard host-port-not-in-meta-ports: services.%s publishes host port %d "
+                     "but meta.ports does not list it; add %d to meta.ports or drop the publish"
+                     % (svc, host, host))
+    return v
+
+
+def standards_violations(record: Dict[str, Any]) -> List[str]:
+    """nOS compose standards, one named reason per breach (empty = compliant)."""
+    meta_ports = (record.get("meta") or {}).get("ports") or []
+    v: List[str] = []
+    for svc, d in ((record.get("compose") or {}).get("services") or {}).items():
+        d = d if isinstance(d, dict) else {}
+        image = d.get("image")
+        if isinstance(image, str) and _image_floats(image):
+            v.append("standard floating-image-tag: services.%s image %r floats; pin a full "
+                     "version tag (e.g. nginx:1.27.3-alpine) or an @sha256: digest" % (svc, image))
+        v.extend(_host_ports(svc, d.get("ports"), meta_ports))
+        labels = d.get("labels") or {}
+        keys = labels.keys() if isinstance(labels, dict) else [str(l).split("=", 1)[0] for l in labels]
+        if any(str(k).lower().startswith("traefik.") for k in keys):
+            v.append("standard traefik-label: services.%s sets traefik.* labels; the runner derives "
+                     "routing from meta.name + meta.ports[0], delete them" % svc)
+        for ref in sorted(set(r for t in _strings(d) for r in _interpolations(t))):
+            if _PLATFORM_SECRET_RE.search(re.split(r"[:?+-]", ref.strip("${}"), maxsplit=1)[0]):
+                v.append("standard platform-secret: services.%s references %s, a platform "
+                         "credential no tenant app may hold; remove it" % (svc, ref))
+            else:
+                v.append("standard env-interpolation: services.%s uses %s; only $SERVICE_FQDN_*, "
+                         "$SERVICE_PASSWORD_*, $SERVICE_USER_*, $SERVICE_BASE64_* are filled, "
+                         "write the value itself, or $$ for a literal $" % (svc, ref))
+        for vol in d.get("volumes") or []:
+            src, kind = (str(vol.get("source") or ""), vol.get("type")) if isinstance(vol, dict) \
+                else (str(vol).split(":", 1)[0] if ":" in str(vol) else "", None)
+            if "docker.sock" in src:
+                v.append("standard docker-socket: services.%s mounts %s, root on the host; remove it"
+                         % (svc, src))
+            elif kind == "bind" or (src and not _VOLUME_NAME_RE.match(src)):
+                v.append("standard bind-mount: services.%s mounts host path %r; a manifest ships no "
+                         "files, use a named volume declared under compose.volumes" % (svc, src))
+        nets = d.get("networks")
+        if nets is not None:
+            nets = list(nets) if isinstance(nets, (list, dict)) else [nets]
+            if "apps_net" not in nets and nets != ["gated_net"] or set(nets) - set(APP_NETWORKS):
+                v.append("standard network-not-apps-net: services.%s networks %r; omit networks: "
+                         "(the runner attaches apps_net) or list apps_net, nothing outside %s"
+                         % (svc, nets, list(APP_NETWORKS)))
+        limits = ((d.get("deploy") or {}).get("resources") or {}).get("limits") or {}
+        if not (d.get("mem_limit") or limits.get("memory")) or not (d.get("cpus") or limits.get("cpus")):
+            v.append("standard no-resource-limits: services.%s needs mem_limit and cpus "
+                     "(e.g. mem_limit: 256m, cpus: 0.5)" % svc)
+        if d.get("privileged"):
+            v.append("standard privileged: services.%s is privileged; remove it" % svc)
+        caps = [str(c).upper().replace("CAP_", "", 1) for c in d.get("cap_add") or []]
+        dropped = [str(c).upper() for c in d.get("cap_drop") or []]
+        if caps and ("ALL" not in dropped or set(caps) - DOCKER_DEFAULT_CAPS):
+            v.append("standard cap-add: services.%s adds %s; cap_add may only restore Docker's "
+                     "default capabilities after cap_drop: [ALL]" % (svc, caps))
+        for key in ("network_mode", "pid", "ipc"):
+            if str(d.get(key) or "").lower() == "host":
+                v.append("standard host-namespace: services.%s sets %s: host; remove it" % (svc, key))
+    return v
 
 
 # ---------------------------------------------------------------------------
