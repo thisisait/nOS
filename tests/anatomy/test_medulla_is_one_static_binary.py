@@ -53,19 +53,37 @@ def _run(exe, *args):
     return subprocess.run([str(exe), *args], capture_output=True, text=True, env=env, timeout=30, check=False)
 
 
+def _foreign(libs: list[str], darwin: bool) -> list[str]:
+    """The linked libraries that are a host runtime or not on the system allow-list."""
+    if darwin:
+        return [lib for lib in libs if HOST_RUNTIMES.search(lib) or not lib.startswith(("/usr/lib/", "/System/Library/"))]
+    return [lib for lib in libs if HOST_RUNTIMES.search(lib)
+            or (pathlib.Path(lib).name not in LINUX_SYSTEM and "ld-linux" not in lib)]
+
+
+def test_the_link_check_takes_only_named_system_libraries():
+    """/usr/lib and /System/Library hold more than libc: libxml2, Python.framework, libcurl."""
+    real = ["/usr/lib/libiconv.2.dylib", "/usr/lib/libSystem.B.dylib"]  # the medulla, otool -L 2026-10-21
+    assert _foreign(real, darwin=True) == []
+    for lib in ("/usr/lib/libxml2.2.dylib", "/usr/lib/libcurl.4.dylib", "/opt/homebrew/lib/libphp.dylib",
+                "/System/Library/Frameworks/Python.framework/Versions/2.7/Python"):
+        assert _foreign([*real, lib], darwin=True) == [lib], f"{lib} passes as a system library"
+    glibc = ["linux-vdso.so.1", "/lib/x86_64-linux-gnu/libc.so.6", "/lib64/ld-linux-x86-64.so.2"]
+    assert _foreign(glibc, darwin=False) == []
+    for lib in ("/lib/x86_64-linux-gnu/libpython3.12.so.1.0", "/lib/x86_64-linux-gnu/libssl.so.3"):
+        assert _foreign([*glibc, lib], darwin=False) == [lib], f"{lib} passes as a system library"
+
+
 def test_the_medulla_links_no_host_runtime():
     exe = _bins() / "medulla"
     if sys.platform == "darwin":
         out = subprocess.run(["otool", "-L", str(exe)], capture_output=True, text=True, check=True).stdout
         libs = [ln.split()[0] for ln in out.splitlines()[1:] if ln.strip()]
-        foreign = [lib for lib in libs if not lib.startswith(("/usr/lib/", "/System/Library/"))]
     else:
         out = subprocess.run(["ldd", str(exe)], capture_output=True, text=True, check=False).stdout
         libs = [ln.split()[0] for ln in out.splitlines() if ln.strip()]
-        foreign = [lib for lib in libs if pathlib.Path(lib).name not in LINUX_SYSTEM and "ld-linux" not in lib]
     assert libs, out
-    assert not [lib for lib in libs if HOST_RUNTIMES.search(lib)], out
-    assert not foreign, f"non-system libraries: {foreign}"
+    assert not _foreign(libs, sys.platform == "darwin"), f"host runtime or non-system libraries: {_foreign(libs, sys.platform == 'darwin')}\n{out}"
 
 
 def test_medulla_thalamus_serve_is_todays_thalamus():
