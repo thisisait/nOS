@@ -137,3 +137,34 @@ def test_a_tier_expression_that_drops_a_group_is_never_ok(tmp_path):
     assert pts.get("thalamus-tier2-env") == "drift", f"`[0]` reads as {pts.get('thalamus-tier2-env')}"
     assert pts.get("thalamus-tier1-plist") == "UNKNOWN", f"an unmodelled filter reads as {pts.get('thalamus-tier1-plist')}"
     assert pts.get("thalamus-tier2-plist") == "drift", f"`[-1]` reads as {pts.get('thalamus-tier2-plist')}"
+
+
+def test_the_genome_models_what_the_doctrine_inventories():
+    """permissions.md §3/§4 + Bone loopauth: bearer scopes, loop identities, app tiers, the DGX group."""
+    rc, out = _run()
+    assert rc == 0
+    matrix = out.get("matrix") or {}
+    for cap in ("loop:read", "loop:propose", "loop:judge", "loop:forget", "wing.halt", "pulse.write",
+                "app.reach:twofauth"):
+        assert cap in matrix, f"{cap} is enforced today but the genome does not hold it"
+    assert "door:face-bff" in matrix.get("wing.operator", []), "the face BFF bearer holds wing.operator"
+    assert any("operator-local" in r for r in matrix.values()), "operator-local is a role holding nothing"
+    points = {p["id"]: p["status"] for p in out.get("points", [])}
+    for pid in ("bone-loop-identities", "wing-reserved-scopes", "app-tiers"):
+        assert points.get(pid) == "ok", f"{pid}: {points.get(pid)}"
+    assert points.get("dgx-keap-identity") == "drift", "nos-maintainers is a group the genome does not hold"
+
+
+def test_a_planted_bearer_loop_or_app_tier_drift_is_named(tmp_path):
+    pts = _scratch(tmp_path, {
+        "files/anatomy/bone/loopauth.py":
+            'LOOP_SCOPES = frozenset({"read", "propose", "judge", "forget"})\n'
+            "IDENTITIES = {\n"
+            '    "agent:proposer": ("P", frozenset({"read", "propose", "judge"})),\n'
+            '    "engine:evaluator": ("J", frozenset({"read", "judge"})),\n'
+            '    "operator": ("O", frozenset({"read", "forget"})),\n}\n',
+        "files/anatomy/wing/bin/provision-token.php":
+            "<?php\nif (in_array('wing.halt', $requested, true) && $name !== 'face-bff') {\n}\n",
+        "apps/twofauth.yml": "authentik:\n  tier: 3\nnginx:\n  rbac_tier: 1\n"})
+    for pid in ("bone-loop-identities", "wing-reserved-scopes", "app-tiers"):
+        assert pts.get(pid) == "drift", f"planted {pid} drift reads as {pts.get(pid)}"
