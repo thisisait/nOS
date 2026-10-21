@@ -10,13 +10,16 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import jinja2
 import pytest
-import yaml
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
+
 SETTINGS = REPO / "roles/pazny.nodered/templates/settings.js.j2"
 needs_node = pytest.mark.skipif(not shutil.which("node"), reason="node is how settings.js's adminAuth is executed")
 
@@ -42,18 +45,16 @@ const cases = JSON.parse(process.argv[3]);
 
 
 def _tier1() -> list[str]:
-    cfg = yaml.safe_load((REPO / "default.config.yml").read_text(encoding="utf-8"))
-    return next(t["groups"] for t in cfg["authentik_rbac_tiers"] if t["tier"] == 1)
+    return next(t["groups"] for t in ni.default_config()["authentik_rbac_tiers"] if t["tier"] == 1)
 
 
 def _render(tmp: Path) -> Path:
     env = jinja2.Environment(undefined=jinja2.ChainableUndefined)
     env.filters["bool"] = lambda v: str(v).lower() in {"1", "true", "yes"}
-    cfg = yaml.safe_load((REPO / "default.config.yml").read_text(encoding="utf-8"))
     out = tmp / "settings.js"
     out.write_text(env.from_string(SETTINGS.read_text(encoding="utf-8")).render(
         install_authentik=True, nodered_native_oidc_enabled=True,
-        authentik_rbac_tiers=cfg["authentik_rbac_tiers"], authentik_domain="auth.test", nodered_domain="nodered.test",
+        authentik_rbac_tiers=ni.default_config()["authentik_rbac_tiers"], authentik_domain="auth.test", nodered_domain="nodered.test",
     ), encoding="utf-8")
     return out
 
