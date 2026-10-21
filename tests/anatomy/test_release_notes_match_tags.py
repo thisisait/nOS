@@ -69,8 +69,20 @@ def test_a_tagged_section_is_headed_by_its_dates_alone():
     assert not drafts, f"tagged, but the heading is not just ' (start … end)': {drafts}"
 
 
+def _key(version):
+    """v0.10-beta > v0.9-beta; v1.0 > v1.0-beta."""
+    core, _, pre = version[1:].partition("-")
+    return tuple(int(n) for n in core.split(".")), not pre
+
+
+def test_sections_are_newest_version_first():
+    versions = [v for v, _, _ in _sections()]
+    assert versions == sorted(versions, key=_key, reverse=True), \
+        f"RELEASE.md sections are not newest version first: {versions}"
+
+
 def test_the_newest_tagged_section_names_its_tag_commit():
     tagged = _tagged()
     assert tagged, "no RELEASE.md section matches an existing tag"
-    version, _, body, sha = tagged[0]  # RELEASE.md is newest-first
+    version, _, body, sha = max(tagged, key=lambda t: _key(t[0]))
     assert sha[:8] in body, f"{version} section does not name its tag commit {sha[:8]}"
