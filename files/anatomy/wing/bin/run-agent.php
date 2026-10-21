@@ -7,6 +7,8 @@ declare(strict_types=1);
  *
  *   php bin/run-agent.php --agent=conductor [--prompt=...] [--vault=...] [--trigger=pulse] [--trigger-id=...] [--session-uuid=...] [--image=...]
  *
+ *   [--parent=REF]               the run this session is started for: a session
+ *                                uuid or thalamus:<uuid> (agent_sessions.parent_ref).
  *   [--actor=ID]                 actor_id written onto the session (must match
  *                                the bearer token's name when spawned from the
  *                                API surface).
@@ -37,7 +39,7 @@ $opts = parseArgs($argv);
 if (empty($opts['agent'])) {
 	fwrite(STDERR, "Usage: php bin/run-agent.php --agent=NAME [--prompt=TEXT] [--vault=NAME]"
 		. " [--trigger=pulse|webhook|operator|coordinator] [--trigger-id=ID]"
-		. " [--session-uuid=UUID] [--actor=ID]\n");
+		. " [--session-uuid=UUID] [--actor=ID] [--parent=REF]\n");
 	exit(2);
 }
 
@@ -51,6 +53,11 @@ if (!empty($opts['session-uuid'])) {
 		fwrite(STDERR, "--session-uuid must be a UUID (8-4-4-4-12 hex)\n");
 		exit(2);
 	}
+}
+
+if (isset($opts['parent']) && preg_match(App\Model\AgentSessionRepository::PARENT_REF, $opts['parent']) !== 1) {
+	fwrite(STDERR, "--parent must be a session uuid or thalamus:<uuid>\n");
+	exit(2);
 }
 
 $configurator = new Configurator();
@@ -91,6 +98,7 @@ try {
 		actorId: $opts['actor'] ?? null,
 		sessionUuid: $opts['session-uuid'] ?? null,
 		imagePath: $opts['image'] ?? null,
+		parentRef: $opts['parent'] ?? null,
 	);
 } catch (AgentLoadException $exc) {
 	fwrite(STDERR, "agent.yml load error: {$exc->getMessage()}\n");

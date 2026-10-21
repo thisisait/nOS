@@ -136,6 +136,9 @@ final class AgentsPresenter extends BaseApiPresenter
 	 * Body (all optional):
 	 *   prompt?: string   — initial user message; defaults to agent's built-in
 	 *   vault?:  string   — vault name for credential resolution
+	 *   parent?: string   — the run this one is started for: a Wing session
+	 *                       uuid the caller can see (else 404, like absent), or
+	 *                       thalamus:<uuid> (an Iris run; shape-checked only)
 	 *
 	 * actor_id is NEVER read from the body. It is always
 	 * $this->validatedToken['name'] via getActorId(). Any 'actor_id' key in
@@ -170,6 +173,19 @@ final class AgentsPresenter extends BaseApiPresenter
 		}
 		$prompt = isset($body['prompt']) && is_string($body['prompt']) ? $body['prompt'] : null;
 		$vault  = isset($body['vault'])  && is_string($body['vault'])  ? $body['vault']  : null;
+		$parent = $body['parent'] ?? null;
+		if ($parent !== null) {
+			if (!is_string($parent) || preg_match(AgentSessionRepository::PARENT_REF, $parent) !== 1) {
+				$this->sendError('parent must be a session uuid or thalamus:<uuid>', 400);
+			}
+			if (!str_starts_with($parent, 'thalamus:')) {
+				$p = $this->sessions->findByUuid($parent);
+				$scope = $this->endUser?->scope();
+				if ($p === null || ($scope !== null && $p['actor_id'] !== $scope)) {
+					$this->sendError('parent session not found', 404);
+				}
+			}
+		}
 
 		// Defence in depth: refuse client-supplied actor_id even though we
 		// don't read it. A future refactor that flips this to ?? $body['actor_id']
@@ -202,6 +218,7 @@ final class AgentsPresenter extends BaseApiPresenter
 				actorId: $actorId,
 				prompt: $prompt,
 				vault: $vault,
+				parentRef: $parent,
 			);
 		} catch (OperatorTriggerException $exc) {
 			$code = $exc->getCode();

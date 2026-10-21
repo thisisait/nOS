@@ -53,7 +53,7 @@ putenv('WING_PHP_BIN=/usr/bin/true');
 $agents = $argv[2];
 $pdo = new Nette\Database\Connection('sqlite::memory:');
 $pdo->query("CREATE TABLE api_tokens (id INTEGER PRIMARY KEY, token TEXT, name TEXT, active INT DEFAULT 1, scopes TEXT, last_used_at TEXT)");
-$pdo->query("CREATE TABLE agent_sessions (id INTEGER PRIMARY KEY, uuid TEXT, agent_name TEXT, actor_id TEXT, status TEXT)");
+$pdo->query("CREATE TABLE agent_sessions (id INTEGER PRIMARY KEY, uuid TEXT, agent_name TEXT, actor_id TEXT, status TEXT, parent_ref TEXT)");
 $pdo->query("CREATE TABLE agent_threads (id INTEGER PRIMARY KEY, session_uuid TEXT)");
 $pdo->query("CREATE TABLE agent_iterations (id INTEGER PRIMARY KEY, session_uuid TEXT, iteration INT)");
 foreach (['bff-secret' => 'face-bff', 'ops-secret' => 'ansible-provisioned'] as $t => $n) {

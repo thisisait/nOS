@@ -92,6 +92,7 @@ CREATE TABLE agent_sessions (
     trace_id        TEXT NOT NULL,                    -- W3C Trace Context (32 hex chars)
     model_uri       TEXT NOT NULL,                    -- e.g. anthropic-claude-opus-4-7
     outcome_id      TEXT,                             -- present iff outcome-driven session
+    parent_ref      TEXT,                             -- run that asked for it: a session uuid, or thalamus:<uuid>
     outcome_result  TEXT,                             -- satisfied | needs_revision | max_iterations_reached | indeterminate | failed | interrupted
     -- 1 iff ANY structured output this session was repaired before a consumer
     -- read it — by the deterministic shape parser or by the one format-only
