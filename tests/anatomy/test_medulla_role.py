@@ -51,7 +51,8 @@ def test_the_binary_is_where_the_plist_looks():
     assert (ROLE / "defaults" / "main.yml").is_file(), "roles/pazny.medulla has no defaults/main.yml"
     d = yaml.safe_load((ROLE / "defaults" / "main.yml").read_text())
     assert d["medulla_bin_dir"] == "{{ thalamus_home }}/bin" and d["medulla_bin"] == "{{ medulla_bin_dir }}/medulla"
-    assert yaml.safe_load((THALAMUS / "defaults" / "main.yml").read_text())["thalamus_bin"] == "{{ medulla_bin_dir }}/thalamus"
+    # The same dir, spelled in thalamus vars: include_role keeps medulla_* private to the role.
+    assert yaml.safe_load((THALAMUS / "defaults" / "main.yml").read_text())["thalamus_bin"] == "{{ thalamus_home }}/bin/thalamus"
 
 
 def test_the_thalamus_role_includes_the_medulla_build():
