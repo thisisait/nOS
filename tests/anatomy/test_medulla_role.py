@@ -85,3 +85,22 @@ def test_the_source_hash_covers_the_whole_workspace(tmp_path):
         h = _hash(tmp_path)
         assert h not in seen, f"a change to {rel} does not rebuild the medulla"
         seen.add(h)
+
+
+def test_thalamus_bin_is_a_copy_the_kernel_names_as_itself():
+    """A symlink would move the exe path: proc_pidpath and /proc/<pid>/exe resolve it (serve.rs).
+
+    launchd's process would read .../bin/medulla, so a path-keyed TCC client entry (the
+    removable-volume grant) would re-prompt, and a peer named `{{ thalamus_bin }}` in
+    NOS_DECIDER_EXES would stop matching. A copy keeps today's path, bytes and signature.
+    """
+    for name in ("macos.yml", "linux.yml"):
+        tasks = _tasks(ROLE, name)
+        assert not _links(name), f"{name}: thalamus_bin is a link to the medulla"
+        at = next((i for i, t in enumerate(tasks) if t.get("ansible.builtin.copy", {}).get("dest") == "{{ thalamus_bin }}"), None)
+        assert at is not None, f"{name}: nothing installs thalamus_bin"
+        cp = tasks[at]["ansible.builtin.copy"]
+        assert cp["src"] == "{{ medulla_bin }}" and cp["remote_src"] is True, (name, cp)
+        if name == "macos.yml":  # the signed bytes are what is copied
+            sign = next(i for i, t in enumerate(tasks) if "sign the binary" in t.get("name", "").lower())
+            assert sign < at, "thalamus_bin is copied before the medulla is signed"
