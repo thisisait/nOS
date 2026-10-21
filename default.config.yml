@@ -629,6 +629,10 @@ thalamus_cortex_catalogue: "lean"
 # The most nodes of the ontology Iris draws around a node she read (read_node's knowledge tree: the
 # parent chain, the node, its children, then its siblings; the rest is said). The wire carries at most 200.
 iris_knowledge_tree_max: 50
+# The Wing agents Iris may START (start_agent: a card the person approves, then a Wing session under her
+# run). Read-only by default: they read and file a report event, never change the estate. [] = none.
+# librarian is left out: it holds keap.write.
+iris_startable_agents: [conductor, surveyor]
 
 # ── Skill library (2026-08-27) ────────────────────────────────────────────────
 # One shelf at files/anatomy/skills/, symlinked onto every reader that should

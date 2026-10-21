@@ -73,6 +73,16 @@
         <key>NOS_SECRET_CORTEX_RO_TOKEN</key>
         <string>{{ cortex_ro_token }}</string>
 {% endif %}
+{% if thalamus_wing_api_token | default('') %}
+        <!-- start_agent's door (src/serve.rs WingDoor): the `thalamus` bearer, read once as nos:wing_token,
+             then removed; Wing believes a person on it for the spawn alone. iris_startable_agents is the list. -->
+        <key>NOS_WING_URL</key>
+        <string>http://127.0.0.1:{{ wing_port | default(9000) }}</string>
+        <key>NOS_SECRET_WING_TOKEN</key>
+        <string>{{ thalamus_wing_api_token }}</string>
+        <key>NOS_IRIS_STARTABLE_AGENTS</key>
+        <string>{{ iris_startable_agents | default([]) | join(',') }}</string>
+{% endif %}
         <!-- The binding env (defaults thalamus_binding_env, also the preflight's); iris binds one of its allowed rows. -->
 {% for name, value in thalamus_binding_env.items() %}
         <key>{{ name }}</key>

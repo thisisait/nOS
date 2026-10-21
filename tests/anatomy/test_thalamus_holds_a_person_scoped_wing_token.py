@@ -40,10 +40,12 @@ def test_wing_mints_it_write_only():
 
 def test_the_allow_list_defaults_to_read_only_agents():
     agents = _default_config()["iris_startable_agents"]
-    assert agents == ["conductor", "surveyor", "librarian"], agents
+    assert agents == ["conductor", "surveyor"], agents
     for a in agents:
         scopes = yaml.safe_load((REPO / f"files/anatomy/agents/{a}/agent.yml").read_text())["audit"]["capability_scopes"]
-        assert "wing.operator" not in scopes and not any(s.endswith(".write") and s != "wing.write" for s in scopes), (a, scopes)
+        # A report event (events.write, wing.write to /events) is the only write a default may hold.
+        writes = {s for s in scopes if s.endswith((".write", ".operator", ".exec"))} - {"events.write", "wing.write"}
+        assert not writes, (a, scopes)
 
 
 def test_the_plist_carries_the_door_only_with_its_token():
