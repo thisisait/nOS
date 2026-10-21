@@ -49,7 +49,7 @@ def test_every_lockfile_has_an_update_entry():
 
 
 def test_the_walk_reads_git_not_the_disk():
-	"""The shipped set: face, cortex and both thalamus crates — never an ignored file."""
+	"""The shipped set: face, cortex and the thalamus workspace — never an ignored file."""
 	assert _lockfile_dirs("npm") >= {"/files/anatomy/face", "/files/anatomy/cortex"}
-	assert _lockfile_dirs("cargo") >= {"/files/anatomy/thalamus/contract", "/files/anatomy/thalamus/thalamus"}
+	assert _lockfile_dirs("cargo") >= {"/files/anatomy/thalamus"}
 	assert "/tests/e2e" not in _lockfile_dirs("npm"), "a gitignored lockfile was counted"
