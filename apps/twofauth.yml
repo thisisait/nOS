@@ -65,7 +65,7 @@ authentik:
   name: '2FAuth'
   enabled: true
   launch_url: "https://twofauth.apps.{{ tenant_domain | default('dev.local') }}"
-  tier: 3   # user-tier
+  tier: 1   # admin-tier: TOTP secrets are operator credentials (nginx.rbac_tier agrees)
 
 # ── Compose fragment — single container, SQLite, internal network ──────────
 compose:
