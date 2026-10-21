@@ -473,18 +473,27 @@ def axis_identity(res: Result, root: Path = Path("/"), home: Path = Path.home(),
             continue
         domain, argv = job
         argv0 = argv[0] if argv else ""
-        runtime = next((rt for pre, rt in RUNTIMES if Path(argv0).name.startswith(pre)), "native")
+        interp = argv0
+        try:  # an entry script (venv uvicorn) runs on its shebang's interpreter
+            first = Path(argv0).read_bytes()[:128].split(b"\n")[0].decode() if argv0 else ""
+            if first.startswith("#!"):
+                interp = first[2:].split()[-1] if "/env" in first else first[2:].split()[0]
+        except (OSError, UnicodeDecodeError):
+            pass
+        runtime = next((rt for pre, rt in RUNTIMES if Path(interp).name.startswith(pre)), "native")
         language = runtime
         if runtime == "native":
             src = REPO / "files/anatomy" / rid.replace("_", "-")
             language = "rust" if any(src.glob("**/Cargo.toml")) else "native"
         langs[language] = langs.get(language, 0) + 1
-        # ponytail: argv prefix match; upgrade to pid-from-launchd/systemd when two organs share an argv0.
-        hit = next((p for p in procs if argv0 and p[2].startswith(argv0)
+        # The script path when argv[1] is one (a python shim re-execs under another argv0), else argv0.
+        # ponytail: argv substring match; upgrade to pid-from-launchd/systemd when two organs share a key.
+        key = argv[1] if len(argv) > 1 and argv[1].startswith("/") else argv0
+        hit = next((p for p in procs if key and key in p[2]
                     and (len(argv) < 2 or argv[1] in p[2])), None)
         head = f"{rid} · {language}/{runtime}"
         if hit is None:
-            why = "ps unreadable" if not procs else f"no process runs {argv0 or '(no argv)'}"
+            why = "ps unreadable" if not procs else f"no process runs {key or '(no argv)'}"
             res.add("identity", rid, f"{head} · not reported ({why}) · {domain}", UNREADABLE)
             continue
         uid, user = int(hit[0]), hit[1]
