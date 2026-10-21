@@ -12,12 +12,16 @@ import ast
 import importlib.util
 import json
 import pathlib
+import sys
 
 import jinja2
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-TIERS = yaml.safe_load((REPO / "default.config.yml").read_text())["authentik_rbac_tiers"]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity  # noqa: E402
+
+TIERS = nos_identity.default_config()["authentik_rbac_tiers"]
 TIER1 = {"nos-providers", "nos-admins"}
 
 
