@@ -1,4 +1,4 @@
-"""Anatomy gate — on Linux KEAP embeds query text with the host Ollama by default.
+"""Anatomy gate — KEAP embeds query text with the host Ollama by default, on both platforms.
 
 THE SYMPTOM (2026-10-21, spark1). Iris answered "not in our knowledge base" to
 paraphrased knowledge questions whose node was in KEAP: search_knowledge ran
@@ -9,8 +9,9 @@ gated KEAP container reaches it there; the stored vectors were already in KEAP.
 The iris-bench knowledge domain went from 9/24 to 13/24 with the vector leg.
 
 THE CHECK. Rendered for Linux with Ollama installed, the default is
-``ollama_url``; for macOS it stays "" (Docker Desktop needs
-host.docker.internal, an operator opt-in), and without Ollama it is "".
+``ollama_url``; for macOS it is http://host.docker.internal:11434 (Docker
+Desktop's way to the host loopback; the operator host ran it from config.yml
+for months); without Ollama it is "". Operator 2026-10-21: on by default.
 
 CEILING. Renders the default with stock Jinja; the effect is the
 ``[legs: vector, …]`` line of tools/keap-semantic-search.py on a live estate.
@@ -34,8 +35,12 @@ def test_linux_with_ollama_embeds_queries_on_the_bridge():
     assert _render("Linux", True) == "http://172.17.0.1:11434"
 
 
-def test_macos_stays_an_opt_in():
-    assert _render("Darwin", True) == ""
+def test_macos_embeds_through_docker_desktop():
+    assert _render("Darwin", True) == "http://host.docker.internal:11434"
+
+
+def test_macos_without_ollama_no_embedder():
+    assert _render("Darwin", False) == ""
 
 
 def test_no_ollama_no_embedder():
