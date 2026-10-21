@@ -21,7 +21,12 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 ROOT = REPO / "files/anatomy/thalamus"
 HOST_RUNTIMES = re.compile(r"lib(php|python|node|ruby)", re.I)
-# Linux: glibc's own pieces only; macOS: anything outside the OS image is not a system lib.
+# Linux: glibc's own pieces only. macOS: libSystem and its peers by full path; libiconv because
+# Rust std links it on darwin (libc crate), not because the medulla asked for it.
+DARWIN_SYSTEM = {"/usr/lib/libSystem.B.dylib", "/usr/lib/libc.dylib", "/usr/lib/libm.dylib",
+                 "/usr/lib/libresolv.9.dylib", "/usr/lib/libiconv.2.dylib",
+                 "/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation",
+                 "/System/Library/Frameworks/Security.framework/Versions/A/Security"}
 LINUX_SYSTEM = {"linux-vdso.so.1", "libc.so.6", "libm.so.6", "libgcc_s.so.1", "libpthread.so.0",
                 "libdl.so.2", "librt.so.1", "libresolv.so.2"}
 
@@ -56,7 +61,7 @@ def _run(exe, *args):
 def _foreign(libs: list[str], darwin: bool) -> list[str]:
     """The linked libraries that are a host runtime or not on the system allow-list."""
     if darwin:
-        return [lib for lib in libs if HOST_RUNTIMES.search(lib) or not lib.startswith(("/usr/lib/", "/System/Library/"))]
+        return [lib for lib in libs if HOST_RUNTIMES.search(lib) or lib not in DARWIN_SYSTEM]
     return [lib for lib in libs if HOST_RUNTIMES.search(lib)
             or (pathlib.Path(lib).name not in LINUX_SYSTEM and "ld-linux" not in lib)]
 
