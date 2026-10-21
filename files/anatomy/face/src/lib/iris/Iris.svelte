@@ -373,6 +373,22 @@
 	const inside = (id: string) =>
 		layout.workspaces.filter((s) => s.id !== id && ws.chain(layout, s.id).includes(id)).length;
 
+	// The open board's name being edited in its crumb (null: not editing); Enter saves, Escape or leaving cancels.
+	let naming: string | null = $state(null);
+	let pencil: HTMLButtonElement | undefined = $state();
+	const focused = (el: HTMLElement) => el.focus();
+	async function nameKey(e: KeyboardEvent) {
+		if (e.key === 'Escape') naming = null;
+		if (e.key !== 'Enter' || naming === null) return;
+		e.preventDefault();
+		const next = ws.rename(layout, space.id, naming);
+		if (next === layout) return void (layoutNote = 'not renamed: a board needs a name');
+		layout = next;
+		naming = layoutNote = null;
+		await tick();
+		pencil?.focus();
+	}
+
 	// Escape goes up one board, unless the person is typing or a question is open.
 	function escape(e: KeyboardEvent) {
 		const t = e.target as HTMLElement;
@@ -585,8 +601,25 @@
 					<li>
 						{#if i < crumbs.length - 1}
 							<button class="ghost" onclick={() => showTab(id)}>{nameOf(id)}</button>
+						{:else if naming !== null}
+							<input
+								class="name"
+								aria-label="board name"
+								maxlength="40"
+								bind:value={naming}
+								onkeydown={nameKey}
+								onblur={() => (naming = null)}
+								use:focused
+							/>
 						{:else}
 							<span aria-current="page">{nameOf(id)}</span>
+							<button
+								class="ghost pencil"
+								aria-label="rename board"
+								title="rename this board"
+								bind:this={pencil}
+								onclick={() => (naming = nameOf(id))}
+							></button>
 						{/if}
 					</li>
 				{/each}
@@ -746,6 +779,25 @@
 	}
 	.crumbs [aria-current] {
 		font-weight: 600;
+	}
+	/* The glyph is drawn, not text: the crumb reads as the name alone, the button by its label. */
+	.crumbs .pencil::before {
+		content: '✎';
+	}
+	.crumbs .pencil {
+		margin-left: 4px;
+		padding: 0 4px;
+		border: 0;
+	}
+	.crumbs .name {
+		width: 16ch;
+		font: inherit;
+		font-weight: 600;
+		color: var(--fg);
+		background: var(--glass);
+		border: 1px solid var(--accent);
+		border-radius: 6px;
+		padding: 0 4px;
 	}
 	.crumbs details {
 		position: relative;
