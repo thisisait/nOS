@@ -70,6 +70,7 @@ Each line here is a `reader:` node of the anatomy graph, a sense.
 - `nos-guide.py` — How do I do X with nOS: the top 3 doc passages (docs/systems, nos-cli, README, glossary, profile headers; cs/en) and, for a named service, the config.yml line and the derived `nos --tags` converge/verify; Iris's nos_guide. Runs nothing. Exit 0; unreadable sources in `unknown`.
 - `face-wiring-report.py` — nOS-face wiring report — the hard-doctrine linter for the web-desktop shell.
 - `identity-status.py` — identity-status — the declared account roster vs what each realm holds.
+- `rbac-status.py` — The permission genome (`state/genome/permissions.yml`, descriptive) as capability × role, then each enforcement point's literal (Wing PHP consts, face/cortex TS consts, Jinja tier expressions, `authentik_rbac_tiers`, agent and Bone scopes) that disagrees with it, by file:line; a point it cannot read is UNKNOWN. Repo only (`--root`), never the live estate.
 - `loader-vars-report.py` — D1 scoping tool (2026-06-11) — the plugin-loader variable contract.
 - `loop-status.py` — Which weakness sources actually produce proposals, and what came of them.
 - `geo-status.py` — READER: rows per geo layer counted back from PostGIS, last load beside it; UNKNOWN when unreachable.
