@@ -7,7 +7,7 @@ use crate::binding::{self, Binding, Pick};
 use crate::cortex_plan::{self, Cortex, Engine};
 use crate::ledger::{Kind, Ledger, RowOp, Session};
 use crate::septum::Septum;
-use nos_contract::renderers::{is_date, ActionApproval, ApprovalsList, Axis, CellChange, Chart, ChartKind, Choice, Component, Dashboard, DashboardWidget, Kpi,
+use nos_contract::renderers::{is_date, ActionApproval, ApprovalsList, Axis, CellChange, Chart, ChartKind, Choice, Component, Dashboard, DashboardWidget, Dendrogram, DENDROGRAM_MAX, Kpi, RunKind, RunNode, RunStatus,
                                Dropped, FieldKind, Form, FormField, InboxItem, InboxList, KnowledgeNode, KnowledgeTree, need_node_id, Lens, LensOp, Lines, List, ListItem, Omitted, Parent, RedStatus,
                                Row, RowDiffApproval, SchemaColumn, ColumnAddApproval, ColumnKind, ExistingColumn, Series, Table, TableResults, TableSchemaApproval, Visibility};
 use nos_contract::wire::{check_params, check_spec, decode_to_thalamus, encode, CatalogueColumn, CatalogueTable, ChartSpec, ControlView, Decision, FormSpec,
@@ -674,7 +674,12 @@ const RED_STATUS: &str = "What is red on the estate right now, and what is on ho
 tools/red-status.py run as the operator. Renders red_status to the person. Tier 1 only. If it cannot be read, \
 the state is UNKNOWN: say so, never zero and never green.";
 
-const ESTATE_SERVICES: &str = "What nOS offers on this estate: each service's id, category, description and whether \
+const READ_RUN: &str = "One agent run as a tree, from Wing (tools/agent-status.py --run, run as the operator): the \
+session at the root, its threads, model turns, tool calls, approvals and grader iterations, each with its status. \
+uuid: the run's session uuid (its actor_action_id). Renders a dendrogram to the person. Tier 1 only. If it cannot be read, \
+the run is UNKNOWN: say so, never that it did nothing.";
+
+const ESTATE_SERVICES: &str ="What nOS offers on this estate: each service's id, category, description and whether \
 it is enabled (null: unknown), from tools/services-status.py. Renders a table to the person. Without `q` only \
 enabled services; with `q` every service whose id, category or description contains it. Call it before \
 recommending software. If it cannot be read, the catalogue is UNKNOWN: say so, never empty.";
@@ -913,6 +918,9 @@ else one total over every matched row"},
         {"type": "function", "function": {"name": "show", "description": SHOW, "parameters": show_schema()}},
         {"type": "function", "function": {"name": "red_status", "description": RED_STATUS,
         "parameters": {"type": "object", "additionalProperties": false, "properties": {}}}},
+        {"type": "function", "function": {"name": "read_run", "description": READ_RUN,
+        "parameters": {"type": "object", "additionalProperties": false, "required": ["uuid"], "properties": {
+            "uuid": {"type": "string", "minLength": 36, "maxLength": 36, "description": "the agent session's uuid"}}}}},
         {"type": "function", "function": {"name": "list_tables", "description": LIST_TABLES,
         "parameters": {"type": "object", "additionalProperties": false, "properties": {}}}},
         {"type": "function", "function": {"name": "estate_services", "description": ESTATE_SERVICES,
@@ -2481,6 +2489,12 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                             send(out, &ToShell::Render { session: o.session.clone(), component: Component::RedStatus(r), pin: None });
                             v
                         }),
+                    "read_run" => self.read_run(who, &args).map_err(|why| format!("{why}; the run is UNKNOWN, not empty"))
+                        .map(|(d, v)| {
+                            let _ = self.record(o, Kind::ToolResult, Some(name), v.clone());
+                            send(out, &ToShell::Render { session: o.session.clone(), component: Component::Dendrogram(d), pin: None });
+                            v
+                        }),
                     "estate_services" => self.services(who, &args).map(|(table, v)| {
                         let _ = self.record(o, Kind::ToolResult, Some(name), json!({"count": table.rows.len(), "truncated": v.get("truncated")}));
                         send(out, &ToShell::Render { session: o.session.clone(), component: Component::Table(table), pin: None });
@@ -3503,6 +3517,23 @@ impl Server {
         }
     }
 
+    /// agent-status.py --run as the operator: one Wing run drawn as a tree. Wing's API scopes a run
+    /// to its owner; this reader reads every run, so it is tier 1 only, as red_status is.
+    fn read_run(&self, who: &Person, args: &Value) -> Result<(Dendrogram, Value), String> {
+        if !self.is_tier1(who) {
+            return Err("not yours to see".into());
+        }
+        let uuid = args.get("uuid").and_then(Value::as_str).map(str::trim).unwrap_or_default();
+        if !nos_contract::wire::is_uuid(uuid) {
+            return Err(format!("read_run needs a lowercase session uuid, not {uuid:?}"));
+        }
+        let v = self.reader("agent-status.py", &["--run", uuid])?;
+        if let Some(e) = v.get("error").and_then(Value::as_str) {
+            return Err(e.to_string());
+        }
+        dendrogram(&v)
+    }
+
     /// services-status.py: the catalogue for everyone; its unreadable sources (live state) for tier 1 only.
     /// Without q only enabled services, then at most 50 (the table cap) with `truncated` saying how many were cut.
     fn services(&self, who: &Person, args: &Value) -> Result<(Table, Value), String> {
@@ -4278,6 +4309,87 @@ fn mark_links(text: &str, known: &str) -> String {
         rest = &rest[end..];
     }
     out + rest
+}
+
+/// Wing's run (agent-status.py --run) as a dendrogram and what the model hears. Root, threads (parents
+/// first) and iterations come before the events, so the cap at DENDROGRAM_MAX never cuts a parent.
+pub fn dendrogram(run: &Value) -> Result<(Dendrogram, Value), String> {
+    let s = run.get("session").filter(|s| s.is_object()).ok_or("Wing holds no agent run with that uuid")?;
+    let text = |v: &Value, k: &str| v.get(k).and_then(Value::as_str).map(str::to_string);
+    let when = |v: &Value, k: &str| text(v, k).map(|t| t.replacen(' ', "T", 1)).map(|t| if t.len() == 19 { t + "Z" } else { t }).filter(|t| is_date(t));
+    let tokens = |v: &Value| match (v["tokens_input"].as_u64(), v["tokens_output"].as_u64()) {
+        (None, None) => None,
+        (i, o) => Some(i.unwrap_or(0) + o.unwrap_or(0)),
+    };
+    let lived = |status: &str, stop: Option<&str>, bad: bool| match status {
+        "running" | "pending" => RunStatus::Running,
+        "idle" => RunStatus::Waiting,
+        _ if bad || matches!(stop, Some("error" | "interrupted")) => RunStatus::Bad,
+        _ => RunStatus::Ok,
+    };
+    let root = text(s, "uuid").ok_or("Wing's run has no uuid")?;
+    let agent = text(s, "agent_name").unwrap_or_else(|| "agent".into());
+    let status = text(s, "status").unwrap_or_default();
+    let bad = s["errored"].as_i64().is_some_and(|e| e != 0) || matches!(text(s, "outcome_result").as_deref(), Some("failed"));
+    let note = [text(s, "stop_reason"), text(s, "outcome_result")].into_iter().flatten().collect::<Vec<_>>().join(", ");
+    let mut nodes = vec![RunNode { id: root.clone(), parent: None, kind: RunKind::Agent, name: agent.clone(),
+        status: lived(&status, s["stop_reason"].as_str(), bad), started: when(s, "started_at"), ended: when(s, "ended_at"),
+        tokens: tokens(s), note: (!note.is_empty()).then_some(note) }];
+    // Threads whose parent is placed, until none is left that can be: one that never can hangs off the root.
+    let mut threads: Vec<&Value> = run["threads"].as_array().map(|a| a.iter().collect()).unwrap_or_default();
+    let mut placed = HashSet::from([root.clone()]);
+    while !threads.is_empty() {
+        let at = threads.iter().position(|t| t["parent_thread_uuid"].as_str().is_none_or(|p| placed.contains(p))).unwrap_or(0);
+        let t = threads.remove(at);
+        let Some(id) = text(t, "uuid").filter(|id| !placed.contains(id)) else { continue };
+        let parent = t["parent_thread_uuid"].as_str().filter(|p| placed.contains(*p)).unwrap_or(&root).to_string();
+        let name = text(t, "role").unwrap_or_else(|| "thread".into());
+        nodes.push(RunNode { id: id.clone(), parent: Some(parent), kind: RunKind::Thread, name,
+            status: lived(t["status"].as_str().unwrap_or_default(), t["stop_reason"].as_str(), false),
+            started: when(t, "started_at"), ended: when(t, "ended_at"), tokens: tokens(t), note: text(t, "stop_reason") });
+        placed.insert(id);
+    }
+    // Events hang off the primary thread: Wing's events name the session, not the thread.
+    let under = nodes.iter().find(|n| n.kind == RunKind::Thread && n.name == "primary").map_or(root.clone(), |n| n.id.clone());
+    for i in run["iterations"].as_array().into_iter().flatten() {
+        let n = i["iteration"].as_u64().unwrap_or_default();
+        let grade = text(i, "grader_result").unwrap_or_default();
+        let status = match grade.as_str() { "satisfied" => RunStatus::Ok, "needs_revision" => RunStatus::Waiting, _ => RunStatus::Bad };
+        nodes.push(RunNode { id: format!("i{n}"), parent: Some(root.clone()), kind: RunKind::Iteration, name: format!("grader {n}"),
+            status, started: when(i, "created_at"), ended: None, tokens: tokens(i), note: (!grade.is_empty()).then_some(grade) });
+    }
+    let events: Vec<&Value> = run["events"].as_array().map(|a| a.iter().collect()).unwrap_or_default();
+    let results: HashMap<&str, bool> = events.iter().filter(|e| e["type"] == "agent_tool_result")
+        .filter_map(|e| Some((e["tool_use_id"].as_str()?, e["is_error"].as_bool().unwrap_or(false)))).collect();
+    let running = status == "running" || status == "pending";
+    for e in &events {
+        let ty = e["type"].as_str().unwrap_or_default();
+        let task = e["task"].as_str().unwrap_or_default();
+        let (kind, name, status) = match ty {
+            "agent_session_start" | "agent_session_end" | "agent_tool_result" | "agent_grader_decision" => continue,
+            "agent_tool_use" => {
+                let result = e["tool_use_id"].as_str().and_then(|u| results.get(u));
+                let status = match result { Some(true) => RunStatus::Bad, Some(false) => RunStatus::Ok, None if running => RunStatus::Running, None => RunStatus::Bad };
+                (RunKind::Tool, task.rsplit_once("/tool:").map_or(ty, |(_, t)| t).to_string(), status)
+            }
+            "agent_message" => (RunKind::Turn, task.rsplit_once('/').map_or(ty, |(_, t)| t).to_string(), RunStatus::Ok),
+            t if t.contains("approval") || t.contains("question") => (RunKind::Approval, t.to_string(), RunStatus::Waiting),
+            t => (RunKind::Turn, t.to_string(), RunStatus::Ok),
+        };
+        let Some(id) = e["id"].as_i64() else { continue };
+        let name = if name.trim().is_empty() { ty.to_string() } else { name.chars().take(200).collect() };
+        nodes.push(RunNode { id: format!("e{id}"), parent: Some(under.clone()), kind, name, status,
+            started: when(e, "ts"), ended: None, tokens: None, note: None });
+    }
+    let total = nodes.len() + usize::from(run["events_cut"].as_bool().unwrap_or(false));
+    nodes.truncate(DENDROGRAM_MAX);
+    let hidden = (total - nodes.len()) as u32;
+    let bad: Vec<&str> = nodes.iter().filter(|n| n.status == RunStatus::Bad).map(|n| n.name.as_str()).collect();
+    let said = json!({"agent": agent, "status": status, "stop_reason": s["stop_reason"], "outcome": s["outcome_result"],
+        "drawn": nodes.len(), "hidden": hidden, "bad": bad});
+    let d = Dendrogram { title: Some(format!("{agent} run").chars().take(120).collect()), root, nodes, hidden };
+    Component::Dendrogram(d.clone()).check()?;
+    Ok((d, said))
 }
 
 fn data_notice(tool: &str) -> Option<&'static str> {

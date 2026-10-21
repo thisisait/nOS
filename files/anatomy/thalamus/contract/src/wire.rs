@@ -517,6 +517,7 @@ fn check_shell(m: &ToShell) -> Result<(), String> {
                 Component::Dashboard(_) => Err("a dashboard is offered in a render, never in an approval".into()),
                 Component::Kpi(_) => Err("a kpi is drawn in a render or a widget, never in an approval".into()),
                 Component::KnowledgeTree(_) => Err("a knowledge tree is drawn in a render or a widget, never in an approval".into()),
+                Component::Dendrogram(_) => Err("a run tree is drawn in a render, never in an approval".into()),
                 _ => Ok(()),
             }
         }

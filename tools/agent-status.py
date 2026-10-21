@@ -28,6 +28,7 @@ Usage:
     tools/agent-status.py            # the pane view
     tools/agent-status.py --limit 20
     tools/agent-status.py --json
+    tools/agent-status.py --run <uuid>   # one run as JSON, for the thalamus's read_run
 
 Exit 0 always. It reports; it never starts, stops or reaps a run.
 """
@@ -150,11 +151,59 @@ def _collect(conn, limit: int) -> dict:
     }
 
 
+#: The most events one run hands back; the thalamus draws at most 200 nodes (DENDROGRAM_MAX).
+RUN_EVENTS_MAX = 400
+
+
+def run(uuid: str) -> dict:
+    """One run as Wing holds it, for the thalamus's read_run: the session, its threads, its grader
+    iterations and its events by actor_action_id. Free text (messages, tool output, grader
+    feedback) stays behind; only what a tree node says leaves."""
+    conn, how = _connect()
+    if conn is None:
+        return {"error": f"wing.db UNKNOWN — {how}"}
+    try:
+        with conn:
+            one = conn.execute(
+                "SELECT uuid, agent_name, status, stop_reason, outcome_result, error_json IS NOT NULL AS errored,"
+                " started_at, ended_at, tokens_input, tokens_output FROM agent_sessions WHERE uuid = ?", (uuid,)).fetchone()
+            threads = [dict(r) for r in conn.execute(
+                "SELECT uuid, parent_thread_uuid, agent_name, role, status, stop_reason, started_at, ended_at,"
+                " tokens_input, tokens_output FROM agent_threads WHERE session_uuid = ? ORDER BY id", (uuid,))]
+            iterations = [dict(r) for r in conn.execute(
+                "SELECT iteration, grader_result, tokens_input, tokens_output, created_at FROM agent_iterations"
+                " WHERE session_uuid = ? ORDER BY iteration", (uuid,))]
+            rows = conn.execute(
+                "SELECT id, ts, type, task, result_json FROM events WHERE actor_action_id = ? ORDER BY id LIMIT ?",
+                (uuid, RUN_EVENTS_MAX + 1)).fetchall()
+    except sqlite3.Error as exc:
+        return {"error": f"wing.db UNKNOWN — {exc}"}
+    finally:
+        conn.close()
+    events = []
+    for r in rows[:RUN_EVENTS_MAX]:
+        try:
+            res = json.loads(r["result_json"] or "{}")
+        except ValueError:
+            res = {}
+        res = res if isinstance(res, dict) else {}
+        events.append({"id": r["id"], "ts": r["ts"], "type": r["type"], "task": r["task"],
+                       "tool_use_id": res.get("tool_use_id"), "is_error": res.get("is_error")})
+    return {"session": dict(one) if one else None, "threads": threads, "iterations": iterations,
+            "events": events, "events_cut": len(rows) > RUN_EVENTS_MAX}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--limit", type=int, default=10)
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--run", metavar="UUID", help="one run's session, threads, iterations and events (JSON)")
     args = ap.parse_args()
+
+    if args.run:
+        json.dump(run(args.run), sys.stdout, indent=2, sort_keys=True)
+        sys.stdout.write("\n")
+        return 0
 
     report = collect(args.limit)
     if args.json:

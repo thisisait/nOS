@@ -2,7 +2,7 @@
 //! what the person typed or pressed, and renders only the closed component vocabulary.
 //! Whatever it cannot decode is shown as a refusal (decode_to_shell), never dropped.
 
-use nos_contract::renderers::{Choice, Component, Delta, KnowledgeTree, LensOp, RowOp, SchemaColumn, Step, Tone, TreeNode, WhenOp};
+use nos_contract::renderers::{Choice, Component, Dendrogram, Delta, KnowledgeTree, RunStatus, LensOp, RowOp, SchemaColumn, Step, Tone, TreeNode, WhenOp};
 use nos_contract::wire::{decode_to_shell, encode, ControlView, Decision, ModelOption, Scope, ToShell, ToThalamus, WidgetSpec};
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::layout::{Constraint, Layout, Rect};
@@ -366,6 +366,25 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
             walk(k, None, 0, &mut out);
             if k.hidden > 0 {
                 out.push(Line::styled(format!("  {} more not drawn", k.hidden), Style::new().fg(Color::DarkGray)));
+            }
+        }
+        // An agent run: one indented line a node under its parent, its status a word, the cap's rest said.
+        Component::Dendrogram(d) => {
+            out.extend(d.title.clone().map(head));
+            fn walk(d: &Dendrogram, parent: Option<&str>, depth: usize, out: &mut Vec<Line<'static>>) {
+                let word = |v: serde_json::Value| v.as_str().unwrap_or_default().to_string();
+                for n in d.nodes.iter().filter(|n| n.parent.as_deref() == parent && depth < d.nodes.len()) {
+                    let (kind, status) = (word(serde_json::json!(n.kind)), word(serde_json::json!(n.status)));
+                    let tokens = n.tokens.map(|t| format!(" ({t} tokens)")).unwrap_or_default();
+                    let note = n.note.as_deref().map(|t| format!(" — {t}")).unwrap_or_default();
+                    let line = format!("{}{kind} {} [{status}]{tokens}{note}", "  ".repeat(depth + 1), n.name);
+                    out.push(if n.status == RunStatus::Bad { warn(line) } else { Line::from(line) });
+                    walk(d, Some(&n.id), depth + 1, out);
+                }
+            }
+            walk(d, None, 0, &mut out);
+            if d.hidden > 0 {
+                out.push(Line::styled(format!("  {} more not drawn", d.hidden), Style::new().fg(Color::DarkGray)));
             }
         }
         // A terminal draws no diagram; every node and edge is said as text.

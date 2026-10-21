@@ -1,0 +1,10 @@
+conductor run
+  agent conductor [ok] (18234 tokens) — end_turn, satisfied
+    thread primary [ok]
+      turn llm call 1 [ok]
+      tool bash-read-only [ok]
+      tool mcp-wing-read [bad] — tool exception: timeout
+      approval operator approval [waiting]
+    iteration grader 0 [waiting] — needs_revision
+    iteration grader 1 [running]
+  2 more not drawn

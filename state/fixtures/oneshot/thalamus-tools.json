@@ -1114,6 +1114,28 @@
   },
   {
     "function": {
+      "description": "One agent run as a tree, from Wing (tools/agent-status.py --run, run as the operator): the session at the root, its threads, model turns, tool calls, approvals and grader iterations, each with its status. uuid: the run's session uuid (its actor_action_id). Renders a dendrogram to the person. Tier 1 only. If it cannot be read, the run is UNKNOWN: say so, never that it did nothing.",
+      "name": "read_run",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "uuid": {
+            "description": "the agent session's uuid",
+            "maxLength": 36,
+            "minLength": 36,
+            "type": "string"
+          }
+        },
+        "required": [
+          "uuid"
+        ],
+        "type": "object"
+      }
+    },
+    "type": "function"
+  },
+  {
+    "function": {
       "description": "The DataTables the person can read in KEAP: each id, title, rowCount and the day it was last updated. Renders a table to the person. Call it before query_rows when the person names a table you do not have the id of.",
       "name": "list_tables",
       "parameters": {

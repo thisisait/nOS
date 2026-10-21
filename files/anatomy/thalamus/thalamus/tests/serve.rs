@@ -1581,7 +1581,7 @@ fn the_tools_and_prompt_name_query_rows_and_bound_proposals() {
     assert!(p.contains("propose_row_insert only for a new row the person asked for, in a table query_rows showed them"), "{p}");
     let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[0].1).unwrap();
     let names: Vec<&str> = body["tools"].as_array().unwrap().iter().map(|t| t["function"]["name"].as_str().unwrap()).collect();
-    assert_eq!(names, ["query_rows", "propose_row_edit", "propose_row_insert", "propose_row_delete", "propose_table_create", "propose_column_add", "show", "red_status", "list_tables",
+    assert_eq!(names, ["query_rows", "propose_row_edit", "propose_row_insert", "propose_row_delete", "propose_table_create", "propose_column_add", "show", "red_status", "read_run", "list_tables",
                        "estate_services", "nos_guide", "approvals_awaiting", "inbox", "search_knowledge", "read_node", "offer_dashboard"]);
     assert!(p.contains("call search_knowledge"), "{p}");
     assert!(p.contains("Before recommending software, call estate_services: prefer a service the estate already has."), "{p}");
@@ -1915,7 +1915,7 @@ fn show_kinds_agree_everywhere() {
     assert_eq!(consts, kinds, "show_schema oneOf kind consts");
     let spec = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../contracts/thalamus-shell.yml")).unwrap();
     let spec: serde_yaml_ng::Value = serde_yaml_ng::from_str(&spec).unwrap();
-    let tool_chosen = ["table_results", "row_diff_approval", "table_schema_approval", "column_add_approval", "inbox_list", "approvals_list", "red_status", "markdown", "form", "dashboard", "action_approval", "knowledge_tree"];
+    let tool_chosen = ["table_results", "row_diff_approval", "table_schema_approval", "column_add_approval", "inbox_list", "approvals_list", "red_status", "markdown", "form", "dashboard", "action_approval", "knowledge_tree", "dendrogram"];
     let mut vocab: Vec<String> = spec["components"]["vocabulary"].as_mapping().unwrap().keys()
         .map(|k| k.as_str().unwrap().to_string()).filter(|k| !tool_chosen.contains(&k.as_str())).collect();
     let mut want: Vec<String> = kinds.iter().map(|k| k.to_string()).collect();
@@ -3122,6 +3122,81 @@ fn red_status_for_iris_is_tier_one_only() {
     let got = turn(&s, &mut r, None, "red?");
     assert!(!got.iter().any(|m| matches!(m, ToShell::Render { component: Component::RedStatus(_), .. })), "{got:?}");
     assert!(tool_result(&rig, 1)["error"].as_str().is_some_and(|e| e.contains("not yours to see")));
+}
+
+// --- iris-agent-dendrogram inc.1: read_run draws one Wing agent run as a tree, serve-built ---
+
+const RUN_UUID: &str = "5e2a9c41-7b3d-4f6e-8a1c-2d3e4f5a6b7c";
+
+fn run_py(events: usize) -> String {
+    let mut ev = vec![
+        serde_json::json!({"id": 1, "ts": "2026-10-20T07:00:00+00:00", "type": "agent_session_start", "task": "agent:conductor/start"}),
+        serde_json::json!({"id": 2, "ts": "2026-10-20T07:00:03+00:00", "type": "agent_message", "task": "agent:conductor/llm.call.1"}),
+        serde_json::json!({"id": 3, "ts": "2026-10-20T07:00:04+00:00", "type": "agent_tool_use", "task": "agent:conductor/tool:bash-read-only", "tool_use_id": "u1"}),
+        serde_json::json!({"id": 4, "ts": "2026-10-20T07:00:05+00:00", "type": "agent_tool_result", "task": "agent:conductor/tool:bash-read-only", "tool_use_id": "u1", "is_error": true}),
+    ];
+    ev.extend((0..events).map(|i| serde_json::json!({"id": 10 + i, "ts": "2026-10-20T07:01:00+00:00", "type": "agent_message", "task": format!("agent:conductor/llm.call.{}", i + 2)})));
+    let run = serde_json::json!({
+        "session": {"uuid": RUN_UUID, "agent_name": "conductor", "status": "terminated", "stop_reason": "end_turn", "outcome_result": "satisfied",
+                    "errored": 0, "started_at": "2026-10-20T07:00:00+00:00", "ended_at": "2026-10-20T07:04:12+00:00", "tokens_input": 18000, "tokens_output": 234},
+        "threads": [{"uuid": "6f3b0d52-8c4e-4a7f-9b2d-3e4f5a6b7c8d", "parent_thread_uuid": null, "role": "primary", "status": "terminated", "stop_reason": "end_turn",
+                     "started_at": "2026-10-20 07:00:00", "ended_at": null, "tokens_input": null, "tokens_output": null}],
+        "iterations": [{"iteration": 0, "grader_result": "needs_revision", "created_at": "2026-10-20T07:02:00+00:00"},
+                       {"iteration": 1, "grader_result": "satisfied", "created_at": "2026-10-20T07:04:00+00:00"}],
+        "events": ev, "events_cut": false});
+    format!("import sys\nassert sys.argv[1:] == ['--json', '--run', '{RUN_UUID}'], sys.argv\nprint({run})\n",
+            run = serde_json::to_string(&run.to_string()).unwrap())
+}
+
+#[test]
+fn read_run_draws_one_wing_run_as_a_tree() {
+    let rig = rig_n("irun", admin(), vec![], vec![call("read_run", &format!(r#"{{"uuid": "{RUN_UUID}"}}"#)), answer("The run ended satisfied.")]);
+    reader(&rig, "agent-status.py", &run_py(0));
+    let (got, _) = tool_turn(&rig, "show me the conductor's last run");
+    let d = got.iter().find_map(|m| match m {
+        ToShell::Render { component: Component::Dendrogram(d), pin: None, .. } => Some(d.clone()),
+        _ => None,
+    }).unwrap_or_else(|| panic!("no run tree drawn: {got:?}"));
+    let said: Vec<(String, Option<String>, String)> = d.nodes.iter().map(|n| (n.name.clone(), n.parent.clone(),
+        serde_json::to_value(n.status).unwrap().as_str().unwrap().to_string())).collect();
+    let thread = Some("6f3b0d52-8c4e-4a7f-9b2d-3e4f5a6b7c8d".to_string());
+    assert_eq!(said, [
+        ("conductor".into(), None, "ok".into()),
+        ("primary".into(), Some(RUN_UUID.into()), "ok".into()),
+        ("grader 0".into(), Some(RUN_UUID.into()), "waiting".into()),
+        ("grader 1".into(), Some(RUN_UUID.into()), "ok".into()),
+        ("llm.call.1".into(), thread.clone(), "ok".into()),
+        ("bash-read-only".into(), thread, "bad".into()),
+    ]);
+    assert_eq!((d.root.as_str(), d.hidden, d.nodes[0].tokens), (RUN_UUID, 0, Some(18234)));
+    assert_eq!(d.nodes[1].started.as_deref(), Some("2026-10-20T07:00:00Z"), "Wing's sqlite datetime is read as UTC");
+    let t = tool_result(&rig, 1);
+    assert_eq!((&t["drawn"], &t["bad"]), (&serde_json::json!(6), &serde_json::json!(["bash-read-only"])), "{t}");
+}
+
+#[test]
+fn read_run_caps_the_tree_and_says_what_it_left_out() {
+    let rig = rig_n("irun-cap", admin(), vec![], vec![call("read_run", &format!(r#"{{"uuid": "{RUN_UUID}"}}"#)), answer("x")]);
+    reader(&rig, "agent-status.py", &run_py(300));
+    let (got, _) = tool_turn(&rig, "the run");
+    let d = got.iter().find_map(|m| match m { ToShell::Render { component: Component::Dendrogram(d), .. } => Some(d.clone()), _ => None })
+        .unwrap_or_else(|| panic!("{got:?}"));
+    assert_eq!((d.nodes.len(), d.hidden), (200, 306 - 200));
+}
+
+#[test]
+fn read_run_is_tier_one_only_and_unknown_when_unreadable() {
+    let args = format!(r#"{{"uuid": "{RUN_UUID}"}}"#);
+    for (name, map, py, want) in [("irun-tier", mapped(), run_py(0), "not yours to see"),
+                                  ("irun-unread", admin(), "import json; print(json.dumps({'error': 'wing.db UNKNOWN — gone'}))".to_string(), "UNKNOWN"),
+                                  ("irun-none", admin(), "import json; print(json.dumps({'session': None}))".to_string(), "no agent run")] {
+        let rig = rig_n(name, map, vec![], vec![call("read_run", &args), answer("x")]);
+        reader(&rig, "agent-status.py", &py);
+        let (got, _) = tool_turn(&rig, "the run");
+        assert!(!got.iter().any(|m| matches!(m, ToShell::Render { component: Component::Dendrogram(_), .. })), "{name}: {got:?}");
+        let e = tool_result(&rig, 1);
+        assert!(e["error"].as_str().is_some_and(|e| e.contains(want)), "{name}: {e}");
+    }
 }
 
 // --- iris-genui-change-markers: a dry run's delta, offered in every place the model reads a shape ---

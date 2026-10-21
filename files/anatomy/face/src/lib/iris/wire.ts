@@ -122,6 +122,7 @@ export type Component =
 	  }
 	| { kind: 'sequence'; props: { title?: string; participants: string[]; steps: SequenceStep[] } }
 	| { kind: 'knowledge_tree'; props: KnowledgeProps }
+	| { kind: 'dendrogram'; props: DendrogramProps }
 	| { kind: 'form'; props: FormProps }
 	| { kind: 'choice'; props: ChoiceProps }
 	| { kind: 'dashboard'; props: DashboardProps }
@@ -136,6 +137,24 @@ export type KnowledgeProps = {
 	title?: string;
 	focus: string;
 	nodes: { id: string; name: string; parent?: string; child_count?: number; text?: string }[];
+	hidden: number;
+};
+
+/** One agent run as a tree (renderers.rs Dendrogram, v11): serve-built from Wing, one root; `hidden`: what the cap left out. */
+export type DendrogramProps = {
+	title?: string;
+	root: string;
+	nodes: {
+		id: string;
+		parent?: string;
+		kind: 'agent' | 'thread' | 'turn' | 'tool' | 'approval' | 'iteration';
+		name: string;
+		status: 'running' | 'ok' | 'bad' | 'waiting';
+		started?: string;
+		ended?: string;
+		tokens?: number;
+		note?: string;
+	}[];
 	hidden: number;
 };
 

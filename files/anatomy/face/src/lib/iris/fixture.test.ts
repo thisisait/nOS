@@ -36,6 +36,7 @@ const PROPS: Record<string, string[]> = {
 	graph: ['edges', 'nodes', 'title'],
 	sequence: ['participants', 'steps', 'title'],
 	knowledge_tree: ['focus', 'hidden', 'nodes', 'title'],
+	dendrogram: ['hidden', 'nodes', 'root', 'title'],
 	form: ['fields', 'form', 'omitted', 'prefill', 'table', 'title'],
 	choice: ['id', 'multi', 'options', 'question', 'suggested'],
 	dashboard: ['dropped', 'lens', 'name', 'widgets'],
@@ -48,6 +49,7 @@ const OPTIONAL: Record<string, string[]> = {
 	table_schema_approval: ['description'],
 	form: ['prefill'],
 	knowledge_tree: ['title'],
+	dendrogram: ['title'],
 	kpi: ['delta', 'delta_label', 'source', 'unit']
 };
 
