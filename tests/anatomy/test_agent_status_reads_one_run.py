@@ -92,3 +92,16 @@ def test_a_run_names_its_parent_and_its_children(tmp_path):
     iris = json.loads(r.stdout)
     assert iris["session"] is None, "Iris's session is the thalamus's, not Wing's"
     assert [k["uuid"] for k in iris["children"]] == [RUN, "c2"]
+
+
+def test_an_unknown_run_is_said_absent_not_an_empty_run(tmp_path):
+    """spark1 2026-10-21: an unknown uuid read as an empty run (rc 0, all lists []). Absent is said."""
+    test_a_run_names_its_parent_and_its_children(tmp_path)
+    r = subprocess.run([sys.executable, str(READER), "--json", "--run", "0badc0de-0000-4000-8000-000000000000"],
+                       capture_output=True, text=True, env={**os.environ, "HOME": str(tmp_path)}, timeout=60, check=False)
+    got = json.loads(r.stdout)
+    assert r.returncode == 0 and got["found"] is False and "no run" in got["said"], got
+    assert _run(tmp_path)["found"] is True
+    iris = subprocess.run([sys.executable, str(READER), "--json", "--run", IRIS], capture_output=True, text=True,
+                          env={**os.environ, "HOME": str(tmp_path)}, timeout=60, check=False)
+    assert json.loads(iris.stdout)["found"] is True, "an Iris session with runs under it is found"
