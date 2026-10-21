@@ -37,7 +37,7 @@ export const GET: RequestHandler = ({ request, url, locals }) => {
 			if (l.state === 'closed') end();
 		}
 	});
-	if (!tab) error(429, 'too many Iris tabs open');
+	if (!tab) error(503, 'the optic nerve is not configured (no thalamus relay)');
 
 	const body = new ReadableStream<Uint8Array>({
 		start(c) {

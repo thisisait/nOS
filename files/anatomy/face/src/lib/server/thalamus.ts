@@ -15,7 +15,7 @@ export const MAX_LINE = 1 << 20;
 /** Open Iris tabs per person; the thalamus keeps only the newest anyway (relay.rs take_over). */
 export const MAX_TABS = 4;
 
-type Tab = { uid: string; sock: Socket };
+type Tab = { uid: string; sock: Socket; why: string | null };
 const tabs = new Map<string, Tab>();
 
 const relay = () => {
@@ -43,18 +43,26 @@ export const hello = (who: Identity, tab: string, secret: string) =>
 
 export type Sink = { line: (l: string) => void; link: (l: Link) => void };
 
-/** Opens a tab for this person, or null when the relay is not configured or the person is at MAX_TABS. */
+/** Opens a tab for this person (closing their oldest at MAX_TABS), or null when the relay is not configured. */
 export function openTab(who: Identity, sink: Sink): { tab: string; close: () => void } | null {
 	const r = relay();
-	if (!r || !who.authenticated || tabsOf(who.uid) >= MAX_TABS) return null;
+	if (!r || !who.authenticated) return null;
+	// At the cap the newest wins (the thalamus keeps only it): the oldest is closed and told why.
+	// Live 2026-10-21: refusing the newest left Connect doing nothing behind tabs that never closed.
+	for (const [id, t] of tabs)
+		if (t.uid === who.uid && tabsOf(who.uid) >= MAX_TABS) {
+			t.why = 'a newer Iris tab took over (the oldest of this person closes at the cap)';
+			t.sock.destroy();
+			tabs.delete(id);
+		}
 	const tab = randomUUID();
 	const sock = connect({ host: r.host, port: r.port });
 	// The hello is queued before the tab is known: written on 'connect', a POST that came first
 	// went ahead of it and the relay refused the tab (seen under load, 2026-10-18).
 	sock.write(hello(who, tab, r.secret) + '\n');
-	tabs.set(tab, { uid: who.uid, sock });
+	const entry: Tab = { uid: who.uid, sock, why: null };
+	tabs.set(tab, entry);
 	let buf = '';
-	let why: string | null = null;
 	sock.setEncoding('utf8');
 	sock.on('connect', () => sink.link({ state: 'connected', reason: null }));
 	sock.on('data', (chunk: string) => {
@@ -66,23 +74,23 @@ export function openTab(who: Identity, sink: Sink): { tab: string; close: () => 
 			if (line.trim()) sink.line(line);
 		}
 		if (buf.length > MAX_LINE) {
-			why = 'the thalamus sent a line over 1 MiB';
+			entry.why = 'the thalamus sent a line over 1 MiB';
 			sock.destroy();
 		}
 	});
 	// The error's message names host and port only; it never carries the hello.
-	sock.on('error', (e) => (why ??= `the optic nerve failed: ${e.message}`));
+	sock.on('error', (e) => (entry.why ??= `the optic nerve failed: ${e.message}`));
 	sock.on('close', () => {
 		tabs.delete(tab);
 		sink.link({
 			state: 'closed',
-			reason: why ?? 'the thalamus closed the link'
+			reason: entry.why ?? 'the thalamus closed the link'
 		});
 	});
 	return {
 		tab,
 		close: () => {
-			why ??= 'the tab closed';
+			entry.why ??= 'the tab closed';
 			sock.destroy();
 		}
 	};
