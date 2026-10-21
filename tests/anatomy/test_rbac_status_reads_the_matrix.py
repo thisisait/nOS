@@ -109,3 +109,16 @@ def test_a_const_over_several_lines_is_read_and_a_non_literal_is_unknown(tmp_pat
         "files/anatomy/face/src/lib/security/tier.ts": "export const WRITE_GROUPS = groupsFor(2);\n"})
     assert pts.get("wing-enduser") == "ok", f"a correct multi-line OPERATOR_GROUPS reads as {pts.get('wing-enduser')}"
     assert pts.get("face-write-groups") == "UNKNOWN", f"a non-literal const reads as {pts.get('face-write-groups')}"
+
+
+def test_a_per_tier_point_is_read_from_what_its_line_says(tmp_path):
+    pts = _scratch(tmp_path, {
+        "roles/pazny.jupyterhub/templates/jupyterhub_config.py.j2":
+            "UNIX_REALM_GROUPS = {{ authentik_rbac_tiers | map(attribute='groups') | flatten | unique | list | to_json }}\n",
+        "roles/pazny.receptor/templates/identity-map.yml.j2":
+            "{%- set _ = ns.logins.update({u.name: {'username': u.name, 'groups': "
+            "(authentik_rbac_tiers | selectattr('tier', 'equalto', u.tier | int) | first).groups}}) -%}\n"})
+    # A realm keeping every group holds the whole set: ok, not a drift assumed from the line's place.
+    assert pts.get("jupyterhub-unix-realm") == "ok", pts.get("jupyterhub-unix-realm")
+    # A login given its tier's CUMULATIVE groups holds tier 1's: drift, not UNKNOWN.
+    assert pts.get("receptor-identity-map") == "drift", pts.get("receptor-identity-map")
