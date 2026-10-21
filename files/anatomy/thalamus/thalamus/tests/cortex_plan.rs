@@ -166,7 +166,7 @@ struct Rig {
 
 fn binding(name: &str, local: bool) -> Binding {
     Binding { name: name.into(), base_url: String::new(), auth_token: String::new(), model_id: "m".into(), local,
-              temperature: local.then_some(0.3) }
+              temperature: local.then_some(0.3), seed: None }
 }
 
 fn rig(name: &str, b: Binding, models: Vec<String>, cortex: Option<String>) -> Rig {

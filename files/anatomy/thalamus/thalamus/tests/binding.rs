@@ -208,6 +208,25 @@ fn a_local_binding_carries_a_low_temperature_a_cloud_one_none() {
     }
 }
 
+#[test]
+fn a_local_binding_carries_a_seed_only_when_one_is_set() {
+    // A bench run is repeatable only when the sampler is: same seed, same digest, same prompt.
+    let local = |extra: &[(&str, &str)]| {
+        let mut e = ARMED.to_vec();
+        e.extend_from_slice(extra);
+        match decide(LOCAL_CELL, &register(), env(&e)).unwrap() { Decision::Bound(b) => b, d => panic!("{d:?}") }
+    };
+    assert_eq!(local(&[]).seed, None, "no seed unless the operator asks for one");
+    assert_eq!(local(&[("NOS_LOCAL_SEED", "")]).seed, None, "the plist's empty default is unset");
+    assert_eq!(local(&[("NOS_LOCAL_SEED", "42")]).seed, Some(42));
+    assert_eq!(local(&[("NOS_LOCAL_SEED", "lucky")]).seed, None, "an unreadable value is unset");
+    match resolve(&repo(), "iris", env(&[("NOS_ARMED_BACKENDS", "mistral-eu"), ("NOS_MISTRAL_MODEL", "m"),
+                                         ("nos:mistral_api_key", "k"), ("NOS_LOCAL_SEED", "42")])).unwrap() {
+        Decision::Bound(b) => assert_eq!(b.seed, None, "a cloud row keeps its own sampler"),
+        d => panic!("{d:?}"),
+    }
+}
+
 /// tests/binding-cases.yml `sizes:` — the floors tools/nos_cell_binding.py and job_readiness.py also judge.
 #[test]
 fn binding_judges_size_like_the_shared_cases() {
