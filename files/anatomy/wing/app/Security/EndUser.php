@@ -8,12 +8,14 @@ namespace App\Security;
  * An end user the face BFF speaks for (files/anatomy/contracts/face-wing.yml, wire).
  *
  * Wing believes X-Nos-User-* only on a request whose bearer is the `face-bff`
- * row; every other token gets null and the headers are ignored. Pure, so the
- * gate runs it without Nette.
+ * or the `thalamus` row (the latter on the spawn alone: BaseApiPresenter); every
+ * other token gets null and the headers are ignored. Pure, so the gate runs it without Nette.
  */
 final class EndUser
 {
 	public const TOKEN_NAME = 'face-bff';
+	/** Iris's door: it speaks for a person only to start an agent session (BaseApiPresenter::$thalamusActions). */
+	public const THALAMUS = 'thalamus';
 	public const OPERATOR_GROUPS = ['nos-providers', 'nos-admins'];
 
 	private function __construct(
@@ -28,12 +30,12 @@ final class EndUser
 	 */
 	public static function fromRequest(?string $tokenName, ?string $uid, ?string $groups): ?self
 	{
-		if ($tokenName !== self::TOKEN_NAME) {
+		if ($tokenName !== self::TOKEN_NAME && $tokenName !== self::THALAMUS) {
 			return null;
 		}
 		$uid = (string) $uid;
 		if (!CanonicalUid::isCanonical($uid)) {
-			throw new \DomainException('face-bff request without a canonical X-Nos-User-Uid', 401);
+			throw new \DomainException("{$tokenName} request without a canonical X-Nos-User-Uid", 401);
 		}
 		$set = preg_split('/[\s,|]+/', strtolower((string) $groups), -1, PREG_SPLIT_NO_EMPTY) ?: [];
 		return new self($uid, (bool) array_intersect($set, self::OPERATOR_GROUPS));

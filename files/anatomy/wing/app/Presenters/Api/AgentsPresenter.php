@@ -27,7 +27,7 @@ use Nette\Http\IResponse;
  *
  * Operator-trigger contract (A14 follow-up, 2026-05-07):
  *   - actor_id is ALWAYS derived from $this->validatedToken['name'] via
- *     BaseApiPresenter::getActorId() — or, for the face-bff bearer only,
+ *     BaseApiPresenter::getActorId() — or, for the face-bff and thalamus bearers,
  *     'user:<uid>' (files/anatomy/contracts/face-wing.yml). NEVER accept a client-supplied
  *     actor_id in the request body — that is a privilege-escalation
  *     vector and would let any token holder masquerade as 'conductor'
@@ -60,6 +60,9 @@ final class AgentsPresenter extends BaseApiPresenter
 	}
 
 	protected array $bffActions = ['sessions'];
+
+	/** Iris's start_agent: POST sessions as the person who approved it (face-wing.yml, wire). */
+	protected array $thalamusActions = ['sessions'];
 
 	public function actionDefault(?string $name = null): void
 	{

@@ -65,6 +65,16 @@ wire:
     - "GET  /api/v1/agent-sessions/<uuid>    {session, threads, iterations, children}"
     - "GET  /api/v1/pulse_jobs, /pulse_runs[/summary], /events, /notifications — Tier 1 only (BaseApiPresenter::$bffOperatorReads)"
     - "POST every operator verb (BaseApiPresenter::$operatorActions; scope wing.operator) — Tier 1 only; the record names user:<uid>"
+  # A second delegate (iris-agent-dendrogram inc.2): the thalamus, which the kernel tells who its peer is,
+  # starts an agent session for the person who approved Iris's start_agent card. Same headers, same fold.
+  thalamus:
+    bearer: "Authorization: Bearer <thalamus_wing_api_token> — the api_tokens row named `thalamus`, scope wing.write. Held only by the thalamus."
+    actions:   # the thalamus bearer reaches this and nothing else (BaseApiPresenter::$thalamusActions)
+      - "POST /api/v1/agents/<name>/sessions   body: {prompt, parent: thalamus:<iris session uuid>}"
+    refusals:
+      - "thalamus bearer without a canonical X-Nos-User-Uid -> 401"
+      - "thalamus bearer on any other action or method, operator verbs included -> 403"
+    gate: tests/anatomy/test_thalamus_speaks_for_a_person_only_to_start.py
 
 # ── 3. The three invariants (ssot/doctrine/cross-repo-contracts.md §4) ────────────────────
 invariants:
