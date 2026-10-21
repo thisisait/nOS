@@ -3555,6 +3555,25 @@ fn a_local_model_is_asked_not_to_think_and_a_cloud_one_is_left_alone() {
 }
 
 
+#[test]
+fn a_seeded_local_model_is_sent_its_seed_and_an_unseeded_one_none() {
+    // Deterministic evals: Ollama's chat endpoint takes `seed`; without it two runs sample apart.
+    let seeded = rig_full("seeded", mapped(), vec![ROWS.into()], vec![answer("hi")],
+                          Some(Binding { seed: Some(42), ..local() }));
+    let s = connect(&seeded.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    turn(&s, &mut r, None, "hello");
+    let body: serde_json::Value = serde_json::from_str(&seeded.model.lock().unwrap()[0].1).unwrap();
+    assert_eq!(body["seed"], 42, "{body}");
+    let rig = rig("unseeded", mapped(), ROWS, vec![answer("hi")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    turn(&s, &mut r, None, "hello");
+    let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[0].1).unwrap();
+    assert!(body.get("seed").is_none(), "{body}");
+}
+
+
 // --- client bench 2026-10-14: qwen3.5 passed the table's TITLE as `table` and got KEAP's 404 ---
 
 const TITLED: &str = r#"{"success": true, "data": [{"id": "todos", "title": "Todo list"}, {"id": "other", "title": "Other"}]}"#;

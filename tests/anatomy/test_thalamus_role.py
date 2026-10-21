@@ -475,6 +475,13 @@ def test_a_sign_that_cannot_reach_the_key_says_the_one_command(tmp_path):
     assert r.returncode != 0 and "set-key-partition-list" in r.stderr, r.stderr
 
 
+def test_the_local_seed_is_a_config_knob_unset_by_default():
+    # Deterministic evals pin the sampler; a host that never benches keeps Ollama's own.
+    assert _default_config()["iris_local_seed"] == ""
+    assert _plist(iris_local_seed="")["EnvironmentVariables"]["NOS_LOCAL_SEED"] == ""
+    assert _plist(iris_local_seed=42)["EnvironmentVariables"]["NOS_LOCAL_SEED"] == "42"
+
+
 def test_the_local_temperature_is_a_config_knob_in_the_plist():
     assert _default_config()["iris_local_temperature"] == 0.3
     assert _plist(iris_local_temperature=0.1)["EnvironmentVariables"]["NOS_LOCAL_TEMPERATURE"] == "0.1"
