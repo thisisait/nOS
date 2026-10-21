@@ -98,3 +98,39 @@ def test_the_cli_exits_by_verdict(tmp_path):
     assert r.returncode == 1 and "not repeatable" in r.stdout, r.stdout + r.stderr
     r = subprocess.run([sys.executable, str(TOOL), "--compare", str(a), str(a), "--json"], capture_output=True, text=True)
     assert r.returncode == 0 and json.loads(r.stdout)["verdict"] == "repeatable", r.stdout + r.stderr
+
+
+def test_two_runs_that_share_no_judged_case_say_nothing_was_paired():
+    # review 2026-10-21: disjoint --domain/--tier runs read as "repeatable" and exited 0
+    a, b = _run({"x": True}), _run({"y": True})
+    assert bc.compare(a, b)["verdict"] == "nothing paired"
+    assert bc.compare(_run({}), _run({}))["verdict"] == "nothing paired"
+
+
+def test_a_run_without_a_digest_or_commit_is_unverified_not_repeatable():
+    # provenance writes None when Ollama's tags or git cannot be read: None == None is no evidence
+    a, b = _run({"x": True}, digest=None), _run({"x": True}, digest=None)
+    r = bc.compare(a, b)
+    assert r["verdict"] == "unverified" and r["unverified"] == ["models"]
+    a, b = _run({"x": True}, commit=None), _run({"x": False}, commit=None, plan="cortex")
+    assert bc.compare(a, b)["unverified"] == ["nos_commit"]
+    assert bc.compare(a, b)["verdict"] == "unverified"
+
+
+def test_the_cli_exit_codes_hold_at_the_process_boundary(tmp_path):
+    def run(a, b):
+        pa, pb = tmp_path / "a.json", tmp_path / "b.json"
+        pa.write_text(json.dumps(a))
+        pb.write_text(json.dumps(b))
+        return subprocess.run([sys.executable, str(TOOL), "--compare", str(pa), str(pb)], capture_output=True, text=True)
+    better = run(_run({f"c{i}": False for i in range(8)}), _run({f"c{i}": True for i in range(8)}, plan="cortex"))
+    assert better.returncode == 0 and "B better" in better.stdout, better.stdout + better.stderr
+    mixed = run(_run({"x": True}), _run({"x": True}, plan="cortex", digest="sha256:bb"))
+    assert mixed.returncode == 2 and "confounded" in mixed.stdout, mixed.stdout + mixed.stderr
+    gone = subprocess.run([sys.executable, str(TOOL), "--compare", str(tmp_path / "nope.json"), str(tmp_path / "a.json")],
+                          capture_output=True, text=True)
+    assert gone.returncode == 3 and gone.stdout == "" and "nope.json" in gone.stderr, gone.stdout + gone.stderr
+    (tmp_path / "bad.json").write_text(json.dumps({"no": "cases"}))
+    bad = subprocess.run([sys.executable, str(TOOL), "--compare", str(tmp_path / "bad.json"), str(tmp_path / "a.json")],
+                         capture_output=True, text=True)
+    assert bad.returncode == 3 and bad.stdout == "", bad.stdout + bad.stderr
