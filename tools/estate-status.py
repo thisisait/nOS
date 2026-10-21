@@ -55,7 +55,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import plistlib
 import re
+import shlex
 import subprocess
 import sys
 import urllib.error
@@ -395,7 +397,7 @@ def axis_toolchain(res: Result) -> None:
 
 # Layer resolution lives in nos_identity — the same reader discovery-scan and
 # nos-smoke use, so three tools cannot disagree about one flag.
-from nos_identity import default_config_text, install_flags, resolve_flag  # noqa: E402
+from nos_identity import default_config_text, install_flags, resolve_flag, services  # noqa: E402
 
 
 def axis_config(res: Result, flag: str) -> None:
@@ -419,6 +421,78 @@ def axis_config(res: Result, flag: str) -> None:
     if "config.yml" not in declared_in:
         note += "; config.yml does not override it"
     res.add("config", flag, f"{trail}{note}  ==> {winner[1]}")
+
+
+# ── axis 5: what each host organ IS, and who it runs as (the medulla's measure) ─
+
+
+#: argv0 basename prefix -> runtime; `native` becomes rust when the organ has a Cargo.toml.
+RUNTIMES = (("python", "python"), ("frankenphp", "php"), ("php", "php"),
+            ("node", "node"), ("bash", "shell"), ("sh", "shell"))
+
+
+def _deployed_job(label: str, root: Path, home: Path) -> tuple[str, list[str]] | None:
+    """(domain, argv) of the job installed for `label` — one lookup on both platforms."""
+    for domain, path in (("LaunchAgent", home / "Library/LaunchAgents" / f"{label}.plist"),
+                         ("LaunchDaemon", root / "Library/LaunchDaemons" / f"{label}.plist")):
+        if path.exists():
+            try:
+                doc = plistlib.loads(path.read_bytes())
+            except Exception:  # noqa: BLE001 — unparsable is still installed; ps then cannot match it
+                return domain, []
+            return domain, list(doc.get("ProgramArguments") or [doc.get("Program", "")])
+    for domain, path in (("user unit", home / ".config/systemd/user" / f"{label}.service"),
+                         ("system unit", root / "etc/systemd/system" / f"{label}.service")):
+        if path.exists():
+            for raw in path.read_text(encoding="utf-8").splitlines():
+                if raw.strip().startswith("ExecStart="):
+                    return domain, shlex.split(raw.split("=", 1)[1].lstrip("-@:+!"))
+            return domain, []
+    return None
+
+
+def axis_identity(res: Result, root: Path = Path("/"), home: Path = Path.home(),
+                  ps_lines: list[str] | None = None) -> None:
+    if ps_lines is None:
+        try:
+            ps_lines = subprocess.run(["ps", "-axo", "uid=,user=,command="], capture_output=True,
+                                      text=True, timeout=10, check=True).stdout.splitlines()
+        except (OSError, subprocess.SubprocessError):
+            ps_lines = []
+    procs = [p for p in (x.split(None, 2) for x in ps_lines) if len(p) == 3]
+    operator_uid = home.stat().st_uid if home.exists() else None
+    langs = {"php": 0, "python": 0, "node": 0, "rust": 0}
+    runs = {"operator": 0, "root": 0, "other": 0}
+    for row in services():
+        if row.get("software_owner") != "self" or not row.get("launchd_label"):
+            continue
+        rid = row["id"]
+        job = _deployed_job(row["launchd_label"], root, home)
+        if job is None:
+            res.add("identity", rid, f"{rid} · not installed here")
+            continue
+        domain, argv = job
+        argv0 = argv[0] if argv else ""
+        runtime = next((rt for pre, rt in RUNTIMES if Path(argv0).name.startswith(pre)), "native")
+        language = runtime
+        if runtime == "native":
+            src = REPO / "files/anatomy" / rid.replace("_", "-")
+            language = "rust" if any(src.glob("**/Cargo.toml")) else "native"
+        langs[language] = langs.get(language, 0) + 1
+        # ponytail: argv prefix match; upgrade to pid-from-launchd/systemd when two organs share an argv0.
+        hit = next((p for p in procs if argv0 and p[2].startswith(argv0)
+                    and (len(argv) < 2 or argv[1] in p[2])), None)
+        head = f"{rid} · {language}/{runtime}"
+        if hit is None:
+            why = "ps unreadable" if not procs else f"no process runs {argv0 or '(no argv)'}"
+            res.add("identity", rid, f"{head} · not reported ({why}) · {domain}", UNREADABLE)
+            continue
+        uid, user = int(hit[0]), hit[1]
+        runs["root" if uid == 0 else "operator" if uid == operator_uid else "other"] += 1
+        res.add("identity", rid, f"{head} · runs as {user} uid {uid} · {domain}")
+    res.add("identity", "summary",
+            "host runtimes: " + ", ".join(f"{k} {v}" for k, v in langs.items())
+            + " · run as " + ", ".join(f"{k} {v}" for k, v in runs.items()))
 
 
 # ── output ──────────────────────────────────────────────────────────────────
@@ -454,6 +528,8 @@ def main() -> int:
                     help="resolve one config flag across the layering")
     ap.add_argument("--install-flags", action="store_true",
                     help="every install_* resolved, as one JSON object (exit 0)")
+    ap.add_argument("--identity", action="store_true",
+                    help="only the organ-identity axis (language, runtime, run-as uid)")
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args()
 
@@ -464,9 +540,12 @@ def main() -> int:
     res = Result()
     if args.config:
         axis_config(res, args.config)
+    elif args.identity:
+        axis_identity(res)
     else:
         axis_repos(res, do_fetch=not args.no_fetch)
         axis_organs(res)
+        axis_identity(res)
         axis_blank(res)
         axis_toolchain(res)
 
