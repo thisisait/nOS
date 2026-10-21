@@ -336,6 +336,7 @@ def axis_blank(res: Result) -> None:
         smoke = last.get("smoke_strict")
         red = smoke and (smoke["ok"] < smoke["total"] or smoke["failed"])
         strict = f"smoke --strict {smoke['ok']}/{smoke['total']}" if smoke else "no strict smoke"
+        strict += f" at {smoke['at']}" if smoke and smoke.get("at") else ""
         strict += f" failed: {', '.join(map(str, smoke['failed']))}" if red else ""
     except (AttributeError, KeyError, TypeError, ValueError) as exc:
         res.add("blank", "newest blank", f"UNKNOWN — unreadable record ({type(exc).__name__}: {path})", UNREADABLE)
@@ -348,7 +349,7 @@ def axis_blank(res: Result) -> None:
     elif not smoke or red:  # no strict smoke, or a strict probe red: the release gate needs all green
         res.add("blank", "newest blank", f"{when} · {strict} (release gate unmet)", DISAGREE)
     else:
-        res.add("blank", "newest blank", f"{when} · {strict}")
+        res.add("blank", "newest blank", f"{when} · {strict} (release gate met)")
 
 
 # ── axis 3: the toolchain ───────────────────────────────────────────────────

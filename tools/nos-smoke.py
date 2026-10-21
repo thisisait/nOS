@@ -1031,6 +1031,43 @@ def build_catalog(vars_dict: dict) -> list[dict]:
     return merge_catalog(manifest_entries, extras, defaults, vars_dict)
 
 
+def record_blank(results: list, args) -> None:
+    """A strict, unfiltered run within --blank-window-hours of the newest FINISHED
+    blank appends that record's line again with smoke_strict (the reader takes the
+    last line per started). 10-17: the 32/32 ran after the converge, the record kept null."""
+    path = pathlib.Path.home() / ".nos" / "blank-runs.jsonl"
+    try:
+        rows = [json.loads(x) for x in path.read_text(encoding="utf-8").splitlines() if x.strip()]
+        started = max(r.get("started") or "" for r in rows)
+        last = dict([r for r in rows if r.get("started") == started][-1])
+        fin = last.get("finished")
+        age = (datetime.now(tz=timezone.utc) - datetime.strptime(fin, "%Y-%m-%dT%H:%M:%SZ")
+               .replace(tzinfo=timezone.utc)).total_seconds() / 3600 if fin else None
+    except (OSError, ValueError, AttributeError, TypeError, IndexError) as exc:
+        why = f"no readable blank record ({type(exc).__name__}: {path})"
+    else:
+        why = ("the newest blank is still open (its own post-smoke records it)" if age is None
+               else f"the newest blank finished {age:.0f}h ago, older than {args.blank_window_hours:g}h"
+               if age > args.blank_window_hours else None)
+    if not why and (args.tier or args.include):
+        why = "a filtered run (--tier/--include) is not release evidence"
+    if why:
+        sys.stderr.write(f"blank record: not recorded — {why}\n")
+        return
+    last["smoke_strict"] = {
+        "ok": sum(1 for r in results if r.ok), "total": len(results),
+        "failed": [r.entry["id"] for r in results if not r.ok and not r.skipped],
+        "at": datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "by": "nos-smoke --strict"}
+    try:
+        with path.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(last) + "\n")
+    except OSError as exc:
+        sys.stderr.write(f"blank record: not recorded — {path}: {exc}\n")
+        return
+    sys.stderr.write(f"blank record: smoke --strict {last['smoke_strict']['ok']}/{len(results)} "
+                     f"recorded for the blank started {started}\n")
+
+
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     p.add_argument("--tier", type=int, choices=[1, 2, 3], help="filter by tier")
@@ -1075,6 +1112,8 @@ def main() -> int:
                         "when the platform is broadly unreachable (e.g. local DNS "
                         "down = ~all DEAD) while tolerating a few flaky probes. "
                         "When unset, exit code is the raw failed count (min 127).")
+    p.add_argument("--blank-window-hours", type=float, default=24.0,
+                   help="--strict records into the newest finished blank only within this many hours of it (default 24)")
     args = p.parse_args()
 
     vars_dict = load_vars(args.host_alias, args.tenant_domain, args.apps_subdomain, overrides={
@@ -1162,6 +1201,9 @@ def main() -> int:
             emit_jsonl(path, run_id, results)
         except Exception as exc:  # noqa: BLE001
             sys.stderr.write("WARN: JSONL append to %s failed: %s\n" % (path, exc))
+
+    if args.strict:
+        record_blank(results, args)
 
     failed = sum(1 for r in results if not r.ok and not r.skipped)
     # Systemic-failure gate: when --fail-ratio is set, exit non-zero ONLY when a
