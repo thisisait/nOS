@@ -202,6 +202,7 @@ fn rig_deciders(name: &str, map: serde_json::Value, (keap_url, keap): (String, S
         repo: d.clone(),
         reader_secs: READER_SECS.with(|c| c.get()),
         tier1: vec!["nos-admins".into()],
+        tier2: vec!["nos-admins".into(), "nos-managers".into()],
         deciders,
         log: Mutex::new(Box::new(log.clone())),
         picks: picks.into_iter().map(|p| thalamus::binding::Pick { bound: p.bound.map(|b| Binding { base_url: model_url.clone(), ..b }), ..p }).collect(),
@@ -6956,6 +6957,8 @@ fn app_rig(name: &str, map: serde_json::Value, model: Vec<String>) -> Rig {
         std::fs::set_permissions(repo.join(d), std::fs::Permissions::from_mode(0o700)).unwrap();
     }
     std::os::unix::fs::symlink(real, repo.join("files/anatomy/module_utils")).unwrap();
+    let scaffolds = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../state/app-scaffolds.yml").canonicalize().unwrap();
+    std::os::unix::fs::symlink(scaffolds, repo.join("state/app-scaffolds.yml")).unwrap();
     std::fs::write(repo.join("apps/roundcube.yml"), "meta: {name: roundcube}\n").unwrap();
     std::fs::write(repo.join("state/manifest.yml"), "services:\n  - id: next_cloud\n").unwrap();
     rig
@@ -7040,13 +7043,103 @@ fn propose_app_reject_writes_nothing() {
 }
 
 #[test]
-fn propose_app_refuses_a_taken_name_and_anyone_below_tier_one() {
+fn propose_app_refuses_a_taken_name_and_anyone_below_tier_two() {
     for (name, map, app, want) in [("app-apps", admin(), "roundcube", "already"), ("app-row", admin(), "next-cloud", "already"),
-                                   ("app-role", admin(), "gitea", "already"), ("app-tier", mapped(), "notes", "tier 1")] {
+                                   ("app-role", admin(), "gitea", "already"), ("app-tier", mapped(), "notes", "tier 2")] {
         let rig = app_rig(name, map, vec![propose_app(&app_manifest(app)), answer("x")]);
         let (got, _) = tool_turn(&rig, "make me an app");
         assert!(!got.iter().any(|g| matches!(g, ToShell::ApprovalRequest { .. })), "{name}: {got:?}");
         let e = tool_result(&rig, 1)["error"].as_str().unwrap_or_default().to_string();
         assert!(e.contains(want), "{name}: {e}");
     }
+}
+
+// --- iris-app-toolchain: app_slots and scaffold_app, the parts propose_app assembles; managers may propose ---
+
+/// A person in nos-managers: tier 2 (authentik_rbac_tiers), not tier 1.
+fn manager() -> serde_json::Value {
+    serde_json::json!({"logins": {me(): {"username": "Alice Smith", "groups": ["nos-users", "nos-managers"]}}})
+}
+
+/// app-slots.py as the reader contract has it: here it cannot read the live estate, so every check is null.
+const SLOTS_UNKNOWN: &str = r#"import json, sys
+a = sys.argv[1:]
+assert a[0] == "--json" and "--live" in a and a[a.index("--name") + 1] == "notes" and "--free-port" in a, a
+print(json.dumps({"names_taken": [], "subdomains_taken": [], "ports_taken": [],
+    "checks": {"name": {"value": "notes", "free": None, "why": "docker ps: unreadable"}},
+    "free_port": None, "sources": {}, "unknown": ["docker ps: unreadable"]}))
+"#;
+
+#[test]
+fn app_slots_says_unknown_when_the_reader_says_null() {
+    let rig = app_rig("slots-null", manager(), vec![call("app_slots", r#"{"name": "notes", "free_port": true}"#), answer("x")]);
+    reader(&rig, "app-slots.py", SLOTS_UNKNOWN);
+    tool_turn(&rig, "is notes free?");
+    let heard = tool_result(&rig, 1);
+    let name = heard["checks"]["name"]["says"].as_str().unwrap_or_default();
+    assert!(name.starts_with("UNKNOWN") && !name.contains("free,"), "a null check is UNKNOWN, never free: {heard}");
+    assert!(heard["free_port"].as_str().is_some_and(|s| s.starts_with("UNKNOWN")), "no port is UNKNOWN, never a number: {heard}");
+    assert_eq!(heard["unknown"], serde_json::json!(["docker ps: unreadable"]), "{heard}");
+}
+
+#[test]
+fn app_slots_is_refused_below_tier_two() {
+    let rig = app_rig("slots-tier", mapped(), vec![call("app_slots", r#"{"name": "notes"}"#), answer("x")]);
+    reader(&rig, "app-slots.py", SLOTS_UNKNOWN);
+    tool_turn(&rig, "is notes free?");
+    assert!(tool_result(&rig, 1)["error"].as_str().unwrap_or_default().contains("tier 2"), "{}", tool_result(&rig, 1));
+}
+
+fn merge(a: &mut serde_json::Value, b: &serde_json::Value) {
+    match (a, b) {
+        (serde_json::Value::Object(a), serde_json::Value::Object(b)) => b.iter().for_each(|(k, v)| merge(a.entry(k.clone()).or_insert(serde_json::Value::Null), v)),
+        (a, b) => *a = b.clone(),
+    }
+}
+
+#[test]
+fn scaffold_parts_assemble_into_a_manifest_the_parser_accepts() {
+    let rig = app_rig("scaffold", manager(), vec![
+        call("scaffold_app", r#"{"kind": "infra", "name": "notes", "runtime": "python", "port": 8123}"#),
+        call("scaffold_app", r#"{"kind": "backend", "name": "notes", "runtime": "python"}"#),
+        call("scaffold_app", r#"{"kind": "frontend", "name": "notes"}"#), answer("x")]);
+    tool_turn(&rig, "scaffold me a notes app");
+    let (infra, backend, front) = (tool_result(&rig, 1), tool_result(&rig, 2), tool_result(&rig, 3));
+    let svc = &infra["part"]["compose"]["services"]["notes"];
+    assert_eq!(svc["ports"], serde_json::json!(["127.0.0.1:8123:8000"]), "{infra}");
+    assert_eq!(svc["networks"], serde_json::json!(["apps_net"]), "{infra}");
+    assert!(svc["image"].as_str().is_some_and(|i| i.starts_with("docker.io/library/python:3.")), "{infra}");
+    assert!(backend["part"].to_string().contains("$SERVICE_FQDN_NOTES"), "{backend}");
+    let f = front.to_string();
+    assert!(f.contains("TablesApp") && f.contains("index.html") && f.contains("KEAP"), "{front}");
+
+    let mut m = app_manifest("notes");
+    m["compose"]["services"] = serde_json::json!({});
+    merge(&mut m, &infra["part"]);
+    merge(&mut m, &backend["part"]);
+    let rig = app_rig("scaffold-ok", manager(), vec![propose_app(&m), answer("Proposed.")]);
+    let (got, _) = tool_turn(&rig, "propose it");
+    assert!(app_card(&got).is_some(), "the assembled parts did not pass the parser: {}", tool_result(&rig, 1));
+}
+
+#[test]
+fn scaffold_app_refuses_an_infra_part_without_a_port() {
+    let rig = app_rig("scaffold-port", manager(), vec![call("scaffold_app", r#"{"kind": "infra", "name": "notes"}"#), answer("x")]);
+    tool_turn(&rig, "scaffold");
+    assert!(tool_result(&rig, 1)["error"].as_str().unwrap_or_default().contains("app_slots"), "{}", tool_result(&rig, 1));
+}
+
+#[test]
+fn propose_app_is_a_managers_to_ask() {
+    let rig = app_rig("app-mgr", manager(), vec![propose_app(&app_manifest("notes")), answer("Proposed.")]);
+    let (got, _) = tool_turn(&rig, "make me a notes app");
+    assert!(app_card(&got).is_some(), "a manager was refused: {}", tool_result(&rig, 1));
+}
+
+#[test]
+fn propose_app_sends_the_model_to_the_helpers_and_a_table_editor_to_tables_app() {
+    let tools = serve::tools();
+    let d = tools.as_array().unwrap().iter().find(|t| t["function"]["name"] == "propose_app").unwrap()["function"]["description"]
+        .as_str().unwrap().to_string();
+    assert!(d.contains("app_slots") && d.contains("scaffold_app") && d.contains("TablesApp") && d.contains("Tier 2"), "{d}");
 }

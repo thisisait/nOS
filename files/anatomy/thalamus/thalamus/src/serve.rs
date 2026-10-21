@@ -48,6 +48,8 @@ pub struct Server {
     pub reader_secs: u64,
     /// The groups that see the operator's views (NOS_TIER1_GROUPS, from authentik_rbac_tiers).
     pub tier1: Vec<String>,
+    /// NOS_TIER2_GROUPS, the same list's tier 2 (managers and above): who may ask for an app.
+    pub tier2: Vec<String>,
     /// NOS_DECIDER_EXES: the executables that may decide; empty records the peer only.
     pub deciders: Vec<PathBuf>,
     pub log: Mutex<Box<dyn Write + Send>>,

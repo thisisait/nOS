@@ -202,6 +202,7 @@ fn rig_cx(name: &str, b: Binding, models: Vec<String>, cortex: Option<Cortex>, e
         repo: d.clone(),
         reader_secs: 10,
         tier1: vec![],
+        tier2: vec![],
         deciders: vec![],
         log: Mutex::new(Box::new(std::io::sink())),
         picks: vec![],
