@@ -2364,18 +2364,18 @@
     # `nginx_sites_enabled`. See tasks/nginx.yml header + templates/nginx/_LEGACY.md.
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/nginx.yml
-      when: install_nginx | default(false)
+      when: install_nginx | default(false) | bool
       tags: ['nginx', 'webserver']
 
     - import_tasks: tasks/node.yml
-      when: install_node | default(true)
+      when: install_node | default(true) | bool
       tags: ['node', 'nodejs']
 
     # AFTER node.yml on purpose: the native installer is invoked through the
     # NVM-provided `claude` on first run, so node has to exist. Everything it
     # sets up afterwards is deliberately independent of which node that was.
     - import_tasks: tasks/claude-cli.yml
-      when: install_claude_cli | default(true)
+      when: install_claude_cli | default(true) | bool
       tags: ['claude-cli', 'node', 'nodejs']
 
     # After claude-cli (the claude-code provider drives that binary) and homebrew.
@@ -2391,19 +2391,19 @@
       tags: ['openhuman', 'verify']   # --tags verify reaches only the role's verify task
 
     - import_tasks: tasks/bun.yml
-      when: install_bun | default(false)
+      when: install_bun | default(false) | bool
       tags: ['bun']
 
     - import_tasks: tasks/python.yml
-      when: install_python | default(true)
+      when: install_python | default(true) | bool
       tags: ['python']
 
     - import_tasks: tasks/golang.yml
-      when: install_golang | default(false)
+      when: install_golang | default(false) | bool
       tags: ['go', 'golang']
 
     - import_tasks: tasks/dotnet.yml
-      when: install_dotnet | default(false)
+      when: install_dotnet | default(false) | bool
       tags: ['dotnet', 'csharp']
 
     # ──────────────────────────────────────────────────────────────────────────
@@ -2710,7 +2710,7 @@
     # Shell extras – starship prompt + aliases
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/shell-extras.yml
-      when: install_shell_extras | default(false)
+      when: install_shell_extras | default(false) | bool
       tags: ['shell', 'shell-extras', 'starship']
 
     # ──────────────────────────────────────────────────────────────────────────
@@ -2805,13 +2805,13 @@
           install_device_gateway is true but files/anatomy/plugins/device-gateway-base/plugin.yml
           carries no complete gdpr: block — Art-30 is the deploy gate (docs/compliance/devices.md).
         quiet: true
-      when: install_device_gateway | default(false)
+      when: install_device_gateway | default(false) | bool
       tags: ['device-gateway', 'ai']
 
     - name: "Device gateway (pazny.device_gateway role)"
       ansible.builtin.import_role:
         name: pazny.device_gateway
-      when: install_device_gateway | default(false)
+      when: install_device_gateway | default(false) | bool
       tags: ['device-gateway', 'ai']
 
     # ──────────────────────────────────────────────────────────────────────────
@@ -2821,7 +2821,7 @@
     - name: "OpenCode AI TUI (pazny.opencode role)"
       ansible.builtin.import_role:
         name: pazny.opencode
-      when: install_opencode | default(false)
+      when: install_opencode | default(false) | bool
       tags: ['opencode', 'ai']
 
     # The skill library goes on every reader's shelf AFTER the agents exist, so
@@ -2843,7 +2843,7 @@
     - name: "Cortex — reasoning organ daemon (pazny.cortex role)"
       ansible.builtin.import_role:
         name: pazny.cortex
-      when: install_cortex | default(false)
+      when: install_cortex | default(false) | bool
       tags: ['cortex', 'anatomy']
 
     # ──────────────────────────────────────────────────────────────────────────
@@ -2899,7 +2899,7 @@
     - name: "Pulse — scheduled-job daemon (pazny.pulse role)"
       ansible.builtin.import_role:
         name: pazny.pulse
-      when: install_pulse | default(false)
+      when: install_pulse | default(false) | bool
       tags: ['pulse', 'anatomy']
 
     # ──────────────────────────────────────────────────────────────────────────
@@ -2934,11 +2934,11 @@
     - name: "backrest — restic UI/scheduler host daemon (pazny.backrest role)"
       ansible.builtin.import_role:
         name: pazny.backrest
-      when: install_backrest | default(false)
+      when: install_backrest | default(false) | bool
       tags: ['backrest', 'backup', 'ops']
 
     - import_tasks: tasks/pi-agents.yml
-      when: install_pi_agents | default(false)
+      when: install_pi_agents | default(false) | bool
       tags: ['pi', 'pi-agents', 'ai', 'agent']
 
     # ──────────────────────────────────────────────────────────────────────────
@@ -3000,7 +3000,7 @@
           install_nos_forum is true but files/anatomy/plugins/nos-forum-base/plugin.yml
           carries no complete gdpr: block — Art-30 is the deploy gate (docs/compliance/nos-forum.md).
         quiet: true
-      when: install_nos_forum | default(false)
+      when: install_nos_forum | default(false) | bool
       tags: ['nos_forum', 'iiab']
 
     # ──────────────────────────────────────────────────────────────────────────
@@ -3125,7 +3125,7 @@
     # (self-gated to launchd). Install just this: --tags os-resume.
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/os-resume.yml
-      when: install_os_resume | default(true)
+      when: install_os_resume | default(true) | bool
       tags: ['os-resume']
 
     # ──────────────────────────────────────────────────────────────────────────

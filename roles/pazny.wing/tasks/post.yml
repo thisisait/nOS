@@ -369,7 +369,7 @@
     'Created' in (_wing_face_bff_token.stdout | default(''))
     or 'Updated' in (_wing_face_bff_token.stdout | default(''))
   no_log: true
-  when: install_face | default(false)
+  when: install_face | default(false) | bool
 
 # The emergency-halt break-glass (`nos halt`, docs/nos-cli.md). wing.halt reaches
 # Admin:halt/resume and no other operator verb; wing.write: POST. Its only holder
@@ -477,7 +477,7 @@
     'Created' in (_wing_openclaw_token.stdout | default(''))
     or 'Updated' in (_wing_openclaw_token.stdout | default(''))
   no_log: true
-  when: install_openclaw | default(false)
+  when: install_openclaw | default(false) | bool
 
 # ── Pulse job registration via Wing API ──────────────────────────────────────
 # Plugin loader does not yet process pulse: blocks — jobs are registered here

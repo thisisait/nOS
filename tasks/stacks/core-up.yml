@@ -208,7 +208,7 @@
     src: "stacks/observability/docker-compose.yml.j2"
     dest: "{{ stacks_dir }}/observability/docker-compose.yml"
     mode: '0644'
-  when: install_observability | default(true)
+  when: install_observability | default(true) | bool
 
 # ── Wave 2 per-role compose overrides (rendered BEFORE enumerate + compose up) ─
 # Each role renders its compose fragment into {{ stacks_dir }}/<stack>/overrides/<svc>.yml.
@@ -218,12 +218,12 @@
 # Infra roles
 - name: "[Core] pazny.mariadb render"
   ansible.builtin.include_role: { name: pazny.mariadb, apply: { tags: ['mariadb', 'database'] } }
-  when: install_mariadb | default(false)
+  when: install_mariadb | default(false) | bool
   tags: ['mariadb', 'database']
 
 - name: "[Core] pazny.postgresql render"
   ansible.builtin.include_role: { name: pazny.postgresql, apply: { tags: ['postgresql', 'database'] } }
-  when: install_postgresql | default(false)
+  when: install_postgresql | default(false) | bool
   tags: ['postgresql', 'database']
 
 - name: "[Core] pazny.redis render"
@@ -233,37 +233,37 @@
 
 - name: "[Core] pazny.authentik render + blueprints"
   ansible.builtin.include_role: { name: pazny.authentik, apply: { tags: ['authentik', 'iam'] } }
-  when: install_authentik | default(false)
+  when: install_authentik | default(false) | bool
   tags: ['authentik', 'iam']
 
 - name: "[Core] pazny.infisical render"
   ansible.builtin.include_role: { name: pazny.infisical, apply: { tags: ['infisical', 'iam'] } }
-  when: install_infisical | default(false)
+  when: install_infisical | default(false) | bool
   tags: ['infisical', 'iam']
 
 - name: "[Core] pazny.traefik render"
   ansible.builtin.include_role: { name: pazny.traefik, apply: { tags: ['traefik', 'infra'] } }
-  when: install_traefik | default(true)
+  when: install_traefik | default(true) | bool
   tags: ['traefik', 'infra']
 
 - name: "[Core] pazny.portainer render"
   ansible.builtin.include_role: { name: pazny.portainer, apply: { tags: ['portainer', 'infra'] } }
-  when: install_portainer | default(false)
+  when: install_portainer | default(false) | bool
   tags: ['portainer', 'infra']
 
 - name: "[Core] pazny.bluesky_pds render"
   ansible.builtin.include_role: { name: pazny.bluesky_pds, apply: { tags: ['bluesky-pds', 'infra'] } }
-  when: install_bluesky_pds | default(false)
+  when: install_bluesky_pds | default(false) | bool
   tags: ['bluesky-pds', 'infra']
 
 - name: "[Core] pazny.smtp_stalwart render (Track G — production SMTP/IMAP/JMAP)"
   ansible.builtin.include_role: { name: pazny.smtp_stalwart, apply: { tags: ['smtp', 'stalwart', 'mail', 'infra'] } }
-  when: install_smtp_stalwart | default(false)
+  when: install_smtp_stalwart | default(false) | bool
   tags: ['smtp', 'stalwart', 'mail', 'infra']
 
 - name: "[Core] pazny.spacetimedb render"
   ansible.builtin.include_role: { name: pazny.spacetimedb, apply: { tags: ['spacetimedb', 'infra'] } }
-  when: install_spacetimedb | default(false)
+  when: install_spacetimedb | default(false) | bool
   tags: ['spacetimedb', 'infra']
 
 - name: "[Core] pazny.bone render"
@@ -271,28 +271,28 @@
   # task seeds the state dir + service-registry placeholder so the bind
   # mounts have valid sources at compose-up time.
   ansible.builtin.include_role: { name: pazny.bone, apply: { tags: ['bone', 'api', 'infra'] } }
-  when: install_bone | default(false)
+  when: install_bone | default(false) | bool
   tags: ['bone', 'api', 'infra']
 
 # Observability roles
 - name: "[Core] pazny.grafana render"
   ansible.builtin.include_role: { name: pazny.grafana, apply: { tags: ['grafana', 'observability'] } }
-  when: install_observability | default(true)
+  when: install_observability | default(true) | bool
   tags: ['grafana', 'observability']
 
 - name: "[Core] pazny.prometheus render"
   ansible.builtin.include_role: { name: pazny.prometheus, apply: { tags: ['prometheus', 'observability'] } }
-  when: install_observability | default(true)
+  when: install_observability | default(true) | bool
   tags: ['prometheus', 'observability']
 
 - name: "[Core] pazny.loki render"
   ansible.builtin.include_role: { name: pazny.loki, apply: { tags: ['loki', 'observability'] } }
-  when: install_observability | default(true)
+  when: install_observability | default(true) | bool
   tags: ['loki', 'observability']
 
 - name: "[Core] pazny.tempo render"
   ansible.builtin.include_role: { name: pazny.tempo, apply: { tags: ['tempo', 'observability'] } }
-  when: install_observability | default(true)
+  when: install_observability | default(true) | bool
   tags: ['tempo', 'observability']
 
 - name: "[Core] pazny.influxdb render"
@@ -339,7 +339,7 @@
     dest: "{{ stacks_dir }}/observability/blackbox/config.yml"
     mode: '0644'
     force: true
-  when: install_observability | default(true)
+  when: install_observability | default(true) | bool
 
 # ── Pre-check: Docker daemon must be ready ──────────────────────────────────
 

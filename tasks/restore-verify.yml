@@ -15,7 +15,7 @@
   register: _rv_maria_ps
   changed_when: false
   failed_when: "'infra-mariadb-1' not in _rv_maria_ps.stdout"
-  when: install_mariadb | default(false)
+  when: install_mariadb | default(false) | bool
 
 - name: "[Restore-verify] MariaDB has at least the expected user databases"
   ansible.builtin.shell: |
@@ -30,14 +30,14 @@
   changed_when: false
   no_log: true
   failed_when: (_rv_maria_dbs.stdout | trim | int) < (restore_verify_min_mariadb_dbs | default(1) | int)
-  when: install_mariadb | default(false)
+  when: install_mariadb | default(false) | bool
 
 - name: "[Restore-verify] PostgreSQL container is running"
   ansible.builtin.command: docker ps --filter "name=infra-postgresql-1" --format "{% raw %}{{.Names}}{% endraw %}"
   register: _rv_pg_ps
   changed_when: false
   failed_when: "'infra-postgresql-1' not in _rv_pg_ps.stdout"
-  when: install_postgresql | default(false)
+  when: install_postgresql | default(false) | bool
 
 - name: "[Restore-verify] PostgreSQL has at least the expected databases"
   ansible.builtin.shell: |
@@ -49,7 +49,7 @@
   register: _rv_pg_dbs
   changed_when: false
   failed_when: (_rv_pg_dbs.stdout | trim | int) < (restore_verify_min_pg_dbs | default(2) | int)
-  when: install_postgresql | default(false)
+  when: install_postgresql | default(false) | bool
 
 - name: "[Restore-verify] Authentik user count (>=1 proves the PG dump replayed)"
   ansible.builtin.shell: |
@@ -61,7 +61,7 @@
   register: _rv_ak_users
   changed_when: false
   failed_when: (_rv_ak_users.stdout | trim | int) < 1
-  when: install_authentik | default(false)
+  when: install_authentik | default(false) | bool
 
 - name: "[Restore-verify] Wing DB has rows (proves wing-db.sql.gz replayed)"
   ansible.builtin.shell: |
@@ -73,7 +73,7 @@
   register: _rv_wing
   changed_when: false
   failed_when: false
-  when: install_wing | default(true)
+  when: install_wing | default(true) | bool
 
 - name: "[Restore-verify] Summary"
   ansible.builtin.debug:

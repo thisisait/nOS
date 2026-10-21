@@ -261,4 +261,4 @@
     state: link
     force: true
   notify: Restart nginx
-  when: install_nginx | default(true)
+  when: install_nginx | default(true) | bool

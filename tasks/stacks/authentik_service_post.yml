@@ -30,7 +30,7 @@
   ansible.builtin.command: >
     {{ docker_bin }} compose -p devops exec -T -u git gitea gitea --version
   register: _gitea_running
-  when: install_gitea | default(false)
+  when: install_gitea | default(false) | bool
   changed_when: false
   failed_when: false
 
@@ -104,7 +104,7 @@
   ansible.builtin.set_fact:
     _gitea_oauth_fp: >-
       {{ (nos_derived_secrets.oidc_gitea ~ '|' ~ (authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))) ~ '|nos_roles|admin') | hash('sha256') }}
-  when: install_gitea | default(false)
+  when: install_gitea | default(false) | bool
   no_log: true
 
 - name: "[Authentik->Gitea] Read the last-written fingerprint"
@@ -112,7 +112,7 @@
     src: "{{ ansible_facts['env']['HOME'] }}/.nos/gitea-oauth-source.sha256"
   register: _gitea_oauth_fp_prev
   failed_when: false
-  when: install_gitea | default(false)
+  when: install_gitea | default(false) | bool
 
 - name: "[Authentik->Gitea] Rotate Authentik source secret (reconverge)"
   ansible.builtin.command:
@@ -195,7 +195,7 @@
     status_code: [200]
     timeout: 10
   register: _portainer_public
-  when: install_portainer | default(false)
+  when: install_portainer | default(false) | bool
   failed_when: false
 
 - name: "[Authentik->Portainer] Fail if SSO is NOT active (AuthenticationMethod != 3)"
@@ -229,7 +229,7 @@
   register: _nc_running
   changed_when: false
   failed_when: false
-  when: install_nextcloud | default(false)
+  when: install_nextcloud | default(false) | bool
 
 - name: "[Authentik->Nextcloud] Install user_oidc app"
   ansible.builtin.command: >
