@@ -2,17 +2,22 @@
     the receptor reads it with the stdlib, the Thalamus will read the same file.
     nos_identity_map wins whole; empty = the roster: each nos_extra_identities name is a login
     of its own name, the operator's login is nos_primary_admin. A login not listed is refused. -#}
+{#- A tier's own groups: tier 1 is every tier-1 group (nos-providers + nos-admins), never `| last`. -#}
+{%- set rt = namespace(own={}) -%}
+{%- for t in authentik_rbac_tiers -%}
+{%- set _ = rt.own.update({t.tier | int: (t.groups | list) if t.tier | int == 1 else [t.groups | last]}) -%}
+{%- endfor -%}
 {%- set ns = namespace(logins={}) -%}
 {%- for u in nos_extra_identities | default([]) -%}
-{%- set _ = ns.logins.update({u.name: {'username': u.name, 'groups': [(authentik_rbac_tiers | selectattr('tier', 'equalto', u.tier | int) | first).groups | last]}}) -%}
+{%- set _ = ns.logins.update({u.name: {'username': u.name, 'groups': rt.own[u.tier | int]}}) -%}
 {%- endfor -%}
 {#- The unix realm (roles/pazny.linux.users): each declared login of its own name, so
     every person with a host login reaches Iris as themselves. Synthetics only while on. -#}
 {%- for u in (nos_identities | default([])) + ((nos_synthetic_identities | default([])) if nos_test_users_enabled | default(false) else []) -%}
 {%- if 'unix' in (u.realms | default([])) -%}
-{%- set _ = ns.logins.update({u.name: {'username': u.name, 'groups': [(authentik_rbac_tiers | selectattr('tier', 'equalto', u.tier | int) | first).groups | last]}}) -%}
+{%- set _ = ns.logins.update({u.name: {'username': u.name, 'groups': rt.own[u.tier | int]}}) -%}
 {%- endif -%}
 {%- endfor -%}
 {%- set op = nos_identities | selectattr('name', 'equalto', nos_primary_admin) | first -%}
-{%- set _ = ns.logins.update({ansible_facts['user_id']: {'username': nos_primary_admin, 'groups': [(authentik_rbac_tiers | selectattr('tier', 'equalto', op.tier | int) | first).groups | last]}}) -%}
+{%- set _ = ns.logins.update({ansible_facts['user_id']: {'username': nos_primary_admin, 'groups': rt.own[op.tier | int]}}) -%}
 {{ {'logins': nos_identity_map or ns.logins} | to_nice_json }}

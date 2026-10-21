@@ -46,7 +46,7 @@ c.GenericOAuthenticator.admin_groups = {{ (authentik_rbac_tiers | selectattr('ti
 # (roles/pazny.linux.users). Any other passwd row — root, system accounts, an
 # operator account nOS did not make — is not a person who may have notebooks,
 # whatever an SSO username claims.
-UNIX_REALM_GROUPS = {{ authentik_rbac_tiers | map(attribute='groups') | map('last') | list | to_json }}
+UNIX_REALM_GROUPS = {{ authentik_rbac_tiers | map(attribute='groups') | sum(start=[]) | unique | list | to_json }}
 
 
 def _in_the_unix_realm(name):

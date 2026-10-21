@@ -196,9 +196,22 @@ def realm_accounts(merged: dict, secrets: dict) -> dict[str, list[str] | None]:
     return out
 
 
+def tier_groups(merged: dict) -> dict[int, list[str]]:
+    """Each tier's own groups, as roles/pazny.linux.users and the receptor
+    map assign them: tier 1 is every tier-1 group (nos-providers AND
+    nos-admins), every other tier its last group."""
+    tiers = [t for t in merged.get("authentik_rbac_tiers") or []
+             if isinstance(t, dict) and str(t.get("tier")).isdigit()]
+    own: dict[int, list[str]] = {}
+    for t in tiers:
+        groups = [str(g) for g in t.get("groups") or []]
+        own[int(t["tier"])] = groups if int(t["tier"]) == 1 else groups[-1:]
+    return own
+
+
 def unix_logins(merged: dict) -> list[str] | None:
     """The unix realm's holdings: members of the RBAC tier groups that
-    roles/pazny.linux.users manages (authentik_rbac_tiers[].groups[-1]). The
+    roles/pazny.linux.users manages (every tier's own groups). The
     host's other accounts are not the realm's, so they are never UNDECLARED.
     None off Linux — macOS host accounts are not nOS's to make."""
     if not sys.platform.startswith("linux"):
@@ -206,8 +219,7 @@ def unix_logins(merged: dict) -> list[str] | None:
     import grp
     import pwd
 
-    tiers = merged.get("authentik_rbac_tiers") or []
-    names = {str((t.get("groups") or [""])[-1]) for t in tiers if isinstance(t, dict)}
+    names = {g for gs in tier_groups(merged).values() for g in gs}
     held: set[str] = set()
     for name in filter(None, names):
         try:
@@ -281,6 +293,7 @@ def main() -> int:
               "nothing to check the realms against")
     else:
         print(f"declared identities ({len(roster)}):")
+        own = tier_groups(merged)
         for ident in roster:
             marks = []
             for realm in ident.get("realms", []) or []:
@@ -294,9 +307,12 @@ def main() -> int:
                     marks.append(f"{realm}={OK}")
                 else:
                     marks.append(f"{realm}={MISSING}")
+            tier = str(ident.get("tier", "?"))
+            groups = ",".join(own.get(int(tier), [])) if tier.isdigit() else ""
             print(
                 f"  {ident['name']:<24} kind={ident.get('kind', '?'):<9}"
-                f" tier={ident.get('tier', '?')}  " + "  ".join(marks)
+                f" tier={tier} groups={groups or UNKNOWN}  "
+                + "  ".join(marks)
             )
 
     if any(
