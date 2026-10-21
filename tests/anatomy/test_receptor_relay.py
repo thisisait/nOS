@@ -140,7 +140,7 @@ def test_the_default_map_is_derived_from_the_roster():
            "nos_identities": [{"name": "pazny", "tier": 1}], "nos_identity_map": {},
            "nos_extra_identities": [{"name": "iris", "email": "i@x", "tier": 3}]}
     got = json.loads(env.from_string(tpl).render(**ctx))
-    assert got == {"logins": {"pazny": {"username": "pazny", "groups": ["nos-admins"]},
+    assert got == {"logins": {"pazny": {"username": "pazny", "groups": ["nos-providers", "nos-admins"]},
                               "iris": {"username": "iris", "groups": ["nos-users"]}}}, got
     over = {"studio": {"username": "pazny", "groups": ["nos-admins"]}}
     assert json.loads(env.from_string(tpl).render(**{**ctx, "nos_identity_map": over})) == {"logins": over}
