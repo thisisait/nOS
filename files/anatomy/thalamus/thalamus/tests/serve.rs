@@ -4038,7 +4038,7 @@ fn an_absent_topic_is_said_not_in_our_knowledge_and_an_unknown_node_reads_nothin
     let rig = rig_n("know-0", mapped(), vec![memory(true, serde_json::json!([])), r#"{"success": true, "data": null}"#.into()],
         vec![call("search_knowledge", r#"{"q": "Haber process"}"#), call("read_node", r#"{"id": "99.99"}"#),
              answer("That is not in our knowledge.")]);
-    let (got, _) = tool_turn(&rig, "what does our knowledge base say about the Haber process?");
+    let (got, _) = tool_turn(&rig, "what do we hold on the Haber process?");
     let found = tool_result(&rig, 1);
     assert_eq!(found["items"], serde_json::json!([]), "{found}");
     assert!(found["said"].as_str().is_some_and(|s| s.contains("not in our knowledge")), "nothing found tells the model what to say: {found}");
@@ -4087,7 +4087,7 @@ fn an_answer_after_a_search_cites_a_drawn_node_or_says_it_is_not_in_our_knowledg
     // From memory, then asked once: the person hears only the grounded answer; the ledger keeps both.
     let rig = rig_n("ground", mapped(), vec![near()], vec![call("search_knowledge", r#"{"q": "Haber process"}"#),
         answer("The Haber process makes ammonia (Haber and Bosch)."), answer("That is not in our knowledge.")]);
-    let (got, session) = tool_turn(&rig, "what does our knowledge base say about the Haber process?");
+    let (got, session) = tool_turn(&rig, "what do we hold on the Haber process?");
     assert_eq!(told(&got), (vec!["That is not in our knowledge.".to_string()], vec![]), "{got:?}");
     let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[2].1).unwrap();
     let asked = body["messages"].as_array().unwrap().last().unwrap().clone();
@@ -4100,7 +4100,7 @@ fn an_answer_after_a_search_cites_a_drawn_node_or_says_it_is_not_in_our_knowledg
         answer("Grace Hopper, 1959."), answer("Grace Hopper designed it in 1959.")]);
     let s = connect(&rig.sock);
     let mut r = BufReader::new(s.try_clone().unwrap());
-    let mut got = turn(&s, &mut r, None, "per our knowledge base, who designed COBOL?");
+    let mut got = turn(&s, &mut r, None, "who designed COBOL, per what we hold?");
     got.extend(next(&mut r)); // the notice comes first, so the person reads the answer below it
     let (texts, notes) = told(&got);
     assert_eq!(texts, vec!["Grace Hopper designed it in 1959.".to_string()], "{got:?}");
