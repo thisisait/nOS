@@ -23,7 +23,7 @@ import sys
 from pathlib import Path
 
 ALPHA = 0.05
-TOP = ("plan_path", "primer_sha256", "grammar_sha256", "registry_hash")
+TOP = ("plan_path", "engine", "primer_sha256", "grammar_sha256", "registry_hash", "catalogue", "catalogue_digest")
 
 
 def mcnemar(a: int, b: int) -> float:
@@ -66,7 +66,14 @@ def compare(a: dict, b: dict) -> dict:
         verdict = "B better" if len(b_only) > len(a_only) else "A better"
     else:
         verdict = "no measured difference"
-    return {"axes": diff, "paired": len(both), "a_pass": sum(ca[i]["pass"] for i in both),
+    kinds = sorted({ca[i].get("kind") or "-" for i in both})
+    by_kind = {}
+    for k in kinds:
+        ao = sum(1 for i in a_only if (ca[i].get("kind") or "-") == k)
+        bo = sum(1 for i in b_only if (ca[i].get("kind") or "-") == k)
+        by_kind[k] = {"paired": sum(1 for i in both if (ca[i].get("kind") or "-") == k),
+                      "a_only": ao, "b_only": bo, "p": mcnemar(ao, bo)}
+    return {"axes": diff, "by_kind": by_kind, "paired": len(both), "a_pass": sum(ca[i]["pass"] for i in both),
             "b_pass": sum(cb[i]["pass"] for i in both), "a_only": len(a_only), "b_only": len(b_only),
             "a_only_ids": a_only, "b_only_ids": b_only, "left_out": left_out, "p": p, "verdict": verdict}
 
@@ -87,6 +94,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"axes: {', '.join(r['axes']) or 'none (repeatability check)'}")
         print(f"paired {r['paired']} · A {r['a_pass']} · B {r['b_pass']} · only A {r['a_only']} · only B {r['b_only']} "
               f"· McNemar p={r['p']:.4f} · left out {len(r['left_out'])}")
+        for k, v in r["by_kind"].items():
+            if v["a_only"] or v["b_only"]:
+                print(f"  {k:<12} paired {v['paired']} · only A {v['a_only']} · only B {v['b_only']} · p={v['p']:.4f}")
         for side in ("a", "b"):
             if r[f"{side}_only_ids"]:
                 print(f"  only {side.upper()}: {', '.join(r[f'{side}_only_ids'])}")
