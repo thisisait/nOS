@@ -178,15 +178,19 @@ def own_from_cumulative(cum):
 
 
 def jinja_tier(root, rel, anchor):
-    """A line holding `selectattr('tier', 'equalto', N) ... .groups` (and maybe `| last`)."""
+    """`selectattr('tier', 'equalto', N) | first).groups ...` (or `| map(attribute='groups') | first`),
+    read for what the rest of the `{{ }}` keeps of tier N's groups."""
     lines = _read(root, rel)
     i = _find(lines, anchor, rel)
     m = re.search(r"selectattr\('tier',\s*'equalto',\s*(\d+)\)", lines[i])
-    if not m:
-        raise Unknown(f"{rel}:{i + 1}: no tier expression")
+    row = m and re.match(r"\s*\|\s*first\s*\)\s*\.groups|\s*\|\s*map\(attribute='groups'\)\s*\|\s*first",
+                         lines[i][m.end():])
+    if not row:
+        raise Unknown(f"{rel}:{i + 1}: no tier expression the parser models")
+    how = _pick(lines[i][m.end() + row.end():].split("}}", 1)[0], rel, i + 1)
     cum, _ = yaml_tiers(root)
     groups = cum[int(m.group(1))]
-    return (groups[-1:] if re.search(r"\|\s*last\b", lines[i][m.end():]) else groups), i + 1
+    return {"all": groups, "first": groups[:1], "last": groups[-1:]}[how], i + 1
 
 
 _SELECT = re.compile(r"\|\s*(first|last)\b|map\(\s*['\"](first|last)['\"]\s*\)|\[\s*(-?\d+)\s*\]")
