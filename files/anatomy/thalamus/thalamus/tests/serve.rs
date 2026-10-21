@@ -7101,14 +7101,16 @@ fn merge(a: &mut serde_json::Value, b: &serde_json::Value) {
 #[test]
 fn scaffold_parts_assemble_into_a_manifest_the_parser_accepts() {
     let rig = app_rig("scaffold", manager(), vec![
-        call("scaffold_app", r#"{"kind": "infra", "name": "notes", "runtime": "python", "port": 8123}"#),
+        call("scaffold_app", r#"{"kind": "infra", "name": "notes", "runtime": "python"}"#),
         call("scaffold_app", r#"{"kind": "backend", "name": "notes", "runtime": "python"}"#),
         call("scaffold_app", r#"{"kind": "frontend", "name": "notes"}"#), answer("x")]);
     tool_turn(&rig, "scaffold me a notes app");
     let (infra, backend, front) = (tool_result(&rig, 1), tool_result(&rig, 2), tool_result(&rig, 3));
     let svc = &infra["part"]["compose"]["services"]["notes"];
-    assert_eq!(svc["ports"], serde_json::json!(["127.0.0.1:8123:8000"]), "{infra}");
-    assert_eq!(svc["networks"], serde_json::json!(["apps_net"]), "{infra}");
+    // Operator 2026-10-21: expose, no host port, by default; no networks list (the runner attaches apps_net
+    // and Traefik's network; a declared list would drop Traefik's).
+    assert_eq!((&svc["expose"], &svc["ports"], &svc["networks"]), (&serde_json::json!(["8000"]), &serde_json::Value::Null,
+               &serde_json::Value::Null), "{infra}");
     assert!(svc["image"].as_str().is_some_and(|i| i.starts_with("docker.io/library/python:3.")), "{infra}");
     assert!(backend["part"].to_string().contains("$SERVICE_FQDN_NOTES"), "{backend}");
     let f = front.to_string();
@@ -7124,10 +7126,12 @@ fn scaffold_parts_assemble_into_a_manifest_the_parser_accepts() {
 }
 
 #[test]
-fn scaffold_app_refuses_an_infra_part_without_a_port() {
-    let rig = app_rig("scaffold-port", manager(), vec![call("scaffold_app", r#"{"kind": "infra", "name": "notes"}"#), answer("x")]);
-    tool_turn(&rig, "scaffold");
-    assert!(tool_result(&rig, 1)["error"].as_str().unwrap_or_default().contains("app_slots"), "{}", tool_result(&rig, 1));
+fn scaffold_app_adds_a_loopback_host_port_only_when_asked() {
+    let rig = app_rig("scaffold-port", manager(), vec![
+        call("scaffold_app", r#"{"kind": "infra", "name": "notes", "port": 8123}"#), answer("x")]);
+    tool_turn(&rig, "scaffold, with a debug port");
+    let svc = &tool_result(&rig, 1)["part"]["compose"]["services"]["notes"];
+    assert_eq!((&svc["ports"], &svc["expose"]), (&serde_json::json!(["127.0.0.1:8123:80"]), &serde_json::json!(["80"])), "{svc}");
 }
 
 #[test]
