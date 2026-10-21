@@ -10,8 +10,7 @@ The iris-bench knowledge domain went from 9/24 to 13/24 with the vector leg.
 
 THE CHECK. Rendered for Linux with Ollama installed, the default is
 ``ollama_url``; for macOS it is http://host.docker.internal:11434 (Docker
-Desktop's way to the host loopback; the operator host ran it from config.yml
-for months); without Ollama it is "". Operator 2026-10-21: on by default.
+Desktop's way to the host loopback; the operator host runs it from config.yml); without Ollama it is "". Operator 2026-10-21: on by default.
 
 CEILING. Renders the default with stock Jinja; the effect is the
 ``[legs: vector, …]`` line of tools/keap-semantic-search.py on a live estate.

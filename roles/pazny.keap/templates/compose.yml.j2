@@ -145,9 +145,8 @@ services:
 {% if keap_ollama_url | default('') %}
       # Optional live embedder for free-text semantic search. Stored vectors
       # come from the host-side keap-embed-sync Pulse job either way; this
-      # only embeds ad-hoc QUERY text. Docker Desktop (Mac): set to
-      # http://host.docker.internal:11434. Linux host-gateway cannot reach a
-      # loopback-bound Ollama, hence default-off.
+      # only embeds ad-hoc QUERY text. On by default (keap_ollama_url): Mac via
+      # host.docker.internal, Linux via the docker-bridge-bound Ollama.
       KEAP_OLLAMA_URL: "{{ keap_ollama_url }}"
 {% endif %}
     networks:
