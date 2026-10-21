@@ -196,8 +196,12 @@ def run(uuid: str) -> dict:
         res = res if isinstance(res, dict) else {}
         events.append({"id": r["id"], "ts": r["ts"], "type": r["type"], "task": r["task"],
                        "tool_use_id": res.get("tool_use_id"), "is_error": res.get("is_error")})
-    return {"session": dict(one) if one else None, "threads": threads, "iterations": iterations,
-            "events": events, "events_cut": len(rows) > RUN_EVENTS_MAX, "children": children}
+    out = {"session": dict(one) if one else None, "threads": threads, "iterations": iterations,
+           "events": events, "events_cut": len(rows) > RUN_EVENTS_MAX, "children": children,
+           "found": bool(one or children or events)}
+    if not out["found"]:
+        out["said"] = f"no run {uuid} in wing.db: no session, no run started under it, no event"
+    return out
 
 
 def main() -> int:
