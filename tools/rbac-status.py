@@ -3,7 +3,8 @@
 
 Prints state/genome/permissions.yml as capability x role, then reads each
 enforcement point's LITERAL in the repo (a PHP const, a TS const, a Jinja tier
-expression, a YAML tier list, an agent scope) and names, with file:line, the ones
+expression, a YAML tier list, an agent scope, a Bone loop identity, a reserved
+Wing bearer scope, an app tier) and names, with file:line, the ones
 that disagree with the genome. A point whose source cannot be read or parsed is
 UNKNOWN, never ok. Reads the repo only (`--root`), never the live estate; writes
 nothing; exits 0 whatever it finds. Doctrine: ssot/doctrine/permissions.md.
@@ -237,6 +238,80 @@ def nodered_admin(root, rel):
     return "every authenticated user", i + 1
 
 
+LOOPAUTH = "files/anatomy/bone/loopauth.py"
+PROVISION = "files/anatomy/wing/bin/provision-token.php"
+DGX_IDENTITY = "bootstrap/minimal-linux-dgx/identity/keap-identity.py"
+
+
+def bone_loop(root):
+    """loopauth.py LOOP_SCOPES + IDENTITIES → {loop:<scope>: roles}; `operator` is operator-local."""
+    import ast
+    src = "\n".join(_read(root, LOOPAUTH))
+    try:
+        found = {t.id: n for n in ast.walk(ast.parse(src)) if isinstance(n, (ast.Assign, ast.AnnAssign))
+                 for t in (n.targets if isinstance(n, ast.Assign) else [n.target])
+                 if isinstance(t, ast.Name) and t.id in ("LOOP_SCOPES", "IDENTITIES")}
+
+        def scopes(node):  # frozenset({"a", "b"}) only
+            assert isinstance(node, ast.Call) and getattr(node.func, "id", "") == "frozenset"
+            assert len(node.args) == 1 and isinstance(node.args[0], ast.Set)
+            return {ast.literal_eval(e) for e in node.args[0].elts}
+
+        out = {f"loop:{s}": [] for s in scopes(found["LOOP_SCOPES"].value)}
+        ids = found["IDENTITIES"].value
+        assert isinstance(ids, ast.Dict)
+        for k, v in zip(ids.keys, ids.values):
+            assert isinstance(v, ast.Tuple) and len(v.elts) == 2
+            name = ast.literal_eval(k)
+            for s in scopes(v.elts[1]):
+                out.setdefault(f"loop:{s}", []).append("operator-local" if name == "operator" else name)
+    except (SyntaxError, KeyError, AssertionError, ValueError):
+        raise Unknown(f"{LOOPAUTH}: LOOP_SCOPES/IDENTITIES not the literal shape the parser models") from None
+    return {c: sorted(r) for c, r in out.items()}, found["IDENTITIES"].lineno
+
+
+def wing_reserved(root):
+    """provision-token.php `in_array('<scope>', $requested, true) && $name !== '<bearer>'` → {scope: (door, line)}."""
+    lines = _read(root, PROVISION)
+    rx = re.compile(r"in_array\('([\w.]+)',\s*\$requested,\s*true\)\s*&&\s*\$name\s*!==\s*'([\w-]+)'")
+    out = {m.group(1): (f"door:{m.group(2)}", n) for n, line in enumerate(lines, 1) for m in rx.finditer(line)}
+    if not out:
+        raise Unknown(f"{PROVISION}: no reserved scope found")
+    return out
+
+
+def app_tiers(root):
+    """apps/*.yml declaring both authentik.tier and nginx.rbac_tier → [(app, tier, rbac_tier, line)]."""
+    import yaml
+    out = []
+    for f in sorted((root / "apps").glob("*.yml")):
+        rel = str(f.relative_to(root))
+        lines = _read(root, rel)
+        try:
+            d = yaml.safe_load("\n".join(lines)) or {}
+            a, b = (d.get("authentik") or {}).get("tier"), (d.get("nginx") or {}).get("rbac_tier")
+        except Exception:  # noqa: BLE001
+            raise Unknown(f"{rel}: unparseable") from None
+        if a is not None and b is not None:
+            out.append((f.stem, int(a), int(b), f"{rel}:{_find(lines, r'^authentik:', rel) + 1}"))
+    if not out:
+        raise Unknown("apps/: no app declares both authentik.tier and nginx.rbac_tier")
+    return out
+
+
+def dgx_identity(root):
+    """keap-identity.py `if "<linux group>" in mine: return "<groups>"` → [(linux group, asserted, line)]."""
+    lines = _read(root, DGX_IDENTITY)
+    out = []
+    for n, line in enumerate(lines[:-1]):
+        m, r = re.search(r'if "([\w-]+)" in mine:', line), re.search(r'return "([^"]+)"', lines[n + 1])
+        if m and r:
+            out.append((m.group(1), sorted(r.group(1).split(",")), n + 1))
+    if not out:
+        raise Unknown(f"{DGX_IDENTITY}: no group mapping found")
+    return out
+
+
 # ── genome helpers ─────────────────────────────────────────────────────────
 
 def load_genome(root):
@@ -377,6 +452,59 @@ def evaluate(root: pathlib.Path) -> dict:
 
     point("keap-internal", "UNKNOWN", None, "KEAP decides tier 1 internally; its source is not in this repo")
 
+    try:
+        got, line = bone_loop(root)
+        want = {c: sorted(r) for c, r in caps.items() if c.startswith("loop:")}
+        bad = {c: got.get(c, []) for c in sorted(set(got) | set(want)) if got.get(c, []) != want.get(c, [])}
+        at = f"{LOOPAUTH}:{line}"
+        drifted("bone-loop-identities", at, bad, {c: want.get(c, []) for c in bad}) if bad \
+            else point("bone-loop-identities", "ok", at)
+    except Unknown as e:
+        point("bone-loop-identities", "UNKNOWN", None, str(e))
+
+    try:
+        reserved = wing_reserved(root)
+        held = {c: sorted(r for r in roles if r.startswith("door:")) for c, roles in caps.items()
+                if c != "identity.assert" and any(r.startswith("door:") for r in roles)}
+        bad = 0
+        for c in sorted(set(reserved) | set(held)):
+            door, n = reserved.get(c, (None, None))
+            if held.get(c, []) != ([door] if door else []):
+                at = f"{PROVISION}:{n}" if n else f"{GENOME}:{cap_at.get(c, 1)}"
+                drifted("wing-reserved-scopes", at, f"{c} reserved to {door}", held.get(c, []))
+                bad += 1
+        if not bad:
+            point("wing-reserved-scopes", "ok", PROVISION)
+    except Unknown as e:
+        point("wing-reserved-scopes", "UNKNOWN", None, str(e))
+
+    try:
+        bad = 0
+        for app, tier, rbac, at in app_tiers(root):
+            want = caps.get(f"app.reach:{app}")
+            says = [f"tier:{t}" for t in range(1, tier + 1)]
+            if tier != rbac or (want is not None and sorted(want) != says):
+                drifted("app-tiers", at, f"{app} authentik.tier {tier}, nginx.rbac_tier {rbac}", want)
+                bad += 1
+        if not bad:
+            point("app-tiers", "ok", "apps/")
+    except Unknown as e:
+        point("app-tiers", "UNKNOWN", None, str(e))
+
+    try:
+        bad = 0
+        for group, asserted, n in dgx_identity(root):
+            tier = next((t for t, g in tiers.items() if sorted(g) == asserted), None)
+            if tier is None or group not in tiers[tier]:
+                drifted("dgx-keap-identity", f"{DGX_IDENTITY}:{n}", f"linux group {group} asserts {asserted}",
+                        f"{group} is not a tier-{tier} group {sorted(tiers[tier])}" if tier
+                        else "no tier holds that set")
+                bad += 1
+        if not bad:
+            point("dgx-keap-identity", "ok", DGX_IDENTITY)
+    except Unknown as e:
+        point("dgx-keap-identity", "UNKNOWN", None, str(e))
+
     _scopes(root, caps, cap_at, point, drifted)
     return {"matrix": caps, "points": points, "drift": drift}
 
@@ -385,7 +513,8 @@ def _scopes(root, caps, cap_at, point, drifted):
     """Agent scopes: declared ⊆ genome ⊆ enforced, and the genome's agents are the declarers."""
     import yaml
 
-    agent_caps = {c for c, r in caps.items() if any(x.startswith("agent:") for x in r) or c.startswith("nos:")}
+    agent_caps = {c for c, r in caps.items() if (any(x.startswith("agent:") for x in r) or c.startswith("nos:"))
+                  and not c.startswith("loop:")}  # loop:* is Bone loopauth, read by bone-loop-identities
     declared: dict[str, set[str]] = {}
     files = sorted((root / AGENTS).glob("*/agent.yml"))
     if not files:

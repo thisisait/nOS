@@ -7,7 +7,8 @@
 # then it is prescriptive. Where points disagree, it holds what most of them do.
 #
 # Roles: tier:1..4 (people, via `tiers:` groups), agent:<name> (files/anatomy/agents/),
-# door:<bearer> (a named Wing bearer), operator-local (loopback break-glass).
+# door:<bearer> (a named Wing bearer), engine:<name> (a non-agent machine identity),
+# operator-local (loopback break-glass).
 # Doors and agents live here beside people: one file (operator to rule, §5.3).
 
 version: 1
@@ -27,13 +28,16 @@ roles:
   - tier:4
   - door:face-bff
   - door:thalamus
-  - operator-local   # no enforcement point inventoried yet
+  - door:wing-halt            # the operator's shell (`nos halt`)
+  - door:ansible-provisioned  # the converge's own Wing bearer
+  - engine:evaluator          # Pulse judging a loop proposal (Bone loopauth)
+  - operator-local            # the human on loopback (Bone loopauth `operator`)
   # agent:<name> — one per files/anatomy/agents/<name>/, named in the rows below
 
 capabilities:
   # ── people: who is tier 1, and what it opens ───────────────────────────
   idp.superuser: [tier:1]            # Authentik is_superuser (00-admin-groups blueprint)
-  wing.operator: [tier:1]            # Wing EndUser::OPERATOR_GROUPS, requireSuperAdmin
+  wing.operator: [tier:1, door:face-bff]  # EndUser::OPERATOR_GROUPS, requireSuperAdmin; bearer reserved
   face.admin: [tier:1]               # face ADMIN_GROUPS
   table.write: [tier:1, tier:2]      # face WRITE_GROUPS
   iris.operator_views: [tier:1]      # thalamus NOS_TIER1_GROUPS
@@ -42,8 +46,20 @@ capabilities:
   app.admin:jupyterhub: [tier:1]
   app.reach:jupyterhub: [tier:1, tier:2, tier:3]
   app.admin:nodered: [tier:1]
+  # apps/<name>.yml authentik.tier (and nginx.rbac_tier, which must agree)
+  app.reach:twofauth: [tier:1]
+  app.reach:documenso: [tier:1, tier:2]
+  app.reach:roundcube: [tier:1, tier:2, tier:3]
   # ── doors: bearers Wing believes X-Nos-User-* from (EndUser.php) ───────
   identity.assert: [door:face-bff, door:thalamus]
+  # ── Wing bearer scopes reserved to one bearer (bin/provision-token.php) ─
+  wing.halt: [door:wing-halt]
+  pulse.write: [door:ansible-provisioned]
+  # ── Bone loop API, loopback only (bone/loopauth.py IDENTITIES) ─────────
+  loop:read: [agent:proposer, engine:evaluator, operator-local]
+  loop:propose: [agent:proposer]
+  loop:judge: [engine:evaluator]
+  loop:forget: [operator-local]
   # ── agent runtime scopes Wing's ToolRegistry checks (requiredScopes) ───
   mcp.tool_use: [agent:conductor, agent:curator, agent:inspektor, agent:jeff, agent:jeff-cloud, agent:librarian,
                  agent:migration-author, agent:proposer, agent:surveyor, agent:upgrade-architect]
