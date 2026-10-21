@@ -218,3 +218,28 @@ def test_a_scheduled_job_between_runs_is_idle_not_unreadable(tmp_path):
         assert "scheduled, idle" in got[row["id"]].detail, got[row["id"]]
     # a daemon that should be resident and is not stays unreadable
     assert got[daemon_row["id"]].state == mod.UNREADABLE, got[daemon_row["id"]]
+
+
+def test_a_shimmed_module_run_and_an_env_dash_s_shebang_are_seen(tmp_path):
+    """`/usr/bin/python3 -m pkg` re-execs as the framework Python, so argv0 never shows in ps;
+    `#!/usr/bin/env -S python3 -u` names python3, not its `-u` flag."""
+    mod = load()
+    home = tmp_path / "home"
+    agents = home / "Library/LaunchAgents"
+    agents.mkdir(parents=True)
+    mod_row, env_row = ORGANS[0], ORGANS[1]
+    script = tmp_path / "bin/organ"
+    script.parent.mkdir(parents=True)
+    script.write_text("#!/usr/bin/env -S python3 -u\nprint()\n")
+    for row, args in ((mod_row, ["/usr/bin/python3", "-m", "nos_gw.serve"]),
+                      (env_row, [str(script), "--port", "1"])):
+        (agents / f"{row['launchd_label']}.plist").write_bytes(plistlib.dumps(
+            {"Label": row["launchd_label"], "ProgramArguments": args}))
+    ps = [f"{ME} pazny /Library/Frameworks/Python3.framework/MacOS/Python -m nos_gw.serve",
+          f"{ME} pazny python3 -u {script} --port 1"]
+    res = mod.Result()
+    mod.axis_identity(res, root=tmp_path, home=home, ps_lines=ps)
+    got = {x.subject: x for x in lines(res)}
+    for row in (mod_row, env_row):
+        assert got[row["id"]].state == mod.OK, got[row["id"]]
+        assert "python/python" in got[row["id"]].detail, got[row["id"]]
