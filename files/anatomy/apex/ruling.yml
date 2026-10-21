@@ -803,6 +803,7 @@ nodes:
   "article:generative-ui": withheld
   "article:genome": withheld  # 2026-10-07: new, PROPOSED
   "article:identity": withheld
+  "article:permissions": withheld  # 2026-10-21: new, PROPOSED
   "article:immune-system": withheld
   "article:layers": withheld
   "article:loop-contract": withheld  # 2026-10-07: promoted from docs/idea

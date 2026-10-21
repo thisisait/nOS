@@ -14,7 +14,7 @@
     "sense": 81,
     "limb": 118,
     "memory": 41,
-    "law": 52,
+    "law": 53,
     "reflex": 43,
     "heartbeat": 1,
     "internal": 76,
@@ -154,6 +154,10 @@
       "kind": "article"
     },
     "article:operator-model": {
+      "level": "law",
+      "kind": "article"
+    },
+    "article:permissions": {
       "level": "law",
       "kind": "article"
     },

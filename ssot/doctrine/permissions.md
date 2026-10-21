@@ -2,7 +2,8 @@
 in_force: false
 ruled: null
 row: rbac-permission-genome
-gates: []
+gates:
+  - tests/anatomy/test_an_app_states_one_tier.py
 ---
 # Permissions — one genome says what each role may do
 
