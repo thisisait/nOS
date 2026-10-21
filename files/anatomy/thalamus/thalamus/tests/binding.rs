@@ -220,6 +220,9 @@ fn a_local_binding_carries_a_seed_only_when_one_is_set() {
     assert_eq!(local(&[("NOS_LOCAL_SEED", "")]).seed, None, "the plist's empty default is unset");
     assert_eq!(local(&[("NOS_LOCAL_SEED", "42")]).seed, Some(42));
     assert_eq!(local(&[("NOS_LOCAL_SEED", "lucky")]).seed, None, "an unreadable value is unset");
+    // Ollama reads seed as a Go int: past i64::MAX the request is refused before it samples.
+    assert_eq!(local(&[("NOS_LOCAL_SEED", "9223372036854775807")]).seed, Some(i64::MAX as u64));
+    assert_eq!(local(&[("NOS_LOCAL_SEED", "9223372036854775808")]).seed, None, "out of Ollama's range is unset");
     match resolve(&repo(), "iris", env(&[("NOS_ARMED_BACKENDS", "mistral-eu"), ("NOS_MISTRAL_MODEL", "m"),
                                          ("nos:mistral_api_key", "k"), ("NOS_LOCAL_SEED", "42")])).unwrap() {
         Decision::Bound(b) => assert_eq!(b.seed, None, "a cloud row keeps its own sampler"),
