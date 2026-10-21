@@ -68,6 +68,14 @@ def test_the_plist_names_the_tier_one_groups_from_the_rbac_tiers():
     assert not [g for g in tier1 if f'"{g}"' in src], "a tier-1 group name is hard-coded in Rust"
 
 
+def test_the_plist_names_the_tier_two_groups_from_the_rbac_tiers():
+    """propose_app is a manager's to ask (tier 2); the groups come from the same list, not Rust."""
+    tier2 = next(t for t in _default_config()["authentik_rbac_tiers"] if t["tier"] == 2)["groups"]
+    assert _plist()["EnvironmentVariables"]["NOS_TIER2_GROUPS"] == ",".join(tier2)
+    src = "".join(p.read_text() for p in (REPO / "files/anatomy/thalamus/thalamus/src").glob("*.rs"))
+    assert not [g for g in tier2 if f'"{g}"' in src], "a tier-2 group name is hard-coded in Rust"
+
+
 def test_the_plist_runs_serve_and_keeps_the_secret_out_of_argv():
     p = _plist()
     assert p["ProgramArguments"] == ["/h/thalamus/bin/thalamus", "serve",

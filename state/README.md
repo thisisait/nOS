@@ -38,7 +38,7 @@ that is `anatomy-graph.json`, `body-plan.json`, `loop-graph.json`,
 
 Also here, authored: `night-watch.json` (expectations, merged never regenerated,
 ADR 0002), `smoke-catalog.yml`, `roadmap-probes.yml`, `apgar.yml`,
-`cortex-lang.gbnf` (`task-types.yml` moved to `state/genome/`, I-10).
+`cortex-lang.gbnf`, `app-scaffolds.yml` (Iris's scaffold_app parts) (`task-types.yml` moved to `state/genome/`, I-10).
 
 ## Moved 2026-10-07 (repo-body-plan I-11)
 

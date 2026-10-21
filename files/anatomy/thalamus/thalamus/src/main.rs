@@ -102,8 +102,8 @@ fn serve_main(args: &[String]) -> Result<(), String> {
         repo,
         reader_secs: serve::READER_SECS,
         // Unset or empty: nobody is tier 1, so the operator views refuse everyone.
-        tier1: std::env::var("NOS_TIER1_GROUPS").unwrap_or_default().split(',').filter(|g| !g.is_empty())
-            .map(str::to_string).collect(),
+        tier1: groups("NOS_TIER1_GROUPS"),
+        tier2: groups("NOS_TIER2_GROUPS"),
         // Off unless the operator sets thalamus_decider_exes: the role renders it ':'-joined.
         deciders,
         log: Mutex::new(Box::new(std::io::stderr())),
@@ -183,4 +183,9 @@ fn main() -> ExitCode {
         }
     }
     ExitCode::FAILURE
+}
+
+/// A comma-joined group list from the environment; unset or empty is nobody.
+fn groups(var: &str) -> Vec<String> {
+    std::env::var(var).unwrap_or_default().split(',').filter(|g| !g.is_empty()).map(str::to_string).collect()
 }
