@@ -216,6 +216,12 @@ class TestRenderManifestEndToEnd:
             '  data_source: from_subject',
         )
         text = text.replace('- "TODO"', '- "ip_address"')
+        # ...and the env TODOs the preamble lists, plus the limits nOS demands.
+        for var, val in (("SMTP_HOST", "mailpit"), ("DISABLE_SIGNUP", "false"), ("POSTGRES_DB", "example_db")):
+            text = text.replace("$" + var, val)
+        record = yaml.safe_load(text)
+        record["compose"]["services"]["example"].update(mem_limit="256m", cpus=0.5)
+        text = yaml.safe_dump(record, sort_keys=False)
         out_path.write_text(text)
 
         record = p.parse_app_file(str(out_path))
