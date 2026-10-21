@@ -122,3 +122,18 @@ def test_a_per_tier_point_is_read_from_what_its_line_says(tmp_path):
     assert pts.get("jupyterhub-unix-realm") == "ok", pts.get("jupyterhub-unix-realm")
     # A login given its tier's CUMULATIVE groups holds tier 1's: drift, not UNKNOWN.
     assert pts.get("receptor-identity-map") == "drift", pts.get("receptor-identity-map")
+
+
+def test_a_tier_expression_that_drops_a_group_is_never_ok(tmp_path):
+    expr = "(authentik_rbac_tiers | selectattr('tier', 'equalto', {n}) | first).groups"
+    pts = _scratch(tmp_path, {
+        "roles/pazny.thalamus/templates/thalamus.env.j2":
+            f"NOS_TIER1_GROUPS={{{{ {expr.format(n=1)} | first }}}}\n"
+            f"NOS_TIER2_GROUPS={{{{ {expr.format(n=2)}[0] }}}}\n",
+        "roles/pazny.thalamus/templates/thalamus.plist.j2":
+            f"<string>{{{{ {expr.format(n=1)} | random }}}}</string>\n"
+            f"<string>{{{{ {expr.format(n=2)}[-1] }}}}</string>\n"})
+    assert pts.get("thalamus-tier1-env") == "drift", f"`| first` reads as {pts.get('thalamus-tier1-env')}"
+    assert pts.get("thalamus-tier2-env") == "drift", f"`[0]` reads as {pts.get('thalamus-tier2-env')}"
+    assert pts.get("thalamus-tier1-plist") == "UNKNOWN", f"an unmodelled filter reads as {pts.get('thalamus-tier1-plist')}"
+    assert pts.get("thalamus-tier2-plist") == "drift", f"`[-1]` reads as {pts.get('thalamus-tier2-plist')}"
