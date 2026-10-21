@@ -917,6 +917,9 @@ nodes:
   "reader:pin-latest-scan": withheld
   "reader:work-assignment": withheld
   "reader:workflow-tree": withheld
+  # --- 2026-10-21 active-work-from-table (row of rel-018) -------------------
+  # The writer projecting the roadmap seed into docs/active-work.md. WITHHELD.
+  "effector:active-work-gen": withheld
   # 2026-10-07 tools-index-by-body-word: effector:<stem> per §Limbs line
   # (a tool that acts). WITHHELD; the published set is unchanged.
   "effector:anatomy-graph-gen": withheld

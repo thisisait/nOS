@@ -210,6 +210,7 @@ posts, restarts or renders something.
 - `keap-apply-view.py` — Apply a KEAP table definition's `view:` block to the live table for the digest OUTPUT tables (invoice, account) — same refuse-before-write / verify-by-reading discipline as roadmap-apply-view.py, kept separate since those UNSEEDED tables are importer-populated, not playbook-seeded.
 - `party-graph.py` — The kmenová-data (master-data) view: walk the live rowRef graph around a party (facets + derived rows) and render it as mermaid; --dump json is the {nodes,edges} a face graph view consumes. Reader only.
 - `roadmap-apply-columns.py` — Reconcile a NAMED column's shape (kind/options) from the roadmap definition to the live table; per-column, never touches the column set.
+- `active-work-gen.py` — Project the roadmap seed into docs/active-work.md (Now = the release row's tree, follow-ups = blocked/parked; slug + status only); `--check`, UNKNOWN rc 3 without the seed.
 - `roadmap-extract.py` — One-time: live roadmap table → per-row `<slug>.md` files in the PRIVATE seed repo.
 - `roadmap-seed.py` — Seed / --sync the roadmap table from per-row files in the private seed repo (NOS_SEED_DIR).
 - `roadmap-update.py` — Move a roadmap row's CLAIM. Not its verdict — that has a different writer.
