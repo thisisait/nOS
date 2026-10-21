@@ -3963,6 +3963,49 @@ fn an_absent_topic_is_said_not_in_our_knowledge_and_an_unknown_node_reads_nothin
     }
 }
 
+/// The texts the person was told this turn, and the notices.
+fn told(got: &[ToShell]) -> (Vec<String>, Vec<String>) {
+    let texts = got.iter().filter_map(|m| match m { ToShell::Text { text, .. } => Some(text.clone()), _ => None }).collect();
+    let notes = got.iter().filter_map(|m| match m { ToShell::Refused { reason, .. } => Some(reason.clone()), _ => None }).collect();
+    (texts, notes)
+}
+
+/// Night 2026-10-21: 4 of 6 absent topics answered from the model's memory, 7 facts without their [id].
+/// KEAP's scores are rank fusion, never a relevance floor, so the answer is checked, not the hits.
+#[test]
+fn an_answer_after_a_search_cites_a_drawn_node_or_says_it_is_not_in_our_knowledge() {
+    let near = || memory(true, serde_json::json!([{"kind": "taxonomy", "refId": "02.02.03.01.10", "nodeId": "02.02.03.01.10",
+        "name": "Sibling 10", "description": "d", "score": 0.016, "legs": ["vector"]}]));
+    // From memory, then asked once: the person hears only the grounded answer; the ledger keeps both.
+    let rig = rig_n("ground", mapped(), vec![near()], vec![call("search_knowledge", r#"{"q": "Haber process"}"#),
+        answer("The Haber process makes ammonia (Haber and Bosch)."), answer("That is not in our knowledge.")]);
+    let (got, session) = tool_turn(&rig, "what does our knowledge base say about the Haber process?");
+    assert_eq!(told(&got), (vec!["That is not in our knowledge.".to_string()], vec![]), "{got:?}");
+    let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[2].1).unwrap();
+    let asked = body["messages"].as_array().unwrap().last().unwrap().clone();
+    assert!(asked["role"] == "user" && asked["content"].as_str().is_some_and(|c| c.starts_with("[thalamus]") && c.contains("not in our knowledge")), "{asked}");
+    assert!(events(&rig.ledger, &session).iter().any(|(_, _, r)| r["text"] == "The Haber process makes ammonia (Haber and Bosch)."),
+            "the ledger keeps what was said");
+
+    // Still from memory: said, and marked so.
+    let rig = rig_n("ground-2", mapped(), vec![near()], vec![call("search_knowledge", r#"{"q": "COBOL"}"#),
+        answer("Grace Hopper, 1959."), answer("Grace Hopper designed it in 1959.")]);
+    let (got, _) = tool_turn(&rig, "per our knowledge base, who designed COBOL?");
+    let (texts, notes) = told(&got);
+    assert_eq!(texts, vec!["Grace Hopper designed it in 1959.".to_string()], "{got:?}");
+    assert!(notes.iter().any(|n| n.contains("cites nothing our knowledge holds")), "{got:?}");
+
+    // A fact cited by a drawn id is not asked again (the rig has no third model answer to give).
+    let rig = rig_n("ground-3", mapped(), vec![near()], vec![call("search_knowledge", r#"{"q": "x"}"#),
+        answer("Sibling 10 is d [02.02.03.01.10].")]);
+    let (got, _) = tool_turn(&rig, "x?");
+    assert_eq!(told(&got), (vec!["Sibling 10 is d [02.02.03.01.10].".to_string()], vec![]), "{got:?}");
+    // An id no tool drew is no citation.
+    let rig = rig_n("ground-4", mapped(), vec![near()], vec![call("search_knowledge", r#"{"q": "x"}"#),
+        answer("It is [07.07]."), answer("That is not in our knowledge.")]);
+    assert_eq!(told(&tool_turn(&rig, "x?").0).0, vec!["That is not in our knowledge.".to_string()]);
+}
+
 // --- propose_row_insert: a new row is a card the person decides, on a table they queried ---
 
 /// GET /api/tables/cards: a required title, a select and a number.
