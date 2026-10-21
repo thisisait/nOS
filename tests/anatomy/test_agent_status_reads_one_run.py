@@ -59,3 +59,36 @@ def test_one_run_leaves_its_free_text_behind(tmp_path):
 
 def test_an_unreadable_ledger_is_unknown(tmp_path):
     assert "UNKNOWN" in _run(tmp_path)["error"]
+
+
+IRIS = "e1e1e1e1-0000-4000-8000-000000000001"
+
+
+def test_a_run_names_its_parent_and_its_children(tmp_path):
+    """inc.2: a run Iris started carries parent_ref thalamus:<iris session>; asking for either end finds the other."""
+    db = tmp_path / "wing" / "app" / "data" / "wing.db"
+    db.parent.mkdir(parents=True)
+    c = sqlite3.connect(db)
+    c.executescript("""
+        CREATE TABLE agent_sessions (uuid, agent_name, status, stop_reason, outcome_result, error_json,
+            started_at, ended_at, tokens_input, tokens_output, parent_ref);
+        CREATE TABLE agent_threads (id INTEGER PRIMARY KEY, uuid, session_uuid, parent_thread_uuid, agent_name, role,
+            status, stop_reason, started_at, ended_at, tokens_input, tokens_output);
+        CREATE TABLE agent_iterations (session_uuid, iteration, grader_result, tokens_input, tokens_output, created_at);
+        CREATE TABLE events (id INTEGER PRIMARY KEY, ts, type, task, result_json, actor_action_id);
+    """)
+    rows = [(RUN, "conductor", f"thalamus:{IRIS}"), ("c1", "surveyor", RUN), ("c2", "librarian", f"thalamus:{IRIS}"),
+            ("x1", "surveyor", "thalamus:someone-else")]
+    for uuid, agent, parent in rows:
+        c.execute("INSERT INTO agent_sessions VALUES (?, ?, 'terminated', 'end_turn', NULL, NULL, 't0', NULL, 1, 1, ?)",
+                  (uuid, agent, parent))
+    c.commit()
+    c.close()
+    got = _run(tmp_path)
+    assert got["session"]["parent_ref"] == f"thalamus:{IRIS}"
+    assert [k["uuid"] for k in got["children"]] == ["c1"]
+    r = subprocess.run([sys.executable, str(READER), "--json", "--run", IRIS], capture_output=True, text=True,
+                       env={**os.environ, "HOME": str(tmp_path)}, timeout=60, check=False)
+    iris = json.loads(r.stdout)
+    assert iris["session"] is None, "Iris's session is the thalamus's, not Wing's"
+    assert [k["uuid"] for k in iris["children"]] == [RUN, "c2"]

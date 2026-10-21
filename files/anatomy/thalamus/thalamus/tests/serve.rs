@@ -159,6 +159,11 @@ thread_local! {
     static PICKS: std::cell::RefCell<(Vec<thalamus::binding::Pick>, Option<(f64, f64)>)> = Default::default();
 }
 
+thread_local! {
+    /// The next rig's Wing door for start_agent; the default is none configured.
+    static WING: std::cell::RefCell<serve::WingDoor> = Default::default();
+}
+
 fn rig_full(name: &str, map: serde_json::Value, keap_bodies: Vec<String>, model_bodies: Vec<String>,
             bound: Option<Binding>) -> Rig {
     rig_at(name, map, fake(keap_bodies), model_bodies, bound)
@@ -199,6 +204,7 @@ fn rig_deciders(name: &str, map: serde_json::Value, (keap_url, keap): (String, S
         cortex: None,
         data: d.clone(),
         tree_max: 50,
+        wing: WING.with(|w| w.take()),
     };
     let sock = d.join("t.sock");
     let listener = serve::bind(&sock, SOCK_MODE.with(|m| m.get())).unwrap();
@@ -6701,4 +6707,168 @@ fn a_small_models_chart_is_drawn_and_a_turn_that_drew_nothing_says_so() {
             && reason.contains("unknown field `y`"), "{reason}"),
         other => panic!("the turn that drew nothing must say so after the text, got {other:?}"),
     }
+}
+
+// --- iris-agent-dendrogram inc.2: start_agent asks the person, then opens a Wing session as Iris's child ---
+
+const WING_TOKEN: &str = "wing-thalamus-bearer-5c1d";
+const CHILD: &str = "7a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d";
+const ASK_PROMPT: &str = "check the estate for red";
+
+/// A rig whose Wing door is the fake at `wing`; `token` empty = no door configured.
+fn rig_wing(name: &str, map: serde_json::Value, wing: &str, token: &str, model: Vec<String>) -> Rig {
+    WING.with(|w| *w.borrow_mut() = serve::WingDoor { url: wing.into(), token: token.into(),
+                                                       agents: vec!["conductor".into(), "surveyor".into()] });
+    rig_n(name, map, vec![], model)
+}
+
+fn start(name: &str) -> String {
+    call("start_agent", &serde_json::json!({"name": name, "prompt": ASK_PROMPT}).to_string())
+}
+
+/// One turn that asks to start an agent; returns (stream, reader, session, approval, the card).
+fn asked_start(rig: &Rig) -> (UnixStream, BufReader<UnixStream>, String, String, nos_contract::renderers::ActionApproval) {
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "start the conductor on the estate");
+    let session = session_of(&got);
+    let (approval, card) = got.iter().find_map(|m| match m {
+        ToShell::ApprovalRequest { approval, component: Component::ActionApproval(a), .. } => Some((approval.clone(), a.clone())),
+        _ => None,
+    }).unwrap_or_else(|| panic!("no start card: {got:?}"));
+    (s, r, session, approval, card)
+}
+
+/// What the session's ledger rows hold beside the conversation itself: the prompt must not be in it.
+fn ledger_text(rig: &Rig, session: &str) -> String {
+    events(&rig.ledger, session).iter().filter(|(t, _, _)| t != "agent_message").map(|e| e.2.to_string()).collect::<Vec<_>>().join("\n")
+}
+
+#[test]
+fn start_agent_asks_then_opens_a_wing_session_as_the_person_under_iris() {
+    let (wing, seen) = fake(vec![format!(r#"!202 {{"session_uuid": "{CHILD}", "status": "starting", "agent_name": "conductor", "actor_id": "user:alice-smith"}}"#)]);
+    let rig = rig_wing("start-ok", admin(), &wing, WING_TOKEN, vec![start("conductor"), answer("Asked."), answer("Started.")]);
+    let (s, mut r, session, approval, card) = asked_start(&rig);
+    assert_eq!((card.app.as_str(), card.action.as_str()), ("wing", "start_agent"));
+    assert_eq!((&card.params["agent"], &card.params["prompt"]), (&serde_json::json!("conductor"), &serde_json::json!(ASK_PROMPT)),
+               "the card says which agent and the prompt");
+    assert!(seen.lock().unwrap().is_empty(), "nothing is started before the person decides");
+
+    decide(&s, &approval, Decision::Approve);
+    let said = match next(&mut r) { Some(ToShell::Text { text, .. }) => text, other => panic!("{other:?}") };
+    assert!(said.contains(CHILD), "the person hears the new session: {said}");
+    let p = seen.lock().unwrap().clone();
+    assert_eq!(p.len(), 1, "approve starts exactly once");
+    let head = p[0].0.to_ascii_lowercase();
+    assert!(head.starts_with("post /api/v1/agents/conductor/sessions "), "{head}");
+    assert!(head.contains(&format!("authorization: bearer {WING_TOKEN}")), "{head}");
+    assert!(head.contains("x-nos-user-uid: alice-smith") && head.contains("x-nos-user-groups: nos-users,nos-admins"), "{head}");
+    let body: serde_json::Value = serde_json::from_str(&p[0].1).unwrap();
+    assert_eq!(body, serde_json::json!({"prompt": ASK_PROMPT, "parent": format!("thalamus:{session}")}));
+
+    turn(&s, &mut r, Some(session.clone()), "and?");
+    let heard = rig.model.lock().unwrap()[2].1.clone();
+    assert!(heard.contains(&format!("[thalamus] approval {approval}: approved, conductor started as session {CHILD}")), "{heard}");
+    drop((s, r));
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    let led = ledger_text(&rig, &session);
+    assert!(led.contains(CHILD) && led.contains("conductor"), "the ledger keeps the ids: {led}");
+    assert!(!led.contains(ASK_PROMPT), "the ledger keeps ids, never the prompt: {led}");
+}
+
+#[test]
+fn start_agent_rejected_starts_nothing() {
+    let (wing, seen) = fake(vec![format!(r#"!202 {{"session_uuid": "{CHILD}"}}"#)]);
+    let rig = rig_wing("start-no", admin(), &wing, WING_TOKEN, vec![start("conductor"), answer("Asked.")]);
+    let (s, mut r, _, approval, _) = asked_start(&rig);
+    decide(&s, &approval, Decision::Reject);
+    assert!(matches!(next(&mut r), Some(ToShell::Text { .. })));
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    assert!(seen.lock().unwrap().is_empty(), "reject reached Wing");
+}
+
+#[test]
+fn start_agent_without_a_door_or_off_the_list_asks_nothing() {
+    let (wing, seen) = fake(vec![format!(r#"!202 {{"session_uuid": "{CHILD}"}}"#)]);
+    for (name, token, agent, want) in [("start-notok", "", "conductor", "holds no Wing token"),
+                                       ("start-off", WING_TOKEN, "upgrade-architect", "iris_startable_agents")] {
+        let rig = rig_wing(name, admin(), &wing, token, vec![start(agent), answer("x")]);
+        let (got, _) = tool_turn(&rig, "start it");
+        assert!(!got.iter().any(|m| matches!(m, ToShell::ApprovalRequest { .. })), "{name}: {got:?}");
+        let e = tool_result(&rig, 1);
+        assert!(e["error"].as_str().is_some_and(|e| e.contains(want)), "{name}: {e}");
+    }
+    assert!(seen.lock().unwrap().is_empty());
+}
+
+#[test]
+fn start_agent_passes_wings_refusal_through() {
+    let (wing, _) = fake(vec![r#"!404 {"error": "Agent 'conductor' not found on disk", "code": 404}"#.into()]);
+    let rig = rig_wing("start-404", admin(), &wing, WING_TOKEN, vec![start("conductor"), answer("Asked.")]);
+    let (s, mut r, _, approval, _) = asked_start(&rig);
+    decide(&s, &approval, Decision::Approve);
+    let said = match next(&mut r) { Some(ToShell::Text { text, .. }) => text, other => panic!("{other:?}") };
+    assert!(said.contains("Wing answered 404") && said.contains("not found on disk"), "{said}");
+}
+
+#[test]
+fn start_agent_waits_its_turn_behind_an_open_approval() {
+    let two = serde_json::json!({"choices": [{"message": {"role": "assistant", "content": null, "tool_calls": [
+        {"id": "c1", "type": "function", "function": {"name": "start_agent", "arguments": serde_json::json!({"name": "conductor", "prompt": "a"}).to_string()}},
+        {"id": "c2", "type": "function", "function": {"name": "start_agent", "arguments": serde_json::json!({"name": "surveyor", "prompt": "b"}).to_string()}}]}}]}).to_string();
+    let (wing, _) = fake(vec![format!(r#"!202 {{"session_uuid": "{CHILD}"}}"#)]);
+    let rig = rig_wing("start-two", admin(), &wing, WING_TOKEN, vec![two, answer("Asked.")]);
+    let (got, _) = tool_turn(&rig, "start both");
+    assert_eq!(got.iter().filter(|m| matches!(m, ToShell::ApprovalRequest { .. })).count(), 1, "{got:?}");
+    assert!(rig.model.lock().unwrap()[1].1.contains("an approval is already waiting"));
+}
+
+// --- read_run joins the runs: Iris's session is a parent, and the runs it started are its children ---
+
+const IRIS_UUID: &str = "e1e1e1e1-0000-4000-8000-000000000001";
+
+fn family_py(run: serde_json::Value, asked: &str) -> String {
+    format!("import sys\nassert sys.argv[1:] == ['--json', '--run', '{asked}'], sys.argv\nprint({run})\n",
+            run = serde_json::to_string(&run.to_string()).unwrap())
+}
+
+fn child_row(uuid: &str, agent: &str, parent: &str) -> serde_json::Value {
+    serde_json::json!({"uuid": uuid, "agent_name": agent, "status": "terminated", "stop_reason": "end_turn",
+                       "started_at": "2026-10-21T07:00:00+00:00", "ended_at": null, "parent_ref": parent})
+}
+
+fn drawn(rig: &Rig, got: &[ToShell]) -> nos_contract::renderers::Dendrogram {
+    got.iter().find_map(|m| match m { ToShell::Render { component: Component::Dendrogram(d), .. } => Some(d.clone()), _ => None })
+        .unwrap_or_else(|| panic!("{got:?}; heard {}", tool_result(rig, 1)))
+}
+
+#[test]
+fn read_run_of_a_started_run_draws_iris_above_it_and_its_children_below() {
+    let run = serde_json::json!({
+        "session": {"uuid": RUN_UUID, "agent_name": "conductor", "status": "terminated", "stop_reason": "end_turn",
+                    "errored": 0, "parent_ref": format!("thalamus:{IRIS_UUID}")},
+        "threads": [], "iterations": [], "events": [], "events_cut": false,
+        "children": [child_row(CHILD, "surveyor", RUN_UUID)]});
+    let rig = rig_n("irun-fam", admin(), vec![], vec![call("read_run", &format!(r#"{{"uuid": "{RUN_UUID}"}}"#)), answer("x")]);
+    reader(&rig, "agent-status.py", &family_py(run, RUN_UUID));
+    let (got, _) = tool_turn(&rig, "the run");
+    let d = drawn(&rig, &got);
+    let tree: Vec<(String, String, Option<String>)> = d.nodes.iter().map(|n| (n.id.clone(), n.name.clone(), n.parent.clone())).collect();
+    assert_eq!(d.root, IRIS_UUID, "Iris's session is the root");
+    assert_eq!(tree, [(IRIS_UUID.into(), "iris".into(), None),
+                      (RUN_UUID.into(), "conductor".into(), Some(IRIS_UUID.into())),
+                      (CHILD.into(), "surveyor".into(), Some(RUN_UUID.into()))]);
+}
+
+#[test]
+fn read_run_of_an_iris_session_lists_the_runs_it_started() {
+    let parent = format!("thalamus:{IRIS_UUID}");
+    let run = serde_json::json!({"session": null, "threads": [], "iterations": [], "events": [], "events_cut": false,
+        "children": [child_row(RUN_UUID, "conductor", &parent), child_row(CHILD, "surveyor", &parent)]});
+    let rig = rig_n("irun-iris", admin(), vec![], vec![call("read_run", &format!(r#"{{"uuid": "{IRIS_UUID}"}}"#)), answer("x")]);
+    reader(&rig, "agent-status.py", &family_py(run, IRIS_UUID));
+    let (got, _) = tool_turn(&rig, "what did you start");
+    let d = drawn(&rig, &got);
+    let tree: Vec<(String, Option<String>)> = d.nodes.iter().map(|n| (n.name.clone(), n.parent.clone())).collect();
+    assert_eq!(tree, [("iris".into(), None), ("conductor".into(), Some(IRIS_UUID.into())), ("surveyor".into(), Some(IRIS_UUID.into()))]);
 }
