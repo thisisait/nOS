@@ -61,6 +61,18 @@ pub struct Server {
     pub data: PathBuf,
     /// iris_knowledge_tree_max (NOS_IRIS_KNOWLEDGE_TREE_MAX): the most nodes a knowledge tree draws.
     pub tree_max: usize,
+    /// start_agent's way into Wing; an empty token is no door.
+    pub wing: WingDoor,
+}
+
+/// Wing's agent door (NOS_WING_URL, the `thalamus` bearer read as nos:wing_token, NOS_IRIS_STARTABLE_AGENTS):
+/// Wing believes the person on this bearer for POST /agents/<name>/sessions alone (face-wing.yml, wire.thalamus).
+#[derive(Debug, Clone, Default)]
+pub struct WingDoor {
+    pub url: String,
+    pub token: String,
+    /// iris_startable_agents: the only agents start_agent asks for.
+    pub agents: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -528,7 +540,7 @@ thread_local! {
 }
 
 /// The tools that ask an approval of the person, as `pending` names them.
-const ASKING: [&str; 6] = ["propose_row_edit", "propose_row_insert", "propose_row_delete", "propose_table_create", "propose_column_add", "face_act"];
+const ASKING: [&str; 7] = ["propose_row_edit", "propose_row_insert", "propose_row_delete", "propose_table_create", "propose_column_add", "face_act", "start_agent"];
 /// The conversation file's byte cap: a replay of it rides one line of at most 1 MiB.
 const REPLAY_BYTES: usize = 768 << 10;
 /// How many of a resumed session's messages its model hears again.
@@ -678,6 +690,12 @@ const READ_RUN: &str = "One agent run as a tree, from Wing (tools/agent-status.p
 session at the root, its threads, model turns, tool calls, approvals and grader iterations, each with its status. \
 uuid: the run's session uuid (its actor_action_id). Renders a dendrogram to the person. Tier 1 only. If it cannot be read, \
 the run is UNKNOWN: say so, never that it did nothing.";
+
+const START_AGENT: &str = "Start one Wing agent as your sub-agent, for the person and only when they ask: renders an approval card \
+naming the agent and the prompt, and nothing starts unless they approve. Only the agents the operator allows (iris_startable_agents) \
+can be started; Wing may still refuse. On approve you hear the new session's uuid: call read_run with it to draw its run.";
+/// The longest prompt start_agent passes on (the card shows it whole).
+const START_PROMPT_MAX: usize = 2000;
 
 const ESTATE_SERVICES: &str ="What nOS offers on this estate: each service's id, category, description and whether \
 it is enabled (null: unknown), from tools/services-status.py. Renders a table to the person. Without `q` only \
@@ -921,6 +939,10 @@ else one total over every matched row"},
         {"type": "function", "function": {"name": "read_run", "description": READ_RUN,
         "parameters": {"type": "object", "additionalProperties": false, "required": ["uuid"], "properties": {
             "uuid": {"type": "string", "minLength": 36, "maxLength": 36, "description": "the agent session's uuid"}}}}},
+        {"type": "function", "function": {"name": "start_agent", "description": START_AGENT,
+        "parameters": {"type": "object", "additionalProperties": false, "required": ["name", "prompt"], "properties": {
+            "name": {"type": "string", "minLength": 1, "maxLength": 64, "description": "the Wing agent's name, e.g. conductor"},
+            "prompt": {"type": "string", "minLength": 1, "maxLength": START_PROMPT_MAX, "description": "what the agent is asked to do, in the person's words"}}}}},
         {"type": "function", "function": {"name": "list_tables", "description": LIST_TABLES,
         "parameters": {"type": "object", "additionalProperties": false, "properties": {}}}},
         {"type": "function", "function": {"name": "estate_services", "description": ESTATE_SERVICES,
@@ -1385,6 +1407,10 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             if *tool == "face_act" {
                 o.acting.insert(id.clone(), rec);
             }
+            // start_agent's ledger row holds no prompt: the card the person was shown is the start.
+            if let (&"start_agent", Component::ActionApproval(a)) = (tool, &component) {
+                o.acting.insert(id.clone(), Value::Object(a.params.clone()));
+            }
             o.pending.insert(id.clone(), tool);
             open.push(id);
         }
@@ -1649,6 +1675,17 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                         }
                     }
                     Err(why) => (format!("Approved, but {why}"), json!({"approval": approval, "error": why}), format!("approved, but {why}")),
+                }
+            }
+            Decision::Approve if tool == Some("start_agent") => {
+                let start = acting.unwrap_or_default();
+                let agent = text(&start["agent"]);
+                match self.start(who, o, &start) {
+                    Ok(uuid) => (format!("Approved: {agent} started as session {uuid}."),
+                                 json!({"approval": approval, "agent": agent, "session_uuid": uuid}),
+                                 format!("approved, {agent} started as session {uuid}; read_run draws it")),
+                    Err(why) => (format!("Approved, but {agent} was not started: {why}"), json!({"approval": approval, "agent": agent, "error": why}),
+                                 format!("approved, but {agent} was not started: {why}")),
                 }
             }
             Decision::Approve if tool == Some("propose_table_create") => match self.create_table(who, id) {
@@ -2252,6 +2289,53 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
         Ok(rec)
     }
 
+    /// start_agent: an allowed agent and a prompt become a card; decide() opens the session on approve (start()).
+    /// The ledger keeps the agent and the prompt's length; the prompt itself is the card's, as the person saw it.
+    fn start_agent(&self, out: &mut dyn Write, o: &mut Open, args: &Value) -> Result<Value, String> {
+        if self.wing.token.is_empty() || self.wing.url.is_empty() {
+            return Err("the thalamus holds no Wing token (thalamus_wing_api_token), so it starts no agent".into());
+        }
+        let (name, prompt) = (text(&args["name"]), text(&args["prompt"]).trim().to_string());
+        if !self.wing.agents.contains(&name) {
+            let may = if self.wing.agents.is_empty() { "none".to_string() } else { self.wing.agents.join(", ") };
+            return Err(format!("{name:?} is not an agent Iris may start (iris_startable_agents: {may})"));
+        }
+        let n = prompt.chars().count();
+        if n == 0 || n > START_PROMPT_MAX {
+            return Err(format!("start_agent needs a prompt of 1-{START_PROMPT_MAX} chars, not {n}"));
+        }
+        if !o.pending.is_empty() {
+            return Err("an approval is already waiting".into());
+        }
+        let params = Map::from_iter([("agent".to_string(), json!(name)), ("prompt".to_string(), json!(prompt))]);
+        let card = ActionApproval { app: "wing".into(), action: "start_agent".into(), params: params.clone(),
+            says: format!("Start the Wing agent {name} under this conversation, as you, with this prompt.") };
+        let v = self.asking(o, out, "start_agent", json!({"agent": name, "prompt_chars": n}), Component::ActionApproval(card))?;
+        o.acting.insert(text(&v["approval"]), Value::Object(params));
+        Ok(v)
+    }
+
+    /// POST Wing's agents/<agent>/sessions as the person, parented to this Iris session: the new session's uuid,
+    /// or Wing's own refusal (an unknown agent, one not open to the person) passed through.
+    fn start(&self, who: &Person, o: &Open, start: &Value) -> Result<String, String> {
+        let name = text(&start["agent"]);
+        let url = format!("{}/api/v1/agents/{}/sessions", self.wing.url.trim_end_matches('/'), enc(&name));
+        let body = json!({"prompt": start["prompt"], "parent": format!("thalamus:{}", o.session)});
+        let mut r = agent(30).post(&url)
+            .header("authorization", &format!("Bearer {}", self.wing.token))
+            .header("x-nos-user-uid", &who.uid())
+            .header("x-nos-user-groups", &who.groups.join(","))
+            .send_json(&body).map_err(|e| format!("Wing unreachable: {e}"))?;
+        let status = r.status().as_u16();
+        // The log names the agent and the status, never the prompt or the bearer.
+        self.say(format!("{status} as {} POST wing /agents/{name}/sessions", who.username));
+        let v: Value = r.body_mut().read_json().unwrap_or(Value::Null);
+        match v["session_uuid"].as_str() {
+            Some(u) if status == 202 && nos_contract::wire::is_uuid(u) => Ok(u.to_string()),
+            _ => Err(format!("Wing answered {status}: {}", text(&v["error"]).chars().take(300).collect::<String>())),
+        }
+    }
+
     /// Sends one act and waits for the face's answer within the reader timeout: {act, ok, result?, reason?}.
     fn act(&self, out: &mut dyn Write, o: &Open, face: &Face, app: &str, action: &str, params: Map<String, Value>) -> Result<Value, String> {
         let act = mint_uuid().map_err(|e| format!("no act id: {e}"))?;
@@ -2342,6 +2426,10 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                     .and_then(|a| serde_json::from_str(a).ok()).unwrap_or(Value::Null);
                 unmark(&mut args); // a ⟦data⟧ mark copied back is never searched for or written
                 let mut used = json!({"args": args});
+                // start_agent's prompt is the person's words for another agent: the ledger keeps its length.
+                if let (true, Some(p)) = (name == "start_agent", used["args"].get_mut("prompt")) {
+                    *p = json!(format!("<{} chars>", text(p).chars().count()));
+                }
                 if from_text {
                     used["text_tool_call"] = json!(true);
                 }
@@ -2553,6 +2641,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                         v
                     }),
                     "face_act" => self.face_act(out, o, face, &args),
+                    "start_agent" => self.start_agent(out, o, &args),
                     _ => Err(format!("unknown tool {name:?}")),
                 };
                 if name == "show" || name == "offer_dashboard" {
@@ -4314,7 +4403,6 @@ fn mark_links(text: &str, known: &str) -> String {
 /// Wing's run (agent-status.py --run) as a dendrogram and what the model hears. Root, threads (parents
 /// first) and iterations come before the events, so the cap at DENDROGRAM_MAX never cuts a parent.
 pub fn dendrogram(run: &Value) -> Result<(Dendrogram, Value), String> {
-    let s = run.get("session").filter(|s| s.is_object()).ok_or("Wing holds no agent run with that uuid")?;
     let text = |v: &Value, k: &str| v.get(k).and_then(Value::as_str).map(str::to_string);
     let when = |v: &Value, k: &str| text(v, k).map(|t| t.replacen(' ', "T", 1)).map(|t| if t.len() == 19 { t + "Z" } else { t }).filter(|t| is_date(t));
     let tokens = |v: &Value| match (v["tokens_input"].as_u64(), v["tokens_output"].as_u64()) {
@@ -4327,14 +4415,37 @@ pub fn dendrogram(run: &Value) -> Result<(Dendrogram, Value), String> {
         _ if bad || matches!(stop, Some("error" | "interrupted")) => RunStatus::Bad,
         _ => RunStatus::Ok,
     };
+    // A run Iris started names her session thalamus:<uuid>: she is drawn above it, and its own started runs below it.
+    let iris_of = |r: Option<&str>| r.and_then(|r| r.strip_prefix("thalamus:")).filter(|u| nos_contract::wire::is_uuid(u)).map(str::to_string);
+    let iris = |id: String| RunNode { id, parent: None, kind: RunKind::Agent, name: "iris".into(), status: RunStatus::Ok,
+        started: None, ended: None, tokens: None, note: Some("Iris's session: its turns are the thalamus's ledger".into()) };
+    let children: Vec<&Value> = run["children"].as_array().map(|a| a.iter().collect()).unwrap_or_default();
+    let child = |c: &Value, parent: &str| text(c, "uuid").map(|id| RunNode { id, parent: Some(parent.to_string()), kind: RunKind::Agent,
+        name: text(c, "agent_name").unwrap_or_else(|| "agent".into()), status: lived(c["status"].as_str().unwrap_or_default(), c["stop_reason"].as_str(), false),
+        started: when(c, "started_at"), ended: when(c, "ended_at"), tokens: None, note: text(c, "stop_reason") });
+    let started: Vec<Value> = children.iter().map(|c| json!({"uuid": c["uuid"], "agent": c["agent_name"], "status": c["status"]})).collect();
+    let Some(s) = run.get("session").filter(|s| s.is_object()) else {
+        // Iris's own session is the thalamus's, not Wing's: drawn as the runs it started.
+        let top = children.iter().find_map(|c| iris_of(c["parent_ref"].as_str())).ok_or("Wing holds no agent run with that uuid")?;
+        let mut nodes = vec![iris(top.clone())];
+        nodes.extend(children.iter().filter_map(|c| child(c, &top)));
+        let total = nodes.len();
+        nodes.truncate(DENDROGRAM_MAX);
+        let said = json!({"agent": "iris", "started": started, "drawn": nodes.len(), "hidden": total - nodes.len()});
+        let d = Dendrogram { title: Some("Iris's runs".into()), root: top, hidden: (total - nodes.len()) as u32, nodes };
+        Component::Dendrogram(d.clone()).check()?;
+        return Ok((d, said));
+    };
     let root = text(s, "uuid").ok_or("Wing's run has no uuid")?;
+    let up = iris_of(s["parent_ref"].as_str());
     let agent = text(s, "agent_name").unwrap_or_else(|| "agent".into());
     let status = text(s, "status").unwrap_or_default();
     let bad = s["errored"].as_i64().is_some_and(|e| e != 0) || matches!(text(s, "outcome_result").as_deref(), Some("failed"));
     let note = [text(s, "stop_reason"), text(s, "outcome_result")].into_iter().flatten().collect::<Vec<_>>().join(", ");
-    let mut nodes = vec![RunNode { id: root.clone(), parent: None, kind: RunKind::Agent, name: agent.clone(),
+    let mut nodes: Vec<RunNode> = up.iter().map(|i| iris(i.clone())).collect();
+    nodes.push(RunNode { id: root.clone(), parent: up.clone(), kind: RunKind::Agent, name: agent.clone(),
         status: lived(&status, s["stop_reason"].as_str(), bad), started: when(s, "started_at"), ended: when(s, "ended_at"),
-        tokens: tokens(s), note: (!note.is_empty()).then_some(note) }];
+        tokens: tokens(s), note: (!note.is_empty()).then_some(note) });
     // Threads whose parent is placed, until none is left that can be: one that never can hangs off the root.
     let mut threads: Vec<&Value> = run["threads"].as_array().map(|a| a.iter().collect()).unwrap_or_default();
     let mut placed = HashSet::from([root.clone()]);
@@ -4358,6 +4469,7 @@ pub fn dendrogram(run: &Value) -> Result<(Dendrogram, Value), String> {
         nodes.push(RunNode { id: format!("i{n}"), parent: Some(root.clone()), kind: RunKind::Iteration, name: format!("grader {n}"),
             status, started: when(i, "created_at"), ended: None, tokens: tokens(i), note: (!grade.is_empty()).then_some(grade) });
     }
+    nodes.extend(children.iter().filter_map(|c| child(c, &root)));
     let events: Vec<&Value> = run["events"].as_array().map(|a| a.iter().collect()).unwrap_or_default();
     let results: HashMap<&str, bool> = events.iter().filter(|e| e["type"] == "agent_tool_result")
         .filter_map(|e| Some((e["tool_use_id"].as_str()?, e["is_error"].as_bool().unwrap_or(false)))).collect();
@@ -4386,8 +4498,8 @@ pub fn dendrogram(run: &Value) -> Result<(Dendrogram, Value), String> {
     let hidden = (total - nodes.len()) as u32;
     let bad: Vec<&str> = nodes.iter().filter(|n| n.status == RunStatus::Bad).map(|n| n.name.as_str()).collect();
     let said = json!({"agent": agent, "status": status, "stop_reason": s["stop_reason"], "outcome": s["outcome_result"],
-        "drawn": nodes.len(), "hidden": hidden, "bad": bad});
-    let d = Dendrogram { title: Some(format!("{agent} run").chars().take(120).collect()), root, nodes, hidden };
+        "drawn": nodes.len(), "hidden": hidden, "bad": bad, "started_by_iris": up, "started": started});
+    let d = Dendrogram { title: Some(format!("{agent} run").chars().take(120).collect()), root: up.unwrap_or(root), nodes, hidden };
     Component::Dendrogram(d.clone()).check()?;
     Ok((d, said))
 }

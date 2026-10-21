@@ -114,6 +114,13 @@ fn serve_main(args: &[String]) -> Result<(), String> {
         // iris_knowledge_tree_max; the contract carries at most KNOWLEDGE_MAX.
         tree_max: std::env::var("NOS_IRIS_KNOWLEDGE_TREE_MAX").ok().and_then(|v| v.trim().parse().ok())
             .unwrap_or(50usize).clamp(1, nos_contract::renderers::KNOWLEDGE_MAX),
+        // start_agent's door: the role renders all three with thalamus_wing_api_token, or none.
+        wing: serve::WingDoor {
+            url: std::env::var("NOS_WING_URL").unwrap_or_default(),
+            token: lookup("nos:wing_token").unwrap_or_default(),
+            agents: std::env::var("NOS_IRIS_STARTABLE_AGENTS").unwrap_or_default().split(',').map(str::trim)
+                .filter(|a| !a.is_empty()).map(str::to_string).collect(),
+        },
     };
     let srv = Arc::new(srv);
     // One line tools/thalamus-status.py reads: bound iff the secret is set. A failed bind keeps the socket serving.

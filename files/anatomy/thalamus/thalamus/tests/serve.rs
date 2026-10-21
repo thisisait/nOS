@@ -6872,3 +6872,25 @@ fn read_run_of_an_iris_session_lists_the_runs_it_started() {
     let tree: Vec<(String, Option<String>)> = d.nodes.iter().map(|n| (n.name.clone(), n.parent.clone())).collect();
     assert_eq!(tree, [("iris".into(), None), ("conductor".into(), Some(IRIS_UUID.into())), ("surveyor".into(), Some(IRIS_UUID.into()))]);
 }
+
+#[test]
+fn a_resumed_start_card_starts_what_it_showed() {
+    // The ledger holds no prompt: a resumed card's approve starts what the card showed, under the same session.
+    let (wing, seen) = fake(vec![format!(r#"!202 {{"session_uuid": "{CHILD}"}}"#)]);
+    let rig = rig_wing("start-resume", admin(), &wing, WING_TOKEN, vec![start("conductor"), answer("Asked.")]);
+    let (s, r, session, approval, _) = asked_start(&rig);
+    drop((s, r));
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    say(&s, &ToThalamus::Resume { workspace: None });
+    match until(&mut r, "replay").1 {
+        ToShell::Replay { session: again, open, .. } => assert!(again == session && open.contains(&approval), "{open:?}"),
+        other => panic!("{other:?}"),
+    }
+    decide(&s, &approval, Decision::Approve);
+    let said = match next(&mut r) { Some(ToShell::Text { text, .. }) => text, other => panic!("{other:?}") };
+    assert!(said.contains(CHILD), "{said}");
+    let body: serde_json::Value = serde_json::from_str(&seen.lock().unwrap()[0].1).unwrap();
+    assert_eq!(body, serde_json::json!({"prompt": ASK_PROMPT, "parent": format!("thalamus:{session}")}));
+}
