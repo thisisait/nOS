@@ -14,7 +14,7 @@ LLM context note (2026-10-21). Where the benches stand, what makes a run repeata
 | Fixed data | `iris-bench.py --seed` (iris-bench-2 tables), nos-assay domains + tiers | yes |
 | Provenance | `--out` records nOS commit, Ollama digest, primer/grammar sha | yes |
 | Majority of N | `--repeat N` | masks noise, does not remove it |
-| Paired A/B, per kind | `tools/bench-compare.py` (2026-10-21) | yes |
+| Paired A/B, per kind | `tools/iris-bench.py --compare` (2026-10-21) | yes |
 | Offline re-judge | `iris-bench.py --rescore` | yes |
 | Sampler pin | `iris_local_seed` → `NOS_LOCAL_SEED` → `seed` on a local row (2026-10-21) | yes, same host + digest |
 
@@ -34,7 +34,7 @@ and `~/iris-bench-local` on the host):
 - `state/habitat/llm-backends.yml` (2026-08-30): hermes3:8b fails cortex-lang syntax, qwen3:14b semantics.
 
 What is missing for the claim to stand: a paired run (same digest, commit, seed, case set) where
-only `iris_plan` differs, its two `--out` files kept, and `bench-compare.py` saying `B better` per
+only `iris_plan` differs, its two `--out` files kept, and `--compare` saying `B better` per
 kind. Overall, cortex (85/283) is below plain tools (143/284) — the benefit is per intent, which
 is exactly what hybrid bets on and what `by_kind` now measures.
 
@@ -42,11 +42,11 @@ is exactly what hybrid bets on and what `by_kind` now measures.
 
 1. `config.yml`: `iris_local_temperature: 0`, `iris_local_seed: 42`; converge thalamus.
 2. `NOS_LIVE=1 tools/iris-bench.py --seed` once (fixed tables).
-3. Same config twice → `tools/bench-compare.py run1.json run2.json` must say `repeatable`.
+3. Same config twice → `tools/iris-bench.py --compare run1.json run2.json` must say `repeatable`.
    Not repeatable at temperature 0 + seed = the host's Ollama is not deterministic (batching,
    Metal kernels); then `--repeat 3` and report it.
 4. Change ONE axis (`iris_plan: tools` → `hybrid`/`cortex`, catalogue, or the model tag), run again →
-   `tools/bench-compare.py tools.json cortex.json`. Verdict by exact McNemar on paired flips;
+   `tools/iris-bench.py --compare tools.json cortex.json`. Verdict by exact McNemar on paired flips;
    two axes at once = `confounded` (exit 2). 43 cases detect only big effects (≈ 6+ net flips);
    use a nos-assay `--tier standard` domain for smaller ones.
 
@@ -82,7 +82,7 @@ Generator (rejection sampling, code as filter): table defs from nos-assay domain
 templates (count, filter, group-by, rank, chart kind, cs/en) → teacher model writes the pipeline →
 keep only if organ validates, mapper maps, and executing on seeded rows equals a code oracle.
 Hold out whole domains for eval. Then: base 3B vs tuned 3B vs qwen3:14b, same digest pin, through
-`bench-compare.py`.
+`iris-bench.py --compare`.
 
 ## Cost (vast.ai, checked 2026-10-21)
 

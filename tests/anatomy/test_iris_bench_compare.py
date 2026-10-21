@@ -1,4 +1,4 @@
-"""tools/bench-compare.py pairs two iris-bench --out runs case by case and says what differs.
+"""tools/iris-bench.py --compare pairs two iris-bench --out runs case by case and says what differs.
 
 A claim like "the cortex plan path beats plain tool calling" is only measured when the two runs
 differ on one axis (plan path, model digest, commit, primer...) and the paired flips are counted
@@ -15,7 +15,7 @@ import subprocess
 import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-TOOL = REPO / "tools" / "bench-compare.py"
+TOOL = REPO / "tools" / "iris-bench.py"
 
 spec = importlib.util.spec_from_file_location("bench_compare", TOOL)
 bc = importlib.util.module_from_spec(spec)
@@ -94,7 +94,7 @@ def test_the_cli_exits_by_verdict(tmp_path):
     a, b = tmp_path / "a.json", tmp_path / "b.json"
     a.write_text(json.dumps(_run({"x": True})))
     b.write_text(json.dumps(_run({"x": False})))
-    r = subprocess.run([sys.executable, str(TOOL), str(a), str(b)], capture_output=True, text=True)
+    r = subprocess.run([sys.executable, str(TOOL), "--compare", str(a), str(b)], capture_output=True, text=True)
     assert r.returncode == 1 and "not repeatable" in r.stdout, r.stdout + r.stderr
-    r = subprocess.run([sys.executable, str(TOOL), str(a), str(a), "--json"], capture_output=True, text=True)
+    r = subprocess.run([sys.executable, str(TOOL), "--compare", str(a), str(a), "--json"], capture_output=True, text=True)
     assert r.returncode == 0 and json.loads(r.stdout)["verdict"] == "repeatable", r.stdout + r.stderr

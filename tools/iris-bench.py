@@ -38,6 +38,12 @@ Two plans are equal when the thalamus runs the same query for them (meaning()), 
 
 `--rescore run.json ...` re-judges pipeline_equals_expected on saved runs offline (the cases come from
 the run's own argv; --domain needs NOS_ASSAY_DIR) and writes run.rescored.json; other verdicts are kept.
+
+`--compare A.json B.json` pairs two saved runs case by case: the axes they differ on (plan path,
+engine, catalogue, primer, grammar, registry, commit, model digests), paired flips overall and per
+kind, exact two-sided McNemar. One axis = a measured verdict (B better / A better / no measured
+difference), none = a repeatability check (repeatable / not repeatable), two or more = confounded.
+A NO-DATA case on either side is left out. Exit 0 B better or repeatable, 2 confounded, else 1.
 """
 
 from __future__ import annotations
@@ -45,6 +51,7 @@ from __future__ import annotations
 import argparse
 import functools
 import json
+import math
 import os
 import re
 import socket
@@ -940,6 +947,80 @@ def rescore(path: Path) -> Path:
     return out
 
 
+# ── --compare: two saved runs paired case by case (docs/llm/evals-and-finetune.md) ──
+
+ALPHA = 0.05
+TOP = ("plan_path", "engine", "primer_sha256", "grammar_sha256", "registry_hash", "catalogue", "catalogue_digest")
+
+
+def mcnemar(a: int, b: int) -> float:
+    """Exact two-sided McNemar: 2 * P(X <= min(a, b)), X ~ Binom(a + b, 1/2), capped at 1."""
+    n = a + b
+    if n == 0:
+        return 1.0
+    k = min(a, b)
+    return min(1.0, 2 * sum(math.comb(n, i) for i in range(k + 1)) / 2 ** n)
+
+
+def _models(run: dict) -> list:
+    return sorted((m.get("name"), m.get("digest")) for m in (run.get("provenance") or {}).get("models") or [])
+
+
+def axes(a: dict, b: dict) -> list[str]:
+    """The axes two runs differ on; a value the run did not record (None) still counts as a value."""
+    out = [k for k in TOP if a.get(k) != b.get(k)]
+    if (a.get("provenance") or {}).get("nos_commit") != (b.get("provenance") or {}).get("nos_commit"):
+        out.append("nos_commit")
+    if _models(a) != _models(b):
+        out.append("models")
+    return sorted(out)
+
+
+def compare(a: dict, b: dict) -> dict:
+    ca = {c["id"]: c for c in a.get("cases") or []}
+    cb = {c["id"]: c for c in b.get("cases") or []}
+    both = [i for i in ca if i in cb and not ca[i].get("no_data") and not cb[i].get("no_data")]
+    left_out = sorted(set(ca) ^ set(cb) | {i for i in set(ca) & set(cb) if i not in both})
+    a_only = sorted(i for i in both if ca[i]["pass"] and not cb[i]["pass"])
+    b_only = sorted(i for i in both if cb[i]["pass"] and not ca[i]["pass"])
+    p = mcnemar(len(a_only), len(b_only))
+    diff = axes(a, b)
+    if not diff:
+        verdict = "not repeatable" if a_only or b_only else "repeatable"
+    elif len(diff) > 1:
+        verdict = "confounded"
+    elif p < ALPHA:
+        verdict = "B better" if len(b_only) > len(a_only) else "A better"
+    else:
+        verdict = "no measured difference"
+    kinds = sorted({ca[i].get("kind") or "-" for i in both})
+    by_kind = {}
+    for k in kinds:
+        ao = sum(1 for i in a_only if (ca[i].get("kind") or "-") == k)
+        bo = sum(1 for i in b_only if (ca[i].get("kind") or "-") == k)
+        by_kind[k] = {"paired": sum(1 for i in both if (ca[i].get("kind") or "-") == k),
+                      "a_only": ao, "b_only": bo, "p": mcnemar(ao, bo)}
+    return {"axes": diff, "by_kind": by_kind, "paired": len(both), "a_pass": sum(ca[i]["pass"] for i in both),
+            "b_pass": sum(cb[i]["pass"] for i in both), "a_only": len(a_only), "b_only": len(b_only),
+            "a_only_ids": a_only, "b_only_ids": b_only, "left_out": left_out, "p": p, "verdict": verdict}
+
+
+COMPARE_EXIT = {"B better": 0, "repeatable": 0, "A better": 1, "not repeatable": 1, "no measured difference": 1, "confounded": 2}
+
+
+def print_compare(r: dict) -> None:
+    print(f"axes: {', '.join(r['axes']) or 'none (repeatability check)'}")
+    print(f"paired {r['paired']} · A {r['a_pass']} · B {r['b_pass']} · only A {r['a_only']} · only B {r['b_only']} "
+          f"· McNemar p={r['p']:.4f} · left out {len(r['left_out'])}")
+    for k, v in r["by_kind"].items():
+        if v["a_only"] or v["b_only"]:
+            print(f"  {k:<12} paired {v['paired']} · only A {v['a_only']} · only B {v['b_only']} · p={v['p']:.4f}")
+    for side in ("a", "b"):
+        if r[f"{side}_only_ids"]:
+            print(f"  only {side.upper()}: {', '.join(r[f'{side}_only_ids'])}")
+    print(r["verdict"])
+
+
 # ── provenance: a run says which weights answered (nos-assay keeps runs as evidence) ──
 
 def ollama_tags(base=None):
@@ -1019,7 +1100,14 @@ def main(argv: list[str] | None = None) -> int:
                     help="create the iris-bench-2 tables, or with --domain the domain's tables, once (writes KEAP; NOS_LIVE=1)")
     ap.add_argument("--rescore", nargs="+", metavar="RUN.json",
                     help="re-judge saved runs offline with this scorer; writes <run>.rescored.json beside each")
+    ap.add_argument("--compare", nargs=2, metavar=("A.json", "B.json"),
+                    help="pair two saved runs: axes, flips per kind, exact McNemar (offline)")
+    ap.add_argument("--json", action="store_true", help="with --compare: print the comparison as JSON")
     a = ap.parse_args(argv)
+    if a.compare:
+        r = compare(*(json.loads(Path(f).read_text(encoding="utf-8")) for f in a.compare))
+        print(json.dumps(r, indent=2)) if a.json else print_compare(r)
+        return COMPARE_EXIT[r["verdict"]]
     if a.rescore:
         for f in a.rescore:
             rescore(Path(f))
