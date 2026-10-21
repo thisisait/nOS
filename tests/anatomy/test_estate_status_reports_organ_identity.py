@@ -191,3 +191,30 @@ def test_a_python_shim_and_a_venv_entry_script_are_still_seen(tmp_path):
     for row in (shim_row, venv_row):
         assert got[row["id"]].state == mod.OK, got[row["id"]]
         assert "python/python" in got[row["id"]].detail, got[row["id"]]
+
+
+def test_a_scheduled_job_between_runs_is_idle_not_unreadable(tmp_path):
+    """backup.rustfs fires on a calendar and exits; between runs ps has nothing to match.
+    That is a known state, not an unreadable side, so it must not turn the default run red."""
+    mod = load()
+    home = tmp_path / "home"
+    agents, units = home / "Library/LaunchAgents", home / ".config/systemd/user"
+    agents.mkdir(parents=True)
+    units.mkdir(parents=True)
+    mac_row, linux_row, daemon_row = ORGANS[0], ORGANS[1], ORGANS[2]
+    (agents / f"{mac_row['launchd_label']}.plist").write_bytes(plistlib.dumps(
+        {"Label": mac_row["launchd_label"], "ProgramArguments": argv(mac_row),
+         "StartCalendarInterval": {"Hour": 3, "Minute": 0}}))
+    (units / f"{linux_row['launchd_label']}.service").write_text(
+        "[Service]\nType=oneshot\nExecStart=" + " ".join(argv(linux_row)) + "\n")
+    (units / f"{linux_row['launchd_label']}.timer").write_text("[Timer]\nOnCalendar=daily\n")
+    (agents / f"{daemon_row['launchd_label']}.plist").write_bytes(plistlib.dumps(
+        {"Label": daemon_row["launchd_label"], "ProgramArguments": argv(daemon_row)}))
+    res = mod.Result()
+    mod.axis_identity(res, root=tmp_path, home=home, ps_lines=["1 someone /bin/unrelated"])
+    got = {x.subject: x for x in lines(res)}
+    for row in (mac_row, linux_row):
+        assert got[row["id"]].state == mod.OK, got[row["id"]]
+        assert "scheduled, idle" in got[row["id"]].detail, got[row["id"]]
+    # a daemon that should be resident and is not stays unreadable
+    assert got[daemon_row["id"]].state == mod.UNREADABLE, got[daemon_row["id"]]
