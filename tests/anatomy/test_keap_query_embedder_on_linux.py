@@ -16,6 +16,7 @@ CEILING. Renders the default with stock Jinja; the effect is the
 ``[legs: vector, …]`` line of tools/keap-semantic-search.py on a live estate.
 """
 
+import sys
 from pathlib import Path
 
 import jinja2
@@ -24,8 +25,15 @@ import yaml
 REPO = Path(__file__).resolve().parents[2]
 
 
+def _raw() -> str:
+    sys.path.insert(0, str(REPO / "tools"))
+    import nos_identity
+    layers = [yaml.safe_load(f.read_text(encoding="utf-8")) or {} for f in nos_identity.default_layers()]
+    return next(d["keap_ollama_url"] for d in layers if "keap_ollama_url" in d)
+
+
 def _render(system: str, install_ollama: bool) -> str:
-    raw = yaml.safe_load((REPO / "default.config.yml").read_text(encoding="utf-8"))["keap_ollama_url"]
+    raw = _raw()
     ctx = {"ansible_system": system, "install_ollama": install_ollama, "ollama_url": "http://172.17.0.1:11434"}
     return jinja2.Environment(undefined=jinja2.StrictUndefined).from_string(raw).render(ctx)
 
