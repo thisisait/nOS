@@ -431,23 +431,26 @@ RUNTIMES = (("python", "python"), ("frankenphp", "php"), ("php", "php"),
             ("node", "node"), ("bash", "shell"), ("sh", "shell"))
 
 
-def _deployed_job(label: str, root: Path, home: Path) -> tuple[str, list[str]] | None:
-    """(domain, argv) of the job installed for `label` — one lookup on both platforms."""
+def _deployed_job(label: str, root: Path, home: Path) -> tuple[str, list[str], bool] | None:
+    """(domain, argv, scheduled) of the job installed for `label` — one lookup on both
+    platforms. `scheduled` = launchd calendar/interval or a systemd .timer beside the unit."""
     for domain, path in (("LaunchAgent", home / "Library/LaunchAgents" / f"{label}.plist"),
                          ("LaunchDaemon", root / "Library/LaunchDaemons" / f"{label}.plist")):
         if path.exists():
             try:
                 doc = plistlib.loads(path.read_bytes())
             except Exception:  # noqa: BLE001 — unparsable is still installed; ps then cannot match it
-                return domain, []
-            return domain, list(doc.get("ProgramArguments") or [doc.get("Program", "")])
+                return domain, [], False
+            scheduled = "StartCalendarInterval" in doc or "StartInterval" in doc
+            return domain, list(doc.get("ProgramArguments") or [doc.get("Program", "")]), scheduled
     for domain, path in (("user unit", home / ".config/systemd/user" / f"{label}.service"),
                          ("system unit", root / "etc/systemd/system" / f"{label}.service")):
         if path.exists():
+            scheduled = path.with_suffix(".timer").exists()
             for raw in path.read_text(encoding="utf-8").splitlines():
                 if raw.strip().startswith("ExecStart="):
-                    return domain, shlex.split(raw.split("=", 1)[1].lstrip("-@:+!"))
-            return domain, []
+                    return domain, shlex.split(raw.split("=", 1)[1].lstrip("-@:+!")), scheduled
+            return domain, [], scheduled
     return None
 
 
@@ -471,7 +474,7 @@ def axis_identity(res: Result, root: Path = Path("/"), home: Path = Path.home(),
         if job is None:
             res.add("identity", rid, f"{rid} · not installed here")
             continue
-        domain, argv = job
+        domain, argv, scheduled = job
         argv0 = argv[0] if argv else ""
         interp = argv0
         try:  # an entry script (venv uvicorn) runs on its shebang's interpreter
@@ -492,6 +495,9 @@ def axis_identity(res: Result, root: Path = Path("/"), home: Path = Path.home(),
         hit = next((p for p in procs if key and key in p[2]
                     and (len(argv) < 2 or argv[1] in p[2])), None)
         head = f"{rid} · {language}/{runtime}"
+        if hit is None and scheduled and procs:
+            res.add("identity", rid, f"{head} · scheduled, idle (no run in progress) · {domain}")
+            continue
         if hit is None:
             why = "ps unreadable" if not procs else f"no process runs {key or '(no argv)'}"
             res.add("identity", rid, f"{head} · not reported ({why}) · {domain}", UNREADABLE)
