@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 // iris-grounded-knowledge: read_node draws the ontology around a node (renderers.rs KnowledgeTree) as the
-// graph's layered columns, at most serve's cap with the rest said, and a click on a node opens it as a
-// knowledge widget the thalamus reads without the model.
+// graph's layered columns, at most serve's cap with the rest said, and a click on a node offers to open it
+// on a new board as a knowledge widget the thalamus reads without the model (operator 2026-10-21).
 import { flushSync, mount, unmount } from 'svelte';
 import { afterEach, describe, expect, it } from 'vitest';
 import Iris from './Iris.svelte';
@@ -56,7 +56,7 @@ const settle = async () => {
 };
 
 describe('a knowledge tree in Iris', () => {
-	it('draws every node serve sent and no more, says the rest, and a click opens a node', async () => {
+	it('draws every node serve sent and no more, says the rest, and a click opens a node on a new board', async () => {
 		const fake = fakeTransport();
 		app = mount(Iris, { target: document.body, props: { transport: fake.transport } });
 		await settle();
@@ -75,6 +75,17 @@ describe('a knowledge tree in Iris', () => {
 		const own = nodes.find((n) => n.querySelector('title')?.textContent?.includes(`${RUST}.01`))!;
 		(own as unknown as HTMLElement).dispatchEvent(new MouseEvent('click', { bubbles: true }));
 		await settle();
+		expect(
+			fake.sent.some((m) => m.t === 'widget'),
+			'a click alone runs nothing'
+		).toBe(false);
+		const go = [...document.querySelectorAll('button')].find(
+			(b) => b.textContent?.trim() === 'Open in a new board'
+		)!;
+		go.click();
+		await settle();
+		const crumb = document.querySelector('nav[aria-label="workspace path"] [aria-current="page"]');
+		expect(crumb?.textContent?.trim(), 'a new board, named for the node').toBe('Ownership');
 		expect(fake.sent).toContainEqual({
 			t: 'widget',
 			widget: expect.any(String),
