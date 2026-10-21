@@ -227,6 +227,8 @@ final class Runner
 	 *                page image attached to the single call. Loop/outcome
 	 *                agents ignore it — a multi-turn image conversation is
 	 *                not a need this estate has yet, so it is not built.
+	 * @param ?string $parentRef  the run this session was started for
+	 *                (agent_sessions.parent_ref); checked by the caller.
 	 * @return RunResult
 	 */
 	public function run(
@@ -238,6 +240,7 @@ final class Runner
 		?string $actorId = null,
 		?string $sessionUuid = null,
 		?string $imagePath = null,
+		?string $parentRef = null,
 	): RunResult {
 		$agent = $this->loader->load($agentName);
 		$tools = $this->tools->forAgent($agent);
@@ -285,6 +288,7 @@ final class Runner
 			'trace_id' => $traceId,
 			'model_uri' => $llm->identifier(),
 			'outcome_id' => $agent->hasOutcome() ? 'outcome_' . substr($sessionUuid, 0, 8) : null,
+			'parent_ref' => $parentRef,
 		]);
 
 		$rootSpan = new Span(

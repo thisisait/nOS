@@ -29,6 +29,9 @@ final class AgentSessionRepository
 	 */
 	private const SESSION_CAP_MINUTES_DEFAULT = 45;
 
+	/** A parent ref: a Wing session uuid, or thalamus:<uuid> for an Iris run Wing cannot see. */
+	public const PARENT_REF = '/^(thalamus:)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/';
+
 	/**
 	 * The cap, resolved once here so the reaper and every surface that reports
 	 * it cannot drift apart. `AgentsPresenter` used to own this constant and
@@ -61,6 +64,7 @@ final class AgentSessionRepository
 			'trace_id'      => $row['trace_id'],
 			'model_uri'     => $row['model_uri'],
 			'outcome_id'    => $row['outcome_id'] ?? null,
+			'parent_ref'    => $row['parent_ref'] ?? null,
 			'started_at'    => gmdate('c'),
 		];
 		$this->db->table('agent_sessions')->insert($insert);
@@ -90,6 +94,22 @@ final class AgentSessionRepository
 	{
 		$row = $this->db->table('agent_sessions')->where('uuid', $uuid)->fetch();
 		return $row !== null ? $row->toArray() : null;
+	}
+
+	/**
+	 * Sessions started on behalf of $parentRef, oldest first, as summary rows
+	 * (enough to draw a tree node). $actorId narrows to one owner's children.
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function listChildren(string $parentRef, ?string $actorId = null): array
+	{
+		$q = $this->db->table('agent_sessions')->where('parent_ref', $parentRef)->order('id ASC');
+		if ($actorId !== null) {
+			$q->where('actor_id', $actorId);
+		}
+		$keep = array_flip(['uuid', 'agent_name', 'status', 'started_at', 'ended_at', 'stop_reason', 'outcome_result']);
+		return array_map(static fn ($r) => array_intersect_key($r->toArray(), $keep), array_values($q->fetchAll()));
 	}
 
 	/**

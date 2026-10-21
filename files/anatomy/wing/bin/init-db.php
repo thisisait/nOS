@@ -724,6 +724,7 @@ $addMissingColumns($db, 'agent_iterations', [
 ]);
 $addMissingColumns($db, 'agent_sessions', [
 	'output_repaired' => 'INTEGER NOT NULL DEFAULT 0',
+	'parent_ref'      => 'TEXT',
 ]);
 
 // SATISFACTION IS WRITTEN BY A GATE RUN, NOT BY THE THING BEING GRADED.

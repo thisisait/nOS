@@ -67,6 +67,7 @@ final class OperatorTrigger
 		?string $prompt = null,
 		?string $vault = null,
 		array $env = [],
+		?string $parentRef = null,
 	): array {
 		// Validate the agent resolves on disk before spawning anything. Mirrors
 		// the AgentsPresenter pre-spawn load() — catches a malformed name that
@@ -113,6 +114,9 @@ final class OperatorTrigger
 		}
 		if ($vault !== null) {
 			$argv[] = '--vault=' . $vault;
+		}
+		if ($parentRef !== null) {
+			$argv[] = '--parent=' . $parentRef;
 		}
 
 		$descriptors = [

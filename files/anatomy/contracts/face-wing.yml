@@ -61,8 +61,8 @@ wire:
     - "face-bff bearer on an estate-wide read for a person below Tier 1 -> 403"
   actions:   # the face-bff bearer reaches these and nothing else
     - "GET  /api/v1/agents/<name>/sessions"
-    - "POST /api/v1/agents/<name>/sessions   body: {prompt?}; vault and actor_id refused"
-    - "GET  /api/v1/agent-sessions/<uuid>"
+    - "POST /api/v1/agents/<name>/sessions   body: {prompt?, parent?}; vault and actor_id refused"
+    - "GET  /api/v1/agent-sessions/<uuid>    {session, threads, iterations, children}"
     - "GET  /api/v1/pulse_jobs, /pulse_runs[/summary], /events, /notifications — Tier 1 only (BaseApiPresenter::$bffOperatorReads)"
     - "POST every operator verb (BaseApiPresenter::$operatorActions; scope wing.operator) — Tier 1 only; the record names user:<uid>"
 
@@ -77,7 +77,8 @@ invariants:
     Any other face caller sees only rows with actor_id = "user:<own uid>"; a
     session that is not theirs answers 404, never 403, so its existence does
     not leak. Agents open to an end user below Tier 1: those whose agent.yml
-    sets metadata.end_user: true. None does in v1.
+    sets metadata.end_user: true. None does in v1. The same rule narrows a
+    session's children, and a parent that is not theirs answers 404 at open.
   removal: >-
     Deleting a user in Authentik removes nothing in Wing: their sessions stay
     as audit lineage under "user:<uid>". A new account whose username folds to

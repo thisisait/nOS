@@ -36,6 +36,7 @@ final class AgentSessionsPresenter extends BaseApiPresenter
 			'session' => $session,
 			'threads' => $this->sessions->listThreadsForSession($uuid),
 			'iterations' => $this->sessions->listIterations($uuid),
+			'children' => $this->sessions->listChildren($uuid, $scope),
 		]);
 	}
 }
