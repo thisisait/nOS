@@ -14,19 +14,29 @@ LLM context note (2026-10-21). Where the benches stand, what makes a run repeata
 | Fixed data | `iris-bench.py --seed` (iris-bench-2 tables), nos-assay domains + tiers | yes |
 | Provenance | `--out` records nOS commit, Ollama digest, primer/grammar sha | yes |
 | Majority of N | `--repeat N` | masks noise, does not remove it |
-| Paired A/B | `tools/bench-compare.py` (2026-10-21) | yes |
+| Paired A/B, per kind | `tools/bench-compare.py` (2026-10-21) | yes |
+| Offline re-judge | `iris-bench.py --rescore` | yes |
 | Sampler pin | `iris_local_seed` → `NOS_LOCAL_SEED` → `seed` on a local row (2026-10-21) | yes, same host + digest |
 
 Not in CI and cannot be: a live run needs a model, KEAP, the organ and the ledger. CI holds the
 judge, the mapper and the compare tool (offline gates); the run itself is an operator step.
 
-## "nos-lang has a measurable benefit" — not measured yet
+## "nos-lang has a measurable benefit" — partly, not provably
 
-The only numbers are the v0.17-beta baseline (devlog 2026-10-17, pre-#57, nos-assay synthetic,
-M1 Max): `qwen3.5:9b` plain tools 68/126 smoke, 143/284 standard; `hermes3:8b` 28/126; first live
-cortex plan run 1/14. `state/habitat/llm-backends.yml` (2026-08-30): hermes3:8b fails cortex-lang
-syntax, qwen3:14b semantics. No run compares `tools` vs `cortex` on the same model, digest,
-commit and case set. Until one does, the claim is open.
+Numbers in the repo (none of the runs themselves are committed; they live under `~/.nos/bench`
+and `~/iris-bench-local` on the host):
+
+- v0.17-beta baseline (devlog 2026-10-17, pre-#57, nos-assay, M1 Max): `qwen3.5:9b` plain tools
+  68/126 smoke, 143/284 standard; `hermes3:8b` 28/126; first live cortex plan run 1/14.
+- `default.config.yml` (2026-10-18/19): cortex on `qwen3.5:9b` GGUF standard 85 → 70/283 beside the
+  catalogue rework; "cortex beat tools" on chart, kpi, top-n, insert-row — hence `iris_plan: hybrid`
+  and `iris_cortex_intents`. Default is still `tools`.
+- `state/habitat/llm-backends.yml` (2026-08-30): hermes3:8b fails cortex-lang syntax, qwen3:14b semantics.
+
+What is missing for the claim to stand: a paired run (same digest, commit, seed, case set) where
+only `iris_plan` differs, its two `--out` files kept, and `bench-compare.py` saying `B better` per
+kind. Overall, cortex (85/283) is below plain tools (143/284) — the benefit is per intent, which
+is exactly what hybrid bets on and what `by_kind` now measures.
 
 ## A repeatable run
 
@@ -35,7 +45,7 @@ commit and case set. Until one does, the claim is open.
 3. Same config twice → `tools/bench-compare.py run1.json run2.json` must say `repeatable`.
    Not repeatable at temperature 0 + seed = the host's Ollama is not deterministic (batching,
    Metal kernels); then `--repeat 3` and report it.
-4. Change ONE axis (`iris_plan: cortex`, or the model tag), run again →
+4. Change ONE axis (`iris_plan: tools` → `hybrid`/`cortex`, catalogue, or the model tag), run again →
    `tools/bench-compare.py tools.json cortex.json`. Verdict by exact McNemar on paired flips;
    two axes at once = `confounded` (exit 2). 43 cases detect only big effects (≈ 6+ net flips);
    use a nos-assay `--tier standard` domain for smaller ones.
