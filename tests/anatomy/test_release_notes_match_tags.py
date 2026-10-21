@@ -5,6 +5,10 @@ while RELEASE.md still headed its section "— DRAFT". A reader of the notes cou
 not tell what shipped from what was planned. Two rules, read from git tags and
 RELEASE.md headings: a section whose tag exists carries no DRAFT marker, and the
 newest tagged section names its tag commit (8-char prefix).
+
+Tags are read from origin (`git ls-remote`), not the local tag list: CI checks
+out shallow with no tags, a local tag may never have been pushed, and a clone
+may not have fetched the newest one.
 """
 import re
 import subprocess
@@ -17,9 +21,18 @@ HEADING = re.compile(r"^## (v\d+\.\d+(?:\.\d+)?(?:-[\w.]+)?)\b(.*)$", re.M)
 
 
 def _tags():
-    out = subprocess.run(["git", "tag", "--list", "v*"], cwd=ROOT,
-                         capture_output=True, text=True, check=True).stdout
-    return set(out.split())
+    """{tag: commit sha} as origin holds them; annotated tags peeled."""
+    out = subprocess.run(["git", "ls-remote", "--tags", "origin", "v*"], cwd=ROOT,
+                         capture_output=True, text=True, check=True, timeout=60).stdout
+    tags = {}
+    for line in out.splitlines():
+        sha, ref = line.split("\t")
+        name = ref.removeprefix("refs/tags/")
+        if name.endswith("^{}"):
+            tags[name[:-3]] = sha
+        else:
+            tags.setdefault(name, sha)
+    return tags
 
 
 def _sections():
@@ -33,19 +46,17 @@ def _sections():
 def _tagged():
     tags = _tags()
     if not tags:
-        pytest.skip("no git tags in this checkout (shallow clone): UNKNOWN, not green")
-    return [(v, h, body) for v, h, body in _sections() if v in tags]
+        pytest.skip("origin lists no v* tags: UNKNOWN, not green")
+    return [(v, h, body, tags[v]) for v, h, body in _sections() if v in tags]
 
 
 def test_a_tagged_section_is_not_a_draft():
-    drafts = [v for v, head, _ in _tagged() if "DRAFT" in head]
+    drafts = [v for v, head, _, _ in _tagged() if "DRAFT" in head]
     assert not drafts, f"tagged but RELEASE.md still says DRAFT: {drafts}"
 
 
 def test_the_newest_tagged_section_names_its_tag_commit():
     tagged = _tagged()
     assert tagged, "no RELEASE.md section matches an existing tag"
-    version, _, body = tagged[0]  # RELEASE.md is newest-first
-    sha = subprocess.run(["git", "rev-list", "-n1", version], cwd=ROOT,
-                         capture_output=True, text=True, check=True).stdout.strip()
+    version, _, body, sha = tagged[0]  # RELEASE.md is newest-first
     assert sha[:8] in body, f"{version} section does not name its tag commit {sha[:8]}"
