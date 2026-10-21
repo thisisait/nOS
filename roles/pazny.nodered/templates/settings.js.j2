@@ -18,12 +18,15 @@
    authentik.autologin.enabled), the passport-openidconnect strategy gets
    `autoLogin: true` so Node-RED initiates the OIDC flow on editor load instead
    of showing the "Sign in with Authentik" button. supports: partial — this is
-   a REDIRECT, NOT a form-hide. A LOCAL ADMIN fallback user is kept in
-   adminAuth.users (break-glass) so an Authentik-down event never locks the
-   operator out. The trailing `| bool` coerces the loader/play-var string to a
-   real bool; default false keeps everything dormant. #}
+   a REDIRECT, NOT a form-hide. The strategy type has no local password
+   login, so there is no break-glass user here (see users() below). The
+   trailing `| bool` coerces the loader/play-var string to a real bool; default false keeps everything dormant. #}
 {% set _autologin_on = _oidc_on and (nodered_autologin_enabled | default(false) | bool) %}
 
+{% if _oidc_on %}
+const _TIER1 = {{ (authentik_rbac_tiers | default([]) | selectattr('tier', 'equalto', 1) | map(attribute='groups') | first | default(['nos-providers', 'nos-admins'])) | tojson }};
+const _grants = {};
+{% endif %}
 module.exports = {
     uiPort: process.env.PORT || 1880,
     mqttReconnectTime: 15000,
@@ -37,10 +40,9 @@ module.exports = {
     exportGlobalContextKeys: false,
 {% if _oidc_on %}
     // ── Authentik native OIDC (β1.B) ─────────────────────────────────────────
-    // Strategy + verify follow Node-RED docs §"OAuth/OpenID-based authentication".
-    // We grant `permissions: '*'` (full admin) to every authenticated user —
-    // RBAC granularity belongs in Authentik group expression policies (Tier 2 /
-    // manager group), not in Node-RED itself.
+    // Tier-1 groups (authentik_rbac_tiers) get '*', other groups 'read'; no
+    // groups claim = no login. users() only admits names verify() saw, so a
+    // restart re-asks Authentik. Gate: test_nodered_admin_is_tier_one.py.
     adminAuth: {
         type: "strategy",
         strategy: {
@@ -52,9 +54,7 @@ module.exports = {
             //    nodered_autologin_enabled (sso_autologin_nodered >
             //    sso_autologin_min_tier_2 > sso_autologin). autoLogin makes
             //    Node-RED start the OIDC flow on load instead of showing the
-            //    button. This is a REDIRECT — the local form is NOT hard-hidden
-            //    (supports: partial). Break-glass: the local admin fallback user
-            //    below stays in adminAuth.users so SSO-down never locks you out.
+            //    button. This is a REDIRECT (supports: partial).
             autoLogin: true,
 {% endif %}
             strategy: require("passport-openidconnect").Strategy,
@@ -72,21 +72,16 @@ module.exports = {
                     var username = profile.username
                         || (profile._json && profile._json["{{ nodered_oidc_username_claim | default('preferred_username') }}"])
                         || profile.id;
-                    return done(null, { username: username, permissions: '*' });
+                    var groups = profile._json && profile._json.groups;
+                    if (!username || !Array.isArray(groups)) return done(null, false);
+                    _grants[username] = groups.some(function (g) { return _TIER1.indexOf(g) >= 0; }) ? '*' : 'read';
+                    return done(null, { username: username });
                 }
             }
         },
-        // ── Local admin fallback (break-glass) ──────────────────────────────
-        // Kept regardless of autoLogin so an operator can still be admitted if
-        // Authentik is down. With the `strategy` adminAuth type Node-RED admits
-        // the OIDC identity via the verify() callback above; this `users`
-        // function maps any authenticated username — including the documented
-        // local admin `{{ nodered_local_admin_username | default('admin') }}` —
-        // to full admin permissions. The local-admin credential lives in role
-        // defaults (nodered_local_admin_password) for the documented offline
-        // recovery path (re-render without autoLogin → button returns).
         users: function(username) {
-            return Promise.resolve({ username: username, permissions: "*" });
+            var p = _grants[username];
+            return Promise.resolve(p ? { username: username, permissions: p } : null);
         }
     },
 {% endif %}
