@@ -1,9 +1,9 @@
-"""roles/pazny.medulla builds the one workspace binary; the thalamus runs it through a symlink.
+"""roles/pazny.medulla builds the one workspace binary; thalamus_bin is a copy of it.
 
 WHY. Row medulla-skeleton (ssot/doctrine/medulla.md §1, §3: the thalamus is absorbed first). The
 build moved out of pazny.thalamus: the medulla links the thalamus crate, so a change anywhere in
 the workspace (root Cargo.toml/Cargo.lock, medulla/src) must rebuild, and the plist's
-`thalamus_bin` stays the path launchd runs — now a link to the medulla. Offline: YAML shape,
+`thalamus_bin` stays the path launchd runs — now a copy of the medulla. Offline: YAML shape,
 and the hash task run on a copy of the workspace.
 """
 from __future__ import annotations
@@ -36,13 +36,11 @@ def _links(name: str) -> list[dict]:
             if t.get("ansible.builtin.file", {}).get("state") == "link"]
 
 
-def test_the_build_is_locked_workspace_and_installs_the_symlink():
+def test_the_build_is_locked_and_builds_the_workspace():
     for name in ("macos.yml", "linux.yml"):
         sh = _build(name)
         for word in ("--locked", "--release", "-p medulla", "CARGO_TARGET_DIR", "{{ medulla_bin | quote }}"):
             assert word in sh, (name, word, sh)
-        links = _links(name)
-        assert any(lk["src"] == "medulla" and lk["dest"] == "{{ thalamus_bin }}" for lk in links), (name, links)
     assert "/files/anatomy/thalamus/Cargo.toml') | quote }}" in _build("macos.yml")
     assert "/files/anatomy/thalamus') | quote }}:/src:ro -w /src " in _build("linux.yml")
 
