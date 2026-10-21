@@ -180,6 +180,68 @@ describe('boards nest', () => {
 		expect(fake.saved.at(-1)!.workspaces[0].name).toBe('Costs 2026');
 	});
 
+	it('previews a child board on its card from what is loaded, and runs nothing for it', async () => {
+		const layout: Layout = {
+			...structuredClone(poc),
+			workspaces: [
+				{
+					...structuredClone(poc.workspaces[0]),
+					items: [
+						...poc.workspaces[0].items,
+						{ id: 'b-c', kind: 'board', board: 'c', x: 0, y: 700, w: 400, h: 300 }
+					]
+				},
+				{
+					id: 'c',
+					name: 'Child',
+					parent: 'main',
+					items: [
+						{ id: 'h9', kind: 'heading', text: 'Plan', x: 0, y: 0, w: 400, h: 48 },
+						{
+							id: 'w9',
+							kind: 'widget',
+							title: 'Notes',
+							spec: { rows: { table: 'notes' } },
+							...{ x: 0, y: 56, w: 592, h: 376 }
+						}
+					]
+				}
+			]
+		};
+		const fake = await open(layout);
+		const preview = () => card('Child')!.querySelector<HTMLElement>('[data-preview]')!;
+		expect(preview(), 'the card draws its board').not.toBeNull();
+		expect(preview().hasAttribute('inert'), 'a thumbnail, never a control').toBe(true);
+		const scale = Number(preview().style.transform.match(/scale\(([\d.]+)\)/)?.[1]);
+		expect(scale > 0 && scale < 1, 'scaled to fit the card').toBe(true);
+		expect(preview().textContent).toContain('Plan');
+		expect(preview().textContent).toContain('Notes');
+		expect(preview().textContent, 'nothing cached yet').toContain('open to load');
+		expect(ran(fake.sent), 'a closed board runs nothing').not.toContain('w9');
+
+		// Open it, let its widget answer, come back: the card shows that answer without a second run.
+		card('Child')!.focus();
+		key(card('Child')!, 'Enter');
+		await wait();
+		expect(ran(fake.sent).filter((w) => w === 'w9')).toHaveLength(1);
+		fake.shell({
+			t: 'widget',
+			session: '0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b',
+			widget: 'w9',
+			component: { kind: 'markdown', props: { text: 'hello preview' } }
+		});
+		await wait();
+		key(document.querySelector('.svelte-flow__pane')!, 'Escape');
+		await wait();
+		expect(current()).toBe('Expenses');
+		expect(preview().textContent).toContain('hello preview');
+		expect(preview().textContent).not.toContain('open to load');
+		expect(
+			ran(fake.sent).filter((w) => w === 'w9'),
+			'shown, not re-run'
+		).toHaveLength(1);
+	});
+
 	it('lists the roots in the first crumb, where a new workspace starts', async () => {
 		const fake = await open(structuredClone(poc));
 		button('+ new workspace')!.click();
