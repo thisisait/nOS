@@ -1093,7 +1093,10 @@ MEASURED_WORK = {
     # RE-DERIVED 2026-10-16 — fired at 8381 collected vs 7957 (septum, model picker, rebind,
     # bench provenance + per-turn scoring). Operator run (vendor): 8214 passed, 169 skipped,
     # 1 failed, so 8215. Judge-env run (no wing/vendor): 8062 passed, 321 skipped, 1 failed -> 8063-120.
-    "pytest-anatomy": 8215,
+    # RE-DERIVED 2026-10-21 — fired at 8682 collected vs 8215 (dendrogram, start_agent, propose_app,
+    # grounding, wing multipart, toggles bool). Operator run (vendor): 8510 passed, 171 skipped,
+    # 1 failed, so 8511. Judge-env run (no vendor): 8348 passed, 330 skipped, 3 failed (2 since fixed) -> 8351-120.
+    "pytest-anatomy": 8511,
     "cortex-corpus-diff": 1,
 }
 
