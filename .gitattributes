@@ -21,6 +21,7 @@ tests/fixtures/selfmodel-recall.json merge=regen
 state/devlog-bundle.jsonl merge=regen
 state/tofu-authentik-services.yml merge=regen
 state/roadmap/index.yml merge=regen
+docs/active-work.md merge=regen
 state/fixtures/report-chain-synthetic/expected.yml merge=regen
 files/anatomy/contracts/bone.openapi.yml merge=regen
 files/anatomy/contracts/wing.openapi.yml merge=regen

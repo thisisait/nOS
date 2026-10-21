@@ -75,6 +75,9 @@ files:
   state/roadmap/index.yml:
     writer: tools/roadmap-seed.py
     checked_by: nobody offline; the writer reads the private seed (NOS_SEED_DIR)
+  docs/active-work.md:
+    writer: tools/active-work-gen.py
+    checked_by: tests/anatomy/test_active_work_slim.py (parity where the private seed is; shape only in CI)
   state/fixtures/report-chain-synthetic/expected.yml:
     writer: tools/report-chain-synth-gen.py
     checked_by: nobody; the writer has no --check
