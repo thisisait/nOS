@@ -2597,11 +2597,12 @@ keap_seed_accounting_fixture: false
 # profiles/praxis.yml is the only committed overlay that turns this on.
 keap_seed_consulting_fixture: false
 # system regardless of install state) — profiles/all-on.yml sets it true.
-# Optional live embedder for free-text semantic search (stored vectors come
-# from the keap-embed-sync Pulse job regardless). Docker Desktop (Mac):
-# "http://host.docker.internal:11434". Default off — Linux host-gateway
-# cannot reach a loopback-bound Ollama.
-keap_ollama_url: ""
+# Live embedder for free-text semantic search (stored vectors come from the
+# keap-embed-sync Pulse job regardless); without it search_knowledge has no
+# vector leg. Linux: on by default, Ollama listens on the docker bridge
+# (ollama_bind_host) and the gated container reaches it there. Docker Desktop
+# (Mac): opt in with "http://host.docker.internal:11434".
+keap_ollama_url: "{{ ollama_url if install_ollama and (ansible_system | default('Darwin')) != 'Darwin' else '' }}"
 # Public bearer-only ingest route (keap.<tld>/ingest/v1 WITHOUT the Authentik
 # middleware) — the DEVICE entry point for AR glasses / mobile companions in
 # the field. Token-gated (keap_agent_token_capture, write-only intake) +
