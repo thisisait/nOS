@@ -3,10 +3,11 @@
 // graph's layered columns, at most serve's cap with the rest said, and a click on a node offers to open it
 // on a new board as a knowledge widget the thalamus reads without the model (operator 2026-10-21).
 import { flushSync, mount, unmount } from 'svelte';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import Iris from './Iris.svelte';
 import { fakeTransport } from './transport.fake';
-import type { ToShell } from './wire';
+import type { Component, ToShell } from './wire';
+import { empty } from './workspace';
 
 const S = '0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b';
 const RUST = '02.02.03.01.03';
@@ -92,5 +93,102 @@ describe('a knowledge tree in Iris', () => {
 			spec: { knowledge: { node: `${RUST}.01` } },
 			trigger: 'click'
 		});
+	});
+});
+
+describe('a knowledge widget on a board', () => {
+	const rect = HTMLElement.prototype.getBoundingClientRect;
+	beforeEach(() => {
+		HTMLElement.prototype.getBoundingClientRect = () =>
+			({
+				x: 0,
+				y: 0,
+				left: 0,
+				top: 0,
+				right: 1200,
+				bottom: 800,
+				width: 1200,
+				height: 800
+			}) as DOMRect;
+	});
+	afterEach(() => {
+		HTMLElement.prototype.getBoundingClientRect = rect;
+	});
+
+	it('expands a node’s children inline from a re-run of the widget, and collapses them again', async () => {
+		const box = { x: 0, y: 0, w: 800, h: 600 };
+		const spec = { knowledge: { node: RUST } };
+		const layout = {
+			...empty(),
+			workspaces: [
+				{
+					id: 'ws1',
+					name: 'Knowledge',
+					items: [{ id: 'k1', kind: 'widget' as const, title: 'Rust', spec, ...box }]
+				}
+			]
+		};
+		const fake = fakeTransport(layout);
+		app = mount(Iris, { target: document.body, props: { transport: fake.transport } });
+		await new Promise((r) => setTimeout(r, 60));
+		await settle();
+		const tree = (read as Extract<ToShell, { t: 'render' }>).component;
+		fake.shell({ t: 'widget', session: S, widget: 'k1', component: tree });
+		await settle();
+		const widget = () => document.querySelector('[data-widget="k1"]')!;
+		const drawn = () => widget().querySelectorAll('g.node').length;
+		expect(drawn()).toBe(50);
+		const node = (id: string) =>
+			[...widget().querySelectorAll('g.node')].find((n) =>
+				`${n.querySelector('title')?.textContent} `.includes(`· ${id} `)
+			) as unknown as HTMLElement;
+		const choose = (label: string) =>
+			[...widget().querySelectorAll('button')].find((b) => b.textContent?.trim() === label)!;
+
+		node(`${RUST}.01`).dispatchEvent(new MouseEvent('click', { bubbles: true }));
+		await settle();
+		const before = fake.sent.length;
+		choose('Expand its children here').click();
+		await settle();
+		const ask = fake.sent.slice(before);
+		expect(ask).toEqual([
+			{
+				t: 'widget',
+				widget: expect.stringMatching(/^k1-k\d+$/),
+				spec: { knowledge: { node: `${RUST}.01` } },
+				trigger: 'click'
+			}
+		]);
+		expect(widget().textContent).toContain('loading the children of Ownership');
+		const kids: Component = {
+			kind: 'knowledge_tree',
+			props: {
+				focus: `${RUST}.01`,
+				hidden: 0,
+				nodes: [
+					{ id: RUST, name: 'Rust' },
+					{ id: `${RUST}.01`, name: 'Ownership', parent: RUST, child_count: 2 },
+					{ id: `${RUST}.01.01`, name: 'Borrowing', parent: `${RUST}.01` },
+					{ id: `${RUST}.01.02`, name: 'Lifetimes', parent: `${RUST}.01` }
+				]
+			}
+		};
+		fake.shell({
+			t: 'widget',
+			session: S,
+			widget: (ask[0] as { widget: string }).widget,
+			component: kids
+		});
+		await settle();
+		expect(drawn(), 'the two children joined the same tree').toBe(52);
+		expect(node(`${RUST}.01.02`)).toBeDefined();
+
+		node(`${RUST}.01`).dispatchEvent(new MouseEvent('click', { bubbles: true }));
+		await settle();
+		const sent = fake.sent.length;
+		choose('Collapse its children').click();
+		await settle();
+		expect(drawn()).toBe(50);
+		expect(fake.sent.length, 'a collapse asks nothing').toBe(sent);
 	});
 });
