@@ -50,6 +50,14 @@
 :9000 {
     bind 127.0.0.1{% if (nos_docker_host_ip | default('127.0.0.1')) != '127.0.0.1' and (wing_edge_token | default('') | length) > 0 %} {{ nos_docker_host_ip }}{% endif %}
 
+    # Wing reads no uploads, and its auth is PHP code: a multipart body would
+    # reach PHP's rfc1867 parser pre-auth from any local user or container
+    # (2026 UAF reports). Refused here, before PHP. Gate: test_wing_refuses_multipart.py
+    @multipart header_regexp Content-Type (?i)multipart
+    respond @multipart "Wing accepts no multipart bodies" 415 {
+        close
+    }
+
     root * {{ wing_app_dir }}/www
     encode zstd gzip
 
