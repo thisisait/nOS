@@ -46,6 +46,15 @@ depends_on:
     unenforced: >-
       iris_plan defaults to tools and nothing auto-enables install_cortex for it. With
       the organ down the plan path is off for the turn and Iris falls back to plain tools.
+  - upstream: "service:wing"
+    kind: data
+    via: >-
+      POST /api/v1/agents/<name>/sessions on NOS_WING_URL (loopback) with the `thalamus`
+      bearer and X-Nos-User-*, only after the person approves start_agent (src/serve.rs start)
+    measured: "2026-10-21"
+    unenforced: >-
+      Nothing auto-enables Wing for the thalamus. With no token rendered start_agent says so;
+      with Wing down the approved start answers "Wing unreachable" and nothing starts.
 
 gdpr:
   purpose: |

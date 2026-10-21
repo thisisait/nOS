@@ -5,7 +5,7 @@
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
     "nodes": 556,
-    "edges": 554,
+    "edges": 555,
     "nodes_pulse": 43,
     "nodes_judge": 5,
     "nodes_gateset": 5,
@@ -32,7 +32,7 @@
     "nodes_article": 26,
     "nodes_organ_system": 13,
     "nodes_tissue": 1,
-    "edges_data": 245,
+    "edges_data": 246,
     "edges_trigger": 71,
     "edges_temporal": 5,
     "edges_mutex": 21,
@@ -41,11 +41,11 @@
     "edges_allows": 5,
     "edges_references": 28,
     "edges_part_of": 109,
-    "edges_service_dependency": 48,
+    "edges_service_dependency": 49,
     "services_survey_declared": 35,
     "services_survey_not_surveyed": 40,
     "services_survey_no_manifest": 4,
-    "edges_service_dependency_unenforced": 25,
+    "edges_service_dependency_unenforced": 26,
     "services_layer_L0": 4,
     "services_layer_L1": 5,
     "services_layer_L2": 26,
@@ -4816,7 +4816,7 @@
       "layer_basis": {
         "height": 0,
         "dependents": 0,
-        "upstreams": 2
+        "upstreams": 3
       }
     },
     "service:traefik": {
@@ -4897,7 +4897,7 @@
       "layer": "L1",
       "layer_basis": {
         "height": 1,
-        "dependents": 1,
+        "dependents": 2,
         "upstreams": 4
       }
     },
@@ -7268,6 +7268,16 @@
       "via": "NOS_HUB_API_URL + NOS_WING_API_URL → host.docker.internal:{{ wing_port }} (roles/pazny.face/templates/compose.yml.j2:40,47) — the app catalog and the Anatomy view's Pulse/Bone/Wing projections all come from Wing; the BFF is an allow-list projection over these responses",
       "enforced_by": null,
       "unenforced": "No auto-enable block ties install_wing to install_face. With Wing down the desktop still boots and every Anatomy panel renders its unreachable state — which is the designed behaviour, and also why nothing fails.",
+      "evidence": "measured"
+    },
+    {
+      "from": "service:wing",
+      "to": "service:thalamus",
+      "kind": "data",
+      "measured": "2026-10-21",
+      "via": "POST /api/v1/agents/<name>/sessions on NOS_WING_URL (loopback) with the `thalamus` bearer and X-Nos-User-*, only after the person approves start_agent (src/serve.rs start)",
+      "enforced_by": null,
+      "unenforced": "Nothing auto-enables Wing for the thalamus. With no token rendered start_agent says so; with Wing down the approved start answers \"Wing unreachable\" and nothing starts.",
       "evidence": "measured"
     },
     {
