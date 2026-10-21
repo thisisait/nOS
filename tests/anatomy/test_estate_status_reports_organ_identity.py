@@ -166,3 +166,28 @@ def test_the_default_run_includes_the_identity_axis(monkeypatch):
     mod.main()
     assert "axis_identity" in called, f"the default run skipped the identity axis: {called}"
     assert called.index("axis_identity") > called.index("axis_organs"), called
+
+
+def test_a_python_shim_and_a_venv_entry_script_are_still_seen(tmp_path):
+    """Measured live 2026-10-21: /usr/bin/python3 re-execs as the framework Python, so
+    ps never starts with argv0; a venv `uvicorn` is a python script, not native."""
+    mod = load()
+    home = tmp_path / "home"
+    agents = home / "Library/LaunchAgents"
+    agents.mkdir(parents=True)
+    shim_row, venv_row = ORGANS[0], ORGANS[1]
+    script = tmp_path / "venv/bin/uvicorn"
+    script.parent.mkdir(parents=True)
+    script.write_text("#!/opt/venv/bin/python3\nimport uvicorn\n")
+    for row, args in ((shim_row, ["/usr/bin/python3", "/opt/nos/gw.py"]),
+                      (venv_row, [str(script), "main:app"])):
+        (agents / f"{row['launchd_label']}.plist").write_bytes(plistlib.dumps(
+            {"Label": row["launchd_label"], "ProgramArguments": args}))
+    ps = [f"{ME} pazny /Library/Frameworks/Python3.framework/MacOS/Python /opt/nos/gw.py",
+          f"{ME} pazny /opt/venv/bin/python3 {script} main:app"]
+    res = mod.Result()
+    mod.axis_identity(res, root=tmp_path, home=home, ps_lines=ps)
+    got = {x.subject: x for x in lines(res)}
+    for row in (shim_row, venv_row):
+        assert got[row["id"]].state == mod.OK, got[row["id"]]
+        assert "python/python" in got[row["id"]].detail, got[row["id"]]
