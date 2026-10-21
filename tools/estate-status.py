@@ -480,7 +480,10 @@ def axis_identity(res: Result, root: Path = Path("/"), home: Path = Path.home(),
         try:  # an entry script (venv uvicorn) runs on its shebang's interpreter
             first = Path(argv0).read_bytes()[:128].split(b"\n")[0].decode() if argv0 else ""
             if first.startswith("#!"):
-                interp = first[2:].split()[-1] if "/env" in first else first[2:].split()[0]
+                words = first[2:].split()
+                if words and words[0].endswith("/env"):  # env [-S] [flags] python3 [flags]
+                    words = [w for w in words[1:] if not w.startswith("-")]
+                interp = words[0] if words else argv0
         except (OSError, UnicodeDecodeError):
             pass
         runtime = next((rt for pre, rt in RUNTIMES if Path(interp).name.startswith(pre)), "native")
@@ -489,11 +492,12 @@ def axis_identity(res: Result, root: Path = Path("/"), home: Path = Path.home(),
             src = REPO / "files/anatomy" / rid.replace("_", "-")
             language = "rust" if any(src.glob("**/Cargo.toml")) else "native"
         langs[language] = langs.get(language, 0) + 1
-        # The script path when argv[1] is one (a python shim re-execs under another argv0), else argv0.
+        # An interpreter argv0 is matched by its arguments (the python shim re-execs under another
+        # argv0, `-m pkg` included); anything else by its whole argv.
         # ponytail: argv substring match; upgrade to pid-from-launchd/systemd when two organs share a key.
-        key = argv[1] if len(argv) > 1 and argv[1].startswith("/") else argv0
-        hit = next((p for p in procs if key and key in p[2]
-                    and (len(argv) < 2 or argv[1] in p[2])), None)
+        own = any(Path(argv0).name.startswith(pre) for pre, _ in RUNTIMES)
+        key = " ".join(argv[1:] if own and len(argv) > 1 else argv)
+        hit = next((p for p in procs if key and key in p[2]), None)
         head = f"{rid} · {language}/{runtime}"
         if hit is None and scheduled and procs:
             res.add("identity", rid, f"{head} · scheduled, idle (no run in progress) · {domain}")
