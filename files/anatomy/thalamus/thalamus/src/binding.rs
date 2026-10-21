@@ -17,6 +17,8 @@ pub struct Binding {
     pub local: bool,
     /// A local row's sampling temperature (NOS_LOCAL_TEMPERATURE, default 0.3); None leaves a cloud row's own.
     pub temperature: Option<f64>,
+    /// A local row's sampling seed (NOS_LOCAL_SEED, unset by default): what a repeatable bench run pins.
+    pub seed: Option<u64>,
 }
 
 /// Never prints the key: a Binding is logged and panicked over.
@@ -158,6 +160,7 @@ pub fn decide(agent_yml: &str, register_yml: &str, env: impl Fn(&str) -> Option<
         // Client bench 2026-10-15: one model scored 9/11 then 6/11 at Ollama's default temperature.
         temperature: local.then(|| env("NOS_LOCAL_TEMPERATURE").and_then(|t| t.trim().parse::<f64>().ok())
             .filter(|t| (0.0..=2.0).contains(t)).unwrap_or(0.3)),
+        seed: if local { env("NOS_LOCAL_SEED").and_then(|s| s.trim().parse::<u64>().ok()) } else { None },
     }))
 }
 
