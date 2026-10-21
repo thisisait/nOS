@@ -147,6 +147,39 @@ describe('boards nest', () => {
 		expect(card('Board')).toBeNull();
 	});
 
+	it('renames the open board from its crumb: Enter saves, Escape cancels, empty is refused', async () => {
+		const fake = await open(structuredClone(poc));
+		const field = () => nav().querySelector<HTMLInputElement>('input[aria-label="board name"]');
+		const type = (v: string, k: string) => {
+			field()!.value = v;
+			field()!.dispatchEvent(new Event('input', { bubbles: true }));
+			key(field()!, k);
+		};
+		button('rename board')!.click();
+		await wait();
+		expect(field()?.value).toBe('Expenses');
+		expect(document.activeElement, 'the field takes the focus').toBe(field());
+
+		type('Nope', 'Escape');
+		await wait();
+		expect(field(), 'Escape leaves the edit').toBeNull();
+		expect(current()).toBe('Expenses');
+
+		button('rename board')!.click();
+		await wait();
+		type('   ', 'Enter');
+		await wait();
+		expect(field(), 'an empty name is refused, the edit stays').not.toBeNull();
+		expect(document.body.textContent).toContain('a board needs a name');
+
+		type('  Costs 2026 ', 'Enter');
+		await wait(400);
+		expect(field()).toBeNull();
+		expect(current()).toBe('Costs 2026');
+		expect(document.activeElement, 'the focus returns to the pencil').toBe(button('rename board'));
+		expect(fake.saved.at(-1)!.workspaces[0].name).toBe('Costs 2026');
+	});
+
 	it('lists the roots in the first crumb, where a new workspace starts', async () => {
 		const fake = await open(structuredClone(poc));
 		button('+ new workspace')!.click();
