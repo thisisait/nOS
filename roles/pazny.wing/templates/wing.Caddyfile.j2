@@ -22,6 +22,10 @@
         # num_threads default = 2× CPU cores; explicit cap keeps the Wing
         # process from eating the M-series macbook on cold compose runs.
         num_threads 4
+        # Wing never reports upload progress; the stock On keeps the session
+        # upload-progress handler (2026 heap UAF reports) reachable from every
+        # local user and container that can reach :9000.
+        php_ini session.upload_progress.enabled 0
     }
 }
 
