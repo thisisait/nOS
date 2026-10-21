@@ -43,7 +43,10 @@ the run's own argv; --domain needs NOS_ASSAY_DIR) and writes run.rescored.json; 
 engine, catalogue, primer, grammar, registry, commit, model digests), paired flips overall and per
 kind, exact two-sided McNemar. One axis = a measured verdict (B better / A better / no measured
 difference), none = a repeatability check (repeatable / not repeatable), two or more = confounded.
-A NO-DATA case on either side is left out. Exit 0 B better or repeatable, 2 confounded, else 1.
+A NO-DATA case on either side is left out; no case judged on both sides = nothing paired. A run whose
+commit or any model digest is None (git or Ollama's tags unreadable) is unverified: None == None is no
+evidence. The sampler (temperature, seed) is not on the wire, so it is not compared: pin it in config.
+Exit 0 B better or repeatable, 2 confounded, 3 an unreadable run, else 1.
 """
 
 from __future__ import annotations
@@ -977,6 +980,18 @@ def axes(a: dict, b: dict) -> list[str]:
     return sorted(out)
 
 
+def unverified(a: dict, b: dict) -> list[str]:
+    """Axes a run could not record (None): their equality proves nothing."""
+    out = set()
+    for run in (a, b):
+        prov = run.get("provenance") or {}
+        if not prov.get("nos_commit"):
+            out.add("nos_commit")
+        if not prov.get("models") or any(not m.get("digest") for m in prov["models"]):
+            out.add("models")
+    return sorted(out)
+
+
 def compare(a: dict, b: dict) -> dict:
     ca = {c["id"]: c for c in a.get("cases") or []}
     cb = {c["id"]: c for c in b.get("cases") or []}
@@ -985,8 +1000,12 @@ def compare(a: dict, b: dict) -> dict:
     a_only = sorted(i for i in both if ca[i]["pass"] and not cb[i]["pass"])
     b_only = sorted(i for i in both if cb[i]["pass"] and not ca[i]["pass"])
     p = mcnemar(len(a_only), len(b_only))
-    diff = axes(a, b)
-    if not diff:
+    diff, blind = axes(a, b), unverified(a, b)
+    if not both:
+        verdict = "nothing paired"
+    elif blind:
+        verdict = "unverified"
+    elif not diff:
         verdict = "not repeatable" if a_only or b_only else "repeatable"
     elif len(diff) > 1:
         verdict = "confounded"
@@ -1001,16 +1020,19 @@ def compare(a: dict, b: dict) -> dict:
         bo = sum(1 for i in b_only if (ca[i].get("kind") or "-") == k)
         by_kind[k] = {"paired": sum(1 for i in both if (ca[i].get("kind") or "-") == k),
                       "a_only": ao, "b_only": bo, "p": mcnemar(ao, bo)}
-    return {"axes": diff, "by_kind": by_kind, "paired": len(both), "a_pass": sum(ca[i]["pass"] for i in both),
+    return {"axes": diff, "unverified": blind, "by_kind": by_kind, "paired": len(both), "a_pass": sum(ca[i]["pass"] for i in both),
             "b_pass": sum(cb[i]["pass"] for i in both), "a_only": len(a_only), "b_only": len(b_only),
             "a_only_ids": a_only, "b_only_ids": b_only, "left_out": left_out, "p": p, "verdict": verdict}
 
 
-COMPARE_EXIT = {"B better": 0, "repeatable": 0, "A better": 1, "not repeatable": 1, "no measured difference": 1, "confounded": 2}
+COMPARE_EXIT = {"B better": 0, "repeatable": 0, "A better": 1, "not repeatable": 1, "no measured difference": 1,
+                "nothing paired": 1, "unverified": 1, "confounded": 2}
 
 
 def print_compare(r: dict) -> None:
     print(f"axes: {', '.join(r['axes']) or 'none (repeatability check)'}")
+    if r["unverified"]:
+        print(f"unverified (not recorded): {', '.join(r['unverified'])}")
     print(f"paired {r['paired']} · A {r['a_pass']} · B {r['b_pass']} · only A {r['a_only']} · only B {r['b_only']} "
           f"· McNemar p={r['p']:.4f} · left out {len(r['left_out'])}")
     for k, v in r["by_kind"].items():
@@ -1106,7 +1128,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--json", action="store_true", help="with --compare: print the comparison as JSON")
     a = ap.parse_args(argv)
     if a.compare:
-        r = compare(*(json.loads(Path(f).read_text(encoding="utf-8")) for f in a.compare))
+        try:
+            runs = [json.loads(Path(f).read_text(encoding="utf-8")) for f in a.compare]
+            if not all(isinstance(run, dict) and isinstance(run.get("cases"), list) for run in runs):
+                raise ValueError("a saved run is an object with a cases list")
+            r = compare(*runs)
+        except (OSError, ValueError, KeyError, TypeError) as e:
+            print(f"--compare: unreadable run: {e}", file=sys.stderr)
+            return 3
         print(json.dumps(r, indent=2)) if a.json else print_compare(r)
         return COMPARE_EXIT[r["verdict"]]
     if a.rescore:

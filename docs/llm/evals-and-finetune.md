@@ -43,6 +43,8 @@ is exactly what hybrid bets on and what `by_kind` now measures.
 1. `config.yml`: `iris_local_temperature: 0`, `iris_local_seed: 42`; converge thalamus.
 2. `NOS_LIVE=1 tools/iris-bench.py --seed` once (fixed tables).
 3. Same config twice → `tools/iris-bench.py --compare run1.json run2.json` must say `repeatable`.
+   The compare cannot see the sampler: `repeatable` holds only for runs you know shared the same
+   `iris_local_temperature` and `iris_local_seed`. A None digest or commit says `unverified`.
    Not repeatable at temperature 0 + seed = the host's Ollama is not deterministic (batching,
    Metal kernels); then `--repeat 3` and report it.
 4. Change ONE axis (`iris_plan: tools` → `hybrid`/`cortex`, catalogue, or the model tag), run again →
@@ -81,8 +83,9 @@ pairs: generate them.
 Generator (rejection sampling, code as filter): table defs from nos-assay domains × intent
 templates (count, filter, group-by, rank, chart kind, cs/en) → teacher model writes the pipeline →
 keep only if organ validates, mapper maps, and executing on seeded rows equals a code oracle.
-Hold out whole domains for eval. Then: base 3B vs tuned 3B vs qwen3:14b, same digest pin, through
-`iris-bench.py --compare`.
+Hold out whole domains for eval. Then compare in pairs (base 3B vs tuned 3B, tuned 3B vs
+qwen3:14b), each model on its own pinned Ollama digest reused across its repeated runs; a model
+swap is the one `models` axis of `iris-bench.py --compare`.
 
 ## Cost (vast.ai, checked 2026-10-21)
 
