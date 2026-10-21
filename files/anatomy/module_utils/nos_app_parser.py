@@ -724,8 +724,9 @@ def estate_violations(record: Dict[str, Any], live: bool = True) -> List[str]:
     meta = record.get("meta") or {}
     name = str(meta.get("name") or "")
     sub = str((record.get("nginx") or {}).get("subdomain") or name)
-    # Not resolved: from a symlinked module_utils the repo is the one it was called in.
-    tool = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "tools", "app-slots.py")
+    # normpath, lexically: the OS resolves ".." AFTER a symlinked module_utils, which reached the real repo
+    # (and the live estate) from a test rig. From a symlinked module_utils the repo is the one it was called in.
+    tool = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "tools", "app-slots.py"))
     argv = [sys.executable, tool, "--json", "--name", name, "--subdomain", sub] + (["--live"] if live else [])
     try:
         out = json.loads(subprocess.run(argv, capture_output=True, text=True, timeout=60, check=True).stdout)

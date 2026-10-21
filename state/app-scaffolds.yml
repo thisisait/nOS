@@ -1,6 +1,6 @@
 # The parts Iris's scaffold_app hands back (files/anatomy/thalamus/thalamus/src/serve.rs scaffold_app).
 # infra and backend are YAML text in which <name> (the app slug), <token> (the slug as a magic-token
-# suffix), <port> (the host port app_slots found free) and the runtime's <image>, <cport>, <health> and
+# suffix), <port> (an optional debug host port) and the runtime's <image>, <cport>, <health> and
 # <command> are replaced before it is parsed. Every part, filled with sample values and joined to a
 # meta + gdpr, passes nos_app_parser: tests/anatomy/test_app_scaffolds_parse.py.
 #
@@ -22,7 +22,9 @@ runtimes:
     command: ["node", "/app/server.js"]
     health: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/healthz').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
 
-# The service skeleton: loopback-only host port (Traefik is the edge), apps_net, a limit, a named volume.
+# The service skeleton: the port exposed to Traefik over the network, no host port (operator 2026-10-21), no
+# networks list (the runner attaches apps_net + Traefik's; a declared list drops Traefik's), a limit, a volume.
+# A loopback host port is added only when the model asks (debugging): serve fills the # <hostports> line.
 infra: |
   meta:
     ports: [<cport>]
@@ -32,12 +34,11 @@ infra: |
         image: "<image>"
         container_name: <name>
         restart: unless-stopped
-        ports:
-          - "127.0.0.1:<port>:<cport>"
+        expose:
+          - "<cport>"
+        # <hostports>
         volumes:
           - <name>_data:/data
-        networks:
-          - apps_net
         mem_limit: 256m
         cpus: 0.5
         healthcheck:
