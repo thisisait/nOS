@@ -6965,7 +6965,8 @@ fn app_manifest(name: &str) -> serde_json::Value {
     serde_json::json!({"meta": {"name": name, "version": "1.0.0", "summary": "A small notes app."},
         "gdpr": {"purpose": "Keeps the operator's own notes.", "legal_basis": "contract", "data_categories": ["notes"],
                  "data_subjects": ["operators"], "retention_days": 365, "processors": [], "transfers_outside_eu": false},
-        "compose": {"services": {name: {"image": "docker.io/library/nginx:1.27", "expose": ["80"]}}}})
+        "compose": {"services": {name: {"image": "docker.io/library/nginx:1.27", "expose": ["80"],
+                                         "mem_limit": "256m", "cpus": 0.5}}}})
 }
 
 fn propose_app(m: &serde_json::Value) -> String {
