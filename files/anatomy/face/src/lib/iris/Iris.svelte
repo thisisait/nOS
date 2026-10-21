@@ -267,8 +267,16 @@
 	const added = (title: string, spec: WidgetSpec) =>
 		place(ws.placed(layout, widgets, newId(), title, spec, mid()));
 
-	// The person's click on a knowledge node: it opens as a widget the thalamus reads, without the model.
-	const opened = (node: string, name: string) => added(name, { knowledge: { node } });
+	// The person's "Open in a new board" on a knowledge node: a board inside this one, named for the node,
+	// holding it as a widget the thalamus reads, without the model.
+	function opened(node: string, name: string) {
+		const fresh = ws.addSpace(layout, `ws${Date.now().toString(36)}`, name, layout.active, mid());
+		if (fresh === layout) return void (layoutNote = FULL);
+		place(ws.placed(fresh, widgets, newId(), name, { knowledge: { node } }));
+	}
+	// "Expand its children here": that widget's extra read, under its own token; route() files the answer.
+	const fetched = (widget: string, spec: WidgetSpec) =>
+		sendAll([{ t: 'widget', widget, spec, trigger: 'click' }]);
 
 	const FULL = `no room for another board here (at most ${ws.MAX_SPACES}, ${ws.MAX_DEPTH} deep, ${ws.MAX_ITEMS} items a board)`;
 	const roomy = () => ws.addSpace(layout, 'probe', '', layout.active) !== layout;
@@ -622,6 +630,7 @@
 		onlens={relens}
 		onexport={exported}
 		onread={opened}
+		onfetch={fetched}
 	/>
 </main>
 

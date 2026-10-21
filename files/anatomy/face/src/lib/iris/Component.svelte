@@ -25,6 +25,7 @@
 		type TreeNode,
 		type Value
 	} from './wire';
+	import type { WidgetState } from './widgets';
 	/** A new column as both shells say it (shell.rs column_said): kind, required, options, where a rowRef points. */
 	const columnSaid = (c: SchemaColumn) =>
 		c.kind +
@@ -35,11 +36,20 @@
 
 	// view: Před / Změny / Po of a component that marks a delta (delta.ts); the switch sets it.
 	// onread: a click on a knowledge node opens it (Iris places it as a knowledge widget); absent draws the tree only.
+	// open, onexpand: a knowledge widget's nodes expanded in place (KnowledgeTree.svelte).
 	let {
 		component,
 		view = $bindable('changes'),
-		onread
-	}: { component: Component; view?: View; onread?: (id: string, name: string) => void } = $props();
+		onread,
+		open,
+		onexpand
+	}: {
+		component: Component;
+		view?: View;
+		onread?: (id: string, name: string) => void;
+		open?: Record<string, WidgetState | undefined>;
+		onexpand?: (id: string) => void;
+	} = $props();
 	// One name per switch: one group for the keyboard and a screen reader; two switches never merge.
 	const switchName = $props.id();
 	// A column whose text runs long reads as prose under its row, not as a column that starves the rest.
@@ -360,7 +370,7 @@
 		<Graph graph={component.props} />
 	{:else if component.kind === 'knowledge_tree'}
 		{#if component.props.title}<h3>{component.props.title}</h3>{/if}
-		<KnowledgeTree tree={component.props} {onread} />
+		<KnowledgeTree tree={component.props} {onread} {open} {onexpand} />
 	{:else if component.kind === 'dendrogram'}
 		{#if component.props.title}<h3>{component.props.title}</h3>{/if}
 		<Dendrogram run={component.props} />

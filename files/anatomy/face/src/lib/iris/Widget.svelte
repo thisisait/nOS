@@ -9,7 +9,7 @@
 	import { csvName, toCsv } from './csv';
 	import Form from './Form.svelte';
 	import { lensPrefill } from './form';
-	import type { Lens } from './wire';
+	import type { Lens, WidgetSpec } from './wire';
 	import type { WidgetState } from './widgets';
 	import { age, type WidgetItem } from './workspace';
 
@@ -26,7 +26,9 @@
 		onremove,
 		onsubmit,
 		onexport,
-		onread
+		onread,
+		sub,
+		onfetch
 	}: {
 		box: WidgetItem;
 		state: WidgetState | undefined;
@@ -39,7 +41,26 @@
 		onsubmit: (m: Submit) => void;
 		onexport?: (name: string, csv: string) => Promise<string>;
 		onread?: (id: string, name: string) => void;
+		sub?: (token: string) => WidgetState | undefined;
+		onfetch?: (token: string, spec: WidgetSpec) => void;
 	} = $props();
+
+	// A knowledge node expanded here: this widget re-run for that node under its own token (box id -k n),
+	// never saved; a fresh answer of the widget itself draws the tree collapsed again.
+	let kids: { at: number; tokens: Record<string, string> } = $state({ at: -1, tokens: {} });
+	let n = 0;
+	const tokens = $derived(kids.at === st?.at ? kids.tokens : {});
+	const open = $derived(
+		Object.fromEntries(Object.entries(tokens).map(([id, t]) => [id, sub?.(t)]))
+	);
+	const expand = (node: string) => {
+		const { [node]: was, ...rest } = tokens;
+		if (!was) {
+			rest[node] = `${box.id.slice(0, 56)}-k${n++}`;
+			onfetch?.(rest[node], { knowledge: { node } });
+		}
+		kids = { at: st?.at ?? 0, tokens: rest };
+	};
 
 	// `st`: a prop named state would make $state below read as a store.
 	let exported: string | null = $state(null);
@@ -87,7 +108,12 @@
 					/>
 				{/key}{/key}
 			{#if st.added}<p class="added">row {st.added} added</p>{/if}
-		{:else if st?.component}<ComponentView component={st.component} {onread} />{/if}
+		{:else if st?.component}<ComponentView
+				component={st.component}
+				{onread}
+				{open}
+				onexpand={onfetch && sub ? expand : undefined}
+			/>{/if}
 	</div>
 </article>
 

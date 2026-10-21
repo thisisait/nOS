@@ -46,6 +46,8 @@
 		onsubmit={c.onsubmit}
 		onexport={c.onexport}
 		onread={c.onread}
+		sub={(t) => c.widgets[t]}
+		onfetch={c.onfetch}
 	/>
 {:else if item.kind === 'board'}
 	{@const child = c.spaces.find((s) => s.id === item.board)}
