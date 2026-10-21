@@ -28,7 +28,7 @@ Changes to the app source or composer deps trigger a `Restart php-fpm` handler.
 
 Wing runs on the **FrankenPHP single binary** (Caddy + PHP + Mercure + Vulcain)
 via host launchd — no PHP-FPM container. The version is pinned by
-`frankenphp_version` in `default.config.yml` (tested: **1.12.4**).
+`frankenphp_version` in `default.config.yml` (tested: **1.13.1**).
 
 - **One ARM64 binary across M1..M5.** FrankenPHP's Homebrew formula compiles a
   native ARM64 binary; there are no per-chip sub-variants — the same binary runs

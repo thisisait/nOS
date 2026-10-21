@@ -847,14 +847,14 @@ docker_bin: /usr/local/bin/docker
 # frankenphp_version: pazny.wing fetches exactly this release and refuses a
 # binary whose `frankenphp --version` does not report it. Bump = new version +
 # all four checksums below, in one commit.
-frankenphp_version: "1.12.4"
-# sha256 per release asset (frankenphp-<key>). Linux values: the release's
-# asset digests. mac values: measured 2026-10-08 from the same release URLs.
+frankenphp_version: "1.13.1"
+# sha256 per release asset (frankenphp-<key>): the release's asset digests;
+# mac-arm64 also measured 2026-10-21 (reports PHP 8.5.11, Caddy 2.11.7).
 frankenphp_checksums:
-  linux-aarch64: "1912d7dee869a060afd2de183b9921bcadc82ad47a4650f861b5414888cb6feb"
-  linux-x86_64: "b39c7511483c99faf0d857cc0789b39cc23023038260b31d4b40dd4ae18795dc"
-  mac-arm64: "fb38e69514a04875b83900da0e1585d611fe0f52f3a904c50bef5605347e5dec"
-  mac-x86_64: "0e97b3e2bb8e98c0f8c6275921e1d44fb6459abfaa3bc0525e56c07ae13aa55b"
+  linux-aarch64: "52849d80dcb30fceaefbe140ee1c16ccebedd96a5719d932f9828e8da7688d02"
+  linux-x86_64: "0b5c93c63f02f796716287790028171dbe3af4740d76e1706e20e731312c4086"
+  mac-arm64: "acf6e2b5bac5e96f8a9cb01746c152dd496bcb0662c1f102348912fb4f6c628e"
+  mac-x86_64: "b9123b427cb357eac076b1f316f71589cfe5c3db4ad2449114e243563d794a89"
 
 # ==============================================================================
 # NGINX
