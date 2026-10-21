@@ -247,6 +247,13 @@ impl Ledger {
         Ok((actor, t))
     }
 
+    /// What a decision approved drafting: (actor, the app's name, the YAML the card showed byte for byte).
+    pub fn approved_app(&self, decision: i64) -> Result<(String, String, String), String> {
+        let (actor, req) = self.request(decision)?;
+        let field = |k: &str| req.get(k).and_then(Value::as_str).map(str::to_string).ok_or(format!("the request is no app draft: no {k}"));
+        Ok((actor, field("name")?, field("yaml")?))
+    }
+
     /// The client a table Iris created was made for: its create's result names `working_for` (D2); None is no client.
     pub fn made_for(&self, actor: &str, table: &str) -> rusqlite::Result<Option<String>> {
         self.db.query_row(
