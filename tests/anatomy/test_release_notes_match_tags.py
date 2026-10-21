@@ -3,8 +3,9 @@
 MEASURED 2026-10-21: tag v0.17-beta (d195ed76, 2026-10-17) existed on origin
 while RELEASE.md still headed its section "— DRAFT". A reader of the notes could
 not tell what shipped from what was planned. Two rules, read from git tags and
-RELEASE.md headings: a section whose tag exists carries no DRAFT marker, and the
-newest tagged section names its tag commit (8-char prefix).
+RELEASE.md headings: a section whose tag exists is headed by its dates alone
+("(2026-10-11 … 2026-10-17)": no DRAFT, "in progress" or any other marker), and
+the newest tagged section names its tag commit (8-char prefix).
 
 Tags are read from origin (`git ls-remote`), not the local tag list: CI checks
 out shallow with no tags, a local tag may never have been pushed, and a clone
@@ -19,6 +20,8 @@ from _environment_contract import declared_tools
 
 ROOT = Path(__file__).resolve().parents[2]
 HEADING = re.compile(r"^## (v\d+\.\d+(?:\.\d+)?(?:-[\w.]+)?)\b(.*)$", re.M)
+DATE = r"\d{4}-\d{2}-\d{2}"
+DATED = re.compile(rf" \({DATE}(?: … {DATE})?\)")
 
 
 def _unknown(why):
@@ -61,9 +64,9 @@ def _tagged():
     return [(v, h, body, tags[v]) for v, h, body in _sections() if v in tags]
 
 
-def test_a_tagged_section_is_not_a_draft():
-    drafts = [v for v, head, _, _ in _tagged() if "DRAFT" in head]
-    assert not drafts, f"tagged but RELEASE.md still says DRAFT: {drafts}"
+def test_a_tagged_section_is_headed_by_its_dates_alone():
+    drafts = [f"{v}{head}" for v, head, _, _ in _tagged() if not DATED.fullmatch(head)]
+    assert not drafts, f"tagged, but the heading is not just ' (start … end)': {drafts}"
 
 
 def test_the_newest_tagged_section_names_its_tag_commit():
