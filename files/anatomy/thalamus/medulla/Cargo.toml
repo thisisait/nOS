@@ -1,0 +1,14 @@
+[package]
+name = "medulla"
+version.workspace = true
+edition = "2021"
+publish = false
+description = "One static binary runs the host organs under its own identity; `medulla thalamus` is the relay organ."
+
+[[bin]]
+name = "medulla"
+path = "src/main.rs"
+
+[dependencies]
+nos-contract = { path = "../contract" }
+thalamus = { path = "../thalamus" }
