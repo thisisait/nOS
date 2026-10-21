@@ -97,20 +97,43 @@ compose:
     myapp:
       image: "ghcr.io/example/myapp:1.2.3"
       ports:
-        - "8080:8080"
+        - "127.0.0.1:8080:8080"   # optional; Traefik needs no host port
       environment:
         - "DB_USER=$SERVICE_USER_DB"
         - "DB_PASSWORD=$SERVICE_PASSWORD_DB"
         - "PUBLIC_URL=https://$SERVICE_FQDN_MYAPP/"
       volumes:
         - myapp_data:/data
+      mem_limit: 256m
+      cpus: 0.5
   volumes:
     myapp_data:
 ```
 
 The whole compose dict is YAML-parsed, magic-token-resolved, then
 emitted unchanged into `{{ stacks_dir }}/apps/overrides/<name>.yml`.
-Whatever Docker Compose accepts, the runner accepts.
+
+#### Standards the parser refuses
+
+Each refusal is named `standard <rule>:` and says how to fix it
+(gate: `tests/apps/test_app_standards.py`):
+
+| rule | refuses |
+| --- | --- |
+| `host-port-not-loopback` | a published port not bound to `127.0.0.1` (`8080:80`, `0.0.0.0:`, `[::]:`, bare `8080`) |
+| `host-port-not-in-meta-ports` | a published host port `meta.ports` does not list |
+| `traefik-label` | any `traefik.*` label — the runner derives routing |
+| `env-interpolation` | `$VAR` / `${VAR}` anywhere but the magic tokens; `$$` is a literal `$` |
+| `platform-secret` | a reference to `KEAP_*`, `WING_*`, `BONE_*`, `*_API_TOKEN` and other platform credentials |
+| `bind-mount` / `docker-socket` | a host path mount (named volumes only), `docker.sock` |
+| `floating-image-tag` | no tag, `latest`, `alpine`, `3`, `15-alpine`; a `x.y` version, a date tag or `@sha256:` passes |
+| `network-not-apps-net` | declared `networks:` without `apps_net` (omit it and the runner attaches apps_net + Traefik's net; `[gated_net]` alone is SEC-02) |
+| `no-resource-limits` | a service without `mem_limit` and `cpus` (or `deploy.resources.limits`) |
+| `privileged` / `cap-add` / `host-namespace` | privileged, `cap_add` beyond Docker's defaults after `cap_drop: [ALL]`, `network_mode`/`pid`/`ipc: host` |
+
+`python3 -m module_utils.nos_app_parser --estate apps/<name>.yml` adds
+the estate check through `tools/app-slots.py`: the name, subdomain and
+each published host port must be free here (UNKNOWN is refused too).
 
 #### Magic tokens
 

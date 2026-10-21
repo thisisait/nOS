@@ -135,3 +135,14 @@ def test_what_the_standards_accept(svc):
 @pytest.mark.parametrize("manifest", sorted((REPO / "apps").glob("*.yml*")), ids=lambda p: p.name)
 def test_every_committed_app_meets_the_standards(manifest):
     assert _rules(load_app_file(str(manifest))) == set()
+
+
+def test_the_estate_check_names_a_taken_name_and_port():
+    """--estate asks tools/app-slots.py; apps/documenso.yml holds the name and port 3000."""
+    from module_utils.nos_app_parser import estate_violations
+    rec = _with(ports=["127.0.0.1:3000:3000"])
+    rec["meta"].update(name="documenso", ports=[3000])
+    validate(rec)  # the plain parse is offline and passes
+    got = estate_violations(rec, live=False)
+    assert any(v.startswith("estate name-taken: 'documenso'") for v in got), got
+    assert any(v.startswith("estate port-taken: services.demo host port 3000") for v in got), got

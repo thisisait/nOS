@@ -712,6 +712,53 @@ def parse_app_file(path: str) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Estate check — is the name, subdomain and every published host port free HERE.
+# Opt-in (CLI --estate): it reads the host through tools/app-slots.py, so the
+# plain parse stays offline and deterministic. For a NEW app: an enabled one
+# finds its own name taken.
+
+def estate_violations(record: Dict[str, Any], live: bool = True) -> List[str]:
+    """One named reason per slot taken or UNKNOWN (an unchecked slot is refused too)."""
+    import json
+    import subprocess
+    meta = record.get("meta") or {}
+    name = str(meta.get("name") or "")
+    sub = str((record.get("nginx") or {}).get("subdomain") or name)
+    # Not resolved: from a symlinked module_utils the repo is the one it was called in.
+    tool = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "tools", "app-slots.py")
+    argv = [sys.executable, tool, "--json", "--name", name, "--subdomain", sub] + (["--live"] if live else [])
+    try:
+        out = json.loads(subprocess.run(argv, capture_output=True, text=True, timeout=60, check=True).stdout)
+    except Exception as exc:  # noqa: BLE001
+        return ["estate unknown: tools/app-slots.py could not answer (%s); name, subdomain "
+                "and ports are UNCHECKED" % exc]
+    v = []
+    for kind in ("name", "subdomain"):
+        c = out["checks"][kind]
+        if c["free"] is False:
+            v.append("estate %s-taken: %r is %s; pick another" % (kind, c["value"], c["why"]))
+        elif c["free"] is None:
+            v.append("estate unknown: %s %r is UNCHECKED (%s)" % (kind, c["value"], c["why"]))
+    port_sources = ("manifest", "apps") + (("listening",) if live else ())
+    blind = [s for s in port_sources if out["sources"].get(s) != "ok"]
+    taken = set(out.get("ports_taken") or [])
+    for svc, d in ((record.get("compose") or {}).get("services") or {}).items():
+        for p in (d or {}).get("ports") or []:
+            host = p.get("published") if isinstance(p, dict) else str(p).split("/", 1)[0].rpartition(":")[0].rpartition(":")[2]
+            try:
+                host = int(host)
+            except (TypeError, ValueError):
+                continue
+            if host in taken:
+                v.append("estate port-taken: services.%s host port %d is in use here; "
+                         "`tools/app-slots.py --free-port` names a free one" % (svc, host))
+            elif blind:
+                v.append("estate unknown: services.%s host port %d is UNCHECKED (%s)"
+                         % (svc, host, "; ".join("%s %s" % (s, out["sources"].get(s)) for s in blind)))
+    return v
+
+
+# ---------------------------------------------------------------------------
 # Internal helpers
 
 _NAME_RE = re.compile(r"^[a-z][a-z0-9-]*$")
@@ -748,18 +795,25 @@ def _random_password(n: int) -> str:
 
 
 # ---------------------------------------------------------------------------
-# CLI smoke test:  python -m module_utils.nos_app_parser apps/<name>.yml
+# CLI smoke test:  python -m module_utils.nos_app_parser [--estate] apps/<name>.yml
 
 if __name__ == "__main__":  # pragma: no cover
     import json
     import sys
 
-    if len(sys.argv) != 2:
-        sys.stderr.write("usage: nos_app_parser.py <path-to-app.yml>\n")
+    args = sys.argv[1:]
+    estate = "--estate" in args
+    args = [a for a in args if a != "--estate"]
+    if len(args) != 1:
+        sys.stderr.write("usage: nos_app_parser.py [--estate] <path-to-app.yml>\n")
         sys.exit(2)
 
     try:
-        rec = parse_app_file(sys.argv[1])
+        rec = parse_app_file(args[0])
+        if estate:
+            taken = estate_violations(rec)
+            if taken:
+                raise AppParseError(rec["meta"]["name"], taken)
     except AppParseError as exc:
         sys.stderr.write("FAIL: %s\n" % exc)
         sys.exit(1)
