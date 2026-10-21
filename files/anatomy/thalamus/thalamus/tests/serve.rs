@@ -4061,6 +4061,26 @@ fn told(got: &[ToShell]) -> (Vec<String>, Vec<String>) {
     (texts, notes)
 }
 
+/// spark1 2026-10-21: combine-* cases read two nodes and cited one. Each node read is cited, asked once.
+#[test]
+fn an_answer_cites_every_node_it_read() {
+    const OWN: &str = "02.02.03.01.03.01";
+    let rig = rig_n("know-both", mapped(), vec![rust_meta(), ontology(), rust_meta(), ontology()],
+        vec![call("read_node", &format!(r#"{{"id": "{RUST}"}}"#)), call("read_node", &format!(r#"{{"id": "{OWN}"}}"#)),
+             answer(&format!("Rust is memory-safe [{RUST}] through ownership.")),
+             answer(&format!("Rust is memory-safe [{RUST}] through ownership [{OWN}]."))]);
+    let (got, _) = tool_turn(&rig, "how is rust memory-safe?");
+    assert_eq!(told(&got), (vec![format!("Rust is memory-safe [{RUST}] through ownership [{OWN}].")], vec![]), "{got:?}");
+    let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[3].1).unwrap();
+    let asked = body["messages"].as_array().unwrap().last().unwrap()["content"].as_str().unwrap_or("").to_string();
+    assert!(asked.starts_with("[thalamus]") && asked.contains(&format!("[{OWN}]")) && !asked.contains(&format!("[{RUST}]")), "{asked}");
+    // Still one short after the ask: said as it is, no "cites nothing" notice (it cites what it cites).
+    let rig = rig_n("know-both-2", mapped(), vec![rust_meta(), ontology(), rust_meta(), ontology()],
+        vec![call("read_node", &format!(r#"{{"id": "{RUST}"}}"#)), call("read_node", &format!(r#"{{"id": "{OWN}"}}"#)),
+             answer(&format!("Memory-safe [{RUST}].")), answer(&format!("Memory-safe [{RUST}], still."))]);
+    assert_eq!(told(&tool_turn(&rig, "how is rust memory-safe?").0), (vec![format!("Memory-safe [{RUST}], still.")], vec![]));
+}
+
 /// spark1 2026-10-21: Czech knowledge questions answered without search_knowledge, so grounding never ran.
 /// A turn that names our knowledge searches first, by the thalamus, whatever the model would have done.
 #[test]
