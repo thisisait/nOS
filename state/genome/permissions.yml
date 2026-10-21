@@ -1,0 +1,73 @@
+# The permission genome — which role holds which capability.
+#
+# DESCRIPTIVE IN THIS WAVE: seeded 2026-10-21 from what the estate ENFORCES today
+# (inventory in ssot/doctrine/permissions.md §4). No enforcement point reads this
+# file yet; tools/rbac-status.py reads each point's literal and names where it
+# disagrees with this file (drift). Later rows flip the points to read it, and
+# then it is prescriptive. Where points disagree, it holds what most of them do.
+#
+# Roles: tier:1..4 (people, via `tiers:` groups), agent:<name> (files/anatomy/agents/),
+# door:<bearer> (a named Wing bearer), operator-local (loopback break-glass).
+# Doors and agents live here beside people: one file (operator to rule, §5.3).
+
+version: 1
+mode: descriptive
+
+# A tier's OWN groups. Access is cumulative: a tier-1 group passes a tier-3 check.
+tiers:
+  1: [nos-providers, nos-admins]
+  2: [nos-managers]
+  3: [nos-users]
+  4: [nos-guests]
+
+roles:
+  - tier:1
+  - tier:2
+  - tier:3
+  - tier:4
+  - door:face-bff
+  - door:thalamus
+  - operator-local   # no enforcement point inventoried yet
+  # agent:<name> — one per files/anatomy/agents/<name>/, named in the rows below
+
+capabilities:
+  # ── people: who is tier 1, and what it opens ───────────────────────────
+  idp.superuser: [tier:1]            # Authentik is_superuser (00-admin-groups blueprint)
+  wing.operator: [tier:1]            # Wing EndUser::OPERATOR_GROUPS, requireSuperAdmin
+  face.admin: [tier:1]               # face ADMIN_GROUPS
+  table.write: [tier:1, tier:2]      # face WRITE_GROUPS
+  iris.operator_views: [tier:1]      # thalamus NOS_TIER1_GROUPS
+  app.propose: [tier:1, tier:2]      # thalamus NOS_TIER2_GROUPS
+  app.admin:gitlab: [tier:1]
+  app.admin:jupyterhub: [tier:1]
+  app.reach:jupyterhub: [tier:1, tier:2, tier:3]
+  app.admin:nodered: [tier:1]
+  # ── doors: bearers Wing believes X-Nos-User-* from (EndUser.php) ───────
+  identity.assert: [door:face-bff, door:thalamus]
+  # ── agent runtime scopes Wing's ToolRegistry checks (requiredScopes) ───
+  mcp.tool_use: [agent:conductor, agent:curator, agent:inspektor, agent:jeff, agent:jeff-cloud, agent:librarian,
+                 agent:migration-author, agent:proposer, agent:surveyor, agent:upgrade-architect]
+  bash.read: [agent:conductor, agent:curator, agent:inspektor, agent:librarian, agent:proposer, agent:surveyor]
+  bone.read: [agent:conductor, agent:curator, agent:inspektor, agent:librarian, agent:surveyor]
+  cortex.exec: [agent:jeff]
+  inbox.ask: [agent:jeff, agent:jeff-cloud]
+  keap.read: [agent:curator, agent:iris, agent:librarian]
+  keap.write: [agent:curator, agent:iris, agent:librarian]
+  loop.propose: [agent:proposer]
+  nos.migration.write: [agent:migration-author, agent:upgrade-architect]
+  wing.read: [agent:conductor, agent:curator, agent:inspektor, agent:jeff, agent:jeff-cloud, agent:librarian,
+              agent:migration-author, agent:proposer, agent:surveyor, agent:upgrade-architect]
+  wing.write: [agent:inspektor, agent:librarian, agent:migration-author, agent:surveyor]
+  # ── Bone scopes (require_scope); [] = held only by Authentik agent clients ─
+  nos:state:read: [agent:conductor, agent:jeff, agent:jeff-cloud, agent:librarian, agent:proposer, agent:surveyor,
+                   agent:upgrade-architect]
+  nos:state:write: [agent:conductor]
+  nos:migrations:read: [agent:conductor]
+  nos:migrations:apply: []
+  nos:upgrades:read: [agent:conductor, agent:upgrade-architect]
+  nos:upgrades:apply: []
+  nos:patches:read: [agent:conductor]
+  nos:patches:apply: []
+  nos:coexistence:read: [agent:conductor, agent:upgrade-architect]
+  nos:coexistence:write: []
+  nos:run-tag: []

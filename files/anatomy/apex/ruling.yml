@@ -1080,3 +1080,7 @@ nodes:
   # WITHHELD: a tissue names the cells, tables and services a firm runs, and
   # node.kind lets only `service` nodes publish.
   "tissue:backoffice": withheld
+  # --- withheld: the permission reader (2026-10-21, row rbac-genome-and-reader) ---
+  # Which role may do what, and where the estate disagrees, is the map of the
+  # estate's privilege boundaries: it stays home.
+  "reader:rbac-status": withheld

@@ -1,7 +1,7 @@
 """`tools/rbac-status.py` prints the permission matrix and every drift from it.
 
 WHY. Tier 1 is decided in six places and four restate the group names as
-literals (ssot/doctrine/permissions.md §4); no reader printed capability x role,
+literals (the permissions doctrine, §4); no reader printed capability x role,
 so a literal that drifted (GitLab's `groups | last` dropping nos-providers) was
 found only by an audit. The genome (state/genome/permissions.yml) is the one
 list; the reader compares each enforcement point's literal against it.
