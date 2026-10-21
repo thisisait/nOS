@@ -11,6 +11,7 @@
 	import Form from './Form.svelte';
 	import Graph from './Graph.svelte';
 	import KnowledgeTree from './KnowledgeTree.svelte';
+	import Dendrogram from './Dendrogram.svelte';
 	import Sequence from './Sequence.svelte';
 	import Markdown from './Markdown.svelte';
 	import Timeline from './Timeline.svelte';
@@ -360,6 +361,9 @@
 	{:else if component.kind === 'knowledge_tree'}
 		{#if component.props.title}<h3>{component.props.title}</h3>{/if}
 		<KnowledgeTree tree={component.props} {onread} />
+	{:else if component.kind === 'dendrogram'}
+		{#if component.props.title}<h3>{component.props.title}</h3>{/if}
+		<Dendrogram run={component.props} />
 	{:else if component.kind === 'sequence'}
 		{#if component.props.title}<h3>{component.props.title}</h3>{/if}
 		<Sequence sequence={component.props} />
