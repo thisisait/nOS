@@ -2834,6 +2834,9 @@ fn post_chat(model: &Binding, mut body: Value) -> Result<Value, String> {
         if let Some(t) = model.temperature {
             body["temperature"] = json!(t);
         }
+        if let Some(seed) = model.seed {
+            body["seed"] = json!(seed);
+        }
     }
     // A 429 is a rate limit, not an answer (local bench, mistral-eu: 13/34 cases): wait its
     // Retry-After (capped) or 1 s, 2 s, then try again; a third 429 is refused as before.

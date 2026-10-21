@@ -614,6 +614,9 @@ iris_backend: "{{ 'ollama' if llm_on_host else '' }}"
 # The on-device model's sampling temperature for Iris (low = steadier tool calls; measured 2026-10-15:
 # one model scored 9/11 then 6/11 at Ollama's default). Cloud rows keep their own.
 iris_local_temperature: 0.3
+# A fixed sampling seed for the on-device model ("" = unset, Ollama samples freely). Set it for a
+# deterministic bench run (tools/iris-bench.py, docs/llm/evals-and-finetune.md); cloud rows ignore it.
+iris_local_seed: ""
 # How Iris plans a turn: "tools" = the model calls the thalamus's tools; "cortex" = it first emits ONE
 # cortex-lang pipeline, the cortex organ validates it (needs install_cortex) and the thalamus maps it to
 # those tools, falling back to tools when refused (seed row iris-speaks-cortex-lang, bench before switching);
