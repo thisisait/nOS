@@ -1136,6 +1136,35 @@
   },
   {
     "function": {
+      "description": "Start one Wing agent as your sub-agent, for the person and only when they ask: renders an approval card naming the agent and the prompt, and nothing starts unless they approve. Only the agents the operator allows (iris_startable_agents) can be started; Wing may still refuse. On approve you hear the new session's uuid: call read_run with it to draw its run.",
+      "name": "start_agent",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "description": "the Wing agent's name, e.g. conductor",
+            "maxLength": 64,
+            "minLength": 1,
+            "type": "string"
+          },
+          "prompt": {
+            "description": "what the agent is asked to do, in the person's words",
+            "maxLength": 2000,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "prompt"
+        ],
+        "type": "object"
+      }
+    },
+    "type": "function"
+  },
+  {
+    "function": {
       "description": "The DataTables the person can read in KEAP: each id, title, rowCount and the day it was last updated. Renders a table to the person. Call it before query_rows when the person names a table you do not have the id of.",
       "name": "list_tables",
       "parameters": {
