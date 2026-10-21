@@ -375,8 +375,9 @@ abstract class BasePresenter extends Presenter
 	 *
 	 * The two group names stay duplicated here (not imported from
 	 * default.config.yml) — they're a hard security contract pinned
-	 * by the anatomy gate `test_security_admin_gate_unchanged` so a
-	 * config rename can't silently bypass the boundary.
+	 * by tests/anatomy/test_security_presenter_gates.py
+	 * (test_super_admin_gate_pins_correct_groups) so a config rename
+	 * can't silently bypass the boundary.
 	 */
 	protected function requireSuperAdmin(): void
 	{
