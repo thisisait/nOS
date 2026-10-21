@@ -438,6 +438,32 @@ const STOPPED: &str = "stopped by the person";
 /// What the model hears with an identical call that failed already in this turn (it is not run again).
 const REPEATED: &str = "this exact call failed already in this turn and was not run again: change its arguments, try another way, or answer in text";
 
+/// What the model hears once when its answer after a knowledge search cites no node it was handed (night 2026-10-21:
+/// 4 of 6 absent topics answered from memory). KEAP's scores are rank fusion, so the answer is checked, not the hits.
+const UNGROUNDED: &str = "[thalamus] your answer cites no node our knowledge handed you. Cite the [id] of each fact you took \
+from a hit; if no hit is the topic, say only that it is not in our knowledge, and add nothing you know from elsewhere.";
+
+/// A grounded answer cites an id a knowledge tool handed this turn, or says the topic is absent.
+/// ponytail: absence is a phrase match (EN/CS); a model that words it otherwise is asked once, then marked.
+fn grounded(text: &str, ids: &[String]) -> bool {
+    const ABSENT: [&str; 8] = ["not in our knowledge", "isn't in our knowledge", "nothing found", "found nothing",
+        "není v našich znalostech", "v našich znalostech není", "v našich znalostech to není", "nic jsem nenaš"];
+    let low = text.to_lowercase().replace('’', "'");
+    ids.iter().any(|id| text.contains(&format!("[{id}]"))) || ABSENT.iter().any(|p| low.contains(p))
+}
+
+/// The node ids a knowledge tool's result hands the model: every "id" and "node" in it.
+fn handed_ids(v: &Value, ids: &mut Vec<String>) {
+    match v {
+        Value::Object(m) => m.iter().for_each(|(k, x)| match (k.as_str(), x.as_str()) {
+            ("id" | "node", Some(s)) => ids.push(s.to_string()),
+            _ => handed_ids(x, ids),
+        }),
+        Value::Array(a) => a.iter().for_each(|x| handed_ids(x, ids)),
+        _ => {}
+    }
+}
+
 /// How a connection's session opens: fresh, the person's last one closed, or one named session (a workspace tab's).
 enum How {
     Fresh,
@@ -2251,6 +2277,8 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
         let (mut failed, mut repeats) = (HashMap::<String, String>::new(), 0);
         // Live 2026-10-18: every show refused, then "Graf je hotový". The person hears that nothing was drawn.
         let (mut drew, mut unshown) = (false, None::<String>);
+        // The ids a knowledge search or read handed this turn (None: neither ran), and whether the model was asked.
+        let (mut knowledge, mut asked_ground) = (None::<Vec<String>>, false);
         loop {
             if face.stopped(&o.session) {
                 return self.end_turn(out, o, &[], STOPPED, "Stopped.".into());
@@ -2267,11 +2295,20 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
             let Some(asked) = real.or_else(|| text_call(msg["content"].as_str()?, o.messages.len(), &tools).map(|c| vec![c])) else {
                 let text = msg.get("content").and_then(Value::as_str).unwrap_or("").to_string();
                 let _ = self.record(o, Kind::Message, None, json!({"role": "iris", "text": text}));
+                let ungrounded = knowledge.as_ref().is_some_and(|ids| !grounded(&text, ids));
+                if ungrounded && !asked_ground {
+                    asked_ground = true;
+                    o.messages.push(json!({"role": "user", "content": UNGROUNDED}));
+                    continue;
+                }
                 // Live 2026-10-13: a blank answer drew nothing, so the person could not tell it ended.
                 let text = if text.trim().is_empty() { "(Iris gave no answer.)".to_string() } else { text };
                 // The ledger above keeps what was said; the person sees a link no tool returned marked (operator 2026-10-15).
                 let known: String = o.messages.iter().filter(|m| m["role"] == "tool").filter_map(|m| m["content"].as_str()).collect();
                 let text = mark_links(&text, &known).replace(['⟦', '⟧'], "");
+                if ungrounded {
+                    refuse(out, "the answer below cites nothing our knowledge holds: it may be the model's own memory");
+                }
                 send(out, &ToShell::Text { session: o.session.clone(), text });
                 if let (false, Some(why)) = (drew, unshown) {
                     refuse(out, &format!("nothing was drawn in this turn: {why}"));
@@ -2509,6 +2546,10 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                         Ok(_) => drew = true,
                         Err(why) => unshown = Some(format!("{name}: {why}")),
                     }
+                }
+                // A failed search is UNKNOWN, not absent: only what was handed binds the answer.
+                if let (Ok(v), "search_knowledge" | "search_memory" | "read_node") = (&result, name) {
+                    handed_ids(v, knowledge.get_or_insert_with(Vec::new));
                 }
                 if result.is_ok() && FREE_TEXT.contains(&name) && !o.read_free.iter().any(|t| t == name) {
                     o.read_free.push(name.to_string());

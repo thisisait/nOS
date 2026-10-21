@@ -3990,7 +3990,10 @@ fn an_answer_after_a_search_cites_a_drawn_node_or_says_it_is_not_in_our_knowledg
     // Still from memory: said, and marked so.
     let rig = rig_n("ground-2", mapped(), vec![near()], vec![call("search_knowledge", r#"{"q": "COBOL"}"#),
         answer("Grace Hopper, 1959."), answer("Grace Hopper designed it in 1959.")]);
-    let (got, _) = tool_turn(&rig, "per our knowledge base, who designed COBOL?");
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let mut got = turn(&s, &mut r, None, "per our knowledge base, who designed COBOL?");
+    got.extend(next(&mut r)); // the notice comes first, so the person reads the answer below it
     let (texts, notes) = told(&got);
     assert_eq!(texts, vec!["Grace Hopper designed it in 1959.".to_string()], "{got:?}");
     assert!(notes.iter().any(|n| n.contains("cites nothing our knowledge holds")), "{got:?}");
