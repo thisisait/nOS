@@ -142,7 +142,8 @@ const RECHECK_SCHEMA = { type: 'object', properties: { rows: { type: 'array', it
 const honest = (v, who) => !v ? { refuted: true, defects: [`${who} returned nothing`], checked: [] }
   : (!v.checked || !v.checked.length) ? { ...v, refuted: true, defects: [...(v.defects || []), `${who} listed no command it ran`] } : v
 const METHOD = `Method (in your own worktree): "git fetch origin", "git checkout --detach origin/<branch>",
-"git diff ${BASE}...origin/<branch>"; for red-before, "git checkout --detach <the (red) commit>" and run that gate.
+"git diff <diff base>...origin/<branch>" where the diff base is the row's dependency branch when it has one (its files are
+not this row's), else ${BASE}; for red-before, "git checkout --detach <the (red) commit>" and run that gate.
 Run every gate to a log file and read the exit code, never through a pipe. List every command with its exit code in
 "checked". refuted=true if any gate is not green, was never red for the RIGHT reason, a house rule is broken, a file
 outside the row's ownership changed, or any new test/tool has a default URL/path/token pointing at the live Wing,
@@ -170,6 +171,7 @@ Return what you committed, what you saw red and green (exact commands + exit cod
 
 const review = (row, built, lens) => agent(`You are a skeptic reviewing branch origin/${built.branch} (roadmap row ${row.slug}) through the ${lens} lens.
 Try to REFUTE that it is done. Its gates: ${row.gates.join('; ')}. It may change only: ${row.files_owned.join(', ')}.
+Diff base for ownership: ${row.depends_on.length ? row.depends_on.map(d => `origin/${bySlug[d].branch}`).join(' + ') : BASE}.
 Red is allowed ONLY on: ${row.expected_red.join('; ') || 'nothing'}; any other red lane among the row's lanes refutes it.
 ${METHOD}
 ${row.security_lens && lens === 'security' ? `Security lens: ${row.security_lens}` : ''}
