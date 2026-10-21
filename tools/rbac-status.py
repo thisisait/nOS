@@ -189,12 +189,33 @@ def jinja_tier(root, rel, anchor):
     return (groups[-1:] if re.search(r"\|\s*last\b", lines[i][m.end():]) else groups), i + 1
 
 
-def last_idiom(root, rel, anchor):
-    """`groups | last` / `map('last')` / `[-1]` over every tier: one group per tier."""
+_SELECT = re.compile(r"\|\s*(first|last)\b|map\(\s*['\"](first|last)['\"]\s*\)|\[\s*(-?\d+)\s*\]")
+_BENIGN = re.compile(r"\|\s*(list|to_json|unique|sort|flatten|join\([^)]*\)|default\([^)]*\))")
+
+
+def _pick(tail: str, rel: str, n: int) -> str:
+    """What the text after a group list keeps of it: 'all', 'first' or 'last'; else UNKNOWN."""
+    found = [next(x for x in m.groups() if x) for m in _SELECT.finditer(tail)]
+    if len(found) == 1 and found[0] in ("first", "0", "last", "-1"):
+        return "first" if found[0] in ("first", "0") else "last"
+    if not found and not re.sub(r"[\s)\]}'\"%,-]", "", _BENIGN.sub("", tail)):
+        return "all"
+    raise Unknown(f"{rel}:{n}: the group expression is not one the parser models")
+
+
+def per_tier(root, rel, anchor, assign):
+    """A line over every tier's groups, read for what it keeps of each list.
+    assign: a login gets its tier's list (all = cumulative, so tier 1's groups leak down);
+    else the line names the realm's set of groups (all = every group, once)."""
     lines = _read(root, rel)
     i = _find(lines, anchor, rel)
+    if "groups" not in lines[i]:
+        raise Unknown(f"{rel}:{i + 1}: no group expression on the line")
+    how = _pick(lines[i][lines[i].rindex("groups") + len("groups"):], rel, i + 1)
     cum, _ = yaml_tiers(root)
-    return {t: cum[t][-1:] for t in cum}, i + 1
+    if how == "all":
+        return (cum if assign else own_from_cumulative(cum)), i + 1
+    return {t: (g[:1] if how == "first" else g[-1:]) for t, g in cum.items()}, i + 1
 
 
 def blueprint_superuser(root, rel):
@@ -270,11 +291,11 @@ TIER_POINTS = [  # id, parser, args — each yields {tier: own groups}
     ("wing-basepresenter-tiers", php_tiermap, (BASE, "TIER_GROUPS")),
     ("face-group-rank", ts_rankmap, (TIER_TS, "GROUP_RANK")),
     ("cortex-rbac-ts", ts_tiermap, (CORTEX, "TIER_GROUPS")),
-    ("receptor-identity-map", last_idiom, ("roles/pazny.receptor/templates/identity-map.yml.j2", r"\|\s*last\]")),
-    ("linux-users-unix-groups", last_idiom, ("roles/pazny.linux.users/tasks/main.yml", r"map\('last'\)")),
-    ("jupyterhub-unix-realm", last_idiom,
-     ("roles/pazny.jupyterhub/templates/jupyterhub_config.py.j2", r"^UNIX_REALM_GROUPS\s*=")),
-    ("identity-status-unix", last_idiom, ("tools/identity-status.py", r"groups\"\) or \[\"\"\]\)\[-1\]")),
+    ("receptor-identity-map", per_tier, ("roles/pazny.receptor/templates/identity-map.yml.j2", r"'groups':", True)),
+    ("linux-users-unix-groups", per_tier, ("roles/pazny.linux.users/tasks/main.yml", r"_unix_tier_group:", True)),
+    ("jupyterhub-unix-realm", per_tier,
+     ("roles/pazny.jupyterhub/templates/jupyterhub_config.py.j2", r"^UNIX_REALM_GROUPS\s*=", False)),
+    ("identity-status-unix", per_tier, ("tools/identity-status.py", r"^\s*names\s*=.*groups", False)),
 ]
 
 
