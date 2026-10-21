@@ -5396,7 +5396,7 @@ fn search_memory_for_a_client_drops_personal_memory_and_counts_it() {
                     serde_json::json!({"kind": "note", "refId": "n-1", "name": "my note", "description": "mine", "score": 0.7}),
                     serde_json::json!({"kind": "object", "refId": "o-1", "name": "my card", "description": "mine", "score": 0.6})];
     let rig = rig_at("septmem", mapped(), septum_keap_and(vec![(SEARCH_HITS, hits)]),
-                     vec![call("search_memory", r#"{"q": "vat"}"#), answer("x"), call("search_memory", r#"{"q": "vat"}"#), answer("y")],
+                     vec![call("search_memory", r#"{"q": "vat"}"#), answer("x [t-1]"), call("search_memory", r#"{"q": "vat"}"#), answer("y [t-1]")],
                      Some(local()));
     septum_defs(&rig);
     let s = connect(&rig.sock);
