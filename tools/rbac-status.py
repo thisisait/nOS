@@ -54,10 +54,31 @@ def _find(lines: list[str], pattern: str, rel: str, start: int = 0) -> int:
 
 # ── one parser per enforcement-point family ────────────────────────────────
 
+def _literal(lines: list[str], i: int, rel: str) -> list[str]:
+    """The strings of the literal after `=` on line i: a bracket list may span lines.
+    `[]` is a literal (empty); anything that yields no string otherwise is UNKNOWN."""
+    text = lines[i].split("=", 1)[1].strip()
+    if text.startswith("["):
+        for line in lines[i + 1:]:
+            if text.count("[") <= text.count("]"):
+                break
+            text += "\n" + line
+        if text.count("[") > text.count("]"):
+            raise Unknown(f"{rel}:{i + 1}: the list never closes")
+        body = text[:text.rindex("]") + 1]
+        if re.fullmatch(r"\[\s*\]", body):
+            return []
+        text = body
+    got = _strings(text)
+    if not got:
+        raise Unknown(f"{rel}:{i + 1}: not a string literal; parser does not model it")
+    return got
+
+
 def php_const(root, rel, name):
     lines = _read(root, rel)
     i = _find(lines, rf"\bconst\s+{name}\s*=", rel)
-    return _strings(lines[i].split("=", 1)[1]), i + 1
+    return _literal(lines, i, rel), i + 1
 
 
 def php_tiermap(root, rel, name):
@@ -95,7 +116,7 @@ def php_calls(root, rel, func, call):
 def ts_const(root, rel, name):
     lines = _read(root, rel)
     i = _find(lines, rf"\bconst\s+{name}\b", rel)
-    return _strings(lines[i].split("=", 1)[1]), i + 1
+    return _literal(lines, i, rel), i + 1
 
 
 def ts_rankmap(root, rel, name):
