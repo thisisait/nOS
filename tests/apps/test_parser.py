@@ -45,7 +45,8 @@ def _valid_record(**overrides):
             "processors": [],
             "transfers_outside_eu": False,
         },
-        "compose": {"services": {"app": {"image": "ghcr.io/demo/app:1"}}},
+        "compose": {"services": {"app": {"image": "ghcr.io/demo/app:1.0.0",
+                                         "mem_limit": "256m", "cpus": 0.5}}},
     }
     for k, v in overrides.items():
         if k == "gdpr" and isinstance(v, dict):

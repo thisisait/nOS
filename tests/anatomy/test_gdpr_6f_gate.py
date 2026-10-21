@@ -210,7 +210,8 @@ def _app_record(**gdpr_extra):
             "processors": [],
             "transfers_outside_eu": False,
         },
-        "compose": {"services": {"app": {"image": "ghcr.io/demo/app:1"}}},
+        "compose": {"services": {"app": {"image": "ghcr.io/demo/app:1.0.0",
+                                         "mem_limit": "256m", "cpus": 0.5}}},
     }
     rec["gdpr"].update(gdpr_extra)
     return rec

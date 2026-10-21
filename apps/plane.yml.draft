@@ -15,10 +15,10 @@
 # Upstream:    https://github.com/makeplane/plane
 # License:     AGPL-3.0
 # Images:      docker.io/makeplane/* (multi-arch incl. arm64),
-#              docker.io/postgres:15-alpine,
+#              docker.io/postgres:15.19-alpine,
 #              docker.io/valkey/valkey:7.2-alpine,
-#              docker.io/rabbitmq:3-alpine,
-#              docker.io/minio/minio:latest
+#              docker.io/rabbitmq:3.13.7-alpine,
+#              docker.io/minio/minio:RELEASE.2025-04-22T22-12-26Z
 # ============================================================================
 
 meta:
@@ -202,7 +202,7 @@ compose:
 
     # ── Data tier ─────────────────────────────────────────────────────────
     plane-db:
-      image: "docker.io/postgres:15-alpine"
+      image: "docker.io/postgres:15.19-alpine"
       container_name: plane-db
       restart: unless-stopped
       environment:
@@ -235,7 +235,7 @@ compose:
       cpus: 0.25
 
     plane-mq:
-      image: "docker.io/rabbitmq:3-alpine"
+      image: "docker.io/rabbitmq:3.13.7-alpine"
       container_name: plane-mq
       restart: unless-stopped
       environment:
@@ -252,7 +252,7 @@ compose:
       cpus: 0.5
 
     plane-storage:
-      image: "docker.io/minio/minio:latest"
+      image: "docker.io/minio/minio:RELEASE.2025-04-22T22-12-26Z"
       container_name: plane-storage
       restart: unless-stopped
       command: ["server", "/data", "--address", ":9000", "--console-address", ":9090"]

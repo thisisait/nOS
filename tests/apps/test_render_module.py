@@ -98,12 +98,12 @@ def _record(meta_overrides=None, gdpr_overrides=None, compose_overrides=None,
         "compose": {
             "services": {
                 "demo": {
-                    "image": "ghcr.io/demo/demo:1",
+                    "image": "ghcr.io/demo/demo:1.0.0",
                     "environment": [
                         "DB_USER=$SERVICE_USER_DB",
                         "DB_PASS=$SERVICE_PASSWORD_DB",
                     ],
-                    "ports": ["8080:8080"],
+                    "ports": ["127.0.0.1:8080:8080"], "mem_limit": "256m", "cpus": 0.5,
                 },
             },
         },
@@ -243,12 +243,12 @@ class TestHappyPath(object):
         rec = _record(compose_overrides={
             "services": {
                 "demo": {
-                    "image": "ghcr.io/demo/demo:1",
+                    "image": "ghcr.io/demo/demo:1.0.0",
                     "environment": [
                         "PUBLIC_URL=https://$SERVICE_FQDN_DEMO/",
                         "CALLBACK=https://$SERVICE_FQDN_DEMO/auth/callback",
                     ],
-                    "ports": ["8080:8080"],
+                    "ports": ["127.0.0.1:8080:8080"], "mem_limit": "256m", "cpus": 0.5,
                 },
             },
         })
@@ -348,7 +348,7 @@ class TestGates(object):
 
     def test_gate_eu_residency_us_registry(self, render, tmp_path):
         rec = _record(compose_overrides={"services": {
-            "demo": {"image": "gcr.io/foo/bar:1", "ports": ["8080:8080"]},
+            "demo": {"image": "gcr.io/foo/bar:1.0.0", "ports": ["127.0.0.1:8080:8080"], "mem_limit": "256m", "cpus": 0.5},
         }})
         path = _write_app(tmp_path, "demo", rec)
         app, _, violations = render._process_one(
@@ -360,8 +360,8 @@ class TestGates(object):
 
     def test_extra_eu_registries_satisfies_residency(self, render, tmp_path):
         rec = _record(compose_overrides={"services": {
-            "demo": {"image": "registry.weirdcorp.tld/x:1",
-                     "ports": ["8080:8080"]},
+            "demo": {"image": "registry.weirdcorp.tld/x:1.0.0",
+                     "ports": ["127.0.0.1:8080:8080"], "mem_limit": "256m", "cpus": 0.5},
         }})
         path = _write_app(tmp_path, "demo", rec)
         _, _, violations = render._process_one(
@@ -508,7 +508,7 @@ class TestDerivedShapes(object):
 
 class TestPortResolution(object):
     def test_meta_ports_wins(self, render, tmp_path):
-        rec = _record(meta_overrides={"ports": [9999]})
+        rec = _record(meta_overrides={"ports": [9999, 8080]})
         path = _write_app(tmp_path, "demo", rec)
         app, _, _ = render._process_one(
             path, tenant_domain="dev.local", apps_subdomain="apps",
@@ -517,13 +517,15 @@ class TestPortResolution(object):
         )
         assert app["registry_entry"]["port"] == 9999
 
-    def test_fallback_to_compose_port_mapping(self, render, tmp_path):
+    def test_fallback_to_port_80(self, render, tmp_path):
+        # A published host port must be in meta.ports (standard
+        # host-port-not-in-meta-ports), so with none declared nothing is published.
         rec = _record(meta_overrides={"ports": []})
+        rec["compose"]["services"]["demo"].pop("ports")
         path = _write_app(tmp_path, "demo", rec)
         app, _, _ = render._process_one(
             path, tenant_domain="dev.local", apps_subdomain="apps",
             secret_seed={}, extra_eu_registries=[], strict=False,
             traefik_network="shared_net",
         )
-        # compose has "8080:8080"
-        assert app["registry_entry"]["port"] == 8080
+        assert app["registry_entry"]["port"] == 80

@@ -4,7 +4,7 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 556,
+    "nodes": 557,
     "edges": 555,
     "nodes_pulse": 43,
     "nodes_judge": 5,
@@ -27,7 +27,7 @@
     "nodes_agent": 17,
     "nodes_tasktype": 9,
     "nodes_skill": 13,
-    "nodes_reader": 62,
+    "nodes_reader": 63,
     "nodes_effector": 111,
     "nodes_article": 26,
     "nodes_organ_system": 13,
@@ -3338,6 +3338,13 @@
       "title": "D3 — Authentik aggregator dry-run + parity report.",
       "anchor": "02.02.04",
       "description": "Reader tools/aggregator-dry-run.py: D3 — Authentik aggregator dry-run + parity report."
+    },
+    "reader:app-slots": {
+      "kind": "reader",
+      "source": "tools/app-slots.py",
+      "title": "Which app names, subdomains and host ports are taken (manifest resolved through the layers, apps/ + drafts, roles, Traefik routes, `--live` listening ports) and whether one is free; `--free-port` the lowest free in range. Unreadable source = UNKNOWN, `free: null`. Iris's propose_app and `nos_app_parser --estate`.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/app-slots.py: Which app names, subdomains and host ports are taken (manifest resolved through the layers, apps/ + drafts, roles, Traefik routes, `--live` listening ports) and whether one is free; `--free-port` the lowest free in range. Unreadable source = UNKNOWN, `free: null`. Iris's propose_app and `nos_app_parser --estate`."
     },
     "reader:app-version": {
       "kind": "reader",

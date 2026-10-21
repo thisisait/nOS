@@ -857,6 +857,9 @@ nodes:
   "reader:body": withheld
   "reader:identity-status": withheld
   "reader:iris-trace": withheld
+  # 2026-10-21 reader:app-slots: which app names, subdomains and host ports
+  # are taken here. WITHHELD; the published set is unchanged.
+  "reader:app-slots": withheld
   "reader:loader-vars-report": withheld
   "reader:loop-status": withheld
   "reader:managed-status": withheld

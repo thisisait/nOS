@@ -9,7 +9,7 @@
 # Upstream:    https://github.com/documenso/documenso
 # License:     AGPL-3.0
 # Images:      ghcr.io/documenso/documenso (multi-arch),
-#              docker.io/postgres:15-alpine
+#              docker.io/postgres:15.19-alpine
 #
 # Note on registry: ghcr.io is in DEFAULT_EU_REGISTRIES (parser line 109).
 # ============================================================================
@@ -121,7 +121,7 @@ compose:
       cpus: 1.0
 
     documenso-db:
-      image: "docker.io/postgres:15-alpine"
+      image: "docker.io/postgres:15.19-alpine"
       container_name: documenso-db
       restart: unless-stopped
       environment:

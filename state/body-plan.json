@@ -11,7 +11,7 @@
     "organ system": 13,
     "organism": 0,
     "habitat": 9,
-    "sense": 80,
+    "sense": 81,
     "limb": 118,
     "memory": 41,
     "law": 52,
@@ -1338,6 +1338,10 @@
       "kind": "reader"
     },
     "reader:aggregator-dry-run": {
+      "level": "sense",
+      "kind": "reader"
+    },
+    "reader:app-slots": {
       "level": "sense",
       "kind": "reader"
     },
