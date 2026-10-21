@@ -1,0 +1,35 @@
+meta:
+  name: dtt-editor
+  version: 0.1.0
+  summary: Tabulkový editor pro DTT data (roadmap a current-state) ve stylu Excel/OpenOffice.
+
+gdpr:
+  purpose: Umožnit uživatelům spravovat DTT data (roadmap a current-state) v nOS.
+  legal_basis: contract
+  data_categories:
+    - task_management_data
+  data_subjects:
+    - nOS_operators
+    - nOS_agents
+  retention_days: -1
+  processors: []
+  transfers_outside_eu: false
+  balancing_test: Není potřeba (data neopouštějí estate).
+  data_source: from_subject
+
+compose:
+  services:
+    dtt-editor:
+      image: nginx:alpine
+      ports:
+        - "8080:80"
+      volumes:
+        - ./apps/dtt-editor/frontend:/usr/share/nginx/html
+      environment:
+        - KEAP_API_URL=http://keap:8091/agent/v1
+        - KEAP_AGENT_TOKEN_RO=${KEAP_AGENT_TOKEN_RO}
+        - KEAP_AGENT_TOKEN_RW=${KEAP_AGENT_TOKEN_RW}
+      labels:
+        traefik.enable: "true"
+        traefik.http.routers.dtt-editor.rule: Host(`dtt-editor.dev.local`)
+        traefik.http.services.dtt-editor.loadbalancer.server.port: "80"
