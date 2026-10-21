@@ -187,9 +187,16 @@ describe('bff/iris/stream', () => {
 		await until(() => closed);
 	});
 
-	it('caps the tabs one person holds open', async () => {
-		for (let i = 0; i < MAX_TABS; i++) await stream(ALICE);
-		expect(await refused(() => GET(ev(ALICE, new Request(`${ORIGIN}/bff/iris/stream`))))).toBe(429);
+	// Live 2026-10-21: at the cap a new tab was refused (429) and Connect did nothing, while the
+	// thalamus keeps only the newest tab anyway. The newest now wins: the oldest is closed and said.
+	it('caps the tabs one person holds open: the newest wins, the oldest is closed', async () => {
+		const first = await stream(ALICE);
+		for (let i = 1; i < MAX_TABS; i++) await stream(ALICE);
+		const newest = await stream(ALICE);
+		await until(() => first.done);
+		expect(first.text).toMatch(/event: link\ndata: \{"state":"closed","reason":"a newer Iris tab/);
+		expect(newest.done).toBe(false);
+		await until(() => [..._tabs.values()].filter((t) => t.uid === 'alice').length === MAX_TABS);
 		await stream(BOB);
 	});
 });
