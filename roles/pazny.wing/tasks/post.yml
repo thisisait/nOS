@@ -389,7 +389,7 @@
     'Created' in (_wing_thalamus_token.stdout | default(''))
     or 'Updated' in (_wing_thalamus_token.stdout | default(''))
   no_log: true
-  when: install_thalamus | default(false)
+  when: install_thalamus | default(false) | bool
 
 # The emergency-halt break-glass (`nos halt`, docs/nos-cli.md). wing.halt reaches
 # Admin:halt/resume and no other operator verb; wing.write: POST. Its only holder
