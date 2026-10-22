@@ -55,6 +55,32 @@ def test_the_caddyfile_hands_a_moved_prefix_to_the_medulla():
     assert "handle /api/v1/" not in _render([]), "an empty medulla_routes still hands a prefix away"
 
 
+def _frankenphp():
+    return shutil.which("frankenphp") or next(
+        (str(p) for p in [pathlib.Path.home() / ".local/bin/frankenphp"] if p.exists()), None)
+
+
+def _handlers(routes: list) -> list[dict]:
+    """Caddy's real evaluation order, subroutes inlined (Caddy sorts directives; file order lies)."""
+    out = []
+    for r in routes:
+        for h in r.get("handle", []):
+            out += _handlers(h["routes"]) if h["handler"] == "subroute" else [h]
+    return out
+
+
+@pytest.mark.skipif(not _frankenphp(), reason="no frankenphp binary adapts the Caddyfile")
+def test_the_multipart_415_runs_before_a_moved_prefix(tmp_path):
+    (tmp_path / "Caddyfile").write_text(_render(["metrics"]))
+    r = subprocess.run([_frankenphp(), "adapt", "--config", str(tmp_path / "Caddyfile")],
+                       capture_output=True, text=True, timeout=60, check=False)
+    assert r.returncode == 0, r.stderr[-2000:]
+    order = [h["handler"] if h.get("status_code") != 415 else "415"
+             for h in _handlers(json.loads(r.stdout)["apps"]["http"]["servers"]["srv0"]["routes"])]
+    assert "reverse_proxy" in order and "415" in order, order
+    assert order.index("415") < order.index("reverse_proxy"), f"a multipart body reaches the medulla before Wing's 415: {order}"
+
+
 def test_a_moved_prefix_is_whole():
     paths = list(yaml.safe_load(OPENAPI.read_text(encoding="utf-8"))["paths"])
     for prefix in {*_default_config().get("medulla_routes", []), "metrics"}:
