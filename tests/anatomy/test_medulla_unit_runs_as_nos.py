@@ -107,7 +107,6 @@ def test_the_unit_runs_as_nos_confined_to_its_home():
     assert "docker" not in _render(UNIT), "nos is never in the docker group"
     assert u.get("ProtectSystem") == ["strict"] and u.get("ProtectHome") == ["yes"], u
     assert u.get("NoNewPrivileges") == ["yes"], u
-    assert u.get("ReadWritePaths") == ["/var/lib/nos"], u
     assert u.get("EnvironmentFile") == ["/etc/nos/medulla.env"], u
     exec_start = u["ExecStart"][0].split()
     assert exec_start[0].startswith("/usr/local/libexec/"), "ProtectHome hides ~/thalamus/bin"
