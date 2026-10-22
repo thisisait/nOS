@@ -12,3 +12,4 @@ path = "src/main.rs"
 [dependencies]
 nos-contract = { path = "../contract" }
 thalamus = { path = "../thalamus" }
+rusqlite = { version = "0.40", features = ["bundled"] }

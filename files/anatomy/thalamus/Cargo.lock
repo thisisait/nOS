@@ -615,6 +615,7 @@ name = "medulla"
 version = "0.1.0"
 dependencies = [
  "nos-contract",
+ "rusqlite",
  "thalamus",
 ]
 

@@ -7,6 +7,7 @@ gates:
   - tests/anatomy/test_medulla_is_one_static_binary.py
   - tests/anatomy/test_medulla_role.py
   - tests/anatomy/test_medulla_unit_runs_as_nos.py
+  - tests/anatomy/test_medulla_serves_metrics.py
 ---
 # Medulla — one binary runs the estate under its own identity
 
