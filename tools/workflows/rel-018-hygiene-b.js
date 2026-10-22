@@ -1,7 +1,7 @@
 export const meta = {
   "name": "rel-018-hygiene-b",
   "description": "v0.18 track A, roadmap: the reconcile after v0.17-beta prepared row by row with evidence, in the PRIVATE seed repo; the operator confirms closures",
-  "whenToUse": "After rel-018-hygiene-a or in parallel. Touches the seed repo only (NOS_SEED_DIR, a branch reconcile-2026-10); no nOS code. The integrator's output is ONE confirm list.",
+  "whenToUse": "After rel-018-hygiene-a. Touches the seed repo only (NOS_SEED_DIR); no nOS code. PRECONDITION the operator meets first: the seed repo's local main is pushed and equal to origin/main (git -C $NOS_SEED_DIR status -sb shows neither ahead nor behind), or every row rebases onto commits it does not own (what happened 2026-10-22). Every row cuts its branch from the seed repo's origin/main, commits there with the 'roadmap:' prefix, and pushes with plain git (tools/nos-push is nOS-only). The integrator's output is ONE confirm list; the operator runs the nos dtt update commands.",
   "phases": [
     {
       "title": "Build",
@@ -42,7 +42,7 @@ const ROWS = [
       "nos dtt capture --dry-run on every touched file passes (the seeder would accept it)",
       "the evidence list names a tag, commit or file for every proposed closure"
     ],
-    "steps": "(1) For each row append an 'Evidence 2026-10-21' paragraph to the body with the tag/commit and the proposed move (shipped / dropped / reparent). (2) NEVER change status in the file for a row the table already holds: status moves are the operator's 'nos dtt update'; write the exact commands into reconcile-2026-10.md. (3) rel-017's non-beta goal becomes one sentence in rel-018's body (already there: 'stays -beta')."
+    "steps": "(1) For each row append an 'Evidence 2026-10-21' paragraph to the body with the tag and the TAGGED COMMIT (git rev-list -n1 <tag>, never the annotated tag object's sha) and the proposed move (shipped / dropped / reparent). (2) NEVER change status in the file for a row the table already holds: status moves are the operator's 'nos dtt update'; write the exact commands into reconcile-2026-10.md. (3) rel-017's non-beta goal becomes one sentence in rel-018's body (already there: 'stays -beta')."
   },
   {
     "depends_on": [],
@@ -53,7 +53,7 @@ const ROWS = [
     "security_lens": "",
     "slug": "reconcile-done-and-duplicates",
     "branch": "reconcile-2026-10/done-and-duplicates",
-    "facts": "Next rows git shows as done (one matching commit subject each; verify the GATE, not the subject): blank-run-record (10f280e2), blank-record-after-last-step (1bcb16ce), prompt-echoes-password-prefix (fc4c3525), agent-session-rebind-event (ff576686), converge-keychain-preflight = ssh-converge-locked-keychain (754fa5c17), halt-has-no-break-glass (12bb6a7d8), iris-reads-red-status (e6ef2b068), imprint-short-for-local-models (638cb3ed9), iris-genui-tree-timeline (6fa814beb), keap-recall (ecf278d6a), ci-ubuntu-latest-moves-to-26 (d97c872d0), event-type-gate-dot-blind (31f425905), iris-face-app (IrisApp.svelte exists), iris-transport-seam (transport.ts/transport.tauri.ts exist). Duplicate groups: docker-headroom-not-a-constant ~ keap-converge-stall; organ-one-meaning ~ plat-organ-identity ~ daemon-manifest-drift; tissues ~ tissue-is-the-chart; prose-retirement ~ retire-healing-words ~ keap-is-memory-cortex-reasons ~ lexicon-gate-sees-the-body; plat-active-work-datatable ~ tables.",
+    "facts": "Next rows git shows as done (one matching commit subject each; verify the GATE, not the subject): blank-run-record (10f280e2), blank-record-after-last-step (1bcb16ce), prompt-echoes-password-prefix (fc4c3525), agent-session-rebind-event (ff576686), converge-keychain-preflight = ssh-converge-locked-keychain (754fa5c17), halt-has-no-break-glass (12bb6a7d8), iris-reads-red-status (e6ef2b068), imprint-short-for-local-models (638cb3ed9), iris-genui-tree-timeline (6fa814beb), keap-recall (ecf278d6a), ci-ubuntu-latest-moves-to-26 (d97c872d0), event-type-gate-dot-blind (31f425905), iris-face-app (IrisApp.svelte exists), iris-transport-seam (transport.ts/transport.tauri.ts exist). Duplicate groups: docker-headroom-not-a-constant ~ keap-converge-stall; organ-one-meaning ~ plat-organ-identity ~ daemon-manifest-drift (this row owns organ-one-meaning.md; the contradictions row must not touch it); tissues ~ tissue-is-the-chart; prose-retirement ~ retire-healing-words ~ keap-is-memory-cortex-reasons ~ lexicon-gate-sees-the-body; plat-active-work-datatable ~ tables.",
     "files_owned": [
       "the named seed files (git-owned halves via nos dtt capture --update)",
       "<seed>/reconcile-2026-10.md (append)"
@@ -75,11 +75,11 @@ const ROWS = [
     "branch": "reconcile-2026-10/contradictions-and-refs",
     "facts": "Operator ruling 2026-10-21 (seed row medulla): the host bridge is a THREAD of the medulla with a tiny root-side unit, nos system user on Linux, PHP leaves Wing route by route. Contradicted rows: core-host-bridge ('one native daemon'), containerized-core (order: bridge first as its own daemon), w-agentkit-spine ('every agent run goes through AgentKit', PHP), organelles-not-agentkit and agentkit-rust-organ overlap the medulla plan, face-the-endpoint's title says 'write path into Wing AgentKit comes first'. Parent/child status inversions: rbac-permission-genome (queued) with next children rbac-genome-and-reader, rbac-measured-defects; face-app-builder and iris-app-toolchain (queued) with next child app-standards-are-parsed. Broken refs: docs/doctrine/{organs,tissues,identity,cross-repo-contracts,foreign-properties}.md -> ssot/doctrine/{body-plan,tissue,identity,cross-repo-contracts,foreign-properties}.md; docs/bones-and-wings-refactor.md -> docs/archive/; files/anatomy/skills/contracts/wing.openapi.yml -> files/anatomy/contracts/wing.openapi.yml; tools/cortex-query.py -> tools/keap-recall.py; body-organ's BLOCKER cites the promoted organs.md §3. ssot/doctrine/loops.md §7.1 lists requires_operator as missing though seed row loop-requires-operator is shipped (that one is an nOS doc fix: report it, do not edit nOS here).",
     "files_owned": [
-      "the named seed files (git-owned halves via nos dtt capture --update)",
-      "<seed>/reconcile-2026-10.md (append)"
+      "the named seed files (git-owned halves via nos dtt capture --update); NOT organ-one-meaning.md (the duplicates row owns it)",
+      "<seed>/reconcile-2026-10.md (append; no other new file)"
     ],
     "gates": [
-      "every ref in the touched rows resolves with git ls-files in a worktree of origin/dev",
+      "every ref AND every path named in the BODY of a touched row resolves with git ls-files in a worktree of origin/dev (2026-10-22: docs/multi-agent-batch.md -> docs/archive/, lib/contracts/table.ts -> lib/keap-contracts/table.ts were missed)",
       "nos dtt capture --dry-run passes"
     ],
     "steps": "(1) Amend each contradicted body with a dated 'Superseded in part by the medulla ruling 2026-10-21: …' paragraph and propose reparent under medulla where the row survives, dropped where the medulla rows cover it entirely (say which medulla-* row). (2) Fix the refs. (3) Propose status next for the two inverted parents. (4) body-organ: replace the BLOCKER with the body-plan.md section it meant."
