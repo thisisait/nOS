@@ -1598,7 +1598,7 @@ fn the_tools_and_prompt_name_query_rows_and_bound_proposals() {
     assert!(p.contains("propose_row_insert only for a new row the person asked for, in a table query_rows showed them"), "{p}");
     let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[0].1).unwrap();
     let names: Vec<&str> = body["tools"].as_array().unwrap().iter().map(|t| t["function"]["name"].as_str().unwrap()).collect();
-    assert_eq!(names, ["query_rows", "propose_row_edit", "propose_row_insert", "propose_row_delete", "propose_table_create", "propose_column_add", "show", "red_status", "read_run", "start_agent", "list_tables",
+    assert_eq!(names, ["query_rows", "propose_row_edit", "propose_row_insert", "propose_row_delete", "propose_table_create", "propose_column_add", "show", "red_status", "read_run", "start_agent", "stop_agent", "list_tables",
                        "estate_services", "nos_guide", "approvals_awaiting", "inbox", "search_knowledge", "read_node", "app_slots", "scaffold_app", "propose_app", "offer_dashboard"]);
     assert!(p.contains("call search_knowledge"), "{p}");
     assert!(p.contains("Before recommending software, call estate_services: prefer a service the estate already has."), "{p}");
