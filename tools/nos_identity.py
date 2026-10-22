@@ -13,9 +13,11 @@ Importable, not a CLI: `sys.path.insert(0, "<repo>/tools")`.
 from __future__ import annotations
 
 import json
+import os
 import re
 from functools import lru_cache
 from pathlib import Path
+from typing import NamedTuple
 
 import yaml
 
@@ -182,9 +184,72 @@ def installed(flags: dict, rows: list[dict] | None = None) -> list[dict]:
     return [r for r in (services() if rows is None else rows) if _on(flags.get(r.get("install_flag")))]
 
 
+# ── what RAN: ~/.nos/state.yml, rewritten by every converge ──────────────────
+#: The layers answer "what is declared"; they cannot see a run's -e (a profile),
+#: so a host converged with `-e @profiles/core.yml` read as running apps it never
+#: deployed (2026-10-22). state.yml records what the playbook resolved, -e included.
+STATE_ENV = "NOS_STATE_FILE"
+UNKNOWN = "UNKNOWN"
+
+
+def state_file() -> Path:
+    """~/.nos/state.yml, or $NOS_STATE_FILE. Resolved per call: tests move HOME."""
+    return Path(os.environ.get(STATE_ENV) or Path.home() / ".nos" / "state.yml").expanduser()
+
+
+class Ran(NamedTuple):
+    """What the last converge resolved. source: "state.yml" (read), "layers" (no
+    file: a fresh host, CI, a fork — the layers decide) or UNKNOWN (unreadable)."""
+    source: str
+    state: dict
+    path: Path
+    why: str = ""
+
+    def provenance(self) -> str:
+        if self.source == "state.yml":
+            run = self.state.get("last_run") or {}
+            return f"state.yml ({self.path}; run {run.get('run_id', '?')} at {run.get('at', '?')})"
+        if self.source == "layers":
+            return f"layers (no {self.path}: no converge recorded)"
+        return f"UNKNOWN ({self.path} unreadable: {self.why})"
+
+    def apps(self) -> dict | None:
+        """The apps runner record, or None when this state.yml predates it."""
+        rec = self.state.get("apps")
+        return rec if isinstance(rec, dict) and "runner_enabled" in rec else None
+
+    def flag(self, flag: str) -> list[tuple[str, bool | None]]:
+        """(subject, value the run resolved) for a flag state.yml records: a
+        service's install_flag -> services.<id>.enabled; apps_runner_enabled ->
+        apps.runner_enabled. [] when the flag is not one state.yml records."""
+        if flag == "apps_runner_enabled":
+            rec = self.apps()
+            return [("apps", None if rec is None else rec.get("runner_enabled"))]
+        recorded = self.state.get("services") or {}
+        return [(r["id"], (recorded.get(r["id"]) or {}).get("enabled"))
+                for r in services() if r.get("install_flag") == flag]
+
+
+def ran(path: Path | None = None) -> Ran:
+    """Read state.yml once. Never raises: a missing file is "layers", one that
+    cannot be read or is not a mapping is UNKNOWN — never silently everything on."""
+    path = state_file() if path is None else Path(path)
+    if not path.exists():
+        return Ran("layers", {}, path)
+    try:
+        doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, yaml.YAMLError) as exc:
+        return Ran(UNKNOWN, {}, path, type(exc).__name__)
+    if not isinstance(doc, dict):
+        return Ran(UNKNOWN, {}, path, f"top level is {type(doc).__name__}, not a mapping")
+    return Ran("state.yml", doc, path)
+
+
 def installed_apps(vars_: dict) -> list[str]:
     """The manifest apps (apps/<id>.yml) this host runs: apps_runner_enabled on,
-    minus apps_skip. pazny.apps_runner deploys the same set."""
+    minus apps_skip. pazny.apps_runner deploys the same set. A reader that wants
+    what RAN passes vars that carry the run's record (nos-smoke load_vars applies
+    state.yml's apps block), not the bare layers."""
     if not _on(vars_.get("apps_runner_enabled")):
         return []
     skip = set(vars_.get("apps_skip") or [])

@@ -48,6 +48,7 @@ except ImportError:
 REPO = pathlib.Path(__file__).resolve().parent.parent
 
 sys.path.insert(0, str(REPO / "tools"))
+import nos_identity  # noqa: E402
 from nos_identity import default_layers, installed_apps, is_local_domain, resolve_flag  # noqa: E402
 
 # Lazy ANSI colors — disabled when stdout isn't a TTY.
@@ -112,11 +113,22 @@ def apply_runtime_estate(
     `instance.tld` and `services.<id>.enabled`. CLI --tenant-domain and an
     operator checkout's config.yml still win.
     """
-    state_path = state_path or pathlib.Path(os.path.expanduser("~/.nos/state.yml"))
-    state = load_yaml(state_path)
+    run = nos_identity.ran(state_path)   # $NOS_STATE_FILE or ~/.nos/state.yml
+    if run.source == nos_identity.UNKNOWN:
+        # Not {} quietly: the layers below may name services the run removed.
+        sys.stderr.write("WARN: enablement %s — the layers decide\n" % run.provenance())
+    state = run.state
     tld = str(((state.get("instance") or {}).get("tld") or "")).strip()
     if tld and not config_path.exists():
         vars_dict["tenant_domain"] = tld
+    # The apps runner as the run resolved it (profiles/core.yml turns it off by
+    # -e, which no file shows). A state.yml older than the record leaves it alone.
+    apps = run.apps()
+    if apps is not None:
+        vars_dict["apps_runner_enabled"] = bool(apps.get("runner_enabled"))
+        deployed = set(apps.get("deployed") or [])
+        vars_dict["apps_skip"] = sorted(p.stem for p in (REPO / "apps").glob("*.yml")
+                                        if not p.name.startswith("_") and p.stem not in deployed)
     services = state.get("services") or {}
     if not services:
         return
