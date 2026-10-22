@@ -467,14 +467,20 @@ def axis_identity(res: Result, root: Path = Path("/"), home: Path = Path.home(),
     operator_uid = home.stat().st_uid if home.exists() else None
     langs = {"php": 0, "python": 0, "node": 0, "rust": 0}
     runs = {"operator": 0, "root": 0, "other": 0}
-    for row in services():
-        if row.get("software_owner") != "self" or not row.get("launchd_label"):
-            continue
+    # Symbiont daemons (ollama, alloy, dnsmasq…) are shown apart, for information: the medulla absorbs
+    # self-owned organs only, so the transplant numbers below never count them (operator 2026-10-22).
+    syms = {"installed": 0, "running": 0}
+    rows = [(r, False) for r in services() if r.get("software_owner") == "self" and r.get("launchd_label")]
+    rows += [(r, True) for r in services() if r.get("software_owner") == "symbiont" and r.get("launchd_label")]
+    for row, apart in rows:
         rid = row["id"]
         job = _deployed_job(row["launchd_label"], root, home)
         if job is None:
-            res.add("identity", rid, f"{rid} · not installed here")
+            if not apart:
+                res.add("identity", rid, f"{rid} · not installed here")
             continue
+        if apart:
+            syms["installed"] += 1
         domain, argv, scheduled = job
         argv0 = argv[0] if argv else ""
         interp = argv0
@@ -492,14 +498,15 @@ def axis_identity(res: Result, root: Path = Path("/"), home: Path = Path.home(),
         if runtime == "native":
             src = REPO / "files/anatomy" / rid.replace("_", "-")
             language = "rust" if any(src.glob("**/Cargo.toml")) else "native"
-        langs[language] = langs.get(language, 0) + 1
+        if not apart:
+            langs[language] = langs.get(language, 0) + 1
         # An interpreter argv0 is matched by its arguments (the python shim re-execs under another
         # argv0, `-m pkg` included); anything else by its whole argv.
         # ponytail: argv substring match; upgrade to pid-from-launchd/systemd when two organs share a key.
         own = any(Path(argv0).name.startswith(pre) for pre, _ in RUNTIMES)
         key = " ".join(argv[1:] if own and len(argv) > 1 else argv)
         hit = next((p for p in procs if key and key in p[2]), None)
-        head = f"{rid} · {language}/{runtime}"
+        head = f"{rid} · {'symbiont · ' if apart else ''}{language}/{runtime}"
         if hit is None and scheduled and procs:
             res.add("identity", rid, f"{head} · scheduled, idle (no run in progress) · {domain}")
             continue
@@ -508,11 +515,16 @@ def axis_identity(res: Result, root: Path = Path("/"), home: Path = Path.home(),
             res.add("identity", rid, f"{head} · not reported ({why}) · {domain}", UNREADABLE)
             continue
         uid, user = int(hit[0]), hit[1]
-        runs["root" if uid == 0 else "operator" if uid == operator_uid else "other"] += 1
+        if apart:
+            syms["running"] += 1
+        else:
+            runs["root" if uid == 0 else "operator" if uid == operator_uid else "other"] += 1
         res.add("identity", rid, f"{head} · runs as {user} uid {uid} · {domain}")
     res.add("identity", "summary",
             "host runtimes: " + ", ".join(f"{k} {v}" for k, v in langs.items())
             + " · run as " + ", ".join(f"{k} {v}" for k, v in runs.items()))
+    res.add("identity", "symbionts",
+            f"symbiont daemons: {syms['installed']} installed, {syms['running']} running (not counted above)")
 
 
 # ── output ──────────────────────────────────────────────────────────────────
