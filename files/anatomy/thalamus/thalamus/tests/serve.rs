@@ -6766,7 +6766,7 @@ const ASK_PROMPT: &str = "check the estate for red";
 /// A rig whose Wing door is the fake at `wing`; `token` empty = no door configured.
 fn rig_wing(name: &str, map: serde_json::Value, wing: &str, token: &str, model: Vec<String>) -> Rig {
     WING.with(|w| *w.borrow_mut() = serve::WingDoor { url: wing.into(), token: token.into(),
-                                                       agents: vec!["conductor".into(), "surveyor".into()] });
+                                                       agents: vec!["conductor".into(), "surveyor".into()], ..Default::default() });
     rig_n(name, map, vec![], model)
 }
 
@@ -7172,4 +7172,81 @@ fn propose_app_sends_the_model_to_the_helpers_and_a_table_editor_to_tables_app()
     let d = tools.as_array().unwrap().iter().find(|t| t["function"]["name"] == "propose_app").unwrap()["function"]["description"]
         .as_str().unwrap().to_string();
     assert!(d.contains("app_slots") && d.contains("scaffold_app") && d.contains("TablesApp") && d.contains("Tier 2"), "{d}");
+}
+
+// --- iris-subagent-reports-back: a run Iris started is watched; its end (or the bound) wakes one Iris turn ---
+
+const REPORT_HEAD: &str = "SURVEY-HEAD: 3 red, 1 drift";
+const REPORT_TAIL: &str = "SURVEY-TAIL-PAST-THE-CAP";
+
+/// rig_wing whose watch polls every 50 ms and gives up after `bound_ms`.
+fn rig_watch(name: &str, wing: &str, bound_ms: u64, model: Vec<String>) -> Rig {
+    WING.with(|w| *w.borrow_mut() = serve::WingDoor { url: wing.into(), token: WING_TOKEN.into(), agents: vec!["conductor".into()],
+        poll: Some(std::time::Duration::from_millis(50)), bound: Some(std::time::Duration::from_millis(bound_ms)) });
+    rig_n(name, admin(), vec![], model)
+}
+
+/// Wing's GET /agent-sessions/<CHILD> body: running, or ended with `report`.
+fn run_body(status: &str, report: serde_json::Value) -> String {
+    let ended = if status == "running" { serde_json::Value::Null } else { "2026-10-22T08:00:00+00:00".into() };
+    serde_json::json!({"session": {"uuid": CHILD, "agent_name": "conductor", "status": status, "stop_reason": "outcome_satisfied", "ended_at": ended},
+                       "threads": [], "iterations": [], "children": [], "report": report}).to_string()
+}
+
+/// The next shell message within `ms`, activity skipped; None when nothing came.
+fn within(r: &mut BufReader<UnixStream>, ms: u64) -> Option<ToShell> {
+    r.get_ref().set_read_timeout(Some(std::time::Duration::from_millis(ms))).unwrap();
+    loop {
+        let mut line = String::new();
+        match r.read_line(&mut line) {
+            Ok(n) if n > 0 => match decode_to_shell(&line) {
+                ToShell::Activity { .. } => continue,
+                m => return Some(m),
+            },
+            _ => return None,
+        }
+    }
+}
+
+#[test]
+fn a_started_run_that_ends_wakes_one_iris_turn_with_its_report() {
+    let report = format!("{REPORT_HEAD}\n{}{REPORT_TAIL}", "a".repeat(5000));
+    let (wing, seen) = fake(vec![format!(r#"!202 {{"session_uuid": "{CHILD}"}}"#), run_body("running", serde_json::Value::Null),
+        run_body("idle", serde_json::json!({"event_id": 42, "type": "conductor_report", "body": report}))]);
+    let rig = rig_watch("watch-end", &wing, 5000, vec![start("conductor"), answer("Asked."), answer("The conductor is done.")]);
+    let (s, mut r, session, approval, _) = asked_start(&rig);
+    decide(&s, &approval, Decision::Approve);
+    assert!(matches!(next(&mut r), Some(ToShell::Text { text, .. }) if text.contains(CHILD)));
+
+    let woke = within(&mut r, 5000);
+    assert!(matches!(&woke, Some(ToShell::Text { text, .. }) if text == "The conductor is done."), "one Iris turn follows the run's end: {woke:?}");
+    let heard = rig.model.lock().unwrap().get(2).map(|m| m.1.clone()).unwrap_or_default();
+    assert!(heard.contains("[thalamus] agent conductor ended") && heard.contains(CHILD), "{heard}");
+    assert!(heard.contains(REPORT_HEAD) && !heard.contains(REPORT_TAIL), "the report's head, capped: {heard}");
+    let get = seen.lock().unwrap()[1].0.to_ascii_lowercase();
+    assert!(get.starts_with(&format!("get /api/v1/agent-sessions/{CHILD} ")), "{get}");
+    assert!(get.contains(&format!("authorization: bearer {WING_TOKEN}")) && get.contains("x-nos-user-uid: alice-smith"), "{get}");
+
+    let polls = seen.lock().unwrap().len();
+    assert!(within(&mut r, 400).is_none(), "one turn, not one per poll");
+    assert_eq!(seen.lock().unwrap().len(), polls, "an ended run is not polled again");
+    drop((s, r));
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    let led = ledger_text(&rig, &session);
+    assert!(led.contains(CHILD) && led.contains("\"report_event\":42"), "the ledger keeps the ids: {led}");
+    assert!(!led.contains(REPORT_HEAD), "the ledger keeps the report's length, never its text: {led}");
+}
+
+#[test]
+fn a_started_run_that_outlives_the_bound_is_said_still_running() {
+    let (wing, _) = fake(vec![format!(r#"!202 {{"session_uuid": "{CHILD}"}}"#), run_body("running", serde_json::Value::Null)]);
+    let rig = rig_watch("watch-bound", &wing, 300, vec![start("conductor"), answer("Asked."), answer("Still going.")]);
+    let (s, mut r, _, approval, _) = asked_start(&rig);
+    decide(&s, &approval, Decision::Approve);
+    assert!(matches!(next(&mut r), Some(ToShell::Text { .. })));
+    let woke = within(&mut r, 5000);
+    assert!(matches!(&woke, Some(ToShell::Text { text, .. }) if text == "Still going."), "the bound is said, no hang: {woke:?}");
+    let heard = rig.model.lock().unwrap().get(2).map(|m| m.1.clone()).unwrap_or_default();
+    assert!(heard.contains("still running") && heard.contains(CHILD), "{heard}");
+    assert!(within(&mut r, 400).is_none(), "said once");
 }

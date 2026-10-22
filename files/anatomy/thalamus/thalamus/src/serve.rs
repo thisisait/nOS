@@ -75,6 +75,10 @@ pub struct WingDoor {
     pub token: String,
     /// iris_startable_agents: the only agents start_agent asks for.
     pub agents: Vec<String>,
+    /// How often a started run is asked whether it ended; None is WATCH_POLL. A gate shortens it.
+    pub poll: Option<Duration>,
+    /// How long a started run is watched before Iris says it is still running; None is WATCH_BOUND.
+    pub bound: Option<Duration>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
