@@ -158,9 +158,17 @@ def _read_paths() -> set[str]:
     return found - CEILING
 
 
+def _block() -> dict:
+    return _task(yaml.safe_load(MEDULLA_LINUX.read_text()), lambda t: "block" in t, "no system-branch block")
+
+
+def _genome() -> list[str]:
+    """The block's own vars: the list is the system branch's, not a role default."""
+    return (_block().get("vars") or {}).get("medulla_genome") or []
+
+
 def test_every_path_serve_reads_is_copied_to_the_genome():
-    defaults = yaml.safe_load((REPO / "roles/pazny.medulla/defaults/main.yml").read_text())
-    genome = defaults.get("medulla_genome") or []
+    genome = _genome()
     missing = sorted(p for p in _read_paths() if not any(g.startswith(p) for g in genome))
     assert not missing, f"serve reads these under NOS_REPO_ROOT and the genome lacks them: {missing}"
     assert "files/anatomy/agents/iris/agent.yml" in genome
