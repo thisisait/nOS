@@ -10,13 +10,27 @@ import { test, expect, type Page } from '@playwright/test';
 
 const FACE_URL = process.env.FACE_URL ?? `https://os.${process.env.NOS_HOST ?? 'dev.local'}/`;
 
+// Iris is a dock tile only where the person pinned it (the dock holds 14); otherwise it is under
+// "All apps". A fresh tester has the default pins, so open it the way a person would find it.
+async function openIris(page: Page): Promise<void> {
+	const dock = page.getByRole('navigation', { name: 'Dock' });
+	await dock.waitFor();
+	const tile = dock.getByRole('button', { name: 'Iris', exact: true });
+	if (await tile.count()) {
+		await tile.first().click();
+		return;
+	}
+	await dock.getByRole('button', { name: 'All apps' }).click();
+	await page.getByRole('dialog').getByRole('button', { name: /Iris/ }).first().click();
+}
+
 test.describe('Iris in the face', () => {
 	test.skip(process.env.FACE_E2E !== '1', 'FACE_E2E=1 needs a live face + thalamus relay');
 
 	test('a turn goes over the optic nerve and its answer renders', async ({ page }: { page: Page }) => {
 		const stream = page.waitForResponse((r) => r.url().includes('/bff/iris/stream'));
 		await page.goto(FACE_URL);
-		await page.getByRole('button', { name: 'Iris' }).first().click();
+		await openIris(page);
 		const res = await stream;
 		expect(res.status()).toBe(200);
 		expect(res.headers()['content-type']).toContain('text/event-stream');
@@ -31,10 +45,34 @@ test.describe('Iris in the face', () => {
 		await expect(page.locator('.win').getByText('What is on the roadmap?')).toBeVisible();
 	});
 
+	// spark1 2026-10-22: Bone unreachable from the face container, then BONE_VFS_TOKEN unset on its unit:
+	// the layout never saved and Iris said "layout not saved". The save is a POST to bff/userstate.
+	test('the Iris layout saves to Bone and comes back after a reload', async ({ page }: { page: Page }) => {
+		const saved = page.waitForResponse(
+			(r) => r.url().includes('/bff/userstate') && r.request().method() === 'POST',
+			{ timeout: 20_000 }
+		);
+		await page.goto(FACE_URL);
+		await openIris(page);
+		const res = await saved;
+		expect(res.ok(), `bff/userstate POST answered ${res.status()}: ${await res.text()}`).toBeTruthy();
+		await expect(page.getByText(/layout not saved/)).toHaveCount(0);
+
+		const back = page.waitForResponse(
+			(r) => r.url().includes('/bff/userstate') && r.request().method() === 'GET' && r.url().includes('layout'),
+			{ timeout: 20_000 }
+		);
+		await page.reload();
+		await openIris(page);
+		const got = await back;
+		expect(got.ok(), `bff/userstate GET answered ${got.status()}`).toBeTruthy();
+		expect((await got.json()).value, 'the saved layout came back').toBeTruthy();
+	});
+
 	// Contract 9 (operator 2026-10-18): a running turn stops, /branch makes a tab, /clear empties the chat.
 	test('a turn stops on Stop, /branch adds a tab, /clear empties the chat', async ({ page }: { page: Page }) => {
 		await page.goto(FACE_URL);
-		await page.getByRole('button', { name: 'Iris' }).first().click();
+		await openIris(page);
 		const win = page.locator('.win');
 		const box = win.locator('textarea').first();
 		await expect(box).toBeEnabled({ timeout: 20_000 });
@@ -59,7 +97,7 @@ test.describe('Iris in the face', () => {
 	// The model may answer without acting; the journey then fails on the missing window.
 	test('"open my roadmap table" brings Tables forward with roadmap selected', async ({ page }: { page: Page }) => {
 		await page.goto(FACE_URL);
-		await page.getByRole('button', { name: 'Iris' }).first().click();
+		await openIris(page);
 		const box = page.getByRole('dialog', { name: 'Iris' }).locator('textarea').first();
 		await expect(box).toBeEnabled({ timeout: 20_000 });
 		await box.fill('Open my roadmap table.');
@@ -81,7 +119,7 @@ test.describe('Iris in the face', () => {
 		expect(await vfs('mkdir', { path: 'documents/archive' })).toBeLessThan(300);
 		expect(await vfs('write', { path: 'documents/report.pdf', content: 'e2e residue probe' })).toBeLessThan(300);
 		try {
-			await page.getByRole('button', { name: 'Iris' }).first().click();
+			await openIris(page);
 			const iris = page.getByRole('dialog', { name: 'Iris' });
 			const box = iris.locator('textarea').first();
 			await expect(box).toBeEnabled({ timeout: 20_000 });
