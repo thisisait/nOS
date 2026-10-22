@@ -75,3 +75,16 @@ def test_an_unreadable_linux_axis_names_the_linux_command(monkeypatch):
     assert any(m.startswith("systemd --user (systemctl --user") for m in missing), missing
     assert any("ss -ltnp" in m for m in missing), missing
     assert not any("launchctl" in m or "netstat" in m for m in missing), "a Linux host is not told about launchctl"
+
+
+def test_the_red_pane_shows_what_is_declared_nowhere():
+    """Once the axes became readable on Linux, their findings vanished from the
+    pane: it rendered an unreadable source but never the undeclared items."""
+    import sys  # noqa: PLC0415
+    sys.path.insert(0, str(REPO / "tools"))
+    from cc.panes import red  # noqa: PLC0415
+    rows = red.build_rows({"undeclared": ["port 172.17.0.1:8010 (owner not visible to this user)",
+                                          "systemd vendor-agent"]})
+    got = [(r["source"], r["id"], r["status"], r["what"]) for r in rows if r["source"] == "undeclared"]
+    assert got == [("undeclared", "port", "UNDECLARED", "172.17.0.1:8010 (owner not visible to this user)"),
+                   ("undeclared", "systemd", "UNDECLARED", "vendor-agent")]
