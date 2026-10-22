@@ -282,14 +282,16 @@ def test_the_env_carries_the_wing_db_only_when_a_route_moved():
 
 
 def test_wing_refuses_a_moved_route_under_the_nos_user():
+    # fail + literal `when:`, not assert: the profile builder carries `when` literals to its page
+    # (tools/profile-builder/rules.py) and refuses an assert it cannot carry.
     tasks = yaml.safe_load((REPO / "roles/pazny.wing/tasks/main.yml").read_text())
     names = [t.get("name", "") for t in tasks]
-    guard = next((t for t in tasks if "ansible.builtin.assert" in t and "medulla_routes" in str(t)), None)
-    assert guard, "no assert ties medulla_routes to nos_system_user"
+    guard = next((t for t in tasks if "ansible.builtin.fail" in t and "medulla_routes" in str(t.get("when"))), None)
+    assert guard, "no fail ties medulla_routes to nos_system_user"
     assert names.index(guard["name"]) < names.index("[pazny.wing] Render Caddyfile")
     env = jinja2.Environment()
-    that = guard["ansible.builtin.assert"]["that"]
-    ok = lambda **ctx: all(env.from_string("{{ " + c + " }}").render(**ctx) == "True" for c in that)
-    assert ok(medulla_routes=["metrics"]) and ok(medulla_routes=[], nos_system_user="nos")
-    assert not ok(medulla_routes=["metrics"], nos_system_user="nos")
+    when = guard["when"]
+    fires = lambda **ctx: all(env.from_string("{{ " + c + " }}").render(**ctx) == "True" for c in when)
+    assert not fires(medulla_routes=["metrics"]) and not fires(medulla_routes=[], nos_system_user="nos")
+    assert fires(medulla_routes=["metrics"], nos_system_user="nos")
 
