@@ -42,9 +42,13 @@ def _render(text: str, **ctx) -> str:
 def test_the_role_reaches_the_pupil_statically_after_the_thalamus_is_signed():
     """import_tasks, not include_tasks: --tags thalamus reaches a static import, not a dynamic one."""
     main = [*yaml.safe_load((ROLE / "tasks" / "main.yml").read_text()), *yaml.safe_load((ROLE / "tasks" / "macos.yml").read_text())]  # macos.yml: the launchd flow
+    # The sign moved into pazny.medulla (row medulla-skeleton): expand its include in run order.
+    medulla = REPO / "roles" / "pazny.medulla" / "tasks"
+    main = [x for t in main for x in ([*yaml.safe_load((medulla / "main.yml").read_text()), *yaml.safe_load((medulla / "macos.yml").read_text())]
+            if (t.get("ansible.builtin.include_role") or {}).get("name") == "pazny.medulla" else [t])]
     names = [t.get("name", "").lower() for t in main]
     at = next(i for i, t in enumerate(main) if t.get("ansible.builtin.import_tasks") == "pupil.yml")
-    assert names.index("[pazny.thalamus] sign the binary with it (same identity every build)") < at, \
+    assert names.index("[pazny.medulla] sign the binary with it (same identity every build)") < at, \
         "the pupil is signed with the identity minted above it"
     # 2026-10-19: Linux is no longer refused; it takes linux.yml, which builds no pupil.
     top = yaml.safe_load((ROLE / "tasks" / "main.yml").read_text())
@@ -204,6 +208,10 @@ def test_the_source_hash_covers_what_vite_borrows_from_the_face():
 def test_the_pupil_comes_after_the_thalamus_is_serving():
     """A failed pupil build (npm, tauri) must not hold back the daemon's plist and bootstrap."""
     main = [*yaml.safe_load((ROLE / "tasks" / "main.yml").read_text()), *yaml.safe_load((ROLE / "tasks" / "macos.yml").read_text())]  # macos.yml: the launchd flow
+    # The sign moved into pazny.medulla (row medulla-skeleton): expand its include in run order.
+    medulla = REPO / "roles" / "pazny.medulla" / "tasks"
+    main = [x for t in main for x in ([*yaml.safe_load((medulla / "main.yml").read_text()), *yaml.safe_load((medulla / "macos.yml").read_text())]
+            if (t.get("ansible.builtin.include_role") or {}).get("name") == "pazny.medulla" else [t])]
     at = next(i for i, t in enumerate(main) if t.get("ansible.builtin.import_tasks") == "pupil.yml")
     for needle in ("render launchd plist", "bootstrap launchd job", "flush handlers"):
         before = next(i for i, t in enumerate(main) if needle in t.get("name", "").lower())

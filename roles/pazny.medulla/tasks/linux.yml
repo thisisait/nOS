@@ -1,0 +1,35 @@
+---
+# pazny.medulla on Linux: build in the pinned Rust container (thalamus_rust_image, default.config.yml):
+# no Rust toolchain on the host, the same compiler every run. The workspace root is the mount.
+
+- name: "[pazny.medulla] Build in the pinned Rust container (only when the source moved)"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    C={{ thalamus_build_cache | quote }}
+    {{ nos_docker_bin | default('docker') }} run --rm -u "$(id -u):$(id -g)" \
+      -e CARGO_HOME=/cargo -e CARGO_TARGET_DIR=/target \
+      -v "$C/registry:/cargo" -v "$C/target:/target" \
+      -v {{ (playbook_dir ~ '/files/anatomy/thalamus') | quote }}:/src:ro -w /src \
+      {{ thalamus_rust_image | quote }} cargo build --release --locked -p medulla
+    install -m 0755 "$C/target/release/medulla" {{ medulla_bin | quote }}
+  args:
+    executable: /bin/bash
+  register: _medulla_build
+  when: _medulla_src_sha.stdout != (_medulla_built_sha.stdout | default(''))
+  changed_when: true
+
+- name: "[pazny.medulla] Record the hash the binary was built from"
+  ansible.builtin.copy:
+    content: "{{ _medulla_src_sha.stdout }}"
+    dest: "{{ medulla_bin }}.source-sha256"
+    mode: '0644'
+  when: _medulla_build is not skipped
+
+# A copy, as on macOS: /proc/<pid>/exe resolves a link, and the unit runs `thalamus`.
+- name: "[pazny.medulla] thalamus is the medulla"
+  ansible.builtin.copy:
+    src: "{{ medulla_bin }}"
+    dest: "{{ thalamus_bin }}"
+    remote_src: true
+    mode: '0755'
+  ignore_errors: "{{ ansible_check_mode }}"  # --check builds nothing: a fresh host has no medulla to copy

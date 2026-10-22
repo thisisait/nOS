@@ -1,0 +1,8 @@
+# One workspace, one Cargo.lock: the medulla binary links the thalamus and contract crates
+# (ssot/doctrine/medulla.md §1). `--manifest-path thalamus/Cargo.toml` still resolves inside it.
+[workspace]
+members = ["thalamus", "contract", "medulla"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"

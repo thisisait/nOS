@@ -35,33 +35,18 @@
   when: _thalamus_tmpfiles is changed
   changed_when: true
 
-- name: "[pazny.thalamus] Build in the pinned Rust container (only when the source moved)"
-  ansible.builtin.shell: |
-    set -euo pipefail
-    C={{ thalamus_build_cache | quote }}
-    {{ nos_docker_bin | default('docker') }} run --rm -u "$(id -u):$(id -g)" \
-      -e CARGO_HOME=/cargo -e CARGO_TARGET_DIR=/target \
-      -v "$C/registry:/cargo" -v "$C/target:/target" \
-      -v {{ (playbook_dir ~ '/files/anatomy/thalamus') | quote }}:/src:ro -w /src/thalamus \
-      {{ thalamus_rust_image | quote }} cargo build --release --locked
-    install -m 0755 "$C/target/release/thalamus" {{ thalamus_bin | quote }}
-  args:
-    executable: /bin/bash
-  register: _thalamus_build
-  when: _thalamus_src_sha.stdout != (_thalamus_built_sha.stdout | default(''))
-  changed_when: true
-
-- name: "[pazny.thalamus] Record the hash the binary was built from"
-  ansible.builtin.copy:
-    content: "{{ _thalamus_src_sha.stdout }}"
-    dest: "{{ thalamus_bin }}.source-sha256"
-    mode: '0644'
-  when: _thalamus_build is not skipped
+# The build is the medulla's (row medulla-skeleton): one workspace binary, thalamus_bin is a copy of it.
+- name: "[pazny.thalamus] Build the medulla, which runs as thalamus"
+  ansible.builtin.include_role:
+    name: pazny.medulla
+    apply:
+      tags: [thalamus, keap, medulla]  # main.yml imports pazny.thalamus under thalamus + keap
+  tags: [thalamus, keap, medulla]
 
 # The operator's home is 0700 under the unix realm: other logins exec this copy.
 - name: "[pazny.thalamus] The shell for every login: thalamus and iris"
   ansible.builtin.copy:
-    src: "{{ thalamus_bin }}"
+    src: "{{ thalamus_bin }}"   # the medulla's bytes, named thalamus, argv[0] picks its CLI
     dest: /usr/local/bin/thalamus
     remote_src: true
     mode: '0755'
@@ -111,7 +96,7 @@
     state: restarted
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
-  when: (_thalamus_build is changed) or (_thalamus_env is changed)
+  when: (_medulla_build is changed) or (_thalamus_env is changed)
 
 # A connect, not a file test: a crashed daemon leaves its socket file behind.
 - name: "[pazny.thalamus] Verify — the shared socket accepts"

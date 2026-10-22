@@ -48,17 +48,7 @@ updates:
         patterns:
           - "*"
   - package-ecosystem: "cargo"
-    directory: "/files/anatomy/thalamus/contract"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 0
-    groups:
-      security-updates:
-        applies-to: security-updates
-        patterns:
-          - "*"
-  - package-ecosystem: "cargo"
-    directory: "/files/anatomy/thalamus/thalamus"
+    directory: "/files/anatomy/thalamus"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 0

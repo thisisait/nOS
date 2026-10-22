@@ -46,7 +46,7 @@ HOST_DAEMONS = {
     "pazny.cortex": (("build dist-server",), "cortex"),
     "pazny.device_gateway": (("sync device-gateway source",), "device-gateway"),
     "pazny.receptor": (("sync receptor source",), "receptor"),
-    "pazny.thalamus": (("install thalamus binary",), "thalamus"),
+    "pazny.thalamus": (("build and install the medulla binary",), "thalamus"),  # via include_role pazny.medulla
 }
 
 # Roles that bootstrap something into launchd but are NOT a long-lived process
@@ -83,8 +83,14 @@ DAEMON_ROLES_EXCUSED = {
 def _tasks(role: str) -> list[dict]:
     # Every task file of the role, main.yml first: a role may split by platform
     # (pazny.thalamus macos.yml / linux.yml, 2026-10-19) and the build moves with it.
+    # An include_role of a whole role is expanded: pazny.thalamus's build moved into pazny.medulla
+    # (row medulla-skeleton), and its notify resolves against the including role's handlers.
     files = sorted((REPO / "roles" / role / "tasks").glob("*.yml"), key=lambda p: (p.name != "main.yml", p.name))
-    return [t for p in files for t in (yaml.safe_load(p.read_text()) or []) if isinstance(t, dict)]
+    out = []
+    for t in (t for p in files for t in (yaml.safe_load(p.read_text()) or []) if isinstance(t, dict)):
+        inc = t.get("ansible.builtin.include_role") or {}
+        out += _tasks(inc["name"]) if inc.get("name") and "tasks_from" not in inc else [t]
+    return out
 
 
 def _notifies(task: dict) -> list[str]:

@@ -1,0 +1,31 @@
+---
+# pazny.medulla — builds the one workspace binary (files/anatomy/thalamus: thalamus + contract +
+# medulla crates) and copies it to `thalamus`, the path the thalamus plist/unit runs.
+# Included by pazny.thalamus after its runtime directories exist.
+
+# Build only when the source differs from the one the binary was built from (Pulse's pattern).
+# The whole workspace: the medulla links the thalamus crate, and the root lock is the one lock.
+- name: "[pazny.medulla] Hash the workspace source"
+  ansible.builtin.shell: |
+    set -o pipefail
+    cd {{ (playbook_dir ~ '/files/anatomy/thalamus') | quote }}
+    find Cargo.toml Cargo.lock thalamus/src thalamus/Cargo.toml contract/src contract/Cargo.toml \
+      medulla/src medulla/Cargo.toml -type f | LC_ALL=C sort | xargs cat | shasum -a 256 | cut -d' ' -f1
+  args:
+    executable: /bin/bash
+  register: _medulla_src_sha
+  changed_when: false
+  check_mode: false
+
+- name: "[pazny.medulla] Read the hash the binary was built from"
+  ansible.builtin.command: cat {{ medulla_bin }}.source-sha256
+  register: _medulla_built_sha
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- ansible.builtin.import_tasks: macos.yml
+  when: nos_service_manager == 'launchd'
+
+- ansible.builtin.import_tasks: linux.yml
+  when: nos_service_manager != 'launchd'

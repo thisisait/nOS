@@ -34,6 +34,21 @@ def _tasks() -> list[dict]:
     return [*yaml.safe_load((ROLE / "tasks" / "main.yml").read_text()), *yaml.safe_load((ROLE / "tasks" / "macos.yml").read_text())]  # macos.yml: the launchd flow
 
 
+MEDULLA = REPO / "roles" / "pazny.medulla"
+BUILD = "[pazny.medulla] build and install the medulla binary"
+
+
+def _flow() -> list[dict]:
+    """The launchd flow in run order, the pazny.medulla include expanded: the build lives there (row medulla-skeleton)."""
+    out = []
+    for t in _tasks():
+        if t.get("ansible.builtin.include_role", {}).get("name") == "pazny.medulla":
+            out += [*yaml.safe_load((MEDULLA / "tasks" / "main.yml").read_text()), *yaml.safe_load((MEDULLA / "tasks" / "macos.yml").read_text())]
+        else:
+            out.append(t)
+    return out
+
+
 def _plist(**over) -> dict:
     env = jinja2.Environment(undefined=jinja2.StrictUndefined)
     env.filters["bool"] = bool
@@ -90,7 +105,7 @@ def test_the_plist_runs_serve_and_keeps_the_secret_out_of_argv():
 
 
 def test_the_plist_carries_the_bound_backends_key_in_env_only():
-    """Iris binds mistral-eu (ruling 2026-10-12): its key rides the 0600 plist env, read once by main.rs."""
+    """Iris binds mistral-eu (ruling 2026-10-12): its key rides the 0600 plist env, read once by src/cli.rs."""
     p = _plist(mistral_enabled=True, mistral_model="mistral-large-latest",
                thalamus_model_secrets=["mistral_api_key"], thalamus_model_tokens={"mistral_api_key": "sk-eu-91c2"})
     env = p["EnvironmentVariables"]
@@ -198,7 +213,7 @@ def test_the_ledger_dir_derives_from_nos_data_root():
     import nos_identity
     cfg = nos_identity.default_config_text()
     assert 'thalamus_data_dir: "{{ nos_data_root }}/platform/services/thalamus/data"' in cfg
-    for src in ("src/main.rs", "src/ledger.rs", "src/serve.rs"):
+    for src in ("src/cli.rs", "src/ledger.rs", "src/serve.rs"):
         rs = (REPO / "files/anatomy/thalamus/thalamus" / src).read_text()
         assert "thalamus/data" not in rs, f"{src} hard-codes the ledger dir"
     assert "thalamus/data" not in READER.read_text(), "the reader guesses the ledger dir"
@@ -222,7 +237,7 @@ def test_the_role_refuses_a_receptor_map_the_binary_does_not_read():
 
 def test_the_build_is_locked_and_off_the_checkout():
     """--locked: the converge builds the Cargo.lock dependabot watches, not a fresh resolve."""
-    build = next(t for t in _tasks() if "install thalamus binary" in t.get("name", "").lower())
+    build = next(t for t in _flow() if t.get("name", "").lower() == BUILD)
     sh = build["ansible.builtin.shell"]
     assert "--locked" in sh and "--release" in sh and "CARGO_TARGET_DIR" in sh, sh
 
@@ -231,7 +246,7 @@ def test_the_binary_keeps_one_signing_identity_across_builds():
     """macOS ties a removable-volume grant to the designated requirement. The linker's ad-hoc
     DR is the cdhash, so every rebuild re-asked (measured 2026-10-12). A self-signed identity
     in the login keychain makes the DR identifier + certificate: stable across builds."""
-    tasks = _tasks()
+    tasks = _flow()
     names = [t.get("name", "").lower() for t in tasks]
     mint = next(t for t in tasks if "signing identity" in t.get("name", "").lower())
     sh = mint["ansible.builtin.shell"]
@@ -242,7 +257,7 @@ def test_the_binary_keeps_one_signing_identity_across_builds():
     ssh = sign["ansible.builtin.shell"]
     assert "codesign -f -s" in ssh and "-s -" not in ssh, "ad-hoc (-s -) keeps the cdhash DR"
     assert "Restart thalamus" in str(sign.get("notify")), "a re-signed binary is a new process"
-    install = next(i for i, n in enumerate(names) if "install thalamus binary" in n)
+    install = names.index(BUILD)
     boot = next(i for i, n in enumerate(names) if "bootstrap launchd" in n)
     assert install < names.index(sign["name"].lower()) < boot, "sign after the build, before the job starts"
 
@@ -383,7 +398,7 @@ def test_the_decider_list_is_off_by_default_and_rendered_only_when_set():
     assert "NOS_DECIDER_EXES" not in _plist(thalamus_decider_exes=[])["EnvironmentVariables"]
     exes = ["/h/thalamus/bin/nos-pupil", "/h/thalamus/bin/thalamus"]
     assert _plist(thalamus_decider_exes=exes)["EnvironmentVariables"]["NOS_DECIDER_EXES"] == ":".join(exes)
-    main = (REPO / "files/anatomy/thalamus/thalamus/src/main.rs").read_text()
+    main = (REPO / "files/anatomy/thalamus/thalamus/src/cli.rs").read_text()
     assert '"NOS_DECIDER_EXES"' in main, "serve does not read the list the plist renders"
 
 
@@ -426,11 +441,11 @@ def test_the_cell_backend_choice_rides_the_binding_env():
 def test_a_host_without_rustup_gets_a_toolchain_before_the_build():
     """Live 2026-10-14, a fresh client: ~/.cargo/bin/cargo did not exist (rustup never installed), so the
     build died with 'No such file or directory'. The role finds cargo or installs Homebrew's rust first."""
-    tasks = [*yaml.safe_load((ROLE / "tasks" / "main.yml").read_text()), *yaml.safe_load((ROLE / "tasks" / "macos.yml").read_text())]  # macos.yml: the launchd flow
+    tasks = _flow()
     names = [t.get("name", "").lower() for t in tasks]
     find = next(i for i, n in enumerate(names) if "find a rust toolchain" in n)
     brew = next(i for i, n in enumerate(names) if "install homebrew's rust" in n)
-    build = names.index("[pazny.thalamus] install thalamus binary")
+    build = names.index(BUILD)
     assert find < brew < build, (find, brew, build)
     t = tasks[brew]
     mod = t.get("community.general.homebrew") or t.get("homebrew")
@@ -460,9 +475,9 @@ def _run_sign(tmp, task_yml, ctx):
 def test_a_sign_that_cannot_reach_the_key_says_the_one_command(tmp_path):
     """Live 2026-10-14 on a client over SSH: codesign answered errSecInternalComponent — the key's partition
     list never allowed codesign without the GUI prompt SSH cannot show. The task names the fix."""
-    tasks = [*yaml.safe_load((ROLE / "tasks" / "main.yml").read_text()), *yaml.safe_load((ROLE / "tasks" / "macos.yml").read_text())]  # macos.yml: the launchd flow
+    tasks = _flow()
     t = next(x for x in tasks if "sign the binary with it" in x.get("name", "").lower())
-    ctx = {"_thalamus_signing": {"stdout_lines": ["ABCDEF0123"]}, "thalamus_bin": str(tmp_path / "thalamus"),
+    ctx = {"_thalamus_signing": {"stdout_lines": ["ABCDEF0123"]}, "medulla_bin": str(tmp_path / "medulla"),
            "thalamus_launchd_label": "eu.thisisait.nos.thalamus", "thalamus_signing_keychain": "/k/login.keychain-db"}
     r = _run_sign(tmp_path, t, ctx)
     assert r.returncode != 0
@@ -483,7 +498,7 @@ def test_the_local_temperature_is_a_config_knob_in_the_plist():
 # --- row thalamus-web-relay: the optic nerve, the face's loopback door into serve ---
 
 def test_the_relay_door_is_rendered_only_beside_the_face():
-    """Empty secret = no listener (src/main.rs): a host without the face renders no secret and no port."""
+    """Empty secret = no listener (src/cli.rs): a host without the face renders no secret and no port."""
     for face in (False, True):
         p = _plist(install_face=face, thalamus_relay_secret="relay-s3cret", thalamus_relay_port=8097)
         env = p["EnvironmentVariables"]
@@ -492,7 +507,7 @@ def test_the_relay_door_is_rendered_only_beside_the_face():
             assert env["THALAMUS_RELAY_SECRET"] == "relay-s3cret" and env["THALAMUS_RELAY_PORT"] == "8097"
         else:
             assert "THALAMUS_RELAY_SECRET" not in env and "THALAMUS_RELAY_PORT" not in env, env
-    main = (REPO / "files/anatomy/thalamus/thalamus/src/main.rs").read_text()
+    main = (REPO / "files/anatomy/thalamus/thalamus/src/cli.rs").read_text()
     assert 'remove_var("THALAMUS_RELAY_SECRET")' in main, "serve does not drop the secret it read"
 
 

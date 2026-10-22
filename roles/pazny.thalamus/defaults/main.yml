@@ -3,11 +3,13 @@
 # nos_data_root) live in default.config.yml. The socket (~/.nos/thalamus.sock) is fixed in src/main.rs.
 thalamus_launchd_label: "eu.thisisait.nos.thalamus"
 thalamus_home: "{{ ansible_facts['env']['HOME'] }}/thalamus"
+# A copy of the medulla in the same dir (pazny.medulla medulla_bin_dir); the plist and the unit run it.
+# Spelled without medulla_* vars: include_role keeps them private, and this is read before the include.
 thalamus_bin: "{{ thalamus_home }}/bin/thalamus"
 thalamus_log_dir: "{{ thalamus_home }}/log"
 thalamus_target_dir: "{{ thalamus_home }}/target"
 thalamus_socket: "{{ ansible_facts['env']['HOME'] }}/.nos/thalamus.sock"
-# One self-signed identity per host keeps the removable-volume grant across rebuilds (tasks/main.yml).
+# One self-signed identity per host keeps the removable-volume grant across rebuilds (pazny.medulla).
 thalamus_signing_cn: "nOS local code signing"
 thalamus_signing_keychain: "{{ ansible_facts['env']['HOME'] }}/Library/Keychains/login.keychain-db"
 thalamus_cargo: "{{ ansible_facts['env']['HOME'] }}/.cargo/bin/cargo"
