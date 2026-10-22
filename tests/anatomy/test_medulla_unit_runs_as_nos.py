@@ -58,7 +58,9 @@ def _tasks(path: pathlib.Path) -> list[dict]:
 
 
 def _env():
-    return jinja2.Environment(undefined=jinja2.StrictUndefined, keep_trailing_newline=True)
+    env = jinja2.Environment(undefined=jinja2.StrictUndefined, keep_trailing_newline=True)
+    env.filters["bool"] = bool   # Ansible's; the binding env and the face branch use it
+    return env
 
 
 def _ctx(system_user: str) -> dict:
