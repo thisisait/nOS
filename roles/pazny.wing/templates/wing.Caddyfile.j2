@@ -61,6 +61,19 @@
     root * {{ wing_app_dir }}/www
     encode zstd gzip
 
+    # The strangler seam (ssot/doctrine/medulla.md §5): a whole moved prefix goes to the
+    # medulla's loopback door; everything else falls through to PHP below. Caddy runs
+    # `handle` before the site's `respond`, so each handle repeats the multipart 415.
+    # Gate: test_medulla_serves_metrics.py
+{% for prefix in medulla_routes %}
+    handle /api/v1/{{ prefix }}* {
+        respond @multipart "Wing accepts no multipart bodies" 415 {
+            close
+        }
+        reverse_proxy 127.0.0.1:{{ medulla_http_port }}
+    }
+{% endfor %}
+
     # PHP routing — front-controller pattern (Wing is a Nette app).
     # `php_server` is FrankenPHP's high-level shortcut: it wires up
     # try_files for the URI, sets SCRIPT_FILENAME, and routes to the

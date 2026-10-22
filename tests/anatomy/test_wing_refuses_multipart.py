@@ -34,7 +34,7 @@ def _render(tmp: Path) -> str:
     env = jinja2.Environment(undefined=jinja2.StrictUndefined)
     return env.from_string(CADDY.read_text(encoding="utf-8")).render(
         wing_log_dir=str(tmp), wing_app_dir=str(tmp),
-        nos_docker_host_ip="127.0.0.1", wing_edge_token="t")
+        nos_docker_host_ip="127.0.0.1", wing_edge_token="t", medulla_routes=[], medulla_http_port=8095)
 
 
 def test_the_site_refuses_multipart():

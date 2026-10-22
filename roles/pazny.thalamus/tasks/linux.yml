@@ -2,7 +2,8 @@
 # ==============================================================================
 # THALAMUS ON LINUX — one daemon, every login's Iris. The operator's systemd
 # --user unit (the Linux organ pattern: bone, pulse, wing); the shell is the
-# same binary in /usr/local/bin as `thalamus` and `iris`.
+# same binary in /usr/local/bin as `thalamus` and `iris`. With nos_system_user set,
+# pazny.medulla runs it as a system unit under that account instead.
 # ==============================================================================
 
 - name: "[pazny.thalamus] Runtime directories"
@@ -28,12 +29,38 @@
     mode: '0644'
   become: true
   register: _thalamus_tmpfiles
+  when: not (nos_system_user | length)  # the system unit's RuntimeDirectory=nos makes it (pazny.medulla)
 
 - name: "[pazny.thalamus] Create it now"
   ansible.builtin.command: systemd-tmpfiles --create /etc/tmpfiles.d/nos-thalamus.conf
   become: true
-  when: _thalamus_tmpfiles is changed
+  when:
+    - not (nos_system_user | length)
+    - _thalamus_tmpfiles is changed
   changed_when: true
+
+# A system host, before the medulla starts its unit: the operator's --user unit would hold the same
+# /run/nos socket, and estate-status reads a user unit file before the system one.
+- name: "[pazny.thalamus] A system host retires the --user unit"
+  ansible.builtin.systemd_service:
+    name: "{{ thalamus_unit_name }}"
+    scope: user
+    state: stopped
+    enabled: false
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
+  failed_when: false   # never installed here
+  when: nos_system_user | length > 0
+
+- name: "[pazny.thalamus] And its files"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ ansible_facts['env']['HOME'] }}/.config/systemd/user/{{ thalamus_unit_name }}.service"
+    - /etc/tmpfiles.d/nos-thalamus.conf
+  become: true
+  when: nos_system_user | length > 0
 
 # The build is the medulla's (row medulla-skeleton): one workspace binary, thalamus_bin is a copy of it.
 - name: "[pazny.thalamus] Build the medulla, which runs as thalamus"
@@ -75,6 +102,7 @@
     mode: '0600'
   no_log: true
   register: _thalamus_env
+  when: not (nos_system_user | length)  # a system host: /etc/nos/medulla.env (pazny.medulla)
 
 - name: "[pazny.thalamus] systemd --user unit"
   ansible.builtin.include_role:
@@ -87,6 +115,7 @@
     su_working_dir: "{{ thalamus_home }}"
     su_environment_file: "{{ thalamus_home }}/thalamus.env"
     su_restart_sec: 30
+  when: not (nos_system_user | length)  # a system host: the medulla's system unit
 
 # The unit file did not change when only the binary or the env did.
 - name: "[pazny.thalamus] Restart on a new binary or environment"
@@ -96,7 +125,9 @@
     state: restarted
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
-  when: (_medulla_build is changed) or (_thalamus_env is changed)
+  when:
+    - not (nos_system_user | length)
+    - (_medulla_build is changed) or (_thalamus_env is changed)
 
 # A connect, not a file test: a crashed daemon leaves its socket file behind.
 - name: "[pazny.thalamus] Verify — the shared socket accepts"
@@ -111,4 +142,16 @@
   delay: 2
   until: _thalamus_accepts.rc == 0
   changed_when: false
+  tags: ['verify']
+
+- name: "[pazny.thalamus] Verify — the system unit runs as nos_system_user"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    ps -o user= -p "$(systemctl show -p MainPID --value {{ thalamus_unit_name | quote }})"
+  args:
+    executable: /bin/bash
+  register: _thalamus_runs_as
+  changed_when: false
+  failed_when: _thalamus_runs_as.rc != 0 or (_thalamus_runs_as.stdout | trim) != nos_system_user
+  when: nos_system_user | length > 0
   tags: ['verify']

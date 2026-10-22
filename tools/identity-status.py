@@ -106,6 +106,9 @@ def declared_roster(merged: dict | None = None) -> tuple[list[dict], dict]:
     for entry in merged.get("nos_extra_identities", []) or []:
         if isinstance(entry, dict) and entry.get("name"):
             roster.append({"kind": "user", "realms": ["authentik"], **entry})
+    # The medulla's run-as (nos_system_user, Linux): a tier-less nologin unix account, not a person.
+    if name := _resolve(merged.get("nos_system_user") or "", ctx):
+        roster.append({"name": name, "kind": "service", "tier": "-", "realms": ["unix"]})
     return roster, merged
 
 
@@ -209,15 +212,18 @@ def tier_groups(merged: dict) -> dict[int, list[str]]:
     return own
 
 
-def unix_logins(merged: dict) -> list[str] | None:
+def unix_logins(merged: dict, pwd=None, grp=None) -> list[str] | None:
     """The unix realm's holdings: members of the RBAC tier groups that
-    roles/pazny.linux.users manages (every tier's own groups). The
+    roles/pazny.linux.users manages (every tier's own groups), and the
+    nos_system_user account when its GECOS carries the role's marker. The
     host's other accounts are not the realm's, so they are never UNDECLARED.
-    None off Linux — macOS host accounts are not nOS's to make."""
-    if not sys.platform.startswith("linux"):
-        return None
-    import grp
-    import pwd
+    None off Linux — macOS host accounts are not nOS's to make. `pwd`/`grp`
+    are injectable for the gate."""
+    if pwd is None or grp is None:
+        if not sys.platform.startswith("linux"):
+            return None
+        import grp
+        import pwd
 
     names = {g for gs in tier_groups(merged).values() for g in gs}
     held: set[str] = set()
@@ -228,6 +234,14 @@ def unix_logins(merged: dict) -> list[str] | None:
             continue
         held.update(g.gr_mem)
         held.update(p.pw_name for p in pwd.getpwall() if p.pw_gid == g.gr_gid)
+    if service := str(merged.get("nos_system_user") or ""):
+        marker = merged.get("linux_users_marker") or _yaml(
+            REPO / "roles/pazny.linux.users/defaults/main.yml").get("linux_users_marker", "")
+        try:
+            if marker and marker in pwd.getpwnam(service).pw_gecos:
+                held.add(service)
+        except KeyError:
+            pass
     return sorted(held)
 
 

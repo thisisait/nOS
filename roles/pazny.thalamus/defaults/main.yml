@@ -60,3 +60,9 @@ thalamus_shared_socket: "{{ thalamus_shared_socket_dir }}/thalamus.sock"
 # toolchain on the host, the same compiler every run.
 thalamus_build_cache: "{{ ansible_facts['env']['HOME'] }}/.cache/nos-thalamus-build"
 thalamus_unit_name: "eu.thisisait.nos.thalamus"
+# thalamus.env.j2's HOME, NOS_REPO_ROOT and PATH. Today's values unless nos_system_user is set; then
+# the medulla's system unit (pazny.medulla) reads its identity map and genome under nos_system_home,
+# and no line names the operator's home (ProtectHome hides it).
+thalamus_env_home: "{{ nos_system_home if nos_system_user | default('') | length else ansible_facts['env']['HOME'] }}"
+thalamus_repo_root: "{{ nos_system_home ~ '/genome' if nos_system_user | default('') | length else nos_main_checkout }}"
+thalamus_env_path: "{{ '' if nos_system_user | default('') | length else nos_tools_venv ~ '/bin:' }}/usr/local/bin:/usr/bin:/bin"

@@ -33,3 +33,110 @@
     remote_src: true
     mode: '0755'
   ignore_errors: "{{ ansible_check_mode }}"  # --check builds nothing: a fresh host has no medulla to copy
+
+# nos_system_user set: a system unit runs the medulla as that account (ssot/doctrine/medulla.md §2).
+# ProtectHome=yes hides the operator's home from it, so what it runs and reads lives outside:
+# the binary in /usr/local/libexec, the env in /etc/nos, the repo files serve reads in the genome.
+- name: "[pazny.medulla] The system unit, run as nos_system_user"
+  when: nos_system_user | length > 0
+  become: true
+  vars:
+    # NOS_REPO_ROOT={{ nos_system_home }}/genome: every repo path serve.rs/binding.rs read
+    # (test_medulla_unit_runs_as_nos scans the source for the list).
+    medulla_genome:
+      - files/anatomy/agents/iris/agent.yml
+      - state/habitat/llm-backends.yml
+      - IMPRINT.md
+      - IMPRINT.short.md
+      - state/cortex-lang.gbnf
+      - state/app-scaffolds.yml
+      - state/keap-tables/
+  block:
+    - name: "[pazny.medulla] Its directories"
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: directory
+        owner: "{{ item.owner | default('root') }}"
+        group: "{{ item.group }}"
+        mode: "{{ item.mode }}"
+      # The home is root's (user made it nos's): nos renames nothing in it, so it cannot swap
+      # genome/ or .nos/ for its own; it writes only the ledger (ReadWritePaths).
+      loop:
+        - { path: /usr/local/libexec/nos, group: root, mode: '0755' }
+        - { path: /etc/nos, group: root, mode: '0755' }
+        - { path: "{{ nos_system_home }}", group: "{{ nos_system_user }}", mode: '0750' }
+        - { path: "{{ nos_system_home }}/.nos", group: "{{ nos_system_user }}", mode: '0750' }
+        - { path: "{{ nos_system_home }}/genome", group: "{{ nos_system_user }}", mode: '0750' }
+        - { path: "{{ nos_system_home }}/thalamus", owner: "{{ nos_system_user }}", group: "{{ nos_system_user }}", mode: '0700' }
+
+    - name: "[pazny.medulla] The binary, outside $HOME"
+      ansible.builtin.copy:
+        src: "{{ medulla_bin }}"
+        dest: /usr/local/libexec/nos/medulla
+        remote_src: true
+        owner: root
+        group: root
+        mode: '0755'
+      register: _medulla_sys_bin
+      ignore_errors: "{{ ansible_check_mode }}"  # --check builds nothing
+
+    - name: "[pazny.medulla] Its environment (0640 root:nos: the KEAP proxy secret and model keys)"
+      ansible.builtin.template:
+        src: "{{ role_path }}/../pazny.thalamus/templates/thalamus.env.j2"
+        dest: /etc/nos/medulla.env
+        owner: root
+        group: "{{ nos_system_user }}"
+        mode: '0640'
+      no_log: true
+      register: _medulla_sys_env
+
+    # copy makes no parent dir for a single-file dest; file makes every missing one with these attrs.
+    - name: "[pazny.medulla] The genome's directories"
+      ansible.builtin.file:
+        path: "{{ nos_system_home }}/genome/{{ item | dirname }}"
+        state: directory
+        owner: root
+        group: "{{ nos_system_user }}"
+        mode: '0750'
+      loop: "{{ medulla_genome }}"
+
+    # ponytail: a file dropped from the repo lingers in the genome; prune when one matters.
+    - name: "[pazny.medulla] The genome: the repo files serve reads (NOS_REPO_ROOT)"
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/{{ item }}"
+        dest: "{{ nos_system_home }}/genome/{{ item }}"
+        owner: root
+        group: "{{ nos_system_user }}"
+        mode: '0640'
+        directory_mode: '0750'
+      loop: "{{ medulla_genome }}"
+      register: _medulla_sys_genome
+
+    - name: "[pazny.medulla] The receptor's identity map, at HOME/.nos as serve reads it"
+      ansible.builtin.copy:
+        src: "{{ ansible_facts['env']['HOME'] }}/.nos/identity-map.yml"
+        dest: "{{ nos_system_home }}/.nos/identity-map.yml"
+        remote_src: true
+        owner: root
+        group: "{{ nos_system_user }}"
+        mode: '0640'
+      register: _medulla_sys_map
+      ignore_errors: "{{ ansible_check_mode }}"
+
+    - name: "[pazny.medulla] The system unit file"
+      ansible.builtin.template:
+        src: nos-medulla.service.j2
+        dest: "/etc/systemd/system/{{ thalamus_unit_name }}.service"
+        owner: root
+        group: root
+        mode: '0644'
+      register: _medulla_sys_unit
+
+    - name: "[pazny.medulla] Enabled, and restarted on any change"
+      ansible.builtin.systemd_service:
+        name: "{{ thalamus_unit_name }}"
+        daemon_reload: true
+        enabled: true
+        state: >-
+          {{ 'restarted' if ([_medulla_sys_bin, _medulla_sys_env, _medulla_sys_genome, _medulla_sys_map, _medulla_sys_unit]
+             | select('changed') | list | length) else 'started' }}

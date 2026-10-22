@@ -120,3 +120,27 @@
   loop_control:
     label: "{{ item.name }}"
   become: true
+
+# The medulla's run-as (pazny.medulla). Same rule as a person: a `nos` nOS did not make is refused.
+- name: "[unix] The service account — refuse a login nOS did not create"
+  ansible.builtin.fail:
+    msg: >-
+      {{ nos_system_user }} already exists on this host and nOS did not create it (its GECOS
+      lacks '{{ linux_users_marker }}'). Pick another nos_system_user, or list it in linux_users_adopted.
+  when:
+    - nos_system_user | length > 0
+    - nos_system_user in ansible_facts['getent_passwd']
+    - linux_users_marker not in (ansible_facts['getent_passwd'][nos_system_user][3] | default(''))
+    - nos_system_user not in (linux_users_adopted | default([]))
+
+- name: "[unix] The service account"
+  ansible.builtin.user:
+    name: "{{ nos_system_user }}"
+    system: true
+    shell: /usr/sbin/nologin
+    home: "{{ nos_system_home }}"
+    create_home: true
+    comment: "{{ linux_users_marker }}"
+    groups: []
+  when: nos_system_user | length > 0
+  become: true

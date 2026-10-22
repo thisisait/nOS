@@ -1,0 +1,25 @@
+# {{ ansible_managed }} — roles/pazny.medulla (Linux, nos_system_user set). The thalamus's label:
+# one organ, one unit; estate-status reads /etc/systemd/system/<label>.service.
+[Unit]
+Description=nOS medulla — thalamus serve as {{ nos_system_user }}
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User={{ nos_system_user }}
+Group={{ nos_system_user }}
+ExecStart=/usr/local/libexec/nos/medulla thalamus serve --data-dir {{ nos_system_home }}/thalamus
+WorkingDirectory={{ nos_system_home }}
+EnvironmentFile=/etc/nos/medulla.env
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths={{ nos_system_home }}/thalamus
+RuntimeDirectory=nos
+RuntimeDirectoryMode=0755
+NoNewPrivileges=yes
+PrivateTmp=yes
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

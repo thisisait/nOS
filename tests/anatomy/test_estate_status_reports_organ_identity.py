@@ -243,3 +243,24 @@ def test_a_shimmed_module_run_and_an_env_dash_s_shebang_are_seen(tmp_path):
     for row in (mod_row, env_row):
         assert got[row["id"]].state == mod.OK, got[row["id"]]
         assert "python/python" in got[row["id"]].detail, got[row["id"]]
+
+
+def test_a_system_unit_whose_ps_uid_is_nos_reads_run_as_other(tmp_path):
+    """nos_system_user set: the medulla's rendered system unit (ssot/doctrine/medulla.md §2)."""
+    import jinja2
+    mod = load()
+    row = next(r for r in ORGANS if r["id"] == "thalamus")
+    unit = (REPO / "roles/pazny.medulla/templates/nos-medulla.service.j2").read_text()
+    text = jinja2.Environment(undefined=jinja2.StrictUndefined).from_string(unit).render(
+        ansible_managed="managed", nos_system_user="nos", nos_system_home="/var/lib/nos")
+    home = tmp_path / "home"
+    home.mkdir()
+    system = tmp_path / "etc/systemd/system"
+    system.mkdir(parents=True)
+    (system / f"{row['launchd_label']}.service").write_text(text)
+    ps = ["990 nos /usr/local/libexec/nos/medulla thalamus serve --data-dir /var/lib/nos/thalamus"]
+    res = mod.Result()
+    mod.axis_identity(res, root=tmp_path, home=home, ps_lines=ps)
+    got = {x.subject: x for x in lines(res)}
+    assert "runs as nos uid 990" in got["thalamus"].detail and "system unit" in got["thalamus"].detail, got["thalamus"]
+    assert "other 1" in got["summary"].detail, got["summary"]

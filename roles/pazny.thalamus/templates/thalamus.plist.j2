@@ -42,6 +42,13 @@
         <key>NOS_SECRET_{{ var | upper }}</key>
         <string>{{ thalamus_model_tokens[var] }}</string>
 {% endfor %}
+{% if medulla_routes | default([]) | length and not (nos_system_user | default('') | length) %}
+        <!-- A Wing prefix moved to the medulla (medulla_routes): its loopback door reads wing.db mode=ro. -->
+        <key>NOS_WING_DB</key>
+        <string>{{ wing_data_dir }}/wing.db</string>
+        <key>MEDULLA_HTTP_PORT</key>
+        <string>{{ medulla_http_port }}</string>
+{% endif %}
         <!-- The table serve answers for the model's "roadmap" (src/serve.rs table_id). -->
         <key>NOS_ROADMAP_TABLE_ID</key>
         <string>{{ thalamus_roadmap_table_id }}</string>

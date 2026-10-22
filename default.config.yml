@@ -634,6 +634,13 @@ iris_knowledge_tree_max: 50
 # librarian is left out: it holds keap.write.
 iris_startable_agents: [conductor, surveyor]
 
+# ── nos system user (Linux; roles/pazny.linux.users + pazny.medulla) ──
+# "" = today: the thalamus is a systemd --user unit of the operator. "nos" = a nologin system account
+# (no tier group, never docker) and a system unit running the medulla as it, confined to
+# nos_system_home (ProtectHome: it cannot read ~/wing or ~/.nos). The operator's key (config.yml).
+nos_system_user: ""
+nos_system_home: /var/lib/nos
+
 # ── Skill library (2026-08-27) ────────────────────────────────────────────────
 # One shelf at files/anatomy/skills/, symlinked onto every reader that should
 # hold it; contract + audience rule in files/anatomy/skills/README.md.
@@ -913,6 +920,12 @@ wing_php_cli: "{{ 'php' if ansible_os_family == 'Darwin' else (ansible_facts['en
 wing_home: "{{ ansible_facts['env']['HOME'] }}/wing"
 wing_app_dir: "{{ wing_home }}/app"
 wing_data_dir: "{{ wing_app_dir }}/data"
+# ── the strangler seam (ssot/doctrine/medulla.md §5) ──
+# Whole /api/v1/<prefix> names Wing's Caddy hands to the medulla; [] = everything is still PHP.
+# The operator moves a prefix in config.yml (e.g. [metrics]), then converges --tags wing,thalamus.
+medulla_routes: []
+# The medulla's loopback HTTP door. 8095: free (8096 is Jellyfin; 8097 relay, 8098 cortex, 8099 Bone).
+medulla_http_port: 8095
 wing_json_source: "{{ playbook_dir }}/docs/llm/security"
 # Tracy debug bar gate. Empty (default) = debug NEVER renders — the bar leaks
 # $_COOKIE/config/SQL dumps and must stay off on any reachable install. To
