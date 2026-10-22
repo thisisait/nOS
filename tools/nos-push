@@ -59,6 +59,15 @@ REMOTE="${REMOTE:-origin}"  # git push's first positional argument is the remote
 # HEAD:dev — "Everything up-to-date", exit 0, nothing landed (2026-10-20).
 # REPO_DIR still supplies the mirror-sync config below.
 PUSH_DIR="$(git rev-parse --show-toplevel 2>/dev/null || echo "$REPO_DIR")"
+# This repo only (2026-10-22): run from a worktree of the PRIVATE seed repo nested under an nOS
+# worktree, the push went to the nOS origin. The target must be the origin this script's own
+# checkout pushes to; a remote name is resolved in the checkout you stand in.
+TARGET_URL="$(git -C "$PUSH_DIR" remote get-url "$REMOTE" 2>/dev/null || echo "$REMOTE")"
+HOME_URL="$(git -C "$REPO_DIR" remote get-url origin 2>/dev/null || true)"
+if [ -z "$HOME_URL" ] || [ "$TARGET_URL" != "$HOME_URL" ]; then
+	echo "→ nos-push refused: this repo only — $PUSH_DIR would push to '$TARGET_URL', not to this repo's origin '$HOME_URL'"
+	exit 2
+fi
 BRANCH="$(git -C "$PUSH_DIR" symbolic-ref -q --short HEAD || true)"
 if [ "${#REFSPECS[@]}" -eq 0 ]; then
 	[ -n "$BRANCH" ] || { echo "→ nos-push refused: detached HEAD and no refspec — name it: tools/nos-push $REMOTE HEAD:<branch>"; exit 2; }
