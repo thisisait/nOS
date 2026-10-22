@@ -451,12 +451,15 @@ def service_log(label: str, lines: int = 2000, grep: str | None = None, run: Run
         except OSError:
             return None
     if system == "Linux":
-        argv = ["journalctl", "--user", "-u", _unit(label), "-n", str(lines), "-o", "cat", "--no-pager"]
-        res = run(argv + (["--grep", grep] if grep else []))
+        argv = ["journalctl", "--user", "-u", _unit(label), "-o", "cat", "--no-pager"]
+        # `-n` with `--grep` returned matches NEWEST FIRST on systemd 255 (spark1,
+        # 2026-10-22), so "the last start line" was a stale one: with a grep the
+        # journal filters in order and the tail is cut here instead.
+        res = run(argv + (["--grep", grep] if grep else ["-n", str(lines)]))
         # rc 1 with --grep is "no entry matched": an answer, not a failure.
         if res is None or res[0] not in ((0, 1) if grep else (0,)):
             return None
-        return keep(res[1].splitlines()), f"journalctl --user -u {_unit(label)}"
+        return keep(res[1].splitlines())[-lines:], f"journalctl --user -u {_unit(label)}"
     return None
 
 

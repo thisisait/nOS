@@ -251,7 +251,7 @@ def test_the_journal_is_the_linux_stderr_log():
     run = fake({"journalctl": (0, "thalamus: model bound x\nthalamus: relay closed\n")})
     lines, src = h.service_log("eu.thisisait.nos.thalamus", grep="thalamus: ", run=run, system="Linux")
     assert lines[-1] == "thalamus: relay closed" and src.startswith("journalctl --user -u eu.thisisait.nos.thalamus")
-    assert "--grep" in run.calls[0]
+    assert "--grep" in run.calls[0] and "-n" not in run.calls[0], "-n with --grep reverses the order"
     assert h.service_log("x", grep="y", run=fake({"journalctl": (1, "")}), system="Linux") == ([], src.replace(
         "eu.thisisait.nos.thalamus", "x")), "no match is an empty answer"
     assert h.service_log("x", run=fake({}), system="Linux") is None
