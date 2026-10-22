@@ -40,6 +40,17 @@
 - name: "[pazny.medulla] The system unit, run as nos_system_user"
   when: nos_system_user | length > 0
   become: true
+  vars:
+    # NOS_REPO_ROOT={{ nos_system_home }}/genome: every repo path serve.rs/binding.rs read
+    # (test_medulla_unit_runs_as_nos scans the source for the list).
+    medulla_genome:
+      - files/anatomy/agents/iris/agent.yml
+      - state/habitat/llm-backends.yml
+      - IMPRINT.md
+      - IMPRINT.short.md
+      - state/cortex-lang.gbnf
+      - state/app-scaffolds.yml
+      - state/keap-tables/
   block:
     - name: "[pazny.medulla] Its directories"
       ansible.builtin.file:
