@@ -172,7 +172,8 @@ posts, restarts or renders something.
     - Structured output (`format`) works on Ollama's llama.cpp engine (GGUF), not on its MLX engine (HTTP 501, mxfp8 models); `--format-mode auto` falls back to plain chat there.
   - Workers AI / TypeSafe are cloud processors (US): `--allow-remote --token-env <VAR>` only with a DPA and an Article 30 entry.
 - `loop-diff.py` — Build a valid unified diff from a replacement an agent can state in words.
-- `loop-graph-gen.py` — Compile the loop harness from ledger.py into loop-graph.json (the Planner Loops view + its gate). `--validate <file>` checks one loop manifest (exit 1, every reason on stderr); discover-pulse-catalog.py schedules no loop it refuses.
+- `loop-graph-gen.py` — Compile the loop harness from ledger.py into loop-graph.json (the Planner Loops view + its gate).
+  - `--validate <file>` checks one loop manifest (exit 1, every reason on stderr); discover-pulse-catalog.py schedules no loop it refuses.
 - `loop-pr.py` — The loop's driver: what happens after the judges say pass.
 - `loop-propose.py` — The loop's ENTRY: hand one reported weakness to a model that may propose.
 - `loop-review.py` — The reviewer: the only thing in the loop permitted to merge.
