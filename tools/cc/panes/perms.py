@@ -23,6 +23,11 @@ _RANK = {"DENIED": 0, "UNKNOWN": 1, "LIMITED": 2, "OK": 3}
 
 
 def build_rows(data):
+    # Off the Mac the reader answers "not applicable" — one row that says so,
+    # because an empty table reads as "nothing denied", which nobody checked.
+    if data.get("applicable") is False:
+        return [{"kind": "platform", "state": "N/A", "subject": f"macOS TCC on {data.get('platform', '?')}",
+                 "detail": (data.get("why") or "")[:120]}]
     rows = []
     for p in data.get("probes") or []:
         rows.append({"kind": "probe", "state": p.get("state", "?"),
