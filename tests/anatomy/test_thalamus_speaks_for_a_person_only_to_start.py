@@ -5,8 +5,14 @@ for the person who approved it, so Wing must stamp actor_id = user:<uid> and kee
 owner scoping. Wing believed X-Nos-User-* only on the face-bff bearer; giving the
 thalamus a plain write token would stamp every start "thalamus" and let every login
 see every run. The thalamus bearer now carries a person, but on POST
-/agents/<name>/sessions alone: never on an operator verb, never on a read, and
-never without a person (files/anatomy/contracts/face-wing.yml, wire).
+/agents/<name>/sessions and on GET /agent-sessions/<uuid> alone: never on an
+operator verb, never on another read, and never without a person
+(files/anatomy/contracts/face-wing.yml, wire).
+
+GATE CHANGE (iris-subagent-reports-back, 2026-10-22): the one read is the run
+the person started through Iris, narrowed like the face-bff's (another's is
+404). The thalamus polls it so Iris can say when the run ended and what it
+reported; before, the approve was the last thing the person ever heard.
 
 What runs: the REAL Api presenters through Presenter::run over an in-memory SQLite
 (the harness of test_face_user_owns_its_sessions.py, plus a thalamus row and the
@@ -73,11 +79,23 @@ def test_the_thalamus_bearer_reaches_nothing_else(tmp_path):
     got = _run(tmp_path, [
         {"presenter": "Agents", "method": "GET", "params": {"action": "sessions", "name": "helper"}, **_thal()},
         {"presenter": "Agents", "method": "GET", "params": {"action": "default"}, **_thal()},
-        {"presenter": "AgentSessions", "method": "GET", "params": {"action": "default", "uuid": "a1"}, **_thal()},
+        {"presenter": "AgentSessions", "method": "POST", "params": {"action": "default", "uuid": "a1"}, **_thal()},
         {"presenter": "Admin", "method": "POST", "params": {"action": "halt"}, **_thal()},
         {"presenter": "Admin", "method": "POST", "params": {"action": "halt"}, **_thal(token="thal-op")},
     ])
     assert [g["code"] for g in got] == [403, 403, 403, 403, 403], got
+
+
+@needs_php
+@needs_vendor
+def test_the_thalamus_reads_the_persons_run_and_no_other(tmp_path):
+    def one(uuid, **who):
+        return {"presenter": "AgentSessions", "method": "GET", "params": {"action": "default", "uuid": uuid}, **who}
+    mine, theirs, bare = _run(tmp_path, [one("a1", **_thal(groups="nos-users")), one("b1", **_thal(groups="nos-users")),
+                                         one("a1", token="thal")])
+    assert mine["code"] == 200 and mine["body"]["session"]["actor_id"] == "user:alice", mine
+    assert theirs["code"] == 404, "another's run answers like an absent one"
+    assert bare["code"] == 401, "the thalamus bearer without a person is no one"
 
 
 @needs_php
