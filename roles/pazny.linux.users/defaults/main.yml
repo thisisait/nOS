@@ -22,4 +22,7 @@ linux_users_update_password: on_create
 # (config.yml; the operator decides: an adopted login gets the tier group and a
 # 0700 home). Logins made before the marker existed must be listed there too.
 linux_users_marker: "nos-managed"
+
+# The service account (nos_system_user, default.config.yml; "" = none) is kind service: a nologin
+# system account with no password and no tier group, never docker. Not a person, so not _unix_people.
 linux_users_adopted: []

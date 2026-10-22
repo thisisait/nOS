@@ -4,3 +4,13 @@
 # and its 0700 dirs do not move during coexistence (ssot/doctrine/medulla.md §3).
 medulla_bin_dir: "{{ thalamus_home }}/bin"
 medulla_bin: "{{ medulla_bin_dir }}/medulla"
+# The system unit (nos_system_user set) reads NOS_REPO_ROOT={{ nos_system_home }}/genome: every repo
+# path serve.rs/binding.rs read, copied root:nos 0640 (test_medulla_unit_runs_as_nos measures the list).
+medulla_genome:
+  - files/anatomy/agents/iris/agent.yml
+  - state/habitat/llm-backends.yml
+  - IMPRINT.md
+  - IMPRINT.short.md
+  - state/cortex-lang.gbnf
+  - state/app-scaffolds.yml
+  - state/keap-tables/

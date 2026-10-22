@@ -634,6 +634,13 @@ iris_knowledge_tree_max: 50
 # librarian is left out: it holds keap.write.
 iris_startable_agents: [conductor, surveyor]
 
+# ── nos system user (Linux; roles/pazny.linux.users + pazny.medulla) ──
+# "" = today: the thalamus is a systemd --user unit of the operator. "nos" = a nologin system account
+# (no tier group, never docker) and a system unit running the medulla as it, confined to
+# nos_system_home (ProtectHome: it cannot read ~/wing or ~/.nos). The operator's key (config.yml).
+nos_system_user: ""
+nos_system_home: /var/lib/nos
+
 # ── Skill library (2026-08-27) ────────────────────────────────────────────────
 # One shelf at files/anatomy/skills/, symlinked onto every reader that should
 # hold it; contract + audience rule in files/anatomy/skills/README.md.
