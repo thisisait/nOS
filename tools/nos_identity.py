@@ -73,6 +73,17 @@ def is_local_domain(name: str) -> bool:
     return name == "localhost" or name.endswith(local_tld_suffixes())
 
 
+def is_local_host(name: str, paths: list[Path] | None = None) -> bool:
+    """Whether a host's TLS chain is mkcert: the tenant and its subdomains follow the resolved
+    tenant_domain_is_local (an operator may call a public TLD local), any other name its TLD."""
+    def last(flag: str) -> str:
+        return (resolve_flag(flag, paths) or [("", "")])[-1][1]
+    tenant, flag = last("tenant_domain"), last("tenant_domain_is_local").lower()
+    if tenant and "{{" not in tenant and flag in ("true", "false") and (name == tenant or name.endswith("." + tenant)):
+        return flag == "true"
+    return is_local_domain(name)
+
+
 def resolve_flag(flag: str, paths: list[Path] | None = None) -> list[tuple[str, str]]:
     """Every layer that declares it, in precedence order. The LAST one wins."""
     pattern = re.compile(rf"^{re.escape(flag)}:\s*(\S+)", re.MULTILINE)
