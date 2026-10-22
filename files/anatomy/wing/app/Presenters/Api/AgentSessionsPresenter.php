@@ -42,7 +42,14 @@ final class AgentSessionsPresenter extends BaseApiPresenter
 		$session = $this->sessions->findByUuid($uuid);
 		// Not yours answers like absent, so a uuid's existence does not leak.
 		$scope = $this->endUser?->scope();
-		if ($session === null || ($scope !== null && $session['actor_id'] !== $scope)) {
+		$mine = $session !== null && ($scope === null || $session['actor_id'] === $scope);
+		if ($mine && $this->isThalamus()) {
+			// The thalamus reads only the run its Iris session started (`?parent=thalamus:<session>`),
+			// for its person — Tier 1 included: the model hears this, so a group never widens it.
+			$scope = $this->endUser->actorId();
+			$mine = $this->thalamusOwns($session, $this->getParameter('parent'));
+		}
+		if (!$mine) {
 			$this->sendError('not_found', 404);
 		}
 		$this->sendSuccess([
@@ -70,9 +77,8 @@ final class AgentSessionsPresenter extends BaseApiPresenter
 		$session = $this->sessions->findByUuid($uuid);
 		$scope = $this->endUser?->scope();
 		$mine = $session !== null && ($scope === null || $session['actor_id'] === $scope);
-		if ($mine && ($this->validatedToken['name'] ?? null) === EndUser::THALAMUS) {
-			$parent = $this->getJsonBody()['parent'] ?? null;
-			$mine = is_string($parent) && str_starts_with($parent, 'thalamus:') && $session['parent_ref'] === $parent;
+		if ($mine && $this->isThalamus()) {
+			$mine = $this->thalamusOwns($session, $this->getJsonBody()['parent'] ?? null);
 		}
 		if (!$mine) {
 			$this->sendError('not_found', 404);
@@ -85,6 +91,22 @@ final class AgentSessionsPresenter extends BaseApiPresenter
 		$by = 'cancelled by ' . $this->requireActorId();
 		$this->sessions->endSession($uuid, 'cancelled', $by);
 		$this->sendSuccess(['session_uuid' => $uuid, 'status' => 'cancelled', 'stop_reason' => $by], 202);
+	}
+
+	private function isThalamus(): bool
+	{
+		return $this->endUser !== null && ($this->validatedToken['name'] ?? null) === EndUser::THALAMUS;
+	}
+
+	/**
+	 * A run is the thalamus's to read or stop when its person started it from THIS Iris session
+	 * (`parent` = thalamus:<session> = the row's parent_ref). actorId, never scope(): a Tier 1
+	 * person's thalamus is narrowed like anyone's (review 2026-10-22, defect 1).
+	 */
+	private function thalamusOwns(array $session, mixed $parent): bool
+	{
+		return $session['actor_id'] === $this->endUser->actorId()
+			&& is_string($parent) && str_starts_with($parent, 'thalamus:') && $session['parent_ref'] === $parent;
 	}
 
 	/**
