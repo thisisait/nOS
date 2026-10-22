@@ -744,14 +744,25 @@ def test_no_engine_module_opens_a_socket_or_a_port():
 
 
 def test_bone_binds_loopback_under_both_service_managers():
-    """The engine adds no process, so E is Bone's bind — on macOS AND Linux."""
+    """The engine adds no process, so E is Bone's bind — on macOS AND Linux.
+
+    On Linux Bone also binds the docker bridge (nos_docker_host_ip), the address containers dial as
+    host.docker.internal there (operator 2026-10-22, test_container_host_doors.py); never a wildcard.
+    A container client is not loopback, so the loop routes still refuse it (the test below)."""
     plist = BONE_PLIST.read_text(encoding="utf-8")
     assert re.search(r"<string>--host</string>\s*<string>127\.0\.0\.1</string>", plist), (
         "the launchd unit no longer pins the loopback bind"
     )
     tasks = BONE_TASKS.read_text(encoding="utf-8")
-    assert "--host 127.0.0.1" in tasks, "the systemd ExecStart no longer pins loopback"
-    assert "0.0.0.0" not in plist and "0.0.0.0" not in tasks
+    assert re.search(r"su_exec_start:.*--host \{\{ h \}\}.*bone_bind_hosts", tasks) or re.search(
+        r"su_exec_start:.*bone_bind_hosts.*--host \{\{ h \}\}", tasks), "the systemd ExecStart does not bind bone_bind_hosts"
+    defaults = (BONE_TASKS.parent.parent / "defaults/main.yml").read_text(encoding="utf-8")
+    hosts = re.search(r"^bone_bind_hosts:\s*(.+)$", defaults, re.M)
+    assert hosts, "bone_bind_hosts is not declared"
+    assert re.match(r"""\s*"\{\{\s*\['127\.0\.0\.1'\]\s*\+\s*\(\[nos_docker_host_ip\] if""", hosts.group(1)), (
+        f"bone_bind_hosts is loopback plus the docker bridge only: {hosts.group(1)}"
+    )
+    assert "0.0.0.0" not in plist and "0.0.0.0" not in tasks and "0.0.0.0" not in defaults
 
 
 def test_every_mounted_loop_route_sits_behind_a_loop_scope_dependency():
