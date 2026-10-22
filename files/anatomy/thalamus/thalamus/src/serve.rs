@@ -345,9 +345,6 @@ struct Open {
     acting: HashMap<String, Value>,
     /// The workspace tab whose conversation this is (v9 resume{workspace}); None: the person's one legacy chat.
     tab: Option<String>,
-    /// The Wing sessions start_agent opened in this connection: the only ones stop_agent stops.
-    /// ponytail: not rebuilt on resume, so a run started before a reconnect cannot be stopped here.
-    started: Vec<String>,
 }
 
 /// One connection's lines, read on their own thread so a tool may wait for the face's `acted` mid-turn;
@@ -1421,7 +1418,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             Err(why) => (Err(why), iris.clone()),
         };
         Ok((Open { session, model, iris, messages: vec![json!({"role": "system", "content": system})], moved: None, tokens,
-                  pending: HashMap::new(), shown: HashMap::new(), tables_seen: HashMap::new(), dates: HashMap::new(), names: HashMap::new(), read_free: vec![], forms: HashMap::new(), choices: HashMap::new(), last_group: None, again: HashMap::new(), acting: HashMap::new(), tab: None, started: vec![] },
+                  pending: HashMap::new(), shown: HashMap::new(), tables_seen: HashMap::new(), dates: HashMap::new(), names: HashMap::new(), read_free: vec![], forms: HashMap::new(), choices: HashMap::new(), last_group: None, again: HashMap::new(), acting: HashMap::new(), tab: None },
             resumed.is_some()))
     }
 
@@ -1735,7 +1732,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             Decision::Approve if tool == Some("start_agent") => {
                 let start = acting.unwrap_or_default();
                 let agent = text(&start["agent"]);
-                match self.start(who, o, &start).inspect(|uuid| o.started.push(uuid.clone())) {
+                match self.start(who, o, &start) {
                     Ok(uuid) => (format!("Approved: {agent} started as session {uuid}."),
                                  json!({"approval": approval, "agent": agent, "session_uuid": uuid}),
                                  format!("approved, {agent} started as session {uuid}; read_run draws it")),
@@ -2408,15 +2405,13 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
     /// stop_agent: POST Wing's agent-sessions/<uuid>/cancel as the person, naming this Iris session as the parent.
     /// NO CARD, unlike start_agent: a stop spends nothing, reaches nothing new and only ends work this
     /// conversation began, at the person's word; a card would ask them to confirm what they just said.
-    /// Only a uuid start_agent opened here is sent; Wing checks the parent and the person again.
+    /// Wing is the referee: it stops only a run whose parent_ref is this Iris session and whose person
+    /// this is, so a reconnect (same session) still stops what was started before it.
     fn stop_agent(&self, who: &Person, o: &Open, args: &Value) -> Result<Value, String> {
         if self.wing.token.is_empty() || self.wing.url.is_empty() {
             return Err("the thalamus holds no Wing token (thalamus_wing_api_token), so it stops no agent".into());
         }
         let uuid = text(&args["uuid"]);
-        if !o.started.contains(&uuid) {
-            return Err(format!("{uuid:?} was not started in this conversation; only a run start_agent opened here can be stopped"));
-        }
         let url = format!("{}/api/v1/agent-sessions/{}/cancel", self.wing.url.trim_end_matches('/'), enc(&uuid));
         let mut r = agent(30).post(&url)
             .header("authorization", &format!("Bearer {}", self.wing.token))
