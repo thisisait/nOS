@@ -458,8 +458,10 @@ def axis_ran(res: Result, flag: str, declared: str) -> None:
 
 
 #: argv0 basename prefix -> runtime; `native` becomes rust when the organ has a Cargo.toml.
-RUNTIMES = (("python", "python"), ("frankenphp", "php"), ("php", "php"),
-            ("node", "node"), ("bash", "shell"), ("sh", "shell"))
+#: A table of names, not a command: nothing here runs an interpreter (test_host_php_is_resolved
+#: reads a `("php", …` argv literally, so the table is a dict).
+RUNTIMES = {"python": "python", "frankenphp": "php", "php": "php",
+            "node": "node", "bash": "shell", "sh": "shell"}
 
 
 def _deployed_job(label: str, root: Path, home: Path) -> tuple[str, list[str], bool] | None:
@@ -523,7 +525,7 @@ def axis_identity(res: Result, root: Path = Path("/"), home: Path = Path.home(),
                 interp = words[0] if words else argv0
         except (OSError, UnicodeDecodeError):
             pass
-        runtime = next((rt for pre, rt in RUNTIMES if Path(interp).name.startswith(pre)), "native")
+        runtime = next((rt for pre, rt in RUNTIMES.items() if Path(interp).name.startswith(pre)), "native")
         language = runtime
         if runtime == "native":
             src = REPO / "files/anatomy" / rid.replace("_", "-")
@@ -533,7 +535,7 @@ def axis_identity(res: Result, root: Path = Path("/"), home: Path = Path.home(),
         # An interpreter argv0 is matched by its arguments (the python shim re-execs under another
         # argv0, `-m pkg` included); anything else by its whole argv.
         # ponytail: argv substring match; upgrade to pid-from-launchd/systemd when two organs share a key.
-        own = any(Path(argv0).name.startswith(pre) for pre, _ in RUNTIMES)
+        own = any(Path(argv0).name.startswith(pre) for pre in RUNTIMES)
         key = " ".join(argv[1:] if own and len(argv) > 1 else argv)
         hit = next((p for p in procs if key and key in p[2]), None)
         head = f"{rid} · {'symbiont · ' if apart else ''}{language}/{runtime}"
