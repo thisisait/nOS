@@ -60,6 +60,9 @@ vault:
     - scope: mcp-bone
 
 metadata:
+  # Iris starts it for tier 2 (iris_startable_agents). It only reads; its one write
+  # is the conductor_report the runner files. Gate: test_iris_startable_agents_serve_end_users.py.
+  end_user: true
   specialization: first-non-operator-write
   # The weekly CLI ceremony works; the bound path has never served this agent.
   runner_status: proven  # first satisfied bound run 2026-09-02, session 319d5e91 (conductor_report 3170 B on record)

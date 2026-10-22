@@ -2350,7 +2350,10 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
 
     /// start_agent: an allowed agent and a prompt become a card; decide() opens the session on approve (start()).
     /// The ledger keeps the agent and the prompt's length; the prompt itself is the card's, as the person saw it.
-    fn start_agent(&self, out: &mut dyn Write, o: &mut Open, args: &Value) -> Result<Value, String> {
+    fn start_agent(&self, who: &Person, out: &mut dyn Write, o: &mut Open, args: &Value) -> Result<Value, String> {
+        if !self.is_tier2(who) {
+            return Err("start_agent is a manager's and above: tier 2 only".into());
+        }
         if self.wing.token.is_empty() || self.wing.url.is_empty() {
             return Err("the thalamus holds no Wing token (thalamus_wing_api_token), so it starts no agent".into());
         }
@@ -2720,7 +2723,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                         v
                     }),
                     "face_act" => self.face_act(out, o, face, &args),
-                    "start_agent" => self.start_agent(out, o, &args),
+                    "start_agent" => self.start_agent(who, out, o, &args),
                     _ => Err(format!("unknown tool {name:?}")),
                 };
                 if name == "show" || name == "offer_dashboard" {

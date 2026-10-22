@@ -74,6 +74,9 @@ vault:
     - scope: mcp-bone
 
 metadata:
+  # Iris starts it for tier 2 (iris_startable_agents). It only reads; mcp-wing-write
+  # is its report event alone. Gate: test_iris_startable_agents_serve_end_users.py.
+  end_user: true
   specialization: surface-legibility
   # `unproven`, not `live` — and the distinction is measured, not cautious.
   # Five supervised runs on 2026-08-17 produced no report: the model writes a
