@@ -131,9 +131,10 @@ def _cron_ok(expr) -> bool:
     return True
 
 
-def validate_manifest(path: str, m: dict | None = None) -> list[str]:
+def validate_manifest(path: str, m: dict | None = None, root: str = REPO) -> list[str]:
     """Every reason a loop manifest is refused; [] = valid. One function for
-    --validate, the graph build and discover-pulse-catalog.py (refused = not scheduled)."""
+    --validate, the graph build and discover-pulse-catalog.py (refused = not scheduled).
+    `root` is the checkout whose tools/loops/ the `run` must exist in."""
     if m is None:
         try:
             m = yaml.safe_load(open(path, encoding="utf-8")) or {}
@@ -181,7 +182,7 @@ def validate_manifest(path: str, m: dict | None = None) -> list[str]:
     run = m.get("run")
     if run is not None:
         name = str(run)[len(_RUN_PREFIX):] if str(run).startswith(_RUN_PREFIX) else ""
-        if not name or "/" in name or not os.path.isfile(os.path.join(REPO, "tools", "loops", name)):
+        if not name or "/" in name or not os.path.isfile(os.path.join(root, "tools", "loops", name)):
             why.append(f"run {run!r} must name an existing {_RUN_PREFIX}<file>")
     for w in writes:
         target = str(w.get("target", "") if isinstance(w, dict) else w)

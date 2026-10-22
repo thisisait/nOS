@@ -331,7 +331,7 @@ def main() -> int:
     validate_loop = _loop_validator()
     for path, doc in docs.items():
         is_loop = path.endswith(".loop.yml")
-        refused = validate_loop(path, doc) if is_loop else []
+        refused = validate_loop(path, doc, root=playbook_dir) if is_loop else []
         if refused:
             # A loop the graph refuses must not tick either: no job, and say so.
             for why in refused:
