@@ -65,8 +65,13 @@ fi
 # have at the next bootstrap, and those differ every time a converge renders a
 # variable the daemon has not reloaded — the drift that cost this estate a
 # notification link in August and is documented in roles/pazny.wing.
-if ! LOADED="$(launchctl print "gui/$(id -u)/${LABEL}" 2>/dev/null)"; then
-    echo "[run-agent] ${LABEL} is not loaded in launchd — start Wing first." >&2
+#
+# On Linux the same job is the systemd --user unit of the same label, and what
+# the process has is /proc/<MainPID>/environ. tools/nos_host.py asks whichever
+# this host runs and prints the same `KEY => value` lines (stdout is this pipe,
+# never a terminal); it names the reason on stderr when it cannot.
+if ! LOADED="$("${NOS_PYTHON:-python3}" "$REPO_ROOT/tools/nos_host.py" env "$LABEL")"; then
+    echo "[run-agent] ${LABEL} is not loaded/running (launchd or systemd --user) — start Wing first." >&2
     exit 2
 fi
 
