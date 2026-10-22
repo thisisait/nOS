@@ -62,15 +62,16 @@ wire:
   actions:   # the face-bff bearer reaches these and nothing else
     - "GET  /api/v1/agents/<name>/sessions"
     - "POST /api/v1/agents/<name>/sessions   body: {prompt?, parent?}; vault and actor_id refused"
-    - "GET  /api/v1/agent-sessions/<uuid>    {session, threads, iterations, children}"
+    - "GET  /api/v1/agent-sessions/<uuid>    {session, threads, iterations, children, report: {event_id, type, body <= 4 KB, chars} | null}"
     - "GET  /api/v1/pulse_jobs, /pulse_runs[/summary], /events, /notifications — Tier 1 only (BaseApiPresenter::$bffOperatorReads)"
     - "POST every operator verb (BaseApiPresenter::$operatorActions; scope wing.operator) — Tier 1 only; the record names user:<uid>"
   # A second delegate (iris-agent-dendrogram inc.2): the thalamus, which the kernel tells who its peer is,
   # starts an agent session for the person who approved Iris's start_agent card. Same headers, same fold.
   thalamus:
     bearer: "Authorization: Bearer <thalamus_wing_api_token> — the api_tokens row named `thalamus`, scope wing.write. Held only by the thalamus."
-    actions:   # the thalamus bearer reaches this and nothing else (BaseApiPresenter::$thalamusActions)
+    actions:   # the thalamus bearer reaches these and nothing else (BaseApiPresenter::$thalamusActions, $thalamusReads)
       - "POST /api/v1/agents/<name>/sessions   body: {prompt, parent: thalamus:<iris session uuid>}"
+      - "GET  /api/v1/agent-sessions/<uuid>    the run it started, narrowed to the person; Iris hears its end and report"
     refusals:
       - "thalamus bearer without a canonical X-Nos-User-Uid -> 401"
       - "thalamus bearer on any other action or method, operator verbs included -> 403"
