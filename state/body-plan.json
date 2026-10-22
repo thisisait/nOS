@@ -11,7 +11,7 @@
     "organ system": 13,
     "organism": 0,
     "habitat": 9,
-    "sense": 81,
+    "sense": 82,
     "limb": 118,
     "memory": 41,
     "law": 54,
@@ -1490,6 +1490,10 @@
       "kind": "reader"
     },
     "reader:plugin-wiring-report": {
+      "level": "sense",
+      "kind": "reader"
+    },
+    "reader:rbac-status": {
       "level": "sense",
       "kind": "reader"
     },
