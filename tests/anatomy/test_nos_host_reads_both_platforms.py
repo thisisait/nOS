@@ -264,3 +264,21 @@ def test_macos_only_sources_are_none_elsewhere():
     assert h.lsof("-nP", system="Linux") is None
     assert h.lsof("-nP", run=fake({"lsof": (1, "")}), system="Darwin") == "", "rc 1 = nothing matched"
     assert h.sockets("openhuman", system="Darwin") is None
+
+
+# ── the CLI run-agent.sh reads ───────────────────────────────────────────────
+
+def test_the_env_cli_refuses_a_job_it_cannot_read(monkeypatch, capsys):
+    monkeypatch.setattr(h, "service_state", lambda label: None)
+    assert h.main(["env", "x"]) == 3
+    monkeypatch.setattr(h, "service_state", lambda label: {"loaded": False, "running": False, "pid": None,
+                                                          "detail": "not loaded", "source": "s"})
+    assert h.main(["env", "x"]) == 2
+    monkeypatch.setattr(h, "SYSTEM", "Linux")
+    monkeypatch.setattr(h, "service_state", lambda label: {"loaded": True, "running": True, "pid": 1,
+                                                          "detail": "running", "source": "s"})
+    monkeypatch.setattr(h, "service_env", lambda label: {"NOS_X": "1", "lower": "no", "ML": "a\nb"})
+    capsys.readouterr()
+    assert h.main(["env", "x"]) == 0
+    assert capsys.readouterr().out == "NOS_X => 1\n", "only KEY => value lines a shell can re-read"
+    assert h.main([]) == 64
