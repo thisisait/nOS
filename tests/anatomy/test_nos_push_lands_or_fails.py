@@ -111,3 +111,18 @@ def test_a_checkout_of_another_repo_is_refused(tmp_path):
     assert "this repo only" in (got.stdout + got.stderr).lower(), got.stdout + got.stderr
     assert _git(bare, "rev-parse", "refs/heads/dev") == before
     assert not (tmp_path / "synced").exists()
+
+
+def test_another_remote_of_this_repo_is_allowed(tmp_path):
+    """The guard above refused `tools/nos-push gitea pzny` (review 2026-10-22, defect 5): it compared
+    with origin's URL alone. Any remote the script's own checkout holds is this repo."""
+    bare, tools, work = _estate(tmp_path)
+    mirror = tmp_path / "mirror.git"
+    _git(tmp_path, "init", "-q", "--bare", str(mirror))
+    _git(tools, "remote", "add", "mirror", str(mirror))
+    _git(tools, "push", "-q", "mirror", "HEAD:refs/heads/dev")
+    _git(work, "checkout", "-q", "--detach")
+    sha = _commit(work, "change")
+    got = _push(tools, work, str(mirror), "HEAD:dev")
+    assert got.returncode == 0, f"a remote of this repo was refused:\n{got.stdout}{got.stderr}"
+    assert _git(mirror, "rev-parse", "refs/heads/dev") == sha

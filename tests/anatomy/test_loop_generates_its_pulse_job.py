@@ -77,9 +77,16 @@ def test_a_manifest_the_validator_refuses_is_not_scheduled(tmp_path, monkeypatch
     monkeypatch.delenv("NOS_INSTALL_FLAGS", raising=False)
     assert d.main() == 0
     out = capsys.readouterr()
-    names = [c["job"].get("name") for c in json.loads(out.out)]
+    catalog = json.loads(out.out)
+    names = [c["job"].get("name") for c in catalog if c["installed"]]
     assert "refused-loop" not in names, (
         "discover-pulse-catalog scheduled a loop manifest the validator refuses")
+    # GATE CHANGE (review 2026-10-22, defect 4): the refused loop is in the catalog `installed: false`,
+    # so post.yml unschedules a job an earlier converge registered; dropped, it kept firing.
+    gone = [c for c in catalog if c["job"].get("name") == "refused-loop"]
+    assert gone and not gone[0]["installed"] and gone[0]["plugin_name"] == "loop", (
+        "a refused loop must be emitted installed:false so its registered job is deleted")
+    assert any("runner must be one of" in why for why in gone[0]["refused"]), gone
     assert "refused-loop" in out.err and "runner must be one of" in out.err, (
         f"the refusal was not said: {out.err!r}")
 
@@ -105,7 +112,7 @@ def test_run_resolves_against_the_checkout_that_is_scheduled(tmp_path, monkeypat
     monkeypatch.delenv("NOS_INSTALL_FLAGS", raising=False)
     assert d.main() == 0
     out = capsys.readouterr()
-    names = [c["job"].get("name") for c in json.loads(out.out)]
+    names = [c["job"].get("name") for c in json.loads(out.out) if c["installed"]]
     assert "only-here" in names, f"a runner present in NOS_PLAYBOOK_DIR was refused: {out.err!r}"
     assert "only-in-repo" not in names, "a runner missing from NOS_PLAYBOOK_DIR was scheduled"
 
@@ -123,7 +130,7 @@ def test_a_broken_validator_refuses_loops_not_the_catalog(tmp_path, monkeypatch,
     out = capsys.readouterr()
     cat = json.loads(out.out)
     assert any(c["plugin_name"] != "loop" for c in cat), "plugin jobs vanished with the validator"
-    assert not [c for c in cat if c["plugin_name"] == "loop"], "a loop was scheduled unvalidated"
+    assert not [c for c in cat if c["plugin_name"] == "loop" and c["installed"]], "a loop was scheduled unvalidated"
     assert "boom" in out.err, f"the validator failure was not said: {out.err!r}"
 
 

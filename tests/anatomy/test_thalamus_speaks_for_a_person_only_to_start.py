@@ -37,7 +37,10 @@ def _harness() -> str:
     return (_PRESENTERS
             .replace(_TOKENS, "foreach (['thal' => 'wing.write', 'thal-op' => 'wing.operator,wing.write'] as $t => $s) {\n"
                               "  $pdo->query('INSERT INTO api_tokens', ['token' => hash('sha256', $t), 'name' => 'thalamus', 'scopes' => $s]);\n"
-                              "}\n" + _TOKENS)
+                              "}\n"
+                              # a1 and b1 were started from Iris session e1 (alice's and bob's); c1 was not.
+                              "$pdo->query(\"UPDATE agent_sessions SET parent_ref = '" + _IRIS + "' WHERE uuid IN ('a1', 'b1')\");\n"
+                              + _TOKENS)
             .replace(_ADMIN, ": ($c['presenter'] === 'Admin'\n"
                              "      ? (new ReflectionClass(App\\Presenters\\Api\\AdminPresenter::class))->newInstanceWithoutConstructor()\n"
                              "      : new App\\Presenters\\Api\\AgentSessionsPresenter($sessions));")
@@ -53,9 +56,12 @@ def _thal(token="thal", uid="alice", groups="nos-users,nos-admins") -> dict:
     return {"token": token, "uid": uid, "groups": groups}
 
 
+_IRIS = "thalamus:e1e1e1e1-0000-4000-8000-000000000001"
+
+
 def _start(agent="helper", **who) -> dict:
     return {"presenter": "Agents", "method": "POST", "params": {"action": "sessions", "name": agent},
-            "body": {"prompt": "hi", "parent": "thalamus:e1e1e1e1-0000-4000-8000-000000000001"}, **who}
+            "body": {"prompt": "hi", "parent": _IRIS}, **who}
 
 
 @needs_php
@@ -89,12 +95,25 @@ def test_the_thalamus_bearer_reaches_nothing_else(tmp_path):
 @needs_php
 @needs_vendor
 def test_the_thalamus_reads_the_persons_run_and_no_other(tmp_path):
-    def one(uuid, **who):
-        return {"presenter": "AgentSessions", "method": "GET", "params": {"action": "default", "uuid": uuid}, **who}
-    mine, theirs, bare = _run(tmp_path, [one("a1", **_thal(groups="nos-users")), one("b1", **_thal(groups="nos-users")),
-                                         one("a1", token="thal")])
+    """GATE CHANGE (review 2026-10-22, defect 1): the read names the Iris session (`?parent=`) and is
+    narrowed to the person by actor, not by scope(): a Tier 1 person's thalamus reads no other's run,
+    and no run this Iris session did not start. Before, nos-admins read bob's run whole."""
+    def one(uuid, parent=_IRIS, **who):
+        params = {"action": "default", "uuid": uuid, **({"parent": parent} if parent else {})}
+        return {"presenter": "AgentSessions", "method": "GET", "params": params, **who}
+    mine, theirs, admin, unnamed, other, bare = _run(tmp_path, [
+        one("a1", **_thal(groups="nos-users")),
+        one("b1", **_thal(groups="nos-users")),
+        one("b1", **_thal(groups="nos-users,nos-admins")),
+        one("a1", parent=None, **_thal(groups="nos-users")),
+        one("a1", parent="thalamus:e2e2e2e2-0000-4000-8000-000000000002", **_thal(groups="nos-users")),
+        one("a1", token="thal"),
+    ])
     assert mine["code"] == 200 and mine["body"]["session"]["actor_id"] == "user:alice", mine
     assert theirs["code"] == 404, "another's run answers like an absent one"
+    assert admin["code"] == 404, "a Tier 1 person's thalamus is narrowed like anyone's"
+    assert unnamed["code"] == 404, "a read that names no Iris session reads nothing"
+    assert other["code"] == 404, "a run another Iris session started is not this one's"
     assert bare["code"] == 401, "the thalamus bearer without a person is no one"
 
 
