@@ -179,6 +179,7 @@ posts, restarts or renders something.
 - `nos-ops-harness.py` — nos-ops measurement harness — WHERE does the chain/tool-use boundary sit?
 - `run-agent.sh` — tools/run-agent.sh — run an AgentKit agent against the LIVE estate.
 - `run-journeys.sh` — tools/run-journeys.sh — run the e2e journeys against the LIVE estate.
+- `run-playwright.sh` — tools/run-playwright.sh — the Playwright e2e suite on a host without node: provisions the tester on the host, runs the matching Playwright image, tears down.
 - `run-librarian.sh` — operator-driven knowledge judgment (cortex Layer 2)
 - `run-phase5-ceremony.sh` — operator-driven conductor self-test (Anatomy A8/A9)
 - `run-surveyor.sh` — operator-driven surface survey (Anatomy A20)
