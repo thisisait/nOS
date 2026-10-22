@@ -105,3 +105,35 @@ def test_the_face_bff_still_reads_and_decides(tmp_path):
     listed, = _run(tmp_path, [{"presenter": "Agents", "method": "GET", "params": {"action": "sessions", "name": "helper"},
                                "token": "bff-secret", "uid": "alice", "groups": "nos-users"}])
     assert listed["code"] == 200
+
+
+_REPO = "$p->tokenRepo = new App\\Model\\TokenRepository($db);"
+_REPORT = "SURVEY-HEAD " + "a" * 5000
+
+
+def _with_events() -> str:
+    """_harness with an events table: a1's report, then a later event that is no report; Wing's EventRepository injected."""
+    h = _harness()
+    assert h.count(_REPO) == 1 and h.count(_TOKENS) == 1, "the borrowed harness moved"
+    rows = [("conductor_report", "a1", {"report": _REPORT, "filed_by": "runner"}),
+            ("agent_session_end", "a1", {"stop_reason": "outcome_satisfied"}),
+            ("conductor_report", "b1", {"report": "bob's"})]
+    seed = "$pdo->query('CREATE TABLE events (id INTEGER PRIMARY KEY, ts TEXT, type TEXT, actor_action_id TEXT, result_json TEXT)');\n"
+    seed += "".join(f"$pdo->query('INSERT INTO events', ['ts' => 't', 'type' => '{t}', 'actor_action_id' => '{u}', "
+                    f"'result_json' => {json.dumps(json.dumps(r))}]);\n" for t, u, r in rows)
+    return (h.replace(_TOKENS, seed + _TOKENS)
+             .replace(_REPO, _REPO + "\n  if ($p instanceof App\\Presenters\\Api\\AgentSessionsPresenter && property_exists($p, 'events')) "
+                             "$p->events = new App\\Model\\EventRepository($db);"))
+
+
+@needs_php
+@needs_vendor
+def test_a_run_read_carries_its_newest_report_capped(tmp_path):
+    """The deliverable Iris hears: the newest *_report event of that run, its body at most 4 KB, never another's."""
+    got, = _php(_with_events(), str(AUTOLOAD), str(_agents(tmp_path)), json.dumps(
+        [{"presenter": "AgentSessions", "method": "GET", "params": {"action": "default", "uuid": "a1"},
+          "token": "bff-secret", "uid": "alice", "groups": "nos-users"}]))
+    rep = got["body"].get("report")
+    assert rep is not None, got["body"]
+    assert rep["type"] == "conductor_report" and isinstance(rep["event_id"], int), rep
+    assert rep["body"] == _REPORT[:4096] and rep["chars"] == len(_REPORT), "the head, capped at 4 KB, and the whole length"
