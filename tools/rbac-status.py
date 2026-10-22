@@ -19,8 +19,12 @@ import re
 import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity  # noqa: E402 — the one helper that spells the config layers
+
 GENOME = "state/genome/permissions.yml"
-DEFAULTS = "default.config.yml"
+#: The committed layers by name, under --root, in nos_identity's load order (it owns the paths).
+LAYERS = [str(x.relative_to(nos_identity.REPO)) for x in nos_identity.default_layers()]
 ENDUSER = "files/anatomy/wing/app/Security/EndUser.php"
 BASE = "files/anatomy/wing/app/Presenters/BasePresenter.php"
 TIER_TS = "files/anatomy/face/src/lib/security/tier.ts"
@@ -152,9 +156,25 @@ def ts_tiermap(root, rel, name):
     return out, i + 1
 
 
+def _layer_with(root, key: str) -> str:
+    """The committed layer under root that declares `key` (every variable lives in exactly one)."""
+    for rel in LAYERS:
+        try:
+            if any(re.match(rf"^{re.escape(key)}:", x) for x in _read(root, rel)):
+                return rel
+        except Unknown:
+            continue
+    raise Unknown(f"no committed layer declares {key}")
+
+
+def _tiers_layer(root) -> str:
+    return _layer_with(root, "authentik_rbac_tiers")
+
+
 def yaml_tiers(root):
-    """default.config.yml `authentik_rbac_tiers` (cumulative) → {tier: cumulative groups}, line."""
+    """The layer's `authentik_rbac_tiers` (cumulative) → {tier: cumulative groups}, line."""
     import yaml
+    DEFAULTS = _tiers_layer(root)
     lines = _read(root, DEFAULTS)
     i = _find(lines, r"^authentik_rbac_tiers:", DEFAULTS)
     block = [lines[i]]
@@ -195,7 +215,7 @@ def jinja_tier(root, rel, anchor):
 
 
 _SELECT = re.compile(r"\|\s*(first|last)\b|map\(\s*['\"](first|last)['\"]\s*\)|\[\s*(-?\d+)\s*\]")
-_BENIGN = re.compile(r"\|\s*(list|to_json|unique|sort|flatten|join\([^)]*\)|default\([^)]*\))")
+_BENIGN = re.compile(r"\|\s*(list|to_json|tojson|unique|sort|flatten|join\([^)]*\)|default\([^)]*\)|sum\(start=\[\]\)|map\(attribute='groups'\))")
 
 
 def _pick(tail: str, rel: str, n: int) -> str:
@@ -216,11 +236,33 @@ def per_tier(root, rel, anchor, assign):
     i = _find(lines, anchor, rel)
     if "groups" not in lines[i]:
         raise Unknown(f"{rel}:{i + 1}: no group expression on the line")
-    how = _pick(lines[i][lines[i].rindex("groups") + len("groups"):], rel, i + 1)
+    # Python: `{g for gs in tier_groups(...).values() for g in gs}` keeps every group of every tier.
+    how = ("all" if re.search(r"\{g for gs in .*\.values\(\) for g in gs\}", lines[i])
+           else _pick(lines[i][lines[i].rindex("groups") + len("groups"):], rel, i + 1))
     cum, _ = yaml_tiers(root)
     if how == "all":
         return (cum if assign else own_from_cumulative(cum)), i + 1
     return {t: (g[:1] if how == "first" else g[-1:]) for t, g in cum.items()}, i + 1
+
+
+def own_dict(root, rel, anchor):
+    """The `rt.own.update({t.tier | int: (t.groups | list) if t.tier | int == 1 else [t.groups | last]})`
+    idiom (receptor identity map, unix groups): tier 1 keeps every tier-1 group, a lower tier its own."""
+    lines = _read(root, rel)
+    i = _find(lines, anchor, rel)
+    if not re.search(r"\(t\.groups \| list\) if t\.tier \| int == 1 else \[t\.groups \| last\]", lines[i]):
+        raise Unknown(f"{rel}:{i + 1}: the own-groups expression is not one the parser models")
+    cum, _ = yaml_tiers(root)
+    return {t: (g if t == 1 else g[-1:]) for t, g in cum.items()}, i + 1
+
+
+def own_or_per_tier(root, rel, anchor_own, anchor_old):
+    """The own-groups idiom when the file carries it (2026-10-21 fix), else the older one-line
+    `'groups': <tier expression>` read by per_tier (a login then holds its tier's cumulative list)."""
+    try:
+        return own_dict(root, rel, anchor_own)
+    except Unknown:
+        return per_tier(root, rel, anchor_old, True)
 
 
 def blueprint_superuser(root, rel):
@@ -230,8 +272,11 @@ def blueprint_superuser(root, rel):
 
 
 def nodered_admin(root, rel):
-    """`permissions: '*'` in the OIDC verify callback with no group test = every authenticated user."""
+    """A `const _TIER1 = {{ <tier-1 groups> }}` line gating `permissions: '*'` = those groups (a list);
+    `permissions: '*'` with no group test = "every authenticated user" (a string)."""
     lines = _read(root, rel)
+    if any(re.match(r"\s*const _TIER1\s*=", x) for x in lines):
+        return jinja_tier(root, rel, r"^\s*const _TIER1\s*=")
     i = _find(lines, r"permissions:\s*['\"]\*['\"]", rel)
     if "groups" in "\n".join(lines[max(0, i - 15):i]):
         raise Unknown(f"{rel}:{i + 1}: a group test precedes the grant; parser does not model it")
@@ -370,8 +415,10 @@ TIER_POINTS = [  # id, parser, args — each yields {tier: own groups}
     ("wing-basepresenter-tiers", php_tiermap, (BASE, "TIER_GROUPS")),
     ("face-group-rank", ts_rankmap, (TIER_TS, "GROUP_RANK")),
     ("cortex-rbac-ts", ts_tiermap, (CORTEX, "TIER_GROUPS")),
-    ("receptor-identity-map", per_tier, ("roles/pazny.receptor/templates/identity-map.yml.j2", r"'groups':", True)),
-    ("linux-users-unix-groups", per_tier, ("roles/pazny.linux.users/tasks/main.yml", r"_unix_tier_group:", True)),
+    ("receptor-identity-map", own_or_per_tier,
+     ("roles/pazny.receptor/templates/identity-map.yml.j2", r"rt\.own\.update\(", r"'groups':")),
+    ("linux-users-unix-groups", own_or_per_tier,
+     ("roles/pazny.linux.users/tasks/main.yml", r"rt\.own\.update\(", r"_unix_tier_group:")),
     ("jupyterhub-unix-realm", per_tier,
      ("roles/pazny.jupyterhub/templates/jupyterhub_config.py.j2", r"^UNIX_REALM_GROUPS\s*=", False)),
     ("identity-status-unix", per_tier, ("tools/identity-status.py", r"^\s*names\s*=.*groups", False)),
@@ -427,7 +474,7 @@ def evaluate(root: pathlib.Path) -> dict:
     try:
         cum, line = yaml_tiers(root)
         own = own_from_cumulative(cum)
-        at = f"{DEFAULTS}:{line}"
+        at = f"{_tiers_layer(root)}:{line}"
         if {t: sorted(v) for t, v in own.items()} != {t: sorted(v) for t, v in tiers.items()}:
             drifted("authentik-rbac-tiers", at, own, tiers)
         else:
@@ -437,8 +484,13 @@ def evaluate(root: pathlib.Path) -> dict:
 
     try:
         got, line = nodered_admin(root, "roles/pazny.nodered/templates/settings.js.j2")
-        drifted("nodered-admin", f"roles/pazny.nodered/templates/settings.js.j2:{line}", got,
-                caps.get("app.admin:nodered"))
+        at = f"roles/pazny.nodered/templates/settings.js.j2:{line}"
+        want = groups_of(caps.get("app.admin:nodered", []), tiers)
+        if isinstance(got, list) and sorted(set(got)) == want:
+            point("nodered-admin", "ok", at)
+        else:
+            drifted("nodered-admin", at, sorted(set(got)) if isinstance(got, list) else got,
+                    want if isinstance(got, list) else caps.get("app.admin:nodered"))
     except Unknown as e:
         point("nodered-admin", "UNKNOWN", None, str(e))
 
@@ -574,19 +626,20 @@ def _scopes(root, caps, cap_at, point, drifted):
     enforced("bone-require-scope", BONE, "*.py", r"require_scope\(\s*\"([^\"]+)\"", bone_want)
 
     try:
-        lines = _read(root, DEFAULTS)
-        i = _find(lines, r"^authentik_agent_scopes:", DEFAULTS)
+        layer = _layer_with(root, "authentik_agent_scopes")
+        lines = _read(root, layer)
+        i = _find(lines, r"^authentik_agent_scopes:", layer)
         bad = 0
         for n in range(i + 1, len(lines)):
             if lines[n] and not lines[n].startswith((" ", "#")):
                 break
             m = re.match(r'\s*-\s*"([^"]+)"', lines[n])
             if m and m.group(1) not in caps:
-                drifted("bone-scope-catalog", f"{DEFAULTS}:{n + 1}", f"catalog offers {m.group(1)}",
+                drifted("bone-scope-catalog", f"{layer}:{n + 1}", f"catalog offers {m.group(1)}",
                         "no such capability (enforced nowhere)")
                 bad += 1
         if not bad:
-            point("bone-scope-catalog", "ok", f"{DEFAULTS}:{i + 1}")
+            point("bone-scope-catalog", "ok", f"{layer}:{i + 1}")
     except Unknown as e:
         point("bone-scope-catalog", "UNKNOWN", None, str(e))
 

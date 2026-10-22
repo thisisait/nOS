@@ -1,7 +1,7 @@
 """`tools/rbac-status.py` prints the permission matrix and every drift from it.
 
 WHY. Tier 1 is decided in six places and four restate the group names as
-literals (the permissions doctrine, §4); no reader printed capability x role,
+literals (ssot/doctrine/permissions.md §4); no reader printed capability x role,
 so a literal that drifted (GitLab's `groups | last` dropping nos-providers) was
 found only by an audit. The genome (state/genome/permissions.yml) is the one
 list; the reader compares each enforcement point's literal against it.
@@ -22,6 +22,9 @@ import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 TOOL = REPO / "tools/rbac-status.py"
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity  # noqa: E402
+REMAINDER = nos_identity.default_layers()[-1].name  # the layer that declares authentik_rbac_tiers
 GENOME = "state/genome/permissions.yml"
 ENDUSER = "files/anatomy/wing/app/Security/EndUser.php"
 
@@ -93,7 +96,7 @@ def _scratch(tmp: pathlib.Path, files: dict[str, str]) -> dict[str, str]:
     """A scratch root: the genome, the tier block, the planted files. Returns point -> status."""
     assert TOOL.is_file(), "no reader prints the permission matrix: tools/rbac-status.py is missing"
     for rel, text in {GENOME: (REPO / GENOME).read_text(encoding="utf-8"),
-                      "default.config.yml": TIERS_BLOCK, **files}.items():
+                      REMAINDER: TIERS_BLOCK, **files}.items():
         (tmp / rel).parent.mkdir(parents=True, exist_ok=True)
         (tmp / rel).write_text(text, encoding="utf-8")
     rc, out = _run("--root", str(tmp))
@@ -140,7 +143,7 @@ def test_a_tier_expression_that_drops_a_group_is_never_ok(tmp_path):
 
 
 def test_the_genome_models_what_the_doctrine_inventories():
-    """permissions.md §3/§4 + Bone loopauth: bearer scopes, loop identities, app tiers, the DGX group."""
+    """ssot/doctrine/permissions.md §3 and §4 + Bone loopauth: bearer scopes, loop identities, app tiers, the DGX group."""
     rc, out = _run()
     assert rc == 0
     matrix = out.get("matrix") or {}
