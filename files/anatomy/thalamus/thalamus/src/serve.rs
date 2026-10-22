@@ -9,7 +9,7 @@ use crate::ledger::{Kind, Ledger, RowOp, Session};
 use crate::septum::Septum;
 use nos_contract::renderers::{is_date, ActionApproval, ApprovalsList, Axis, CellChange, Chart, ChartKind, Choice, Component, Dashboard, DashboardWidget, Dendrogram, DENDROGRAM_MAX, Kpi, RunKind, RunNode, RunStatus,
                                Dropped, FieldKind, Form, FormField, InboxItem, InboxList, KnowledgeNode, KnowledgeTree, need_node_id, Lens, LensOp, Lines, List, ListItem, Omitted, Parent, RedStatus,
-                               Row, RowDiffApproval, SchemaColumn, ColumnAddApproval, ColumnKind, ExistingColumn, Series, Table, TableResults, TableSchemaApproval, Visibility};
+                               Row, RowDiffApproval, SchemaColumn, ColumnAddApproval, ColumnKind, ExistingColumn, Series, Table, TableResults, TableSchemaApproval, Timeline, TimelineItem, Visibility};
 use nos_contract::wire::{check_params, check_spec, decode_to_thalamus, encode, CatalogueColumn, CatalogueTable, ChartSpec, ControlView, Decision, FormSpec,
                          KnowledgeSpec, KpiSpec, Limb, Op, ParamKind, Phase, Scope, ModelOption, ToShell, ToThalamus, Trigger, WidgetChart, WidgetSpec, MAX_REPLAY};
 use nos_contract::uid;
@@ -573,7 +573,7 @@ thread_local! {
 }
 
 /// The tools that ask an approval of the person, as `pending` names them.
-const ASKING: [&str; 9] = ["propose_row_edit", "propose_row_insert", "propose_row_delete", "propose_table_create", "propose_column_add", "face_act", "start_agent", "propose_app", "show_report"];
+const ASKING: [&str; 10] = ["propose_row_edit", "propose_row_insert", "propose_row_delete", "propose_table_create", "propose_column_add", "face_act", "start_agent", "propose_app", "show_report", "propose_loop"];
 /// The conversation file's byte cap: a replay of it rides one line of at most 1 MiB.
 const REPLAY_BYTES: usize = 768 << 10;
 /// How many of a resumed session's messages its model hears again.
@@ -790,6 +790,20 @@ approval: only propose_row_edit, propose_row_insert, propose_row_delete, propose
 table's rows pass `source`: the thalamus counts, sums or averages the rows as the person and draws those numbers \
 in place of your series, and the person can pin the chart live. A kpi (one number on a tile) is drawn only with `source` \
 {query, op, y?}: the thalamus computes the number; never send it.";
+
+const READ_LOOP_RUNS: &str = "What one loop did, from tools/loop-status.py --loop (run as the operator). loop: sere (the \
+default: the self-improvement loop's ledger: verdicts by gate set and result, judge runs that did not pass, what awaits an act) or \
+a files/anatomy/loops/<id>.loop.yml id (its pulse runs: count, exit codes, last fired, failures, held runs). since: YYYY-MM-DD, \
+only rows on or after it. Tier 1 only. When no loop job is registered you hear so (install_loops?): that is not an empty \
+history, say it. Unreadable sources are UNKNOWN, never calm. The person sees a timeline of the dated rows, or a table.";
+
+const PROPOSE_LOOP: &str = "Propose an operational loop as its manifest (files/anatomy/loops/<id>.loop.yml), only when the \
+person asked for one. manifest: {id [a-z][a-z0-9-]* (never sere), label, blurb, trigger {cadence: a 5-field cron, or event}, \
+steps [{id, runner tool|agent|query, label, for_each?}], params?, run?, pulse? {category, max_runtime_s, findings_exit_codes?}}. \
+A draft may be graph-only (no run: drawn, never scheduled) or reuse an existing runner under tools/loops/ as run \
+\"{{ playbook_dir }}/tools/loops/<file>\"; a new runner is code and is the operator's: never invent a file. nOS's loop validator \
+checks it: a refusal lists every reason, fix them all before calling again. Accepted, the person sees the whole YAML; an approve \
+writes a draft and never schedules it: the operator copies it into files/anatomy/loops/ and converges. Tier 1 only.";
 
 const OFFER_DASHBOARD: &str = "Offer the person a dashboard of 2-8 widgets (one table, chart or kpi alone is query_rows or show, \
 which the person pins); they place it on the tab they choose. Each widget is {title} and one of rows \
@@ -1046,7 +1060,14 @@ else one total over every matched row"},
                     "rows": {"type": "object", "description": "query_rows arguments"},
                     "chart": {"type": "object", "description": "{query {table, q?, where?}, chart bar|line|pie, x, y?, op count|sum|avg}"},
                     "form": {"type": "object", "description": "{table, columns?, prefill? {column: value}, when? {column: {key, op eq|neq, value}}}"},
-                    "kpi": {"type": "object", "description": "{query {table, q?, where?}, op count|sum|avg, y?, unit?}"}}}}}}}}])
+                    "kpi": {"type": "object", "description": "{query {table, q?, where?}, op count|sum|avg, y?, unit?}"}}}}}}}},
+        {"type": "function", "function": {"name": "read_loop_runs", "description": READ_LOOP_RUNS,
+        "parameters": {"type": "object", "additionalProperties": false, "properties": {
+            "loop": {"type": "string", "maxLength": 64, "description": "sere (default) or a loops/<id>.loop.yml id, e.g. news-scout"},
+            "since": {"type": "string", "minLength": 10, "maxLength": 10, "description": "YYYY-MM-DD: only rows on or after it"}}}}},
+        {"type": "function", "function": {"name": "propose_loop", "description": PROPOSE_LOOP,
+        "parameters": {"type": "object", "additionalProperties": false, "required": ["manifest"], "properties": {
+            "manifest": {"type": "object", "description": "{id, label, blurb, trigger, steps, params?, run?, pulse?} as files/anatomy/loops/<id>.loop.yml holds them"}}}}}])
 }
 
 impl Server {
@@ -1825,6 +1846,13 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                 Ok(p) => (format!("Approved: draft {} written, not enabled. The operator enables it: copy it into apps/ and converge.", p.display()),
                           json!({"approval": approval, "written": true, "draft": p}),
                           format!("approved, draft {} written; it is not enabled until the operator copies it into apps/ and converges", p.display())),
+                Err(why) => (format!("Approved, but no draft was written: {why}"), json!({"approval": approval, "error": why}),
+                             format!("approved, but no draft was written: {why}")),
+            },
+            Decision::Approve if tool == Some("propose_loop") => match self.write_loop_draft(who, id) {
+                Ok(p) => (format!("Approved: loop draft {} written, not scheduled. The operator copies it into files/anatomy/loops/ and converges.", p.display()),
+                          json!({"approval": approval, "written": true, "draft": p}),
+                          format!("approved, loop draft {} written; it runs only once the operator copies it into files/anatomy/loops/ and converges", p.display())),
                 Err(why) => (format!("Approved, but no draft was written: {why}"), json!({"approval": approval, "error": why}),
                              format!("approved, but no draft was written: {why}")),
             },
@@ -2936,6 +2964,20 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                     }),
                     "scaffold_app" => self.scaffold_app(who, &args).inspect(|v| {
                         let _ = self.record(o, Kind::ToolResult, Some(name), json!({"kind": v["kind"], "runtime": v["runtime"]}));
+                    }),
+                    "read_loop_runs" => self.read_loop_runs(who, &args).map_err(|why| format!("{why}; the loop's record is UNKNOWN, not empty"))
+                        .map(|(component, v)| {
+                            let _ = self.record(o, Kind::ToolResult, Some(name), json!({"loop": v["loop"], "since": v["since"],
+                                "registered": v["pulse"]["registered"], "drawn": v["drawn"]}));
+                            send(out, &ToShell::Render { session: o.session.clone(), component, pin: None });
+                            v
+                        }),
+                    "propose_loop" if !o.pending.is_empty() => Err("an approval is already waiting".to_string()),
+                    "propose_loop" => self.propose_loop(who, &args).and_then(|(rec, card, draft)| {
+                        let mut v = self.asking(o, out, "propose_loop", rec, Component::Markdown(card))?;
+                        v["draft"] = json!(draft);
+                        v["schedule"] = json!("only the operator schedules it: copies it into files/anatomy/loops/ and converges; never say it runs");
+                        Ok(v)
                     }),
                     "propose_app" if !o.pending.is_empty() =>Err("an approval is already waiting".to_string()),
                     "propose_app" => self.propose_app(who, &args).and_then(|(rec, card, draft)| {
@@ -4600,13 +4642,183 @@ the infra service of the same name), add meta {name, version, summary} and gdpr,
         if self.taken_names()?.contains(&name) {
             return Err(format!("{name} was taken since the proposal"));
         }
-        let dir = self.data.join("apps");
+        self.new_draft("apps", &format!("{name}.yml.draft"), &yaml)
+    }
+
+    /// <data>/<sub>/<file>, created new (never over a file), the dir 0700.
+    fn new_draft(&self, sub: &str, file: &str, yaml: &str) -> Result<PathBuf, String> {
+        let dir = self.data.join(sub);
         std::fs::create_dir_all(&dir).and_then(|_| std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o700)))
             .map_err(|e| format!("{}: {e}", dir.display()))?;
-        let path = dir.join(format!("{name}.yml.draft"));
+        let path = dir.join(file);
         let mut f = std::fs::OpenOptions::new().write(true).create_new(true).open(&path).map_err(|e| format!("{}: {e}", path.display()))?;
         f.write_all(yaml.as_bytes()).map_err(|e| format!("{}: {e}", path.display()))?;
         Ok(path)
+    }
+
+    /// loop-status.py --loop as the operator: one loop's record. What is drawn (a timeline of the dated rows:
+    /// judge runs not passed by gate set, failed and held pulse runs by job; else a table of the counts) and what
+    /// the model hears: the reader's report, its `registered: false` said in words, never an empty history.
+    fn read_loop_runs(&self, who: &Person, args: &Value) -> Result<(Component, Value), String> {
+        if !self.is_tier1(who) {
+            return Err("read_loop_runs is the operator's: tier 1 only".into());
+        }
+        let loop_id = args.get("loop").and_then(Value::as_str).map(str::trim).filter(|s| !s.is_empty()).unwrap_or("sere");
+        if !is_app_slug(loop_id) {
+            return Err(format!("loop {loop_id:?} is no loop id ([a-z][a-z0-9-]*)"));
+        }
+        let mut argv = vec!["--loop", loop_id];
+        let since = args.get("since").and_then(Value::as_str).map(str::trim).filter(|s| !s.is_empty());
+        if let Some(d) = since {
+            if !is_date(d) {
+                return Err(format!("since {d:?} is no YYYY-MM-DD"));
+            }
+            argv.extend(["--since", d]);
+        }
+        let mut v = self.reader("loop-status.py", &argv)?;
+        if let Some(e) = v.get("error").and_then(Value::as_str) {
+            return Err(format!("{e}; known loops: {}", v["known"]));
+        }
+        if v["pulse"]["registered"] == false {
+            v["pulse"] = json!({"registered": false, "said": "no loop job is registered (install_loops?)"});
+        }
+        let s = |x: &Value| x.as_str().map(str::to_string).unwrap_or_else(|| x.to_string());
+        let mut items: Vec<TimelineItem> = vec![];
+        for r in v["ledger"]["judge_runs_not_passed"].as_array().into_iter().flatten() {
+            items.push(TimelineItem { when: s(&r["started_at"]), title: format!("judge {} {}", s(&r["judge_name"]), s(&r["outcome"])),
+                note: r["reason"].as_str().map(str::to_string), hi: true, until: None, lane: Some(s(&r["gate_set"])) });
+        }
+        for r in v["pulse"]["failures"].as_array().into_iter().flatten() {
+            items.push(TimelineItem { when: s(&r["fired_at"]), title: format!("exit {}", s(&r["exit_code"])),
+                note: r["stderr_tail"].as_str().map(str::to_string), hi: true, until: None, lane: Some(s(&r["job_id"])) });
+        }
+        for r in v["pulse"]["held"].as_array().into_iter().flatten() {
+            let needs: Vec<String> = r["needs"].as_array().into_iter().flatten().map(s).collect();
+            items.push(TimelineItem { when: s(&r["fired_at"]), title: "held".into(), note: Some(needs.join("; ")), hi: false, until: None, lane: Some(s(&r["job_id"])) });
+        }
+        let shorten = |t: String, n: usize| if t.chars().count() > n { t.chars().take(n - 1).collect::<String>() + "…" } else { t };
+        for it in &mut items {
+            it.when = shorten(std::mem::take(&mut it.when), 120);
+            it.title = shorten(std::mem::take(&mut it.title), 500);
+            it.note = it.note.take().map(|n| shorten(n, 2000));
+            it.lane = it.lane.take().map(|l| shorten(l, 40));
+        }
+        items.sort_by(|a, b| a.when.cmp(&b.when));
+        let cut = items.len().saturating_sub(30);
+        items.drain(..cut);
+        let title = Some(format!("Loop {loop_id}{}", since.map(|d| format!(" since {d}")).unwrap_or_default()));
+        let component = if items.is_empty() {
+            let mut rows: Vec<Vec<Value>> = vec![];
+            let mut row = |k: &str, x: &Value| if !x.is_null() { rows.push(vec![json!(k), json!(shorten(s(x), 2000))]) };
+            row("pulse", &v["pulse"]["said"]);
+            row("pulse status", &v["pulse"]["status"]);
+            row("pulse why", &v["pulse"]["why"]);
+            row("runs", &v["pulse"]["count"]);
+            row("exit codes", &v["pulse"]["exit_codes"]);
+            row("last fired", &v["pulse"]["last_fired"]);
+            row("ledger", &v["ledger"]["why"]);
+            for (g, by) in v["ledger"]["verdicts"].as_object().into_iter().flatten() {
+                row(&format!("verdicts {g}"), by);
+            }
+            row("awaiting", &v["ledger"]["awaiting"]);
+            row("readiness", &v["readiness"]);
+            rows.truncate(50);
+            Component::Table(Table { title, columns: vec!["what".into(), "value".into()], rows })
+        } else {
+            Component::Timeline(Timeline { title, items })
+        };
+        component.check()?;
+        v["drawn"] = json!(if matches!(component, Component::Timeline(_)) { "timeline" } else { "table" });
+        Ok((component, v))
+    }
+
+    /// propose_loop: the manifest rendered as YAML and checked by nOS's own validator (tools/loop-graph-gen.py
+    /// --validate, the one the scheduler shares), then a card with every line of it. Tier 1: a loop is scheduled work.
+    /// The ledger record, the card and the draft path it would be written to.
+    fn propose_loop(&self, who: &Person, args: &Value) -> Result<(Value, nos_contract::renderers::Markdown, String), String> {
+        if !self.is_tier1(who) {
+            return Err("propose_loop is the operator's: tier 1 only".into());
+        }
+        if let Some(k) = args.as_object().into_iter().flatten().map(|(k, _)| k).find(|k| k.as_str() != "manifest") {
+            return Err(format!("propose_loop takes manifest, not {k:?}"));
+        }
+        let m = args.get("manifest").and_then(Value::as_object).ok_or("manifest is the loop as an object {id, label, blurb, trigger, steps, ...}")?;
+        let id = m.get("id").and_then(Value::as_str).unwrap_or_default();
+        if !is_app_slug(id) {
+            return Err(format!("id {id:?} must match [a-z][a-z0-9-]*, at most 64 chars"));
+        }
+        let draft = self.data.join("loops").join(format!("{id}.loop.yml.draft"));
+        if self.repo.join("files/anatomy/loops").join(format!("{id}.loop.yml")).exists() || draft.exists() {
+            return Err(format!("{id} is already a loop or a draft here; pick another id"));
+        }
+        // The meta keys lead, as every files/anatomy/loops/*.loop.yml has them; the rest in key order.
+        let lead = ["id", "owner", "label", "blurb", "trigger", "params", "steps", "run", "pulse"];
+        let mut doc = serde_yaml_ng::Mapping::new();
+        for k in lead.into_iter().chain(m.keys().map(String::as_str).filter(|k| !lead.contains(k))) {
+            if let Some(v) = m.get(k) {
+                doc.insert(k.into(), serde_yaml_ng::to_value(v).map_err(|e| format!("{k} is no YAML: {e}"))?);
+            }
+        }
+        let yaml = serde_yaml_ng::to_string(&doc).map_err(|e| format!("the manifest is no YAML: {e}"))?;
+        if yaml.contains("```") {
+            return Err("the manifest holds ``` and the card could not show it whole; leave it out".into());
+        }
+        self.loop_validator(id, &yaml)?;
+        let draft = draft.display().to_string();
+        let text = format!("**Loop {id}: a loop draft; the operator copies it into files/anatomy/loops/ and converges.** Approve writes it \
+to {draft}; nothing is scheduled by that.\n\n```yaml\n{yaml}```");
+        let max = nos_contract::renderers::MARKDOWN_MAX;
+        if text.chars().count() > max {
+            return Err(format!("the manifest is {} chars, over the {max} one card shows whole; make it smaller", yaml.chars().count()));
+        }
+        Ok((json!({"id": id, "yaml": yaml, "draft": draft}), nos_contract::renderers::Markdown { text }, draft))
+    }
+
+    /// `python3 tools/loop-graph-gen.py --validate <tmp>/<id>.loop.yml`: Ok on exit 0; its refusal (exit 1) is its
+    /// own reasons, the temp path stripped; anything else is UNCHECKED. The temp dir is 0700 and gone after.
+    fn loop_validator(&self, id: &str, yaml: &str) -> Result<(), String> {
+        let dir = std::env::temp_dir().join(format!("thalamus-loop-{}", mint_uuid().map_err(|e| format!("no temp dir: {e}"))?));
+        std::fs::create_dir(&dir).and_then(|_| std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o700)))
+            .map_err(|e| format!("{}: {e}", dir.display()))?;
+        let file = dir.join(format!("{id}.loop.yml"));
+        let ran = std::fs::write(&file, yaml).map_err(|e| format!("{}: {e}", file.display())).and_then(|_| {
+            let child = std::process::Command::new("python3").arg(self.repo.join("tools/loop-graph-gen.py")).arg("--validate").arg(&file)
+                .current_dir(&self.repo).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::piped())
+                .process_group(0).spawn().map_err(|e| format!("the loop validator: {e}"))?;
+            let pid = child.id() as libc::pid_t;
+            let (tx, rx) = mpsc::channel();
+            std::thread::spawn(move || tx.send(child.wait_with_output()));
+            rx.recv_timeout(Duration::from_secs(self.reader_secs)).map_err(|_| {
+                unsafe { libc::kill(-pid, libc::SIGKILL) };
+                format!("the loop validator: no answer in {}s", self.reader_secs)
+            })?.map_err(|e| format!("the loop validator: {e}"))
+        });
+        let _ = std::fs::remove_dir_all(&dir);
+        let o = ran.map_err(|why| format!("{why}; the manifest is UNCHECKED, so nothing is asked"))?;
+        let said = String::from_utf8_lossy(&o.stderr);
+        let prefix = format!("{}: ", file.display());
+        match o.status.code() {
+            Some(0) => Ok(()),
+            Some(1) => Err(format!("nOS's loop validator refused it; fix every reason, then call again: {}",
+                                   said.lines().map(|l| l.strip_prefix(&prefix).unwrap_or(l).trim()).filter(|l| !l.is_empty()).collect::<Vec<_>>().join("; "))),
+            _ => Err(format!("the loop validator could not run ({}): {}; the manifest is UNCHECKED, so nothing is asked", o.status, said.trim())),
+        }
+    }
+
+    /// The only write of propose_loop: the YAML the approved card showed, as <data>/loops/<id>.loop.yml.draft, never
+    /// over a file and never in the repo's files/anatomy/loops (scheduling is the operator's).
+    fn write_loop_draft(&self, who: &Person, decision: i64) -> Result<PathBuf, String> {
+        let (actor, id, yaml) = self.ledger.lock().map_err(|_| "ledger poisoned".to_string())?.approved_loop(decision)?;
+        if actor != format!("user:{}", who.uid()) {
+            return Err("the approval belongs to another person".into());
+        }
+        if !is_app_slug(&id) {
+            return Err(format!("{id:?} is no loop id"));
+        }
+        if self.repo.join("files/anatomy/loops").join(format!("{id}.loop.yml")).exists() {
+            return Err(format!("{id} became a loop since the proposal"));
+        }
+        self.new_draft("loops", &format!("{id}.loop.yml.draft"), &yaml)
     }
 
     /// GET /api/graph as the person: the node, its parent chain, its children, then its siblings, at most tree_max.

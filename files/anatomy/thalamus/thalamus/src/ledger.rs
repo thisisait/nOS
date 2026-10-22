@@ -254,6 +254,13 @@ impl Ledger {
         Ok((actor, field("name")?, field("yaml")?))
     }
 
+    /// The loop draft an approve writes: (actor, id, the YAML the card showed), as approved_app.
+    pub fn approved_loop(&self, decision: i64) -> Result<(String, String, String), String> {
+        let (actor, req) = self.request(decision)?;
+        let field = |k: &str| req.get(k).and_then(Value::as_str).map(str::to_string).ok_or(format!("the request is no loop draft: no {k}"));
+        Ok((actor, field("id")?, field("yaml")?))
+    }
+
     /// The client a table Iris created was made for: its create's result names `working_for` (D2); None is no client.
     pub fn made_for(&self, actor: &str, table: &str) -> rusqlite::Result<Option<String>> {
         self.db.query_row(
