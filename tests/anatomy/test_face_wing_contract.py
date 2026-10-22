@@ -197,3 +197,30 @@ def test_a_run_read_carries_its_newest_report_capped(tmp_path):
     assert rep is not None, got["body"]
     assert rep["type"] == "conductor_report" and isinstance(rep["event_id"], int), rep
     assert rep["body"] == _REPORT[:4096] and rep["chars"] == len(_REPORT), "the head, capped at 4 KB, and the whole length"
+
+
+# The harness above hands the presenter its EventRepository by hand; Wing's own container must too.
+_DI = r"""
+[$wing, $tmp] = [$argv[1], $argv[2]];
+require $wing . '/vendor/autoload.php';
+$cfg = new Nette\Bootstrap\Configurator;
+$cfg->setTempDirectory($tmp);
+$cfg->addStaticParameters(['appDir' => $wing . '/app']);
+$cfg->createRobotLoader()->addDirectory($wing . '/app')->register();
+$cfg->addConfig($wing . '/app/config/common.neon');
+$cfg->addConfig(['parameters' => ['dataDir' => $tmp], 'database' => ['dsn' => 'sqlite::memory:']]);
+$p = $cfg->createContainer()->getByType(Nette\Application\IPresenterFactory::class)->createPresenter('Api:AgentSessions');
+$v = (new ReflectionProperty($p, 'events'))->getValue($p);
+echo json_encode(is_object($v) ? get_class($v) : null);
+"""
+
+
+@needs_php
+def test_wings_container_hands_the_run_read_its_events(tmp_path):
+    """Compiled from app/config/common.neon over a scratch dir and in-memory SQLite: no live wing.db."""
+    wing = REPO / "files/anatomy/wing"
+    if not (wing / "vendor/autoload.php").exists():
+        pytest.skip("wing vendor/autoload.php missing (composer install)")
+    r = subprocess.run(["php", "-r", _DI, str(wing), str(tmp_path)], capture_output=True, text=True, timeout=120, check=False)
+    assert r.returncode == 0, "Wing's container does not build the run read:\n" + (r.stdout + r.stderr)[:600]
+    assert json.loads(r.stdout) == "App\\Model\\EventRepository", r.stdout
