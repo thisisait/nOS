@@ -20,7 +20,13 @@
         {%- set _ = out.append({'name': i.name, 'tier': i.tier | int, 'password': (nos_extra_identity_passwords | default({}))[i.name] | default(''), 'active': true}) -%}
       {%- endfor -%}
       {{ out }}
-    _unix_tier_group: "{{ dict(authentik_rbac_tiers | map(attribute='tier') | zip(authentik_rbac_tiers | map(attribute='groups') | map('last'))) }}"
+    # tier -> its own groups; tier 1 is every tier-1 group (nos-providers + nos-admins), never `| last`.
+    _unix_tier_group: >-
+      {%- set rt = namespace(own={}) -%}
+      {%- for t in authentik_rbac_tiers -%}
+        {%- set _ = rt.own.update({t.tier | int: (t.groups | list) if t.tier | int == 1 else [t.groups | last]}) -%}
+      {%- endfor -%}
+      {{ rt.own }}
   no_log: true
 
 - name: "[unix] Every login has a password to start with"
@@ -39,7 +45,7 @@
   ansible.builtin.group:
     name: "{{ item }}"
     state: present
-  loop: "{{ _unix_tier_group.values() | unique | list }}"
+  loop: "{{ _unix_tier_group.values() | flatten | unique | list }}"
   become: true
 
 # A shared host has people nOS did not create. A roster name that matches one
@@ -67,7 +73,7 @@
 - name: "[unix] The logins"
   ansible.builtin.user:
     name: "{{ item.name }}"
-    groups: ["{{ _unix_tier_group[item.tier] }}"]
+    groups: "{{ _unix_tier_group[item.tier] }}"
     append: true
     shell: "{{ linux_users_shell }}"
     comment: "{{ omit if item.name in (linux_users_adopted | default([])) else linux_users_marker }}"
@@ -88,13 +94,13 @@
   ansible.builtin.getent:
     database: group
 
-- name: "[unix] Leave every tier group that is not the person's tier"
+- name: "[unix] Leave every tier group not of the person's tier"
   ansible.builtin.command: "gpasswd -d {{ item.0.name }} {{ item.1 }}"
-  loop: "{{ _unix_people | product(_unix_tier_group.values() | unique | list) | list }}"
+  loop: "{{ _unix_people | product(_unix_tier_group.values() | flatten | unique | list) | list }}"
   loop_control:
     label: "{{ item.0.name }} ∉ {{ item.1 }}"
   when:
-    - item.1 != _unix_tier_group[item.0.tier]
+    - item.1 not in _unix_tier_group[item.0.tier]
     - item.0.name in (ansible_facts['getent_group'][item.1][2] | default('')).split(',')
   changed_when: true
   no_log: false
