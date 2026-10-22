@@ -49,7 +49,6 @@ KNOWN = {("Upgrades", "apply"), ("Upgrades", "applyDetached"), ("Upgrades", "que
 NOT_DECISIONS = {
     ("Advisories", "default"): "scan pipeline ingests an advisory record",
     ("Agents", "sessions"): "opens an agent session; the BFF path narrows to metadata.end_user below Tier 1",
-    ("AgentSessions", "cancel"): "a person stops their own run (thalamus: one its Iris session started); no person: wing.operator inline",
     ("Components", "default"): "component inventory record",
     ("CortexExecutor", "execute"): "gated by its own three cortex axes (CortexBindingGate)",
     ("DeployTrigger", "default"): "HMAC-only from CI with branch+tag allowlists; no bearer reaches it",
