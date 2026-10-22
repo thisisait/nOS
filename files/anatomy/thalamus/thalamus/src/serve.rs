@@ -345,6 +345,9 @@ struct Open {
     acting: HashMap<String, Value>,
     /// The workspace tab whose conversation this is (v9 resume{workspace}); None: the person's one legacy chat.
     tab: Option<String>,
+    /// The Wing sessions start_agent opened in this connection: the only ones stop_agent stops.
+    /// ponytail: not rebuilt on resume, so a run started before a reconnect cannot be stopped here.
+    started: Vec<String>,
 }
 
 /// One connection's lines, read on their own thread so a tool may wait for the face's `acted` mid-turn;
@@ -705,6 +708,10 @@ the run is UNKNOWN: say so, never that it did nothing.";
 const START_AGENT: &str = "Start one Wing agent as your sub-agent, for the person and only when they ask: renders an approval card \
 naming the agent and the prompt, and nothing starts unless they approve. Only the agents the operator allows (iris_startable_agents) \
 can be started; Wing may still refuse. On approve you hear the new session's uuid: call read_run with it to draw its run.";
+
+const STOP_AGENT: &str = "Stop a Wing agent run you started in this conversation with start_agent, when the person asks: \
+Wing marks it cancelled and the run ends before its next model call (the call in flight finishes). uuid: the session uuid \
+start_agent gave you. You hear the outcome; Wing may refuse (not running, not found).";
 /// The longest prompt start_agent passes on (the card shows it whole).
 const START_PROMPT_MAX: usize = 2000;
 
@@ -973,6 +980,9 @@ else one total over every matched row"},
         "parameters": {"type": "object", "additionalProperties": false, "required": ["name", "prompt"], "properties": {
             "name": {"type": "string", "minLength": 1, "maxLength": 64, "description": "the Wing agent's name, e.g. conductor"},
             "prompt": {"type": "string", "minLength": 1, "maxLength": START_PROMPT_MAX, "description": "what the agent is asked to do, in the person's words"}}}}},
+        {"type": "function", "function": {"name": "stop_agent", "description": STOP_AGENT,
+        "parameters": {"type": "object", "additionalProperties": false, "required": ["uuid"], "properties": {
+            "uuid": {"type": "string", "minLength": 36, "maxLength": 36, "description": "the session uuid start_agent gave you"}}}}},
         {"type": "function", "function": {"name": "list_tables", "description": LIST_TABLES,
         "parameters": {"type": "object", "additionalProperties": false, "properties": {}}}},
         {"type": "function", "function": {"name": "estate_services", "description": ESTATE_SERVICES,
@@ -1411,7 +1421,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             Err(why) => (Err(why), iris.clone()),
         };
         Ok((Open { session, model, iris, messages: vec![json!({"role": "system", "content": system})], moved: None, tokens,
-                  pending: HashMap::new(), shown: HashMap::new(), tables_seen: HashMap::new(), dates: HashMap::new(), names: HashMap::new(), read_free: vec![], forms: HashMap::new(), choices: HashMap::new(), last_group: None, again: HashMap::new(), acting: HashMap::new(), tab: None },
+                  pending: HashMap::new(), shown: HashMap::new(), tables_seen: HashMap::new(), dates: HashMap::new(), names: HashMap::new(), read_free: vec![], forms: HashMap::new(), choices: HashMap::new(), last_group: None, again: HashMap::new(), acting: HashMap::new(), tab: None, started: vec![] },
             resumed.is_some()))
     }
 
@@ -1725,7 +1735,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             Decision::Approve if tool == Some("start_agent") => {
                 let start = acting.unwrap_or_default();
                 let agent = text(&start["agent"]);
-                match self.start(who, o, &start) {
+                match self.start(who, o, &start).inspect(|uuid| o.started.push(uuid.clone())) {
                     Ok(uuid) => (format!("Approved: {agent} started as session {uuid}."),
                                  json!({"approval": approval, "agent": agent, "session_uuid": uuid}),
                                  format!("approved, {agent} started as session {uuid}; read_run draws it")),
@@ -2395,6 +2405,33 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
         }
     }
 
+    /// stop_agent: POST Wing's agent-sessions/<uuid>/cancel as the person, naming this Iris session as the parent.
+    /// NO CARD, unlike start_agent: a stop spends nothing, reaches nothing new and only ends work this
+    /// conversation began, at the person's word; a card would ask them to confirm what they just said.
+    /// Only a uuid start_agent opened here is sent; Wing checks the parent and the person again.
+    fn stop_agent(&self, who: &Person, o: &Open, args: &Value) -> Result<Value, String> {
+        if self.wing.token.is_empty() || self.wing.url.is_empty() {
+            return Err("the thalamus holds no Wing token (thalamus_wing_api_token), so it stops no agent".into());
+        }
+        let uuid = text(&args["uuid"]);
+        if !o.started.contains(&uuid) {
+            return Err(format!("{uuid:?} was not started in this conversation; only a run start_agent opened here can be stopped"));
+        }
+        let url = format!("{}/api/v1/agent-sessions/{}/cancel", self.wing.url.trim_end_matches('/'), enc(&uuid));
+        let mut r = agent(30).post(&url)
+            .header("authorization", &format!("Bearer {}", self.wing.token))
+            .header("x-nos-user-uid", &who.uid())
+            .header("x-nos-user-groups", &who.groups.join(","))
+            .send_json(json!({"parent": format!("thalamus:{}", o.session)})).map_err(|e| format!("Wing unreachable: {e}"))?;
+        let status = r.status().as_u16();
+        self.say(format!("{status} as {} POST wing /agent-sessions/{uuid}/cancel", who.username));
+        let v: Value = r.body_mut().read_json().unwrap_or(Value::Null);
+        if status != 202 {
+            return Err(format!("Wing answered {status}: {}", text(&v["error"]).chars().take(300).collect::<String>()));
+        }
+        Ok(json!({"session_uuid": uuid, "status": v["status"], "stop_reason": v["stop_reason"]}))
+    }
+
     /// Sends one act and waits for the face's answer within the reader timeout: {act, ok, result?, reason?}.
     fn act(&self, out: &mut dyn Write, o: &Open, face: &Face, app: &str, action: &str, params: Map<String, Value>) -> Result<Value, String> {
         let act = mint_uuid().map_err(|e| format!("no act id: {e}"))?;
@@ -2721,6 +2758,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                     }),
                     "face_act" => self.face_act(out, o, face, &args),
                     "start_agent" => self.start_agent(out, o, &args),
+                    "stop_agent" => self.stop_agent(who, o, &args).inspect(|v| { let _ = self.record(o, Kind::ToolResult, Some(name), v.clone()); }),
                     _ => Err(format!("unknown tool {name:?}")),
                 };
                 if name == "show" || name == "offer_dashboard" {
