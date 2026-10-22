@@ -56,7 +56,7 @@ done
 # `default.config.yml` alone is the defect `tools/estate-status.py` was written
 # to end, and it would silently point these journeys at `dev.local`.
 eval "$(python3 - <<'PY'
-import pathlib, re, shlex, sys
+import os, pathlib, re, shlex, sys
 
 repo = pathlib.Path.cwd()
 home = pathlib.Path.home()
@@ -104,6 +104,17 @@ exported = {
     # `nos halt` break-glass journey (test_halt_break_glass.py).
     "WING_HALT_TOKEN": secrets.get("wing_halt_token"),
 }
+
+# The thalamus socket the RUNNING organ serves: launchd keeps ~/.nos/thalamus.sock, the
+# systemd unit a shared /run/nos one (THALAMUS_SOCKET). Read it, never assume it.
+sys.path.insert(0, str(repo / "tools"))
+try:
+    import nos_host
+    sock = (nos_host.service_env("eu.thisisait.nos.thalamus") or {}).get("THALAMUS_SOCKET")
+except Exception:                                               # noqa: BLE001
+    sock = None
+if sock and not os.environ.get("THALAMUS_SOCK"):
+    print(f"export THALAMUS_SOCK={shlex.quote(sock)}")
 
 missing = [k for k, v in exported.items() if not v]
 for key, value in exported.items():
