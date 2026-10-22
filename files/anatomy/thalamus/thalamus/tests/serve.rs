@@ -6825,6 +6825,20 @@ fn start_agent_asks_then_opens_a_wing_session_as_the_person_under_iris() {
 }
 
 #[test]
+fn start_agent_is_a_managers_and_refused_below_tier_two() {
+    let (wing, seen) = fake(vec![format!(r#"!202 {{"session_uuid": "{CHILD}"}}"#)]);
+    let rig = rig_wing("start-mgr", manager(), &wing, WING_TOKEN, vec![start("conductor"), answer("Asked.")]);
+    let (_s, _r, _, _, card) = asked_start(&rig);
+    assert_eq!(card.params["agent"], serde_json::json!("conductor"), "a manager is shown the card");
+
+    let rig = rig_wing("start-user", mapped(), &wing, WING_TOKEN, vec![start("conductor"), answer("x")]);
+    let (got, _) = tool_turn(&rig, "start the conductor");
+    assert!(!got.iter().any(|m| matches!(m, ToShell::ApprovalRequest { .. })), "nos-users got a card: {got:?}");
+    assert!(tool_result(&rig, 1)["error"].as_str().is_some_and(|e| e.contains("tier 2")), "{}", tool_result(&rig, 1));
+    assert!(seen.lock().unwrap().is_empty(), "nothing reaches Wing before an approve");
+}
+
+#[test]
 fn start_agent_rejected_starts_nothing() {
     let (wing, seen) = fake(vec![format!(r#"!202 {{"session_uuid": "{CHILD}"}}"#)]);
     let rig = rig_wing("start-no", admin(), &wing, WING_TOKEN, vec![start("conductor"), answer("Asked.")]);
