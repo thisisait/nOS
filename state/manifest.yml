@@ -145,7 +145,7 @@ services:
     data_path_var: authentik_data_dir
     health_check:
       type: http
-      url_template: "http://localhost:{{ authentik_port }}/-/health/live/"
+      url_template: "http://127.0.0.1:{{ authentik_port }}/-/health/live/"
       expect_status: 204
       timeout_sec: 15
     upgrade_recipe: upgrades/authentik.yml
@@ -166,7 +166,7 @@ services:
     data_path_var: infisical_data_dir
     health_check:
       type: http
-      url_template: "http://localhost:{{ infisical_port }}/api/status"
+      url_template: "http://127.0.0.1:{{ infisical_port }}/api/status"
       expect_status: 200
     upgrade_recipe: upgrades/infisical.yml
     oidc: native                            # env-seeded org SSO config; requires one-time Security→SSO toggle in UI post-install
@@ -200,7 +200,7 @@ services:
     port_var: traefik_dashboard_port
     health_check:
       type: http
-      url_template: "http://localhost:{{ traefik_dashboard_port }}/ping"
+      url_template: "http://127.0.0.1:{{ traefik_dashboard_port }}/ping"
       expect_status: 200
 
   - id: bluesky_pds
@@ -217,7 +217,7 @@ services:
     data_path_var: bluesky_pds_data_dir
     health_check:
       type: http
-      url_template: "http://localhost:{{ bluesky_pds_port }}/xrpc/_health"
+      url_template: "http://127.0.0.1:{{ bluesky_pds_port }}/xrpc/_health"
       expect_status: 200
     upgrade_recipe: upgrades/bluesky_pds.yml
 
@@ -249,7 +249,7 @@ services:
     data_path_var: grafana_data_dir
     health_check:
       type: http
-      url_template: "http://localhost:{{ grafana_port }}/api/health"
+      url_template: "http://127.0.0.1:{{ grafana_port }}/api/health"
       expect_status: 200
       timeout_sec: 10
     upgrade_recipe: upgrades/grafana.yml
@@ -268,7 +268,7 @@ services:
     port_var: prometheus_port
     health_check:
       type: http
-      url_template: "http://localhost:{{ prometheus_port }}/-/healthy"
+      url_template: "http://127.0.0.1:{{ prometheus_port }}/-/healthy"
       expect_status: 200
 
   - id: loki
@@ -282,7 +282,7 @@ services:
     port_var: loki_port
     health_check:
       type: http
-      url_template: "http://localhost:{{ loki_port }}/ready"
+      url_template: "http://127.0.0.1:{{ loki_port }}/ready"
       expect_status: 200
 
   - id: tempo
@@ -296,7 +296,7 @@ services:
     port_var: tempo_http_port
     health_check:
       type: http
-      url_template: "http://localhost:{{ tempo_http_port }}/ready"
+      url_template: "http://127.0.0.1:{{ tempo_http_port }}/ready"
       expect_status: 200
 
   # ── alloy (Anatomy P1, 2026-05-05) ────────────────────────────────────────
@@ -316,7 +316,7 @@ services:
     port_var: alloy_ui_port
     health_check:
       type: http
-      url_template: "http://localhost:{{ alloy_ui_port | default(12345) }}/-/ready"
+      url_template: "http://127.0.0.1:{{ alloy_ui_port | default(12345) }}/-/ready"
       expect_status: 200
 
   # ------------------------------------------------------------- iiab stack
@@ -579,7 +579,7 @@ services:
     data_path_var: rustfs_data_dir
     health_check:
       type: http
-      url_template: "http://localhost:{{ rustfs_api_port }}/health"
+      url_template: "http://127.0.0.1:{{ rustfs_api_port }}/health"
       expect_status: 200
       timeout_sec: 10
     upgrade_recipe: upgrades/rustfs.yml
@@ -727,7 +727,7 @@ services:
     data_path_var: gitlab_data_dir
     health_check:
       type: http
-      url_template: "http://localhost:{{ gitlab_http_port }}/-/readiness"
+      url_template: "http://127.0.0.1:{{ gitlab_http_port }}/-/readiness"
       expect_status: 200
       timeout_sec: 15
     upgrade_recipe: upgrades/gitlab.yml
@@ -763,7 +763,7 @@ services:
     data_path_var: paperclip_data_dir
     health_check:
       type: http
-      url_template: "http://localhost:{{ paperclip_port }}/"
+      url_template: "http://127.0.0.1:{{ paperclip_port }}/"
       expect_status: 200
       timeout_sec: 10
     upgrade_recipe: upgrades/paperclip.yml
@@ -806,7 +806,7 @@ services:
     port_var: erpnext_port
     health_check:
       type: http
-      url_template: "http://localhost:{{ erpnext_port }}/api/method/frappe.ping"
+      url_template: "http://127.0.0.1:{{ erpnext_port }}/api/method/frappe.ping"
       expect_status: 200
       timeout_sec: 10
     upgrade_recipe: upgrades/erpnext.yml
@@ -866,7 +866,7 @@ services:
     data_path_var: bookstack_data_dir
     health_check:
       type: http
-      url_template: "http://localhost:{{ bookstack_port }}/login"
+      url_template: "http://127.0.0.1:{{ bookstack_port }}/login"
       expect_status: 200
       timeout_sec: 10
     upgrade_recipe: upgrades/bookstack.yml
@@ -885,7 +885,7 @@ services:
     port_var: firefly_port
     health_check:
       type: http
-      url_template: "http://localhost:{{ firefly_port }}/health"
+      url_template: "http://127.0.0.1:{{ firefly_port }}/health"
       expect_status: 200
       timeout_sec: 10
     upgrade_recipe: upgrades/firefly.yml
@@ -905,7 +905,7 @@ services:
     data_path_var: dolibarr_data_dir
     health_check:
       type: http
-      url_template: "http://localhost:{{ dolibarr_port }}/"
+      url_template: "http://127.0.0.1:{{ dolibarr_port }}/"
       expect_status: 200
       timeout_sec: 15
     oidc: native
@@ -937,7 +937,7 @@ services:
     data_path_var: mikopbx_data_dir
     health_check:
       type: http
-      url_template: "http://localhost:{{ mikopbx_port }}/pbxcore/api/v3/system:ping"
+      url_template: "http://127.0.0.1:{{ mikopbx_port }}/pbxcore/api/v3/system:ping"
       expect_status: 200
       timeout_sec: 10
     oidc: proxy                             # Authentik forward-auth at Traefik; PBX admin login stays behind it
@@ -1085,7 +1085,7 @@ services:
     port_var: device_gateway_port
     health_check:
       type: http
-      url_template: "http://localhost:{{ device_gateway_port }}/health"
+      url_template: "http://127.0.0.1:{{ device_gateway_port }}/health"
       expect_status: 200
 
   # A host login reaches KEAP's human door as a person (roles/pazny.receptor). Serves a
@@ -1156,7 +1156,7 @@ services:
     port_var: bone_port
     health_check:
       type: http
-      url_template: "http://localhost:{{ bone_port }}/api/health"
+      url_template: "http://127.0.0.1:{{ bone_port }}/api/health"
       expect_status: 200
 
   - id: pulse
@@ -1201,7 +1201,7 @@ services:
     port_var: cortex_port
     health_check:
       type: http
-      url_template: "http://localhost:{{ cortex_port }}/health"
+      url_template: "http://127.0.0.1:{{ cortex_port }}/health"
       expect_status: 200
 
   # The listening organ. NO domain_var/port_var and NO health_check, and both
@@ -1229,7 +1229,7 @@ services:
     data_path_var: backrest_data_dir
     health_check:
       type: http
-      url_template: "http://localhost:{{ backrest_port }}/"
+      url_template: "http://127.0.0.1:{{ backrest_port }}/"
       expect_status: 200
 
   - id: iiab_terminal
