@@ -4752,7 +4752,7 @@ the infra service of the same name), add meta {name, version, summary} and gdpr,
             return Err(format!("id {id:?} must match [a-z][a-z0-9-]*, at most 64 chars"));
         }
         let draft = self.data.join("loops").join(format!("{id}.loop.yml.draft"));
-        if self.repo.join("files/anatomy/loops").join(format!("{id}.loop.yml")).exists() || draft.exists() {
+        if self.repo.join("files/anatomy").join("loops").join(format!("{id}.loop.yml")).exists() || draft.exists() {
             return Err(format!("{id} is already a loop or a draft here; pick another id"));
         }
         // The meta keys lead, as every files/anatomy/loops/*.loop.yml has them; the rest in key order.
@@ -4786,7 +4786,8 @@ to {draft}; nothing is scheduled by that.\n\n```yaml\n{yaml}```");
             .map_err(|e| format!("{}: {e}", dir.display()))?;
         let file = dir.join(format!("{id}.loop.yml"));
         let ran = std::fs::write(&file, yaml).map_err(|e| format!("{}: {e}", file.display())).and_then(|_| {
-            let child = std::process::Command::new("python3").arg(self.repo.join("tools/loop-graph-gen.py")).arg("--validate").arg(&file)
+            // The tools/ seam the readers use: on a system-unit host (nos_system_user) it is off, like them.
+            let child = std::process::Command::new("python3").arg(self.repo.join("tools").join("loop-graph-gen.py")).arg("--validate").arg(&file)
                 .current_dir(&self.repo).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::piped())
                 .process_group(0).spawn().map_err(|e| format!("the loop validator: {e}"))?;
             let pid = child.id() as libc::pid_t;
@@ -4819,7 +4820,7 @@ to {draft}; nothing is scheduled by that.\n\n```yaml\n{yaml}```");
         if !is_app_slug(&id) {
             return Err(format!("{id:?} is no loop id"));
         }
-        if self.repo.join("files/anatomy/loops").join(format!("{id}.loop.yml")).exists() {
+        if self.repo.join("files/anatomy").join("loops").join(format!("{id}.loop.yml")).exists() {
             return Err(format!("{id} became a loop since the proposal"));
         }
         self.new_draft("loops", &format!("{id}.loop.yml.draft"), &yaml)
