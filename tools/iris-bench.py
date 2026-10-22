@@ -449,7 +449,7 @@ def renamed(got: dict) -> dict:
 def _cited(arg, got: dict, text: str) -> bool:
     """Every node `arg` names (an id or a name) is cited by its [id], drawn by search_knowledge or read_node.
     A run from before ids reached the model draws none: then the name, drawn and said, is the citation."""
-    drawn: dict[str, str] = {}
+    drawn: dict[str, set[str]] = {}  # one id may come twice: a taxonomy node and its "(note)"
     for r in got["renders"]:
         if r.get("by") not in KNOWLEDGE_BY:
             continue
@@ -457,9 +457,10 @@ def _cited(arg, got: dict, text: str) -> bool:
         if kind == "list":
             for i in props.get("items", []):
                 if m := CITED_ITEM.match(str(i.get("text", ""))):
-                    drawn[m.group(2)] = m.group(1)
+                    drawn.setdefault(m.group(2), set()).add(m.group(1).lower())
         elif kind == "knowledge_tree":
-            drawn |= {n.get("id"): n.get("name", "") for n in props.get("nodes", [])}
+            for n in props.get("nodes", []):
+                drawn.setdefault(n.get("id"), set()).add(n.get("name", "").lower())
     names = [arg] if isinstance(arg, str) else arg
     if not drawn:
         said = {str(i.get("text", "")).split(" · ", 1)[-1].lower() for r in got["renders"]
@@ -468,7 +469,7 @@ def _cited(arg, got: dict, text: str) -> bool:
         low = text.lower()
         return all(n.lower() in said and re.search(rf"(?<!\w){re.escape(n.lower())}(?!\w)", low) for n in names)
     def one(n: str) -> bool:
-        ids = [n] if n in drawn else [i for i, nm in drawn.items() if nm.lower() == n.lower()]
+        ids = [n] if n in drawn else [i for i, nms in drawn.items() if n.lower() in nms]
         return any(re.search(rf"(?<![\w.]){re.escape(i)}(?!\.?\w)", text) for i in ids)
     return all(one(n) for n in names)
 
