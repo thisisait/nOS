@@ -7492,3 +7492,180 @@ fn a_run_wing_will_not_show_is_said_at_once_not_watched_for_an_hour() {
     assert!(within(&mut r, 400).is_none(), "said once");
     assert_eq!(seen.lock().unwrap().len(), polls, "a refused read is not asked again");
 }
+
+// --- iris-reads-and-proposes-loops: read_loop_runs (tools/loop-status.py --loop --since) and propose_loop
+// (the validator tools/loop-graph-gen.py --validate is the check; approve writes <data>/loops/<id>.loop.yml.draft,
+// never files/anatomy/loops: the operator copies it in and converges). Tier 1 both. ---
+
+/// A validator with the real CLI's contract: `--validate <file>`, every reason on stderr as `<file>: <why>`, exit 1.
+const LOOP_VALIDATOR: &str = r#"import sys, yaml
+assert sys.argv[1] == "--validate" and len(sys.argv) == 3, sys.argv
+m = yaml.safe_load(open(sys.argv[2], encoding="utf-8")) or {}
+why = [f"missing required key `{k}`" for k in ("id", "label", "blurb", "trigger", "steps") if k not in m]
+if m.get("id") == "sere":
+    why.append("id `sere` is reserved for the code-defined loop")
+for w in why:
+    print(f"{sys.argv[2]}: {w}", file=sys.stderr)
+sys.exit(1 if why else 0)
+"#;
+
+/// The rig's repo with files/anatomy/loops holding one loop (repo-check) and the fake validator.
+fn loop_rig(name: &str, map: serde_json::Value, model: Vec<String>) -> Rig {
+    DATA_APART.with(|a| a.set(true));
+    let rig = rig_n(name, map, vec![], model);
+    let repo = &rig.srv.repo;
+    for d in ["files", "files/anatomy", "files/anatomy/loops"] {
+        std::fs::create_dir(repo.join(d)).unwrap();
+        std::fs::set_permissions(repo.join(d), std::fs::Permissions::from_mode(0o700)).unwrap();
+    }
+    std::fs::write(repo.join("files/anatomy/loops/repo-check.loop.yml"), "id: repo-check\n").unwrap();
+    reader(&rig, "loop-graph-gen.py", LOOP_VALIDATOR);
+    rig
+}
+
+fn loop_manifest(id: &str) -> serde_json::Value {
+    serde_json::json!({"id": id, "label": "docs-scout — stale docs, report only", "blurb": "Reads docs/ for stale links.",
+        "trigger": {"cadence": "17 3 * * *"},
+        "steps": [{"id": "scan", "runner": "tool", "label": "link-check"}],
+        "run": "{{ playbook_dir }}/tools/loops/repo-check.py", "pulse": {"category": "platform", "max_runtime_s": 120}})
+}
+
+fn propose_loop(m: &serde_json::Value) -> String {
+    call("propose_loop", &serde_json::json!({"manifest": m}).to_string())
+}
+
+#[test]
+fn propose_loop_hands_the_validators_reasons_back_and_asks_nothing() {
+    let mut m = loop_manifest("sere");
+    m.as_object_mut().unwrap().remove("steps");
+    let rig = loop_rig("loop-bad", admin(), vec![propose_loop(&m), answer("x")]);
+    let (got, _) = tool_turn(&rig, "make me a loop");
+    assert!(app_card(&got).is_none(), "{got:?}");
+    let e = tool_result(&rig, 1)["error"].as_str().unwrap_or_default().to_string();
+    assert!(e.contains("missing required key `steps`") && e.contains("reserved"), "{e}");
+    assert!(!e.contains("/loop-graph-gen.py") && !e.contains(".loop.yml:"), "the temp file's path is noise: {e}");
+    assert!(!rig.srv.data.join("loops").exists(), "a refused manifest left a draft");
+}
+
+#[test]
+fn propose_loop_asks_with_the_whole_yaml_and_approve_writes_exactly_it() {
+    let m = loop_manifest("docs-scout");
+    let rig = loop_rig("loop-ok", admin(), vec![propose_loop(&m), answer("Proposed.")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "make me a docs loop");
+    let (approval, card) = app_card(&got).unwrap_or_else(|| panic!("no card: {got:?}"));
+    let yaml = fenced(&card);
+    let back: serde_json::Value = serde_yaml_ng::from_str(&yaml).unwrap();
+    assert_eq!(back, m, "the card is the whole manifest, not a summary");
+    assert!(yaml.starts_with("id: docs-scout\nlabel:"), "id and label lead: {yaml}");
+    let draft = rig.srv.data.join("loops/docs-scout.loop.yml.draft");
+    assert!(card.contains("**") && card.contains("a loop draft; the operator copies it into files/anatomy/loops/ and converges"), "{card}");
+    assert!(card.contains(&draft.display().to_string()) && !draft.exists(), "{card}");
+    assert_eq!(tool_result(&rig, 1)["draft"].as_str(), Some(&*draft.display().to_string()));
+
+    decide(&s, &approval, Decision::Approve);
+    let said = match next(&mut r) {
+        Some(ToShell::Text { text, .. }) => text,
+        other => panic!("the person hears nothing of the draft: {other:?}"),
+    };
+    assert!(said.contains("docs-scout.loop.yml.draft") && said.contains("operator"), "{said}");
+    assert_eq!(std::fs::read_to_string(&draft).unwrap(), yaml, "the draft is the bytes the person approved");
+    assert!(!rig.srv.repo.join("files/anatomy/loops/docs-scout.loop.yml").exists(), "files/anatomy/loops is the operator's");
+    let rec = recorded(&rig, &session_of(&got), "propose_loop");
+    assert_eq!(rec["written"], true, "{rec}");
+}
+
+#[test]
+fn propose_loop_reject_writes_nothing() {
+    let rig = loop_rig("loop-no", admin(), vec![propose_loop(&loop_manifest("docs-scout")), answer("Proposed.")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "make me a docs loop");
+    let (approval, _) = app_card(&got).unwrap_or_else(|| panic!("no card: {got:?}"));
+    decide(&s, &approval, Decision::Reject);
+    assert!(matches!(next(&mut r), Some(ToShell::Text { text, .. }) if text.starts_with("Rejected")));
+    assert!(!rig.srv.data.join("loops").exists());
+}
+
+#[test]
+fn propose_loop_refuses_a_taken_id_and_anyone_below_tier_one() {
+    for (name, map, id, want) in [("loop-repo", admin(), "repo-check", "already"), ("loop-draft", admin(), "docs-scout", "already"),
+                                  ("loop-tier", manager(), "docs-scout", "tier 1"), ("loop-user", mapped(), "docs-scout", "tier 1")] {
+        let rig = loop_rig(name, map, vec![propose_loop(&loop_manifest(id)), answer("x")]);
+        if name == "loop-draft" {
+            let dir = rig.srv.data.join("loops");
+            std::fs::create_dir(&dir).unwrap();
+            std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o700)).unwrap(); // bind()'s umask, as in dir()
+            std::fs::write(dir.join("docs-scout.loop.yml.draft"), "id: docs-scout\n").unwrap();
+        }
+        let (got, _) = tool_turn(&rig, "make me a loop");
+        assert!(app_card(&got).is_none(), "{name}: {got:?}");
+        let e = tool_result(&rig, 1)["error"].as_str().unwrap_or_default().to_string();
+        assert!(e.contains(want), "{name}: {e}");
+    }
+}
+
+#[test]
+fn propose_loop_tells_the_model_a_runner_is_code() {
+    let tools = serve::tools();
+    let d = tools.as_array().unwrap().iter().find(|t| t["function"]["name"] == "propose_loop").unwrap()["function"]["description"]
+        .as_str().unwrap().to_string();
+    assert!(d.contains("graph-only") && d.contains("tools/loops/") && d.contains("operator"), "{d}");
+}
+
+/// loop-status.py --json --loop <id> [--since D] as the reader contract has it.
+fn loop_status_py(want_argv: &str, body: &str) -> String {
+    format!("import json, sys\nassert sys.argv[1:] == {want_argv}, sys.argv\nprint(json.dumps({body}))\n")
+}
+
+#[test]
+fn read_loop_runs_says_no_job_is_registered_never_an_empty_history() {
+    let rig = loop_rig("loop-unreg", admin(), vec![call("read_loop_runs", r#"{"loop": "news-scout", "since": "2026-10-01"}"#), answer("x")]);
+    reader(&rig, "loop-status.py", &loop_status_py(r#"["--json", "--loop", "news-scout", "--since", "2026-10-01"]"#,
+        r#"{"loop": "news-scout", "since": "2026-10-01", "pulse": {"registered": False, "said": "no loop job registered (install_loops?)"},
+            "readiness": {"status": "UNKNOWN", "why": "job_readiness: no config"}}"#));
+    let (got, _) = tool_turn(&rig, "did news-scout run?");
+    assert!(!got.iter().any(|m| matches!(m, ToShell::Render { component: Component::Timeline(_), .. })), "{got:?}");
+    let heard = tool_result(&rig, 1).to_string();
+    assert!(heard.contains("no loop job is registered (install_loops?)"), "{heard}");
+    assert!(!heard.contains("\"count\":0") && !heard.contains("\"failures\":[]"), "an unregistered job is not an empty history: {heard}");
+}
+
+#[test]
+fn read_loop_runs_draws_dated_rows_as_a_timeline_by_lane() {
+    let rig = loop_rig("loop-tl", admin(), vec![call("read_loop_runs", "{}"), answer("x")]);
+    reader(&rig, "loop-status.py", &loop_status_py(r#"["--json", "--loop", "sere"]"#,
+        r#"{"loop": "sere", "since": None,
+            "pulse": {"registered": True, "jobs": ["loop-base:propose"], "count": 3, "exit_codes": {"0": 2, "1": 1}, "last_fired": "2026-10-20 06:10:00",
+                      "failures": [{"job_id": "loop-base:drive", "fired_at": "2026-10-20 06:10:00", "exit_code": 1, "stderr_tail": "no MR"}],
+                      "held": [{"job_id": "loop-base:propose", "fired_at": "2026-10-19 01:30:00", "needs": ["gitlab up"]}]},
+            "readiness": {"status": "ok"},
+            "ledger": {"status": "ok", "verdicts": {"anatomy": {"pass": 30, "fail": 2}},
+                       "judge_runs_not_passed": [{"gate_set": "anatomy", "judge_name": "pytest", "status": "done", "outcome": "fail",
+                                                  "exit_code": 1, "reason": "3 red", "started_at": "2026-10-18 06:40:00"}],
+                       "awaiting": {"ready": 1, "conflict": 1}}}"#));
+    let (got, _) = tool_turn(&rig, "how is sere doing?");
+    let t = got.iter().find_map(|m| match m { ToShell::Render { component: Component::Timeline(t), .. } => Some(t.clone()), _ => None })
+        .unwrap_or_else(|| panic!("no timeline: {got:?}"));
+    let lanes: Vec<(&str, Option<&str>, bool)> = t.items.iter().map(|i| (i.when.as_str(), i.lane.as_deref(), i.hi)).collect();
+    assert_eq!(lanes, [("2026-10-18 06:40:00", Some("anatomy"), true), ("2026-10-19 01:30:00", Some("loop-base:propose"), false),
+                       ("2026-10-20 06:10:00", Some("loop-base:drive"), true)], "{t:?}");
+    let heard = tool_result(&rig, 1);
+    assert_eq!((&heard["ledger"]["verdicts"]["anatomy"]["pass"], &heard["ledger"]["awaiting"]["conflict"], &heard["pulse"]["count"]),
+               (&serde_json::json!(30), &serde_json::json!(1), &serde_json::json!(3)), "{heard}");
+}
+
+#[test]
+fn read_loop_runs_is_tier_one_only_and_unknown_when_unreadable() {
+    for (name, map, py, want) in [("loop-rt", manager(), loop_status_py(r#"["--json", "--loop", "sere"]"#, "{}"), "tier 1"),
+                                  ("loop-ru", admin(), "import sys; sys.exit(1)".to_string(), "UNKNOWN"),
+                                  ("loop-rx", admin(), loop_status_py(r#"["--json", "--loop", "sere"]"#, r#"{"error": "unknown loop 'sere'", "known": ["sere"]}"#), "unknown loop")] {
+        let rig = loop_rig(name, map, vec![call("read_loop_runs", "{}"), answer("x")]);
+        reader(&rig, "loop-status.py", &py);
+        let (got, _) = tool_turn(&rig, "the loop");
+        assert!(!got.iter().any(|m| matches!(m, ToShell::Render { component: Component::Timeline(_) | Component::Table(_), .. })), "{name}: {got:?}");
+        let e = tool_result(&rig, 1);
+        assert!(e["error"].as_str().is_some_and(|e| e.contains(want)), "{name}: {e}");
+    }
+}
