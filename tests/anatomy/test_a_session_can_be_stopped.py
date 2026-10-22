@@ -104,6 +104,20 @@ def test_an_agent_token_stops_nothing(tmp_path):
     assert ops["code"] == 403, ops
 
 
+@needs_php
+@needs_vendor
+def test_the_face_bff_stops_nothing(tmp_path):
+    """The row widened the thalamus alone: the face-bff bearer, Tier 1 or not, reaches no cancel,
+    and the run it named is still running afterwards."""
+    user, admin, read = _run(tmp_path, [
+        _cancel(A1, None, token="bff-secret", uid="alice", groups="nos-users"),
+        _cancel(A1, None, token="bff-secret", uid="alice", groups="nos-admins"),
+        _get(A1),
+    ])
+    assert (user["code"], admin["code"]) == (403, 403), (user, admin)
+    assert read["body"]["session"]["status"] == "running", read
+
+
 _LOOP = r"""<?php
 namespace App\Model { final class EventRepository { public function insert(array $p): int { return 1; } }
   final class AgentSessionRepository { public array $rows = [];
