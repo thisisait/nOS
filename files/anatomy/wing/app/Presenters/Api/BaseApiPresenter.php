@@ -37,7 +37,7 @@ abstract class BaseApiPresenter extends Presenter
 	/** The end user the face BFF speaks for, or null (face-wing.yml, wire). */
 	protected ?EndUser $endUser = null;
 
-	/** POST actions the thalamus bearer reaches for a person (Iris's start_agent); nothing else, no operator verb. */
+	/** POST actions the thalamus bearer reaches for a person (Iris's start_agent, stop_agent); nothing else, no operator verb. */
 	protected array $thalamusActions = [];
 
 	/** Estate-wide GETs the face-bff bearer reaches for a Tier-1 person only: nothing to narrow to. */
@@ -79,15 +79,16 @@ abstract class BaseApiPresenter extends Presenter
 		} catch (\DomainException $e) {
 			$this->sendError($e->getMessage(), IResponse::S401_Unauthorized);
 		}
-		if ($this->endUser !== null && ($this->validatedToken['name'] ?? null) === EndUser::THALAMUS
-			&& ($this->getMethod() !== 'POST' || !in_array($this->getAction(), $this->thalamusActions, true))) {
-			$this->sendError('the thalamus token speaks for a person only to start an agent session', IResponse::S403_Forbidden);
+		$thalamus = $this->endUser !== null && ($this->validatedToken['name'] ?? null) === EndUser::THALAMUS;
+		if ($thalamus && ($this->getMethod() !== 'POST' || !in_array($this->getAction(), $this->thalamusActions, true))) {
+			$this->sendError('the thalamus token speaks for a person only to start or stop an agent session', IResponse::S403_Forbidden);
 		}
 		// PHP method names are case-insensitive, so the match must be too.
 		$operatorAction = in_array(strtolower($this->getAction()), array_map('strtolower', $this->operatorActions), true);
 		$operatorRead = in_array($this->getAction(), $this->bffOperatorReads, true)
 			&& in_array($this->getMethod(), ['GET', 'HEAD'], true);
-		if ($this->endUser !== null && !$operatorAction && !$operatorRead && !in_array($this->getAction(), $this->bffActions, true)) {
+		// A thalamus action is the thalamus's alone: it does not open the action to face-bff.
+		if ($this->endUser !== null && !$thalamus && !$operatorAction && !$operatorRead && !in_array($this->getAction(), $this->bffActions, true)) {
 			$this->sendError('the face-bff token does not reach this action', IResponse::S403_Forbidden);
 		}
 		if ($this->endUser !== null && $operatorRead && !$this->endUser->operator) {

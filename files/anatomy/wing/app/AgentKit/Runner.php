@@ -184,6 +184,8 @@ final class Runner
 
 	/** Session ceilings, reset per run(). Null deadline = no session open. */
 	private ?float $sessionDeadline = null;
+	/** The open session, whose row assertSessionCeiling() reads for a stop. */
+	private ?string $sessionUuid = null;
 	/**
 	 * Split in/out, because a TERMINATED session must still report what it
 	 * spent. `$totalIn`/`$totalOut` in run() are assigned only on the
@@ -271,6 +273,7 @@ final class Runner
 		$this->sessionLargestCall = 0;
 		$this->sessionDeadline = microtime(true)
 			+ (float) self::envInt('NOS_AGENT_SESSION_WALL_CLOCK_S', self::SESSION_WALL_CLOCK_S);
+		$this->sessionUuid = $sessionUuid;
 		$this->fallbackContext = [
 			'session_uuid' => $sessionUuid,
 			'actor_id' => $resolvedActor,
@@ -470,6 +473,8 @@ final class Runner
 			// did, the same evening.
 			$stopReason = 'ceiling';
 			$errorMessage = $exc->getMessage();
+		} catch (SessionCancelled) {
+			// Not an error: someone with the right to stop it did. closing() keeps their words.
 		} catch (LLMPermanentError $exc) {
 			$stopReason = 'error';
 			$errorMessage = $exc->getMessage();
@@ -496,10 +501,12 @@ final class Runner
 		$rootSpan->end();
 		$this->otel->export($spans);
 
+		// A stop that landed after the last check still wins: the row says who ended the run.
+		[$status, $stopReason] = $this->closing($sessionUuid, $errorMessage === null ? 'idle' : 'terminated', $stopReason);
 		$this->sessions->endThread($threadUuid, $stopReason, $totalIn, $totalOut);
 		$this->sessions->endSession(
 			$sessionUuid,
-			$errorMessage === null ? 'idle' : 'terminated',
+			$status,
 			$stopReason,
 			array_merge(
 				[
@@ -540,7 +547,7 @@ final class Runner
 		return new RunResult(
 			sessionUuid: $sessionUuid,
 			traceId: $traceId,
-			status: $errorMessage === null ? 'idle' : 'terminated',
+			status: $status,
 			stopReason: $stopReason,
 			tokensInput: $totalIn,
 			tokensOutput: $totalOut,
@@ -1302,6 +1309,12 @@ final class Runner
 		if ($this->sessionDeadline === null) {
 			return; // no session open (direct unit-level use of the loop)
 		}
+		// A STOP (POST agent-sessions/<uuid>/cancel) is read from the row before each spend:
+		// cooperative, so the call in flight finishes and the next one is never made.
+		if ($this->sessionUuid !== null
+			&& ($this->sessions->findByUuid($this->sessionUuid)['status'] ?? null) === 'cancelled') {
+			throw new SessionCancelled("session cancelled before {$at}");
+		}
 		$tokenCeiling = self::envInt(
 			'NOS_AGENT_SESSION_TOKEN_CEILING', self::SESSION_TOKEN_CEILING
 		);
@@ -1356,6 +1369,20 @@ final class Runner
 				. 'own client is bounded by the clock and by maxIterations.'
 			);
 		}
+	}
+
+	/**
+	 * The status and stop_reason a session closes with: a cancelled row keeps the
+	 * cancel's own (`cancelled by <actor>`); any other closes as the run says.
+	 *
+	 * @return array{0: string, 1: string}
+	 */
+	private function closing(string $uuid, string $status, string $stopReason): array
+	{
+		$row = $this->sessions->findByUuid($uuid);
+		return ($row['status'] ?? null) === 'cancelled'
+			? ['cancelled', (string) ($row['stop_reason'] ?? 'cancelled')]
+			: [$status, $stopReason];
 	}
 
 	/**
@@ -1588,4 +1615,12 @@ final class RunResult
 			true,
 		);
 	}
+}
+
+/**
+ * The session row was cancelled: the run ends before its next model call. Not a
+ * ceiling (no wrap-up turn is spent) and not an LLM error (nothing retries or falls back).
+ */
+final class SessionCancelled extends \RuntimeException
+{
 }

@@ -1165,6 +1165,28 @@
   },
   {
     "function": {
+      "description": "Stop a Wing agent run you started in this conversation with start_agent, when the person asks: Wing marks it cancelled and the run ends before its next model call (the call in flight finishes). uuid: the session uuid start_agent gave you. You hear the outcome; Wing may refuse (not running, not found).",
+      "name": "stop_agent",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "uuid": {
+            "description": "the session uuid start_agent gave you",
+            "maxLength": 36,
+            "minLength": 36,
+            "type": "string"
+          }
+        },
+        "required": [
+          "uuid"
+        ],
+        "type": "object"
+      }
+    },
+    "type": "function"
+  },
+  {
+    "function": {
       "description": "The DataTables the person can read in KEAP: each id, title, rowCount and the day it was last updated. Renders a table to the person. Call it before query_rows when the person names a table you do not have the id of.",
       "name": "list_tables",
       "parameters": {
