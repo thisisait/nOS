@@ -289,6 +289,8 @@ final class RouterFactory
 		// /api/v1/agents/<name>/sessions accepts both GET (list) and POST
 		// (operator-trigger spawn — A14 follow-up, 2026-05-07).
 		$api->addRoute('api/v1/agents/<name>/sessions', 'Agents:sessions');
+		// The stop verb BEFORE the bare <uuid> form (first-match-wins).
+		$api->addRoute('api/v1/agent-sessions/<uuid>/cancel', 'AgentSessions:cancel');
 		$api->addRoute('api/v1/agent-sessions/<uuid>', 'AgentSessions:default');
 
 		// A17 (2026-05-20): CI deploy trigger — HMAC-auth POST that
