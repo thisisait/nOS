@@ -22,12 +22,17 @@ from __future__ import annotations
 
 import importlib.util
 import inspect
+import os
 import pathlib
 import re
+import shutil
+import stat
+import subprocess
 import sys
 import types
 
 import jinja2
+import pytest
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
@@ -182,6 +187,51 @@ def test_every_path_serve_reads_is_copied_to_the_genome():
     imap = _task(_tasks(MEDULLA_LINUX), lambda t: str((t.get("ansible.builtin.copy") or {}).get("dest", "")).endswith(
         "/.nos/identity-map.yml"), "the identity map serve reads under HOME is not copied")
     assert imap["ansible.builtin.copy"]["dest"] == "{{ nos_system_home }}/.nos/identity-map.yml"
+
+
+needs_ansible = pytest.mark.skipif(importlib.util.find_spec("ansible") is None, reason="runs the genome tasks through real Ansible")
+
+
+@needs_ansible
+def test_the_genome_tasks_copy_into_an_empty_home(tmp_path):
+    """copy makes no parent dirs for a single-file dest: the first converge failed at iris/agent.yml.
+    Every block task that loops over medulla_genome runs, in order, through real Ansible into an
+    empty tmp home (owner/group dropped: no chown unprivileged; the modes are still measured)."""
+    genome = _genome()
+    for g in genome:  # a mini repo: playbook_dir is the play's own dir
+        src, dst = REPO / g, tmp_path / g
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(src, dst) if src.is_dir() else shutil.copy(src, dst)
+    tasks = []
+    for t in _block()["block"]:
+        if "medulla_genome" not in str(t.get("loop")):
+            continue
+        t = {k: v for k, v in t.items() if k not in ("register", "become")}
+        for mod in ("ansible.builtin.file", "ansible.builtin.copy"):
+            if mod in t:
+                t[mod] = {k: v for k, v in t[mod].items() if k not in ("owner", "group")}
+        tasks.append(t)
+    assert tasks, "no block task loops over medulla_genome"
+    home = tmp_path / "var/lib/nos"
+    home.mkdir(parents=True)
+    play = [{"hosts": "localhost", "connection": "local", "gather_facts": False,
+             "vars": {"ansible_python_interpreter": sys.executable, "medulla_genome": genome,
+                      "nos_system_home": str(home), "nos_system_user": "nos"},
+             "tasks": tasks}]
+    (tmp_path / "play.yml").write_text(yaml.safe_dump(play))
+    env = {**os.environ, "HOME": str(tmp_path / "op"), "ANSIBLE_LOCAL_TEMP": str(tmp_path / ".ansible")}
+    r = subprocess.run([sys.executable, "-m", "ansible.cli.playbook", "-i", "localhost,", str(tmp_path / "play.yml")],
+                       capture_output=True, text=True, cwd=tmp_path, env=env, timeout=300)
+    assert r.returncode == 0, r.stdout[-2000:] + r.stderr[-1000:]
+    for g in genome:
+        got = home / "genome" / g
+        assert got.exists(), f"{g} did not reach the genome"
+        for f in [got] if got.is_file() else [p for p in got.rglob("*") if p.is_file()]:
+            assert stat.S_IMODE(f.stat().st_mode) == 0o640, f"{f} is {oct(f.stat().st_mode)}"
+        d = (home / "genome" / g.rstrip("/")).parent
+        while d != home:
+            assert stat.S_IMODE(d.stat().st_mode) == 0o750, f"{d} is {oct(d.stat().st_mode)}"
+            d = d.parent
 
 
 def test_the_service_account_is_nologin_tierless_and_no_person():
