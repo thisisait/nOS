@@ -18,7 +18,7 @@
     "reflex": 43,
     "heartbeat": 1,
     "internal": 76,
-    "edges": 436
+    "edges": 437
   },
   "nodes": {
     "agent:conductor": {
@@ -3332,6 +3332,11 @@
       "from": "service:keap",
       "to": "organ_system:archive",
       "kind": "part_of"
+    },
+    {
+      "from": "service:keap",
+      "to": "service:face",
+      "kind": "data"
     },
     {
       "from": "service:keap",

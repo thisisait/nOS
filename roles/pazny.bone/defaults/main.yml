@@ -14,6 +14,8 @@
 # ==============================================================================
 
 bone_port: 8099
+# Loopback for host callers; on Linux also the docker bridge, which host.docker.internal is there.
+bone_bind_hosts: "{{ ['127.0.0.1'] + ([nos_docker_host_ip] if (nos_docker_host_ip | default('127.0.0.1')) != '127.0.0.1' else []) }}"
 bone_domain: "api{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 
 # ── Host launchd shape (Anatomy A3a) ────────────────────────────────────────

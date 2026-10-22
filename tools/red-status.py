@@ -380,16 +380,16 @@ def pulse_daemon() -> dict:
         label = next(r["launchd_label"] for r in nos_identity.services() if r["id"] == "pulse")
     except Exception:  # noqa: BLE001
         return judge_pulse(None, "state/manifest.yml pulse row")
-    if sys.platform == "darwin":
-        cmd = ["launchctl", "print", f"gui/{os.getuid()}/{label}"]
-    else:
-        cmd = ["systemctl", "--user", "is-active", label]
-    try:
-        p = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-        res = (p.returncode, p.stdout)
-    except (OSError, subprocess.SubprocessError):
-        res = None
-    return judge_pulse(res, " ".join(cmd))
+    # launchd or systemd --user, by platform fact: tools/nos_host.py asks.
+    import nos_host  # noqa: PLC0415
+    st = nos_host.service_state(label)
+    if st is None:
+        return judge_pulse(None, f"service manager ({nos_host.SYSTEM}) for {label}")
+    if not st["loaded"]:
+        return {"running": False, "how": f"{st['source']}: {st['detail']}"}
+    if not st["running"]:
+        return {"running": False, "how": f"{st['source']}: loaded, no process ({st['detail']})"}
+    return {"running": True, "how": st["source"]}
 
 
 def _queue_pending() -> dict[str, int] | None:

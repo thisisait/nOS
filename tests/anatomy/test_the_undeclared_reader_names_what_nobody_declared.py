@@ -73,6 +73,8 @@ PS = """\
 
 def test_listeners_are_judged_against_declared_ports_and_daemon_pids(monkeypatch):
     mod = _load(TOOL, "_undecl_c")
+    # The fixture is Darwin's netstat: say so, or a Linux host parses it as `ss`.
+    monkeypatch.setattr(mod, "SYSTEM", "Darwin", raising=False)
     monkeypatch.setattr(mod, "_run", lambda *a, **k: NETSTAT if a[0] == "netstat" else PS)
     rows = mod.listeners()
     assert {r["port"] for r in rows} >= {18080}, "tcp46 (dual-stack) lines must parse"

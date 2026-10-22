@@ -281,6 +281,7 @@ Imported by the tools above; not run on their own, not graph nodes.
 - `_ledger_open.py` — One way to open the Wing ledger read-only, for readers that must not write.
 - `_geo_db.py` — The shared "is there a geo database here" check: absent idles, a stopped container is an outage.
 - `nos_identity.py` — The manifest row is the only place a service's spellings meet.
+- `nos_host.py` — The host's own answers, per platform, in one place: an organ's state, definition, running env and log by label (launchd / systemd --user), the listening TCP ports with their owners (netstat / ss), macOS-only sources (lsof, `log show`). None = UNKNOWN. The only tool that calls those binaries (`test_readers_ask_the_host_through_one_shim.py`); `nos_host.py env <label>` feeds run-agent.sh.
 - `nos_cell_binding.py` — binding.rs ported (same cases) + the preflight: a cell bound to local ollama refuses without a model of at least llm_cell_min_params_b, and prints `WARN:` under llm_cell_recommended_params_b (`--warn-below-b`).
 - `nos_security.py` — Resolve the live security notebook (`~/.nos/security`), not the git promotion copy.
 - `nos_work_uri.py` — Parse + match the nos-work:// routing address (dtt-routing-address); the planner's capability/assignment matcher.

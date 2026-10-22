@@ -10,6 +10,10 @@ the recipe is docs/systems/openhuman/README.md.
 
 Reads only. Exit 0 always. A source it cannot read is UNKNOWN, never green.
 It does not need the app: with nothing installed every config line is UNKNOWN.
+OpenHuman is a macOS desktop app (main.yml installs it on Darwin only): off the
+Mac the egress and second-Ollama lines are N/A — `lsof` and the /opt/homebrew
+habitat are the Mac's — rather than a RED against a Homebrew prefix Linux never
+has. `lsof` runs through tools/nos_host.py.
 
 Usage:
     tools/openhuman-status.py [--json]
@@ -36,12 +40,16 @@ import tempfile
 import urllib.error
 import urllib.request
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import nos_host  # noqa: E402 — the platform fact, and the one place `lsof` is run
+
 try:
     import tomllib
 except ImportError:  # python < 3.11: every config line becomes UNKNOWN
     tomllib = None
 
 OK, RED, UNKNOWN = "OK", "RED", "UNKNOWN"
+NA = "N/A"   # off the Mac: a question that does not apply here, neither green nor red
 HOME = pathlib.Path.home()
 LOCAL_PREFIXES = ("ollama:", "lmstudio:", "mlx:", "omlx:", "local-openai:")
 WORKLOADS = ("chat_provider", "reasoning_provider", "agentic_provider", "coding_provider")
@@ -361,9 +369,12 @@ def collect() -> list[dict]:
         url = str(_get(acfg, "memory.engines.cortexdb.endpoint", "")).rstrip("/")
         if _loopback(url):
             out.append(judge_hippocampus(_status(url + "/v1/admin/health"), url))
-    out.append(judge_lsof(_run(["lsof", "-nP", "-iTCP", "-iUDP"]) if procs else ""))
+    if nos_host.SYSTEM != "Darwin":
+        why = f"OpenHuman is a macOS desktop app; not installed by nOS on {nos_host.SYSTEM}"
+        return out + [line("egress", NA, why, "nos_host.SYSTEM"), line("second Ollama", NA, why, "nos_host.SYSTEM")]
+    out.append(judge_lsof(nos_host.lsof("-nP", "-iTCP", "-iUDP") if procs else ""))
     out.append(judge_ollama(_run(["ps", "-axo", "comm="]),
-                            _run(["lsof", "-nP", "-a", "-iTCP", "-sTCP:LISTEN", "-c", "ollama"]),
+                            nos_host.lsof("-nP", "-a", "-iTCP", "-sTCP:LISTEN", "-c", "ollama"),
                             os.environ.get("NOS_OPENHUMAN_OLLAMA_PREFIX", "/opt/homebrew"),
                             os.environ.get("PATH", "").split(os.pathsep)))
     return out

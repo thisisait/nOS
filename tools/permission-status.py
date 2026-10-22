@@ -49,6 +49,12 @@ data lives — is a removable volume. Things work for a reason nobody had
 written down, and `roles/pazny.backup/files/backup.sh` had written down the
 wrong one ("Docker Desktop holds the grant").
 
+OFF THE MAC. TCC is Apple's; Linux has no per-binary consent store and no
+dialog that can stall a job. On any other platform this reader says exactly
+that — NOT APPLICABLE, exit 0, nothing probed — rather than a traceback (it
+died on the DGX Spark looking for `log`) or a green it did not earn. The
+platform comes from tools/nos_host.py, which also runs the `log show` below.
+
 WHAT IT WILL NOT DO. It never grants, never opens System Settings, never
 prompts. Triggering a dialog to see what happens is precisely the failure it
 exists to prevent, so every probe is chosen to be answerable without one where
@@ -74,6 +80,12 @@ import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 HOME = pathlib.Path.home()
+sys.path.insert(0, str(REPO / "tools"))
+import nos_host  # noqa: E402 — the platform fact, and the one place `log` is run
+
+#: What a non-macOS host is told, in the JSON and on the terminal.
+NOT_APPLICABLE = ("macOS TCC (privacy permissions) has no equivalent on {platform}: "
+                  "no consent store to read, no dialog that can stall a job. Nothing probed.")
 
 OK, DENIED, UNKNOWN = "OK", "DENIED", "UNKNOWN"
 
@@ -211,12 +223,14 @@ def grants(days: int = 2, everything: bool = False) -> list[dict]:
     An empty result is reported as such — `log show` keeps a bounded window,
     so "nothing found" means "not in the last N days", never "never happened".
     """
-    got = _run(["log", "show", "--last", f"{days}d", "--style", "compact",
-                "--predicate",
-                'subsystem == "com.apple.TCC" AND ('
-                'eventMessage CONTAINS "AUTHREQ_CTX" OR '
-                'eventMessage CONTAINS "AUTHREQ_SUBJECT" OR '
-                'eventMessage CONTAINS "AUTHREQ_RESULT")'], timeout=600)
+    got = nos_host.unified_log(["show", "--last", f"{days}d", "--style", "compact",
+                                "--predicate",
+                                'subsystem == "com.apple.TCC" AND ('
+                                'eventMessage CONTAINS "AUTHREQ_CTX" OR '
+                                'eventMessage CONTAINS "AUTHREQ_SUBJECT" OR '
+                                'eventMessage CONTAINS "AUTHREQ_RESULT")'], timeout=600)
+    if got is None:
+        return [{"error": "the unified log is unreadable on this host (`log show` did not run)"}]
     if got.returncode != 0:
         return [{"error": f"log show failed: {got.stderr.strip()[-200:]}"}]
 
@@ -321,6 +335,14 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args(argv)
     both = not (args.probes or args.grants)
+
+    if nos_host.SYSTEM != "Darwin":
+        why = NOT_APPLICABLE.format(platform=nos_host.SYSTEM or "this platform")
+        if args.json:
+            print(json.dumps({"applicable": False, "platform": nos_host.SYSTEM, "why": why}, indent=2))
+        else:
+            print(f"NOT APPLICABLE — {why}")
+        return 0
 
     data: dict = {"days": args.days}
     if both or args.probes:

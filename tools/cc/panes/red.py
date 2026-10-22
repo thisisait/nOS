@@ -115,6 +115,12 @@ def build_rows(data):
         tally = ", ".join(f"{n} {sev}" for sev, n in sorted(dep["counts"].items()))
         rows.append(_row("dep", "dependabot", "OPEN", "", tally))
 
+    # tools/undeclared-status.py: running/persisted on the host, declared nowhere.
+    # Unrendered, a readable axis showed LESS than an unreadable one did.
+    for item in data.get("undeclared") or []:
+        kind, _, what = str(item).partition(" ")
+        rows.append(_row("undeclared", kind, "UNDECLARED", "", what))
+
     for missing in data.get("sources_missing") or []:
         rows.append(_row("source", missing, "UNKNOWN", "", "unreadable"))
 

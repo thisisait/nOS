@@ -91,6 +91,16 @@ depends_on:
     unenforced: >-
       No auto-enable block ties install_bone to install_face; the file browser
       degrades to "unreachable" rather than failing.
+  - upstream: "service:keap"
+    kind: data
+    via: >-
+      NOS_KEAP_TABLES_URL → keap:8080/api/tables over gated_net
+      (roles/pazny.face/templates/compose.yml.j2) — the config DataTables,
+      called as the signed-in person with the keap-proxy shared secret
+    measured: "2026-10-22"
+    unenforced: >-
+      Rendered only under install_keap; without KEAP the URL is empty and the
+      tables app says it is unwired. No auto-enable block ties the two.
 
 authentik:
   mode: forward_auth

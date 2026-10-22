@@ -54,6 +54,19 @@ the Intel fallback, out of scope after macOS 27. Pinned by
 | macOS niceties (dock, defaults, pmset, casks, MAS) | yes | skipped (fact) | skipped |
 | ANSSI hardening | — | yes · skipped in a container | runs (WSL2 is a VM, not a container) |
 
+## Readers: the host is asked in one place
+
+The playbook resolves platform by fact; the readers under `tools/` do the same
+through one shim, `tools/nos_host.py`. It answers an organ's state, definition,
+running environment and log by label (`launchctl` on macOS, `systemctl --user`
++ the journal on Linux), and the listening TCP ports with their owners
+(`netstat` / `ss`). An unreadable source is `None`, which a reader renders as
+UNKNOWN. On Linux `ss -p` cannot name another user's process: such a listener
+is reported with its owner "not visible", never guessed. A macOS-only question
+(TCC permissions, OpenHuman's egress) reads `N/A` off the Mac. Gate:
+`tests/anatomy/test_readers_ask_the_host_through_one_shim.py` — no other tool
+calls those binaries.
+
 ## Windows: WSL2, not native
 
 Ansible's controller does not run on native Windows, and every nOS host daemon

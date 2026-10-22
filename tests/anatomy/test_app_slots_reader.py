@@ -27,7 +27,7 @@ REPO = Path(__file__).resolve().parents[2]
 def rig(tmp_path):
     repo, home = tmp_path / "repo", tmp_path / "home"
     (repo / "tools").mkdir(parents=True)
-    for f in ("app-slots.py", "nos_identity.py"):
+    for f in ("app-slots.py", "nos_identity.py", "nos_host.py"):
         shutil.copy(REPO / "tools" / f, repo / "tools" / f)
     (repo / "state").mkdir()
     (repo / "state/manifest.yml").write_text(
