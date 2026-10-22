@@ -270,7 +270,7 @@ def summary(report: dict) -> list[str]:
     """One phrase per undeclared item — red-status joins them into its line."""
     return ([f"port {p['addr']}:{p['port']} ({_owner(p['exe'])})" for p in report.get("ports", [])]
             + [f"cron `{c[:60]}`" for c in report.get("cron", [])]
-            + [f"launchd {d['label']}{' (loaded)' if d['loaded'] else ''}" for d in report.get("launchd", [])])
+            + [f"{_manager()[0].split()[0]} {d['label']}{' (loaded)' if d['loaded'] else ''}" for d in report.get("launchd", [])])
 
 
 def main() -> int:
@@ -285,7 +285,7 @@ def main() -> int:
     for d in report.get("launchd", []):
         state = ({True: f"loaded pid={d['pid']}" if d["pid"] else "loaded, not running", False: "on disk, not loaded"}
                  .get(d["loaded"], "system domain, not asked"))
-        print(f"  launchd  {d['label']:<44} {state:<26} {d['program']}  [{d['path']}]")
+        print(f"  {_manager()[0].split()[0]:<8} {d['label']:<44} {state:<26} {d['program']}  [{d['path']}]")
     for p in report.get("ports", []):
         exe = _owner(p["exe"]) if p["exe"] == nos_host.OWNER_HIDDEN else p["exe"]
         print(f"  port     {p['addr']}:{p['port']:<6} pid={str(p['pid'] or '-'):<7} {exe}")
