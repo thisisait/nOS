@@ -60,8 +60,6 @@ def test_the_linux_env_carries_the_same_door():
     env = jinja2.Environment(undefined=jinja2.StrictUndefined)
     env.filters["bool"] = bool
     ctx = {"ansible_managed": "managed", "ansible_facts": {"env": {"HOME": "/h"}}, "nos_tools_venv": "/v", "nos_main_checkout": "/repo",
-           # thalamus.env.j2 reads HOME/PATH/NOS_REPO_ROOT from role defaults (row nos-system-user-linux); today's values
-           "thalamus_env_home": "/h", "thalamus_env_path": "/v/bin:/usr/local/bin:/usr/bin:/bin", "thalamus_repo_root": "/repo",
            "keap_proxy_shared_secret": "s", "thalamus_shared_socket": "/run/nos/thalamus.sock", "thalamus_roadmap_table_id": "rt",
            "authentik_rbac_tiers": _default_config()["authentik_rbac_tiers"], "thalamus_binding_env": {},
            "thalamus_wing_api_token": "wt-1", "wing_port": 9000, "iris_startable_agents": ["conductor"]}
