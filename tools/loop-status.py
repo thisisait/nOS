@@ -651,6 +651,143 @@ def collect() -> dict:
     }
 
 
+# ── --loop <id>: one loop's record, one function per source ───────────────
+#
+# Measured 2026-10-21: install_loops off, 32 baseline verdicts, 0 proposals —
+# and nothing said whether a loop had run, failed, been HELD, or was simply not
+# scheduled. Each source below is UNKNOWN (with why) when it cannot be read, and
+# an unregistered job is `registered: false`, never an empty history.
+
+#: SERE is the ledger loop (plugin loop-base); every other id is a manifest.
+SERE_JOBS = ("loop-base:propose", "loop-base:drive", "loop-base:review")
+LOOPS_DIR = REPO / "files" / "anatomy" / "loops"
+HOLD_EXIT = 78      # tools/job_readiness.py HOLD_EXIT
+PAUSED_EXIT = 3     # agent-run-lock.sh: loops paused by the operator
+
+
+def _unknown(why: str) -> dict:
+    return {"status": "UNKNOWN", "why": why}
+
+
+def _load_tool(name: str):
+    import importlib.util  # noqa: PLC0415
+
+    spec = importlib.util.spec_from_file_location(f"_ls_{name}", REPO / "tools" / f"{name}.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _ledger_source(since: str) -> dict:
+    """SERE's own record: verdicts by gate_set/result, judge runs that did not
+    pass, and the awaiting states (current, so not cut by --since)."""
+    conn = _connect()
+    if conn is None:
+        return _unknown(f"ledger unreadable at {WING_DB}")
+    try:
+        with conn:
+            verdicts: dict[str, dict[str, int]] = {}
+            for r in conn.execute(
+                    "SELECT gate_set, result, COUNT(*) AS n FROM loop_verdicts "
+                    " WHERE created_at >= ? GROUP BY gate_set, result", (since,)):
+                verdicts.setdefault(r["gate_set"], {})[r["result"]] = r["n"]
+            runs = [dict(r) for r in conn.execute(
+                "SELECT gate_set, judge_name, status, outcome, exit_code, reason, started_at "
+                "  FROM loop_judge_runs WHERE started_at >= ? "
+                "   AND (outcome IS NULL OR outcome <> 'pass') ORDER BY started_at", (since,))]
+    except sqlite3.Error as exc:
+        return _unknown(f"{type(exc).__name__}: {exc}")
+    finally:
+        conn.close()
+    waiting = awaiting()
+    if waiting.get("error"):
+        return _unknown(waiting["error"])
+    states: dict[str, int] = {}
+    for row in waiting["rows"]:
+        states[row["state"]] = states.get(row["state"], 0) + 1
+    return {"status": "ok", "verdicts": verdicts,
+            "judge_runs_not_passed": runs, "awaiting": states}
+
+
+def _pulse_source(job_ids: list[str], since: str) -> dict:
+    """The loop's pulse_runs: count, exit codes, last fired, failures' stderr
+    tail, and held runs with their HELD lines. A job that is not registered is
+    said, because an empty history would read as 'never ran'."""
+    conn = _connect()
+    if conn is None:
+        return _unknown(f"ledger unreadable at {WING_DB}")
+    try:
+        with conn:
+            jobs = {r["id"]: r["findings_exit_codes"] for r in conn.execute(
+                "SELECT id, findings_exit_codes FROM pulse_jobs "
+                " WHERE removed_at IS NULL AND id IN (SELECT value FROM json_each(?))",
+                (json.dumps(job_ids),))}
+            if not jobs:
+                return {"registered": False, "said": "no loop job registered (install_loops?)"}
+            runs = [dict(r) for r in conn.execute(
+                "SELECT job_id, fired_at, exit_code, stdout_tail, stderr_tail FROM pulse_runs "
+                " WHERE fired_at >= ? AND job_id IN (SELECT value FROM json_each(?)) "
+                " ORDER BY fired_at", (since, json.dumps(list(jobs))))]
+    except sqlite3.Error as exc:
+        return _unknown(f"{type(exc).__name__}: {exc}")
+    finally:
+        conn.close()
+    calm = {}
+    for jid, codes in jobs.items():
+        try:
+            calm[jid] = {0, HOLD_EXIT, PAUSED_EXIT, *json.loads(codes or "[]")}
+        except (TypeError, ValueError):
+            calm[jid] = {0, HOLD_EXIT, PAUSED_EXIT}
+    codes: dict[str, int] = {}
+    for r in runs:
+        key = str(r["exit_code"])
+        codes[key] = codes.get(key, 0) + 1
+    return {
+        "registered": True, "jobs": sorted(jobs), "count": len(runs), "exit_codes": codes,
+        "last_fired": runs[-1]["fired_at"] if runs else None,
+        "failures": [{"job_id": r["job_id"], "fired_at": r["fired_at"],
+                      "exit_code": r["exit_code"], "stderr_tail": r["stderr_tail"]}
+                     for r in runs if r["exit_code"] is not None
+                     and r["exit_code"] not in calm[r["job_id"]]],
+        "held": [{"job_id": r["job_id"], "fired_at": r["fired_at"],
+                  "needs": [ln.strip()[len("HELD: "):] for ln in (r["stdout_tail"] or "").splitlines()
+                            if ln.strip().startswith("HELD: ")] or ["held, need not recorded"]}
+                 for r in runs if r["exit_code"] == HOLD_EXIT],
+    }
+
+
+def _readiness(job_ids: list[str], cfg: dict | None = None, host: dict | None = None) -> dict:
+    """Would each job be HELD if it fired now? Asked of tools/job_readiness.py,
+    the one judge (its catalog keys omit the plugin's `-base`)."""
+    try:
+        jr = _load_tool("job_readiness")
+        catalog = jr.catalog()
+        cfg = jr.resolved_config() if cfg is None else cfg
+        host = jr.host_facts() if host is None else host
+        held = {}
+        for jid in job_ids:
+            job = catalog.get(jid.replace("-base:", ":", 1))
+            needs = [str(n) for n in jr.job_needs(job, cfg, host) if not n.warn] if job else []
+            if needs:
+                held[jid] = needs
+    except Exception as exc:  # noqa: BLE001 — any failure is the same answer: UNKNOWN
+        return _unknown(f"{type(exc).__name__}: {exc}")
+    return {"status": "ok", "held": held}
+
+
+def loop_report(loop_id: str, since: str | None) -> dict:
+    known = sorted(p.name.removesuffix(".loop.yml") for p in LOOPS_DIR.glob("*.loop.yml"))
+    if loop_id != "sere" and loop_id not in known:
+        return {"error": f"unknown loop {loop_id!r}", "known": ["sere", *known]}
+    since = since or ""
+    jobs = list(SERE_JOBS) if loop_id == "sere" else [f"loop:{loop_id}"]
+    out = {"loop": loop_id, "since": since or None,
+           "pulse": _pulse_source(jobs, since), "readiness": _readiness(jobs)}
+    if loop_id == "sere":
+        out["ledger"] = _ledger_source(since)
+    return out
+
+
 #: What each state means for the reader, in the words they need to act on. The
 #: order is the order to act in — a ready patch is a minute's work, a conflicted
 #: one is a re-proposal.
@@ -755,7 +892,20 @@ def main() -> int:
                     help="reported weaknesses that no proposal has ever cited")
     ap.add_argument("--awaiting", action="store_true",
                     help="passed verdicts and whether the patch reached the tree")
+    ap.add_argument("--loop", metavar="ID",
+                    help="one loop's record: 'sere' (the ledger) or a loops/*.loop.yml id")
+    ap.add_argument("--since", metavar="DATE", help="with --loop: only rows on or after DATE")
     args = ap.parse_args()
+
+    if args.loop:
+        report = loop_report(args.loop, args.since)
+        if args.json:
+            json.dump(report, sys.stdout, indent=2, sort_keys=True, default=str)
+            sys.stdout.write("\n")
+        else:
+            for key, val in report.items():
+                print(f"{key}: {json.dumps(val, sort_keys=True, default=str)}")
+        return 0
 
     if args.awaiting:
         return _print_awaiting(awaiting(), as_json=args.json)
