@@ -214,8 +214,8 @@ group, never docker) and `roles/pazny.medulla` runs `thalamus serve` as it from 
 under the same label, `/etc/systemd/system/eu.thisisait.nos.thalamus.service`: the binary at
 `/usr/local/libexec/nos/medulla`, the env at `/etc/nos/medulla.env` (0640 root:nos), the ledger in
 `/var/lib/nos/thalamus`, and the repo files serve reads (`medulla_genome`) plus the identity map
-copied under `/var/lib/nos` at converge. The unit has `ProtectHome=yes` and
-`ReadWritePaths=/var/lib/nos`. **Ceiling:** nos cannot read `~/wing/app/data/wing.db` or `~/.nos`,
+copied under `/var/lib/nos` at converge. The home is root:nos 0750, so nos can rename nothing it
+reads; the unit has `ProtectHome=yes` and `ReadWritePaths=/var/lib/nos/thalamus` only. **Ceiling:** nos cannot read `~/wing/app/data/wing.db` or `~/.nos`,
 so the metrics route, any thread that reads the Wing db, and `propose_app` (repo `tools/`, `apps/`,
 `roles/`) stay off on such a host until Wing's data moves under `/var/lib/nos`. The ledger starts
 empty there. `--tags verify` checks that the unit's process runs as `nos`. Gate:

@@ -56,14 +56,18 @@
       ansible.builtin.file:
         path: "{{ item.path }}"
         state: directory
-        owner: root
+        owner: "{{ item.owner | default('root') }}"
         group: "{{ item.group }}"
         mode: "{{ item.mode }}"
+      # The home is root's (user made it nos's): nos renames nothing in it, so it cannot swap
+      # genome/ or .nos/ for its own; it writes only the ledger (ReadWritePaths).
       loop:
         - { path: /usr/local/libexec/nos, group: root, mode: '0755' }
         - { path: /etc/nos, group: root, mode: '0755' }
+        - { path: "{{ nos_system_home }}", group: "{{ nos_system_user }}", mode: '0750' }
         - { path: "{{ nos_system_home }}/.nos", group: "{{ nos_system_user }}", mode: '0750' }
         - { path: "{{ nos_system_home }}/genome", group: "{{ nos_system_user }}", mode: '0750' }
+        - { path: "{{ nos_system_home }}/thalamus", owner: "{{ nos_system_user }}", group: "{{ nos_system_user }}", mode: '0700' }
 
     - name: "[pazny.medulla] The binary, outside $HOME"
       ansible.builtin.copy:
