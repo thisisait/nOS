@@ -34,7 +34,8 @@ Two layers:
 - **The strangler seam ([medulla.md §5](../../../ssot/doctrine/medulla.md)):** each prefix in `medulla_routes`
   (default `[]`) renders one Caddy `handle /api/v1/<prefix>*` that proxies to the medulla on
   `127.0.0.1:<medulla_http_port>` (8095); everything else still reaches PHP. A prefix moves whole, never one
-  route of it. The multipart 415 and the loopback bind stay in front. The medulla enforces what PHP did for
+  route of it. The loopback bind stays in front; Caddy runs `handle` before the site's `respond`, so each
+  moved handle repeats the multipart 415 itself. The medulla enforces what PHP did for
   the route: `metrics` is an anonymous loopback read (Alloy scrapes it with no bearer), and it opens
   `wing.db` read-only, so PHP stays the one writer. On Linux with `nos_system_user` set, a moved route is
   refused until Wing's data leaves `$HOME`. Gate: `tests/anatomy/test_medulla_serves_metrics.py`.
