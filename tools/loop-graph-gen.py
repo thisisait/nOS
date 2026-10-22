@@ -15,6 +15,7 @@ face copy, `--check` returns 1 on drift. Gate: tests/anatomy/test_loop_graph_is_
 
     tools/loop-graph-gen.py            # write both copies
     tools/loop-graph-gen.py --check    # exit 1 if either copy is stale
+    tools/loop-graph-gen.py --validate <file.loop.yml>   # exit 1, every reason on stderr
 """
 
 from __future__ import annotations
@@ -22,10 +23,13 @@ from __future__ import annotations
 import glob
 import json
 import os
+import posixpath
+import re
 import sys
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.join(REPO, "files", "anatomy", "bone"))
+import budget  # noqa: E402 — ALLOWED_ROOTS bounds the repo paths a loop may write
 import ledger  # noqa: E402 — THE source of truth for loop structure
 
 import yaml  # noqa: E402
@@ -93,7 +97,7 @@ def _grants() -> list[dict]:
 _STEP_BAND = 300  # x per step column
 _ITEM_H = 84      # y per for_each item within a column
 _STEP_RUNNERS = {"tool", "agent", "query"}
-_SLUG = __import__("re").compile(r"^[a-z][a-z0-9-]*[a-z0-9]$")
+_SLUG = re.compile(r"^[a-z][a-z0-9-]*[a-z0-9]$")
 
 
 def _tmpl(text: str, item: dict) -> str:
@@ -104,40 +108,97 @@ def _tmpl(text: str, item: dict) -> str:
     return out
 
 
-def _validate_manifest(m: dict, path: str) -> None:
-    def bad(why: str):
-        raise ValueError(f"{os.path.relpath(path, REPO)}: {why}")
+_CRON_BOUNDS = ((0, 59), (0, 23), (1, 31), (1, 12), (0, 7))
+_CRON_ITEM = re.compile(r"^(\*|(\d+)(?:-(\d+))?)(?:/(\d+))?$")
+_RUN_PREFIX = "{{ playbook_dir }}/tools/loops/"
+_SCHEME = re.compile(r"^[a-z][a-z0-9-]*:")  # keap:/table:/notification: — not a repo path
 
-    for req in ("id", "label", "blurb", "trigger", "steps"):
-        if req not in m:
-            bad(f"missing required key `{req}`")
-    if not (isinstance(m["id"], str) and _SLUG.match(m["id"])):
-        bad(f"id {m.get('id')!r} is not a slug ([a-z][a-z0-9-])")
-    if m["id"] == "sere":
-        bad("id `sere` is reserved for the code-defined loop")
-    trig = m["trigger"]
+
+def _cron_ok(expr) -> bool:
+    """Five numeric fields, each `*`, `n` or `a-b` with an optional `/step`,
+    comma-listed, inside the field's bounds. No names, no @daily."""
+    fields = str(expr).split()
+    if len(fields) != 5:
+        return False
+    for field, (lo, hi) in zip(fields, _CRON_BOUNDS):
+        for item in field.split(","):
+            mt = _CRON_ITEM.match(item)
+            if not mt or mt.group(4) == "0":
+                return False
+            nums = [int(g) for g in mt.group(2, 3) if g is not None]
+            if any(not lo <= n <= hi for n in nums) or (len(nums) == 2 and nums[0] > nums[1]):
+                return False
+    return True
+
+
+def validate_manifest(path: str, m: dict | None = None, root: str = REPO) -> list[str]:
+    """Every reason a loop manifest is refused; [] = valid. One function for
+    --validate, the graph build and discover-pulse-catalog.py (refused = not scheduled).
+    `root` is the checkout whose tools/loops/ the `run` must exist in."""
+    if m is None:
+        try:
+            m = yaml.safe_load(open(path, encoding="utf-8")) or {}
+        except (OSError, yaml.YAMLError) as exc:
+            return [f"unreadable: {exc}"]
+    if not isinstance(m, dict):
+        return ["a manifest must be a map"]
+    why = [f"missing required key `{k}`" for k in ("id", "label", "blurb", "trigger", "steps") if k not in m]
+    if not (isinstance(m.get("id"), str) and _SLUG.match(m["id"])):
+        why.append(f"id {m.get('id')!r} is not a slug ([a-z][a-z0-9-])")
+    if m.get("id") == "sere":
+        why.append("id `sere` is reserved for the code-defined loop")
+    trig = m.get("trigger")
     if not isinstance(trig, dict) or not (trig.get("cadence") or trig.get("event")):
-        bad("trigger needs a `cadence` (cron) or an `event`")
+        why.append("trigger needs a `cadence` (cron) or an `event`")
+    elif trig.get("cadence") and not _cron_ok(trig["cadence"]):
+        why.append(f"cadence {trig['cadence']!r} is not a cron (5 numeric fields in range)")
     params = m.get("params") or {}
     if not isinstance(params, dict):
-        bad("`params` must be a map of name → list")
+        why.append("`params` must be a map of name → list")
+        params = {}
     for pname, items in params.items():
         if not isinstance(items, list) or not all(isinstance(it, dict) and "id" in it for it in items):
-            bad(f"param `{pname}` must be a list of objects each with an `id`")
-    if not (isinstance(m["steps"], list) and m["steps"]):
-        bad("`steps` must be a non-empty list")
+            why.append(f"param `{pname}` must be a list of objects each with an `id`")
+    steps = m.get("steps")
+    if not (isinstance(steps, list) and steps):
+        why.append("`steps` must be a non-empty list")
+        steps = []
+    pulse = m.get("pulse") if isinstance(m.get("pulse"), dict) else {}
+    writes = list(pulse.get("writes") or [])
     seen: set[str] = set()
-    for s in m["steps"]:
+    for s in steps:
         if not (isinstance(s, dict) and isinstance(s.get("id"), str)):
-            bad("each step needs a string `id`")
+            why.append("each step needs a string `id`")
+            continue
         if s["id"] in seen:
-            bad(f"duplicate step id `{s['id']}`")
+            why.append(f"duplicate step id `{s['id']}`")
         seen.add(s["id"])
         if s.get("runner") not in _STEP_RUNNERS:
-            bad(f"step `{s['id']}` runner must be one of {sorted(_STEP_RUNNERS)}")
+            why.append(f"step `{s['id']}` runner must be one of {sorted(_STEP_RUNNERS)}")
         fe = s.get("for_each")
         if fe is not None and fe not in params:
-            bad(f"step `{s['id']}` for_each `{fe}` is not a declared param")
+            why.append(f"step `{s['id']}` for_each `{fe}` is not a declared param")
+        writes += s.get("writes") or []
+    run = m.get("run")
+    if run is not None:
+        name = str(run)[len(_RUN_PREFIX):] if str(run).startswith(_RUN_PREFIX) else ""
+        if not name or "/" in name or not os.path.isfile(os.path.join(root, "tools", "loops", name)):
+            why.append(f"run {run!r} must name an existing {_RUN_PREFIX}<file>")
+    for w in writes:
+        target = str(w.get("target", "") if isinstance(w, dict) else w)
+        if _SCHEME.match(target):
+            continue
+        norm = posixpath.normpath(target)
+        if norm.startswith(("/", "..")) or not any(
+                norm.startswith(r) if r.endswith("/") else norm == r for r in budget.ALLOWED_ROOTS):
+            why.append(f"writes {target!r} is outside the allowed roots {list(budget.ALLOWED_ROOTS)}")
+    return why
+
+
+def _validate_manifest(m: dict, path: str) -> None:
+    why = validate_manifest(path, m)
+    if why:
+        raise ValueError(f"{os.path.relpath(path, REPO)}: " + "; ".join(why))
 
 
 def _load_manifests() -> list[dict]:
@@ -306,6 +367,17 @@ def render(graph: dict) -> str:
 
 
 def main() -> int:
+    if "--validate" in sys.argv:
+        files = sys.argv[sys.argv.index("--validate") + 1:]
+        if not files:
+            print("usage: loop-graph-gen.py --validate <file.loop.yml>...", file=sys.stderr)
+            return 2
+        bad = 0
+        for f in files:
+            for why in validate_manifest(f):
+                print(f"{f}: {why}", file=sys.stderr)
+                bad = 1
+        return bad
     out = render(build())
     if "--check" in sys.argv:
         stale = [p for p in (TARGET, FACE_TARGET)

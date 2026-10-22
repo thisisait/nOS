@@ -46,6 +46,24 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 import nos_identity  # noqa: E402
 
 
+_LOOP_GEN = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "tools", "loop-graph-gen.py")
+
+
+def _loop_validator():
+    """tools/loop-graph-gen.py::validate_manifest — the face draws and Pulse
+    schedules the same manifest, so both refuse it by the same rules. If it
+    cannot load, every loop is refused (fail closed); plugin jobs still discover."""
+    import importlib.util
+    try:
+        spec = importlib.util.spec_from_file_location("loop_graph_gen", _LOOP_GEN)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod.validate_manifest
+    except Exception as exc:  # noqa: BLE001 — any load failure, same answer
+        why = [f"loop validator unavailable: {exc!r}"]
+        return lambda *_a, **_k: why
+
+
 def _env(name: str, default: str = "") -> str:
     """Return an env var, falling back to default. Empty-string default
     keeps the substitution map total — missing env doesn't crash the
@@ -317,8 +335,15 @@ def main() -> int:
     plugins = {d.get("name"): d for p, d in docs.items() if p.endswith("/plugin.yml")}
 
     catalog: list[dict] = []
+    validate_loop = _loop_validator()
     for path, doc in docs.items():
         is_loop = path.endswith(".loop.yml")
+        refused = validate_loop(path, doc, root=playbook_dir) if is_loop else []
+        if refused:
+            # A loop the graph refuses must not tick either: no job, and say so.
+            for why in refused:
+                print(f"refused loop {path.split('/anatomy/')[-1]}: {why}", file=sys.stderr)
+            continue
         block = _loop_pulse_block(doc) if is_loop else (doc.get("pulse") or {})
         plugin_name = "loop" if is_loop else (
             doc.get("name") or doc.get("agent_id")
