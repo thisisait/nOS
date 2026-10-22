@@ -4,7 +4,7 @@
 READER. Sources: state/manifest.yml (service ids + domain_var/port_var resolved
 through the config layers by nos_identity), apps/*.yml (+ drafts) and
 roles/pazny.*, Traefik's rendered dynamic routes (~/stacks/infra/traefik/conf.d),
-and with --live the host's listening TCP ports (netstat / ss, read-only).
+and with --live the host's listening TCP ports (tools/nos_host.py: netstat / ss, read-only).
 A check is free: true only when every source it needs was read; a name a read
 source holds is false; otherwise null. Exit 0 always.
 Gate: tests/anatomy/test_app_slots_reader.py. Consumer: nos_app_parser --estate.
@@ -17,9 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
-import platform
 import re
-import subprocess
 import sys
 from pathlib import Path
 
@@ -96,20 +94,14 @@ def _traefik(subs: dict) -> None:
 
 
 def _listening(ports: dict) -> None:
-    if platform.system() == "Darwin":  # netstat sees every user's sockets, lsof only ours
-        out = subprocess.run(["netstat", "-an", "-p", "tcp"], capture_output=True, text=True,
-                             timeout=10, check=True).stdout
-        addrs = [ln.split()[3] for ln in out.splitlines() if ln.endswith("LISTEN") and len(ln.split()) > 3]
-        sep = "."
-    else:
-        out = subprocess.run(["ss", "-ltnH"], capture_output=True, text=True, timeout=10, check=True).stdout
-        addrs = [ln.split()[3] for ln in out.splitlines() if len(ln.split()) > 3]
-        sep = ":"
-    for a in addrs:
-        try:
-            ports.setdefault(int(a.rsplit(sep, 1)[1]), f"listening on {a}")
-        except (IndexError, ValueError):
-            pass
+    # Only --live asks the host: netstat on Darwin, ss on Linux, by platform fact.
+    import nos_host  # noqa: PLC0415
+    rows = nos_host.listeners()
+    if rows is None:
+        raise RuntimeError(f"listening ports unreadable on {nos_host.SYSTEM}")
+    for r in rows:
+        addr = f"[{r['addr']}]" if ":" in r["addr"] else r["addr"]
+        ports.setdefault(int(r["port"]), f"listening on {addr}:{r['port']}")
 
 
 def collect(args) -> dict:
