@@ -17,6 +17,9 @@
     state_path: "{{ nos_state_file }}"
     manifest_path: "{{ nos_state_manifest }}"
     role_vars: "{{ vars }}"
+    # Records the apps runner as this run resolved it (-e included): readers
+    # read it instead of the file layers, which cannot see an -e profile.
+    apps_dir: "{{ apps_dir | default(playbook_dir ~ '/apps') }}"
   register: _nos_introspect
   # Read/introspection (the module stamps generated_at); not a config write.
   changed_when: false

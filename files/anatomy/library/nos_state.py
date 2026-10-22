@@ -60,6 +60,12 @@ options:
       introspection. Pass C(vars) from the Ansible context.
     type: dict
     default: {}
+  apps_dir:
+    description: For action=introspect, the apps/ directory pazny.apps_runner
+      reads. When set, the run's resolved apps runner is recorded as
+      C(apps.runner_enabled) and C(apps.deployed) (ids only, never var values).
+    type: str
+    required: false
 """
 
 EXAMPLES = r"""
@@ -126,6 +132,7 @@ try:
         empty_state,
         expand_path,
         introspect_all,
+        introspect_apps,
         load_manifest,
         load_state,
         to_json_safe,
@@ -144,6 +151,7 @@ except ImportError:
         empty_state,
         expand_path,
         introspect_all,
+        introspect_apps,
         load_manifest,
         load_state,
         to_json_safe,
@@ -243,6 +251,12 @@ def _action_introspect(module, params):
             existing = {}
         existing.update({k: v for k, v in obs.items() if v is not None or k in existing})
         state["services"][sid] = existing
+    # The apps runner, as this run resolved it — replaced whole, so an app the
+    # run stopped deploying leaves the record (readers prefer it over layers).
+    apps = None
+    if params.get("apps_dir"):
+        apps = introspect_apps(params["apps_dir"], params.get("role_vars") or {})
+        state["apps"] = apps
     state["generated_at"] = utcnow_iso()
 
     changed = True  # Introspection records 'generated_at' every run.
@@ -259,6 +273,7 @@ def _action_introspect(module, params):
     module.exit_json(
         changed=changed,
         services=to_json_safe(services),
+        apps=to_json_safe(apps),
         state=to_json_safe(state),
     )
 
@@ -279,6 +294,7 @@ def main():
             default=dict(type="raw", default=None),
             manifest_path=dict(type="str", default=None),
             role_vars=dict(type="dict", default={}),
+            apps_dir=dict(type="str", default=None),
         ),
         supports_check_mode=True,
     )

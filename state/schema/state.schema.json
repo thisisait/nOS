@@ -67,6 +67,20 @@
       }
     },
 
+    "apps": {
+      "type": "object",
+      "description": "The manifest apps (apps/*.yml) pazny.apps_runner deploys, as the last converge resolved it (-e included). Replaced whole every run. Absent on a state.yml written before it was recorded; readers then fall back to the file layers and say so.",
+      "additionalProperties": true,
+      "properties": {
+        "runner_enabled": { "type": ["boolean", "null"], "description": "apps_runner_enabled at last run." },
+        "deployed": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "App ids (apps/<id>.yml) the runner renders: minus apps_skip, minus openhuman unless install_openhuman. Empty when the runner is off."
+        }
+      }
+    },
+
     "migrations_applied": {
       "type": "array",
       "items": {
