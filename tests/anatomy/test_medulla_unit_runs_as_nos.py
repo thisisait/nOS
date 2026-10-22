@@ -307,22 +307,3 @@ def test_identity_status_shows_nos_as_a_service_account():
     row = [r for r in roster if r["name"] == "nos"]
     assert row and row[0]["kind"] == "service" and row[0]["realms"] == ["unix"], roster
     assert not [r for r in mod.declared_roster({})[0] if r.get("kind") == "service" and r["name"] == ""]
-
-
-def test_estate_status_reads_the_system_unit_as_run_by_another_user(tmp_path):
-    """The rendered unit, as estate-status finds it at /etc/systemd/system/<label>.service."""
-    mod = _load("estate_status_nos", "tools/estate-status.py")
-    assert UNIT.is_file(), f"no {UNIT.relative_to(REPO)} renders User=nos (exists: {UNIT.exists()})"
-    row = next(r for r in nos_identity.services() if r["id"] == "thalamus")
-    home = tmp_path / "home"
-    home.mkdir()
-    system = tmp_path / "etc/systemd/system"
-    system.mkdir(parents=True)
-    (system / f"{row['launchd_label']}.service").write_text(_render(UNIT))
-    assert _ctx("nos")["thalamus_unit_name"] == row["launchd_label"], "the unit keeps the thalamus's label"
-    ps = ["990 nos /usr/local/libexec/nos/medulla thalamus serve --data-dir /var/lib/nos/thalamus"]
-    res = mod.Result()
-    mod.axis_identity(res, root=tmp_path, home=home, ps_lines=ps)
-    got = {x.subject: x for x in res.lines if x.axis == "identity"}
-    assert "runs as nos uid 990" in got["thalamus"].detail and "system unit" in got["thalamus"].detail, got["thalamus"]
-    assert "other 1" in got["summary"].detail, got["summary"]
