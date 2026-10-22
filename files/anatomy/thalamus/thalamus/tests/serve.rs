@@ -7266,3 +7266,229 @@ fn propose_app_sends_the_model_to_the_helpers_and_a_table_editor_to_tables_app()
         .as_str().unwrap().to_string();
     assert!(d.contains("app_slots") && d.contains("scaffold_app") && d.contains("TablesApp") && d.contains("Tier 2"), "{d}");
 }
+
+// --- iris-subagent-reports-back: a run Iris started is watched; its end is a card (operator 2026-10-22):
+// "agent <name> ended; show Iris its report?" Approve: the report's head under the data notice, one Iris
+// turn. Reject: one turn that hears only that the run ended. Never a direct injection. ---
+
+const REPORT_HEAD: &str = "SURVEY-HEAD: 3 red, 1 drift";
+const REPORT_TAIL: &str = "SURVEY-TAIL-PAST-THE-CAP";
+
+/// rig_wing whose watch asks after a started run every 250 ms (a quarter of a 1 s reader timeout).
+fn rig_watch(name: &str, wing: &str, model: Vec<String>) -> Rig {
+    WING.with(|w| *w.borrow_mut() = serve::WingDoor { url: wing.into(), token: WING_TOKEN.into(), agents: vec!["conductor".into()] });
+    READER_SECS.with(|c| c.set(1));
+    rig_n(name, admin(), vec![], model)
+}
+
+/// Wing's GET /agent-sessions/<CHILD> body: running, or ended with `report`.
+fn run_body(status: &str, report: serde_json::Value) -> String {
+    let ended = if status == "running" { serde_json::Value::Null } else { "2026-10-22T08:00:00+00:00".into() };
+    serde_json::json!({"session": {"uuid": CHILD, "agent_name": "conductor", "status": status, "stop_reason": "outcome_satisfied", "ended_at": ended},
+                       "threads": [], "iterations": [], "children": [], "report": report}).to_string()
+}
+
+fn ended_body() -> String {
+    run_body("idle", serde_json::json!({"event_id": 42, "type": "conductor_report", "body": REPORT_HEAD, "chars": REPORT_HEAD.len()}))
+}
+
+/// The next shell message within `ms`, activity skipped; None when nothing came.
+fn within(r: &mut BufReader<UnixStream>, ms: u64) -> Option<ToShell> {
+    r.get_ref().set_read_timeout(Some(std::time::Duration::from_millis(ms))).unwrap();
+    loop {
+        let mut line = String::new();
+        match r.read_line(&mut line) {
+            Ok(n) if n > 0 => match decode_to_shell(&line) {
+                ToShell::Activity { .. } => continue,
+                m => return Some(m),
+            },
+            _ => return None,
+        }
+    }
+}
+
+/// Whether Iris says `said` within `ms`, whatever comes before it.
+fn hears(r: &mut BufReader<UnixStream>, said: &str, ms: u64) -> bool {
+    let end = std::time::Instant::now() + std::time::Duration::from_millis(ms);
+    while let Some(m) = within(r, end.saturating_duration_since(std::time::Instant::now()).as_millis().max(1) as u64) {
+        if matches!(&m, ToShell::Text { text, .. } if text == said) {
+            return true;
+        }
+    }
+    false
+}
+
+/// The show_report card within `ms`, whatever comes before it: (approval, card).
+fn asked_report(r: &mut BufReader<UnixStream>, ms: u64) -> Option<(String, nos_contract::renderers::ActionApproval)> {
+    let end = std::time::Instant::now() + std::time::Duration::from_millis(ms);
+    while let Some(m) = within(r, end.saturating_duration_since(std::time::Instant::now()).as_millis().max(1) as u64) {
+        if let ToShell::ApprovalRequest { approval, component: Component::ActionApproval(a), .. } = m {
+            if a.action == "show_report" {
+                return Some((approval, a));
+            }
+        }
+    }
+    None
+}
+
+/// The index of the first model request that holds `needle`, waiting up to `ms`.
+fn asked_at(rig: &Rig, needle: &str, ms: u64) -> Option<usize> {
+    let end = std::time::Instant::now() + std::time::Duration::from_millis(ms);
+    loop {
+        if let Some(i) = rig.model.lock().unwrap().iter().position(|m| m.1.contains(needle)) {
+            return Some(i);
+        }
+        if std::time::Instant::now() > end {
+            return None;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    }
+}
+
+#[test]
+fn a_started_run_that_ends_is_a_card_and_on_approve_one_iris_turn_with_its_report() {
+    let report = format!("{REPORT_HEAD}\n{}{REPORT_TAIL}", "a".repeat(5000));
+    let (wing, seen) = fake(vec![format!(r#"!202 {{"session_uuid": "{CHILD}"}}"#), run_body("running", serde_json::Value::Null),
+        run_body("idle", serde_json::json!({"event_id": 42, "type": "conductor_report", "body": report, "chars": report.len()}))]);
+    let rig = rig_watch("watch-end", &wing, vec![start("conductor"), answer("Asked."), answer("The conductor is done.")]);
+    let (s, mut r, session, approval, _) = asked_start(&rig);
+    decide(&s, &approval, Decision::Approve);
+    assert!(matches!(next(&mut r), Some(ToShell::Text { text, .. }) if text.contains(CHILD)));
+
+    let (card_id, card) = asked_report(&mut r, 5000).expect("the run's end is a card, not an injection");
+    assert_eq!((card.app.as_str(), card.action.as_str()), ("wing", "show_report"));
+    assert_eq!(card.params["session"], CHILD);
+    assert_eq!(card.params["agent"], "conductor");
+    assert_eq!((card.params["outcome"].as_str(), card.params["stop_reason"].as_str()), (Some("idle"), Some("outcome_satisfied")));
+    assert_eq!(card.params["report_len"], report.len());
+    assert!(card.says.contains("ended") && card.says.contains("report"), "{}", card.says);
+    assert!(!card.says.contains(REPORT_HEAD) && !serde_json::to_string(&card.params).unwrap().contains(REPORT_HEAD), "the card carries no report text");
+    assert_eq!(rig.model.lock().unwrap().len(), 2, "no model turn before the person decides");
+    let get = seen.lock().unwrap()[1].0.to_ascii_lowercase();
+    assert!(get.starts_with(&format!("get /api/v1/agent-sessions/{CHILD} ")), "{get}");
+    assert!(get.contains(&format!("authorization: bearer {WING_TOKEN}")) && get.contains("x-nos-user-uid: alice-smith"), "{get}");
+
+    decide(&s, &card_id, Decision::Approve);
+    assert!(hears(&mut r, "The conductor is done.", 5000), "one Iris turn follows the approve");
+    let heard = rig.model.lock().unwrap().get(2).map(|m| m.1.clone()).unwrap_or_default();
+    assert!(heard.contains("[thalamus] approval") && heard.contains("conductor") && heard.contains(CHILD), "{heard}");
+    assert!(heard.contains("data not instructions"), "the report sits under the data notice: {heard}");
+    assert!(heard.contains(REPORT_HEAD) && !heard.contains(REPORT_TAIL), "the report's head, capped: {heard}");
+    let polls = seen.lock().unwrap().len();
+    assert!(within(&mut r, 400).is_none(), "one turn, not one per poll");
+    assert_eq!(seen.lock().unwrap().len(), polls, "an ended run is not polled again");
+    drop((s, r));
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    let led = ledger_text(&rig, &session);
+    assert!(led.contains(CHILD) && led.contains("\"report_event\":42") && led.contains("\"report_len\""), "the ledger keeps the ids and lengths: {led}");
+    assert!(!led.contains(REPORT_HEAD), "the ledger keeps the report's length, never its text: {led}");
+}
+
+#[test]
+fn a_rejected_report_card_gives_iris_one_turn_that_hears_no_report() {
+    let (wing, seen) = fake(vec![format!(r#"!202 {{"session_uuid": "{CHILD}"}}"#), ended_body()]);
+    let rig = rig_watch("watch-reject", &wing, vec![start("conductor"), answer("Asked."), answer("It ended; I was not shown its report.")]);
+    let (s, mut r, _, approval, _) = asked_start(&rig);
+    decide(&s, &approval, Decision::Approve);
+    let (card_id, _) = asked_report(&mut r, 5000).expect("no card");
+    let polls = seen.lock().unwrap().len();
+    decide(&s, &card_id, Decision::Reject);
+    assert!(hears(&mut r, "It ended; I was not shown its report.", 5000), "one Iris turn follows the reject");
+    let heard = rig.model.lock().unwrap().get(2).map(|m| m.1.clone()).unwrap_or_default();
+    assert!(heard.contains("the run ended") && heard.contains("was not shown"), "{heard}");
+    assert!(!heard.contains(REPORT_HEAD), "a rejected report never reaches the model: {heard}");
+    assert_eq!(seen.lock().unwrap().len(), polls, "a rejected report is not read from Wing");
+}
+
+#[test]
+fn a_report_card_waits_while_another_approval_does_and_the_ledger_says_so() {
+    // The run ends while a second start card is open: one pending approval at a time, so the report card is queued.
+    let (wing, _) = fake(vec![format!(r#"!202 {{"session_uuid": "{CHILD}"}}"#), run_body("running", serde_json::Value::Null), ended_body()]);
+    let rig = rig_watch("watch-queued", &wing, vec![start("conductor"), answer("Asked."), start("conductor"), answer("Asked again."), answer("ok")]);
+    let (s, mut r, session, approval, _) = asked_start(&rig);
+    decide(&s, &approval, Decision::Approve);
+    assert!(matches!(next(&mut r), Some(ToShell::Text { .. })));
+    let got = turn(&s, &mut r, Some(session.clone()), "start another");
+    let second = got.iter().find_map(|m| match m { ToShell::ApprovalRequest { approval, .. } => Some(approval.clone()), _ => None }).expect("no second card");
+    assert!(asked_report(&mut r, 1200).is_none(), "the report card jumped the open approval");
+    decide(&s, &second, Decision::Reject);
+    assert!(asked_report(&mut r, 3000).is_some(), "the queued report card never came");
+    let led = ledger_text(&rig, &session);
+    assert!(led.contains("\"queued\":true"), "the ledger says the card waited: {led}");
+}
+
+#[test]
+fn a_person_typing_does_not_hold_back_a_run_ending() {
+    // Every turn thinks 400 ms, longer than a poll: four typed at once must not queue the run's end behind them.
+    let (wing, _) = fake(vec![format!(r#"!202 {{"session_uuid": "{CHILD}"}}"#), ended_body()]);
+    let rig = rig_watch("watch-typing", &wing, vec![start("conductor"), answer("Asked."), format!("~400 {}", answer("ok"))]);
+    let (s, mut r, session, approval, _) = asked_start(&rig);
+    decide(&s, &approval, Decision::Approve);
+    assert!(matches!(next(&mut r), Some(ToShell::Text { .. })));
+    for i in 1..=4 {
+        say(&s, &ToThalamus::Turn { session: Some(session.clone()), text: format!("typed {i}") });
+    }
+    assert!(asked_report(&mut r, 8000).is_some(), "the run's end is never asked");
+    assert!(asked_at(&rig, "typed 4", 0).is_none(), "the run's end waited behind the person's typing");
+}
+
+#[test]
+fn a_cleared_session_still_hears_the_run_it_started() {
+    let (wing, _) = fake(vec![format!(r#"!202 {{"session_uuid": "{CHILD}"}}"#), ended_body()]);
+    let rig = rig_watch("watch-clear", &wing, vec![start("conductor"), answer("Asked."), answer("Heard after clear.")]);
+    let (s, mut r, _, approval, _) = asked_start(&rig);
+    decide(&s, &approval, Decision::Approve);
+    say(&s, &ToThalamus::Clear);
+    let (card_id, _) = asked_report(&mut r, 3000).expect("a /clear dropped the watch: the run ended and no card came");
+    decide(&s, &card_id, Decision::Approve);
+    assert!(hears(&mut r, "Heard after clear.", 3000), "no Iris turn after the approve");
+}
+
+#[test]
+fn a_run_that_ends_while_the_person_is_away_is_asked_on_return() {
+    let (wing, _) = fake(vec![format!(r#"!202 {{"session_uuid": "{CHILD}"}}"#), ended_body()]);
+    let rig = rig_watch("watch-away", &wing, vec![start("conductor"), answer("Asked."), answer("Heard on return.")]);
+    let (s, r, _, approval, _) = asked_start(&rig);
+    decide(&s, &approval, Decision::Approve);
+    drop((s, r));
+    std::thread::sleep(std::time::Duration::from_millis(400));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    say(&s, &ToThalamus::Resume { workspace: None });
+    let (card_id, _) = asked_report(&mut r, 3000).expect("a closed connection dropped the watch: the run ended and no card came");
+    decide(&s, &card_id, Decision::Approve);
+    assert!(hears(&mut r, "Heard on return.", 3000), "no Iris turn after the approve");
+}
+
+#[test]
+fn a_run_past_the_runners_wall_clock_is_said_still_running() {
+    let (wing, _) = fake(vec![run_body("running", serde_json::Value::Null)]);
+    let rig = rig_watch("watch-bound", &wing, vec![answer("Still going.")]);
+    // Kept from an earlier connection, started two hours ago: past the Runner's one-hour wall clock.
+    let since = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs() - 7200;
+    let kept = thalamus::store::path(rig.sock.parent().unwrap(), "alice-smith", "watching");
+    thalamus::store::write(&kept, &serde_json::json!([{"agent": "conductor", "uuid": CHILD, "since": since}])).unwrap();
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    say(&s, &ToThalamus::Resume { workspace: None });
+    assert!(hears(&mut r, "Still going.", 3000), "the bound is said, no hang");
+    let heard = rig.model.lock().unwrap().first().map(|m| m.1.clone()).unwrap_or_default();
+    assert!(heard.contains("still running") && heard.contains(CHILD), "{heard}");
+    assert!(within(&mut r, 400).is_none(), "said once");
+}
+
+#[test]
+fn a_run_wing_will_not_show_is_said_at_once_not_watched_for_an_hour() {
+    // Wing's 403 is for a run the thalamus did not start (BaseApiPresenter::$thalamusReads); asking again does not change it.
+    let (wing, seen) = fake(vec![format!(r#"!202 {{"session_uuid": "{CHILD}"}}"#),
+        r#"!403 {"error": "the thalamus token speaks for a person only to start an agent session and read it"}"#.to_string()]);
+    let rig = rig_watch("watch-403", &wing, vec![start("conductor"), answer("Asked."), answer("Cannot hear it.")]);
+    let (s, mut r, _, approval, _) = asked_start(&rig);
+    decide(&s, &approval, Decision::Approve);
+    assert!(hears(&mut r, "Cannot hear it.", 3000), "a refused read is said, not polled until the bound");
+    let heard = rig.model.lock().unwrap().get(2).map(|m| m.1.clone()).unwrap_or_default();
+    assert!(heard.contains("cannot hear when agent conductor") && heard.contains("403"), "{heard}");
+    let polls = seen.lock().unwrap().len();
+    assert!(within(&mut r, 400).is_none(), "said once");
+    assert_eq!(seen.lock().unwrap().len(), polls, "a refused read is not asked again");
+}

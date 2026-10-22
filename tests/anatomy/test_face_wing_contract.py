@@ -160,3 +160,67 @@ def test_a_planted_divergence_in_the_crate_goes_red(tmp_path, tmp_path_factory):
     src.write_text(planted, encoding="utf-8")
     out = _rust(crate, tmp_path_factory.getbasetemp() / "cargo-target")
     assert _diff(_fixture()["fold"], out["fold"]), "Rust plant went unseen"
+
+
+# ── A run read carries its report (iris-subagent-reports-back) ──────────────
+# GET /agent-sessions/<uuid> adds `report`: the run's newest *_report event, its body
+# capped at 4 KB. The REAL presenter, built as Nette's container builds it
+# (EventRepository through the constructor), over in-memory SQLite.
+_CTOR = ": new App\\Presenters\\Api\\AgentSessionsPresenter($sessions);"
+_CACHE = "$cache = new Nette\\Caching\\Storages\\DevNullStorage;"
+_REPORT = "SURVEY-HEAD " + "a" * 5000
+
+
+def _with_events(presenters: str) -> str:
+    """The sessions harness with an events table: a1's report, a later non-report, b1's report."""
+    assert presenters.count(_CTOR) == 1 and presenters.count(_CACHE) == 1, "the borrowed harness moved"
+    rows = [("conductor_report", "a1", {"report": _REPORT, "filed_by": "runner"}),
+            ("agent_session_end", "a1", {"stop_reason": "outcome_satisfied"}),
+            ("conductor_report", "b1", {"report": "bob's"})]
+    seed = "$pdo->query('CREATE TABLE events (id INTEGER PRIMARY KEY, ts TEXT, type TEXT, actor_action_id TEXT, result_json TEXT)');\n"
+    seed += "".join(f"$pdo->query('INSERT INTO events', ['ts' => 't', 'type' => '{t}', 'actor_action_id' => '{u}', "
+                    f"'result_json' => {json.dumps(json.dumps(r))}]);\n" for t, u, r in rows)
+    return (presenters.replace(_CACHE, seed + _CACHE)
+            .replace(_CTOR, ": new App\\Presenters\\Api\\AgentSessionsPresenter($sessions, new App\\Model\\EventRepository($db));"))
+
+
+@needs_php
+def test_a_run_read_carries_its_newest_report_capped(tmp_path):
+    from test_face_user_owns_its_sessions import _PRESENTERS, AUTOLOAD, _agents
+    from test_face_user_owns_its_sessions import _php as _wing
+    if not AUTOLOAD.exists():
+        pytest.skip("wing vendor/autoload.php missing (composer install)")
+    got, = _wing(_with_events(_PRESENTERS), str(AUTOLOAD), str(_agents(tmp_path)), json.dumps(
+        [{"presenter": "AgentSessions", "method": "GET", "params": {"action": "default", "uuid": "a1"},
+          "token": "bff-secret", "uid": "alice", "groups": "nos-users"}]))
+    rep = got["body"].get("report")
+    assert rep is not None, got["body"]
+    assert rep["type"] == "conductor_report" and isinstance(rep["event_id"], int), rep
+    assert rep["body"] == _REPORT[:4096] and rep["chars"] == len(_REPORT), "the head, capped at 4 KB, and the whole length"
+
+
+# The harness above hands the presenter its EventRepository by hand; Wing's own container must too.
+_DI = r"""
+[$wing, $tmp] = [$argv[1], $argv[2]];
+require $wing . '/vendor/autoload.php';
+$cfg = new Nette\Bootstrap\Configurator;
+$cfg->setTempDirectory($tmp);
+$cfg->addStaticParameters(['appDir' => $wing . '/app']);
+$cfg->createRobotLoader()->addDirectory($wing . '/app')->register();
+$cfg->addConfig($wing . '/app/config/common.neon');
+$cfg->addConfig(['parameters' => ['dataDir' => $tmp], 'database' => ['dsn' => 'sqlite::memory:']]);
+$p = $cfg->createContainer()->getByType(Nette\Application\IPresenterFactory::class)->createPresenter('Api:AgentSessions');
+$v = (new ReflectionProperty($p, 'events'))->getValue($p);
+echo json_encode(is_object($v) ? get_class($v) : null);
+"""
+
+
+@needs_php
+def test_wings_container_hands_the_run_read_its_events(tmp_path):
+    """Compiled from app/config/common.neon over a scratch dir and in-memory SQLite: no live wing.db."""
+    wing = REPO / "files/anatomy/wing"
+    if not (wing / "vendor/autoload.php").exists():
+        pytest.skip("wing vendor/autoload.php missing (composer install)")
+    r = subprocess.run(["php", "-r", _DI, str(wing), str(tmp_path)], capture_output=True, text=True, timeout=120, check=False)
+    assert r.returncode == 0, "Wing's container does not build the run read:\n" + (r.stdout + r.stderr)[:600]
+    assert json.loads(r.stdout) == "App\\Model\\EventRepository", r.stdout

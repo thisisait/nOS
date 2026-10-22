@@ -40,6 +40,9 @@ abstract class BaseApiPresenter extends Presenter
 	/** POST actions the thalamus bearer reaches for a person (Iris's start_agent, stop_agent); nothing else, no operator verb. */
 	protected array $thalamusActions = [];
 
+	/** GET actions the thalamus bearer reaches for a person: the run Iris started, narrowed like a $bffActions read. */
+	protected array $thalamusReads = [];
+
 	/** Estate-wide GETs the face-bff bearer reaches for a Tier-1 person only: nothing to narrow to. */
 	protected array $bffOperatorReads = [];
 
@@ -80,8 +83,10 @@ abstract class BaseApiPresenter extends Presenter
 			$this->sendError($e->getMessage(), IResponse::S401_Unauthorized);
 		}
 		$thalamus = $this->endUser !== null && ($this->validatedToken['name'] ?? null) === EndUser::THALAMUS;
-		if ($thalamus && ($this->getMethod() !== 'POST' || !in_array($this->getAction(), $this->thalamusActions, true))) {
-			$this->sendError('the thalamus token speaks for a person only to start or stop an agent session', IResponse::S403_Forbidden);
+		if ($thalamus
+			&& !($this->getMethod() === 'POST' && in_array($this->getAction(), $this->thalamusActions, true))
+			&& !($this->getMethod() === 'GET' && in_array($this->getAction(), $this->thalamusReads, true))) {
+			$this->sendError('the thalamus token speaks for a person only to start or stop an agent session and read it', IResponse::S403_Forbidden);
 		}
 		// PHP method names are case-insensitive, so the match must be too.
 		$operatorAction = in_array(strtolower($this->getAction()), array_map('strtolower', $this->operatorActions), true);
