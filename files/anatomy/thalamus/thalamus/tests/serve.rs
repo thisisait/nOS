@@ -6911,6 +6911,30 @@ fn stop_agent_on_a_run_she_did_not_start_calls_nothing() {
 }
 
 #[test]
+fn stop_agent_after_a_reconnect_stops_a_run_started_before_it() {
+    let (wing, seen) = fake(vec![format!(r#"!202 {{"session_uuid": "{CHILD}"}}"#),
+        format!(r#"!202 {{"session_uuid": "{CHILD}", "status": "cancelled", "stop_reason": "cancelled by user:alice-smith"}}"#)]);
+    let rig = rig_wing("stop-resumed", admin(), &wing, WING_TOKEN, vec![start("conductor"), answer("Asked."), stop(CHILD), answer("Stopped.")]);
+    let (s, mut r, session, approval, _) = asked_start(&rig);
+    decide(&s, &approval, Decision::Approve);
+    assert!(matches!(next(&mut r), Some(ToShell::Text { .. })));
+    gone(s, r);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    say(&s, &ToThalamus::Resume { workspace: None });
+    match until(&mut r, "replay").1 {
+        ToShell::Replay { session: again, .. } => assert_eq!(again, session),
+        other => panic!("{other:?}"),
+    }
+    turn(&s, &mut r, Some(session.clone()), "stop it");
+    let p = seen.lock().unwrap().clone();
+    assert_eq!(p.len(), 2, "the stop after a reconnect never reached Wing: {p:?}");
+    assert!(p[1].0.to_ascii_lowercase().starts_with(&format!("post /api/v1/agent-sessions/{CHILD}/cancel ")), "{}", p[1].0);
+    let body: serde_json::Value = serde_json::from_str(&p[1].1).unwrap();
+    assert_eq!(body, serde_json::json!({"parent": format!("thalamus:{session}")}), "the same Iris session is the parent");
+}
+
+#[test]
 fn stop_agent_passes_wings_refusal_through() {
     let (wing, _) = fake(vec![format!(r#"!202 {{"session_uuid": "{CHILD}"}}"#),
                              r#"!409 {"error": "the session is idle, not running", "code": 409}"#.into()]);
