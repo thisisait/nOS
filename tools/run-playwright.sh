@@ -38,7 +38,7 @@ cleanup() {
     (cd "$REPO" && "$PY" tools/e2e-auth-helper.py teardown --input "$TESTER") || true
     rm -f "$TESTER"
   fi
-  rm -f "$ENVF"
+  rm -f "$ENVF" "$OUT/face-state.json"  # the signed-in cookie outlives nothing
 }
 trap cleanup EXIT
 
