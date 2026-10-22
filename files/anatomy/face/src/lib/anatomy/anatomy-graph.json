@@ -3538,9 +3538,9 @@
     "reader:loop-status": {
       "kind": "reader",
       "source": "tools/loop-status.py",
-      "title": "Which weakness sources actually produce proposals, and what came of them.",
+      "title": "Which weakness sources actually produce proposals, and what came of them. `--loop sere|<id> [--since DATE]`: one loop's record — ledger verdicts by gate_set/result, judge runs not passed and awaiting states (SERE), pulse_runs + held jobs + job_readiness (any loop); `registered: false` when no job exists; each source UNKNOWN when unreadable.",
       "anchor": "02.02.04",
-      "description": "Reader tools/loop-status.py: Which weakness sources actually produce proposals, and what came of them."
+      "description": "Reader tools/loop-status.py: Which weakness sources actually produce proposals, and what came of them. `--loop sere|<id> [--since DATE]`: one loop's record — ledger verdicts by gate_set/result, judge runs not passed and awaiting states (SERE), pulse_runs + held jobs + job_readiness (any loop); `registered: false` when no job exists; each source UNKNOWN when unreadable."
     },
     "reader:managed-status": {
       "kind": "reader",
@@ -7749,7 +7749,7 @@
       "from": "effector:loop-graph-gen",
       "to": "doctrine:ssot/doctrine/loop-contract.md#constraint-A",
       "kind": "governed_by",
-      "via": "cited at tools/loop-graph-gen.py:225",
+      "via": "cited at tools/loop-graph-gen.py:286",
       "citations": 2,
       "derived": "doctrine-cite",
       "evidence": "derived"
