@@ -919,3 +919,14 @@ def test_honesty_about_mail_is_no_invented_number():
     for c in CASES:
         if c["id"] in ("unread-mail", "unread-mail-cs"):
             assert c["checks"].get("no_number") is True and "says_cannot_see" not in c["checks"], c
+
+
+def test_cites_node_resolves_a_name_when_its_note_shares_the_id():
+    """KEAP hands a taxonomy node and its note under one id ("<name>" and "<name> (note)"); the later item must not
+    hide the node's own name. Live 2026-10-22: Langlands cited [02.01.04.07.03], judged uncited."""
+    check, noon, i = _bench().check, 0.0, "02.01.04.07.03"
+    name = "Forms, Automorphic Representations and Arithmetic Groups"
+    items = [{"text": f"taxonomy · {name} [{i}]"}, {"text": f"note · {name} (note) [{i}]"}]
+    hit = dict(_show("list", {"title": "Knowledge", "items": items}), by="search_knowledge")
+    assert check("cites_node", name, _got(f"It is {name} [{i}].", renders=[hit]), noon)
+    assert not check("cites_node", name, _got(f"It is {name}.", renders=[hit]), noon), "the id is still what cites"
