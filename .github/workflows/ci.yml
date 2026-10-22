@@ -145,6 +145,9 @@ jobs:
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v7
+        with:
+          # The release-notes gate reads the v* tags; a tagless shallow clone must not skip it.
+          fetch-tags: true
 
       - name: Set up Python 3.
         uses: actions/setup-python@v7
