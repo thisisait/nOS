@@ -19,6 +19,8 @@ final class AgentSessionsPresenter extends BaseApiPresenter
 {
 	public function __construct(
 		private AgentSessionRepository $sessions,
+		// Autowired like EventsPresenter's; null only where a harness builds the presenter without it.
+		private ?EventRepository $events = null,
 	) {
 		parent::__construct();
 	}
@@ -26,12 +28,7 @@ final class AgentSessionsPresenter extends BaseApiPresenter
 	/** The newest *_report body a read carries, in bytes: what Iris hears of a run it started. */
 	public const REPORT_CAP = 4096;
 
-	/** @inject */
-	public ?EventRepository $events = null;
-
 	protected array $bffActions = ['default'];
-
-	protected array $thalamusReads = ['default'];
 
 	public function actionDefault(string $uuid): void
 	{
