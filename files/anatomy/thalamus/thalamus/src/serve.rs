@@ -75,10 +75,6 @@ pub struct WingDoor {
     pub token: String,
     /// iris_startable_agents: the only agents start_agent asks for.
     pub agents: Vec<String>,
-    /// How often a started run is asked whether it ended; None is WATCH_POLL. A gate shortens it.
-    pub poll: Option<Duration>,
-    /// How long a started run is watched before Iris says it is still running; None is WATCH_BOUND.
-    pub bound: Option<Duration>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -297,6 +293,10 @@ fn head_bytes(s: &str, max: usize) -> String {
     s[..end].to_string()
 }
 
+fn unix_now() -> u64 {
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs())
+}
+
 /// An app name that is one path segment and nothing else: the draft file is named by it before the parser runs.
 fn is_app_slug(n: &str) -> bool {
     n.len() <= 64 && n.starts_with(|c: char| c.is_ascii_lowercase()) && n.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
@@ -349,23 +349,21 @@ struct Open {
     acting: HashMap<String, Value>,
     /// The workspace tab whose conversation this is (v9 resume{workspace}); None: the person's one legacy chat.
     tab: Option<String>,
-    /// The runs start_agent opened in this session, asked after until they end or the bound passes.
-    /// ponytail: lives with the connection; a closed or switched session hears nothing (read_run still draws the run).
+    /// The runs start_agent opened this turn; converse() moves them to the connection's watch, which
+    /// outlives a switch, a clear or a branch and is kept per person when the connection closes.
     watching: Vec<Watch>,
 }
 
-/// One run Iris started: (agent, Wing session uuid), the next time it is asked after, and when watching stops.
+/// One run Iris started: (agent, Wing session uuid), when it started (unix seconds), the next time it is asked after.
 struct Watch {
     agent: String,
     uuid: String,
+    since: u64,
     next: Instant,
-    until: Instant,
 }
 
-/// How often a started run is asked whether it ended (WingDoor.poll overrides).
-const WATCH_POLL: Duration = Duration::from_secs(30);
-/// How long it is watched: the Runner's SESSION_WALL_CLOCK_S, past which Wing ends it anyway (WingDoor.bound overrides).
-const WATCH_BOUND: Duration = Duration::from_secs(3600);
+/// How long it is watched: the Runner's SESSION_WALL_CLOCK_S, past which Wing ends it anyway.
+const WATCH_BOUND_SECS: u64 = 3600;
 /// The most of a run's report the model hears, in bytes (Wing caps its body at the same).
 const REPORT_HEARD: usize = 4096;
 
@@ -1069,16 +1067,23 @@ impl Server {
         let mut face = Face::new(input);
         // The model state last said: (session, loaded).
         let mut state: Option<(String, bool)> = None;
+        // The runs Iris started for this person: the connection's, whichever session is open; kept on close.
+        let mut watching = self.watches_taken(&who);
         loop {
-            // A watched run is asked after on time even when the model state is not due.
-            let tick = open.as_ref().and_then(|o| o.watching.iter().map(|w| w.next).min())
+            // Asked after between any two lines, so lines queued by a person typing never hold a run's end back.
+            if let Some(o) = open.as_mut() {
+                watching.append(&mut o.watching);
+                if watching.iter().any(|w| w.next <= Instant::now()) {
+                    self.watch(&who, &mut out, o, &face, &mut watching);
+                }
+            }
+            let tick = watching.iter().map(|w| w.next).min()
                 .map_or(MODEL_STATE_EVERY, |n| n.saturating_duration_since(Instant::now()).clamp(Duration::from_millis(10), MODEL_STATE_EVERY));
             let line = match face.line(tick) {
                 Next::End => break,
                 Next::Tick => {
-                    if let Some(o) = open.as_mut() {
+                    if let Some(o) = &open {
                         self.model_state(&mut out, o, &mut state);
-                        self.watch(&who, &mut out, o, &face);
                     }
                     continue;
                 }
@@ -1203,10 +1208,12 @@ impl Server {
                 }
             }
         }
-        if let Some(o) = open {
+        if let Some(mut o) = open {
+            watching.append(&mut o.watching);
             let _ = self.ledger.lock().map(|l| l.end(&o.session, "connection_closed", (Some(o.tokens.0), Some(o.tokens.1))));
             self.say(format!("closed {} for {}", o.session, who.username));
         }
+        self.watches_kept(&who, watching);
     }
 
     /// The connection's session, opened on its first Turn or Control; None was refused.
@@ -1753,9 +1760,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                 let agent = text(&start["agent"]);
                 match self.start(who, o, &start) {
                     Ok(uuid) => {
-                        let now = Instant::now();
-                        o.watching.push(Watch { agent: agent.clone(), uuid: uuid.clone(), next: now + self.wing.poll.unwrap_or(WATCH_POLL),
-                                                until: now + self.wing.bound.unwrap_or(WATCH_BOUND) });
+                        o.watching.push(Watch { agent: agent.clone(), uuid: uuid.clone(), since: unix_now(), next: Instant::now() + self.poll() });
                         (format!("Approved: {agent} started as session {uuid}."),
                                  json!({"approval": approval, "agent": agent, "session_uuid": uuid}),
                                  format!("approved, {agent} started as session {uuid}; you hear when it ends, read_run draws it"))
@@ -2428,10 +2433,10 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
 
     /// Every watched run that is due is asked after; one that ended, or outlived the bound, is said to the model
     /// as a [thalamus] line and wakes one model turn, so Iris answers in the chat. The ledger keeps ids and lengths.
-    fn watch(&self, who: &Person, out: &mut dyn Write, o: &mut Open, face: &Face) {
+    fn watch(&self, who: &Person, out: &mut dyn Write, o: &mut Open, face: &Face, watching: &mut Vec<Watch>) {
         let now = Instant::now();
-        let (due, rest): (Vec<Watch>, Vec<Watch>) = std::mem::take(&mut o.watching).into_iter().partition(|w| w.next <= now);
-        o.watching = rest;
+        let (due, rest): (Vec<Watch>, Vec<Watch>) = std::mem::take(watching).into_iter().partition(|w| w.next <= now);
+        *watching = rest;
         for mut w in due {
             let (heard, rec) = match self.run_ended(who, &w.uuid) {
                 Ok(Some((outcome, report))) => {
@@ -2441,15 +2446,18 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                     (format!("[thalamus] agent {} ended: {outcome}; session {}; report: {said}", w.agent, w.uuid),
                      json!({"session_uuid": w.uuid, "agent": w.agent, "ended": outcome, "report_event": id, "report_chars": report["chars"]}))
                 }
-                last if now >= w.until => {
-                    let why = last.err().map(|e| format!(" (last ask: {e})")).unwrap_or_default();
-                    (format!("[thalamus] agent {} session {} is still running after the {}s watch; no longer watched{why}; read_run draws it",
-                             w.agent, w.uuid, self.wing.bound.unwrap_or(WATCH_BOUND).as_secs()),
+                // Asking again cannot change a refusal: say it now, not after the hour.
+                Err((true, why)) => (format!("[thalamus] cannot hear when agent {} session {} ends: {why}; read_run draws it", w.agent, w.uuid),
+                                     json!({"session_uuid": w.uuid, "agent": w.agent, "ended": null, "refused": why})),
+                last if unix_now() >= w.since + WATCH_BOUND_SECS => {
+                    let why = last.err().map(|e| format!(" (last ask: {})", e.1)).unwrap_or_default();
+                    (format!("[thalamus] agent {} session {} is still running past the Runner's {WATCH_BOUND_SECS}s; no longer watched{why}; \
+                              read_run draws it", w.agent, w.uuid),
                      json!({"session_uuid": w.uuid, "agent": w.agent, "ended": false, "still_running": true}))
                 }
                 _ => {
-                    w.next = now + self.wing.poll.unwrap_or(WATCH_POLL);
-                    o.watching.push(w);
+                    w.next = now + self.poll();
+                    watching.push(w);
                     continue;
                 }
             };
@@ -2465,14 +2473,50 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
         }
     }
 
-    /// GET Wing /agent-sessions/<uuid> as the person: Some((outcome, report or Null)) once it ended, None while it runs.
-    fn run_ended(&self, who: &Person, uuid: &str) -> Result<Option<(String, Value)>, String> {
+    /// How often a started run is asked after: a quarter of the reader timeout (READER_SECS: 30 s); a gate shortens it.
+    fn poll(&self) -> Duration {
+        Duration::from_millis(self.reader_secs.saturating_mul(250))
+    }
+
+    /// The watches a closed connection of this person kept (people/<uid>/watching.json), taken so no other connection
+    /// says them twice. ponytail: take-then-delete; two connections opening at once may race; a lock if that is seen.
+    fn watches_taken(&self, who: &Person) -> Vec<Watch> {
+        let path = store::path(&self.data, &who.uid(), "watching");
+        let kept = store::read(&path).unwrap_or_else(|why| {
+            self.say(format!("watches of {}: {why}", who.username));
+            None
+        });
+        if kept.is_some() {
+            let _ = std::fs::remove_file(&path);
+        }
+        let next = Instant::now() + self.poll();
+        kept.and_then(|v| v.as_array().cloned()).unwrap_or_default().iter().filter_map(|w| Some(Watch {
+            agent: w["agent"].as_str()?.to_string(), uuid: w["uuid"].as_str()?.to_string(), since: w["since"].as_u64()?, next,
+        })).collect()
+    }
+
+    /// A closing connection's watches, added to what the person's file holds, for the next connection to say.
+    fn watches_kept(&self, who: &Person, watching: Vec<Watch>) {
+        if watching.is_empty() {
+            return;
+        }
+        let path = store::path(&self.data, &who.uid(), "watching");
+        let mut all = store::read(&path).ok().flatten().and_then(|v| v.as_array().cloned()).unwrap_or_default();
+        all.extend(watching.iter().map(|w| json!({"agent": w.agent, "uuid": w.uuid, "since": w.since})));
+        if let Err(why) = store::write(&path, &Value::Array(all)) {
+            self.say(format!("the watches of {} were not kept: {why}", who.username));
+        }
+    }
+
+    /// GET Wing /agent-sessions/<uuid> as the person: Some((outcome, report or Null)) once it ended, None while it runs;
+    /// Err((refused, why)), refused when Wing will not show it (401/403), which asking again does not change.
+    fn run_ended(&self, who: &Person, uuid: &str) -> Result<Option<(String, Value)>, (bool, String)> {
         let url = format!("{}/api/v1/agent-sessions/{}", self.wing.url.trim_end_matches('/'), enc(uuid));
         let mut r = agent(30).get(&url)
             .header("authorization", &format!("Bearer {}", self.wing.token))
             .header("x-nos-user-uid", &who.uid())
             .header("x-nos-user-groups", &who.groups.join(","))
-            .call().map_err(|e| format!("Wing unreachable: {e}"))?;
+            .call().map_err(|e| (false, format!("Wing unreachable: {e}")))?;
         let status = r.status().as_u16();
         // Wing writes the row when the runner boots: a 404 just after the start is "not yet".
         if status == 404 {
@@ -2480,7 +2524,8 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
         }
         let v: Value = r.body_mut().read_json().unwrap_or(Value::Null);
         if status != 200 {
-            return Err(format!("Wing answered {status}: {}", text(&v["error"]).chars().take(300).collect::<String>()));
+            let why = format!("Wing answered {status}: {}", text(&v["error"]).chars().take(300).collect::<String>());
+            return Err((matches!(status, 401 | 403), why));
         }
         let s = &v["session"];
         if s["ended_at"].is_null() && matches!(s["status"].as_str(), Some("running" | "starting") | None) {

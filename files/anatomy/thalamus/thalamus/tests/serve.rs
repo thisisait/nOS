@@ -6766,7 +6766,7 @@ const ASK_PROMPT: &str = "check the estate for red";
 /// A rig whose Wing door is the fake at `wing`; `token` empty = no door configured.
 fn rig_wing(name: &str, map: serde_json::Value, wing: &str, token: &str, model: Vec<String>) -> Rig {
     WING.with(|w| *w.borrow_mut() = serve::WingDoor { url: wing.into(), token: token.into(),
-                                                       agents: vec!["conductor".into(), "surveyor".into()], ..Default::default() });
+                                                       agents: vec!["conductor".into(), "surveyor".into()] });
     rig_n(name, map, vec![], model)
 }
 
@@ -7179,10 +7179,10 @@ fn propose_app_sends_the_model_to_the_helpers_and_a_table_editor_to_tables_app()
 const REPORT_HEAD: &str = "SURVEY-HEAD: 3 red, 1 drift";
 const REPORT_TAIL: &str = "SURVEY-TAIL-PAST-THE-CAP";
 
-/// rig_wing whose watch asks after a started run every 50 ms.
+/// rig_wing whose watch asks after a started run every 250 ms (a quarter of a 1 s reader timeout).
 fn rig_watch(name: &str, wing: &str, model: Vec<String>) -> Rig {
-    WING.with(|w| *w.borrow_mut() = serve::WingDoor { url: wing.into(), token: WING_TOKEN.into(), agents: vec!["conductor".into()],
-        poll: Some(std::time::Duration::from_millis(50)), bound: None });
+    WING.with(|w| *w.borrow_mut() = serve::WingDoor { url: wing.into(), token: WING_TOKEN.into(), agents: vec!["conductor".into()] });
+    READER_SECS.with(|c| c.set(1));
     rig_n(name, admin(), vec![], model)
 }
 

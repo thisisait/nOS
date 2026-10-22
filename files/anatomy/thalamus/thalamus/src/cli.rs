@@ -121,7 +121,6 @@ fn serve_main(args: &[String]) -> Result<(), String> {
             token: lookup("nos:wing_token").unwrap_or_default(),
             agents: std::env::var("NOS_IRIS_STARTABLE_AGENTS").unwrap_or_default().split(',').map(str::trim)
                 .filter(|a| !a.is_empty()).map(str::to_string).collect(),
-            ..Default::default()
         },
     };
     let srv = Arc::new(srv);
