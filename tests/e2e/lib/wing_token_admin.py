@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import os
 import secrets as _secrets
+import shutil
 import sqlite3
 import subprocess
 from dataclasses import dataclass
@@ -40,6 +41,14 @@ def _wing_db_path() -> Path:
     """Production wing.db location. Override via ``WING_DATA_DIR`` env."""
     data_dir = os.environ.get("WING_DATA_DIR") or os.path.expanduser("~/wing/app/data")
     return Path(data_dir) / "wing.db"
+
+
+def php_cli() -> list[str]:
+    """Wing's PHP CLI on this host: WING_PHP_CLI, else `php` on PATH (macOS), else the
+    `nos-php` shim (Linux: frankenphp php-cli). tests/anatomy/test_host_php_is_resolved.py."""
+    if os.environ.get("WING_PHP_CLI"):
+        return os.environ["WING_PHP_CLI"].split()
+    return [shutil.which("php") or shutil.which("nos-php") or str(Path.home() / ".local/bin/nos-php")]
 
 
 @dataclass
@@ -67,7 +76,7 @@ def mint_token(token_name: str, plaintext: str | None = None) -> WingToken:
 
     proc = subprocess.run(
         [
-            "php", "bin/provision-token.php",
+            *php_cli(), "bin/provision-token.php",
             f"--db={db_path}",
             f"--token={plaintext}",
             f"--name={token_name}",

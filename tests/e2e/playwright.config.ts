@@ -57,6 +57,8 @@ export default defineConfig({
   use: {
     baseURL: BASE_URL,
     ignoreHTTPSErrors: true,
+    // FACE_E2E=1: global-setup signed the tester in (lib/face-login.ts); every test starts signed in.
+    storageState: process.env.FACE_E2E === '1' ? path.join(OUT_DIR, 'face-state.json') : undefined,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',

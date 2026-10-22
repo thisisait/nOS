@@ -189,6 +189,10 @@ if [ "$MARK_MERGED" = 1 ]; then
   else
     BRIDGE_ARGS+=(--migration-id "$MIGRATION_ID")
   fi
+  # Wing's PHP CLI: WING_PHP_CLI, else php on PATH, else nos-php (Linux: frankenphp php-cli; test_host_php_is_resolved.py).
+  if [ -n "${WING_PHP_CLI:-}" ] || ! command -v php >/dev/null 2>&1; then
+    php() { ${WING_PHP_CLI:-$(command -v nos-php || echo "$HOME/.local/bin/nos-php")} "$@"; }
+  fi
   php "$WING_BIN" "${BRIDGE_ARGS[@]}"
   exit $?
 fi

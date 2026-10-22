@@ -492,6 +492,37 @@ def introspect_all(
     return out
 
 
+def _truthy(value: Any) -> bool:
+    """As Jinja's `| bool` reads a var: a string "false" is off, not truthy."""
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in ("1", "true", "yes", "y", "on")
+
+
+def introspect_apps(apps_dir: str, role_vars: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """The manifest apps pazny.apps_runner deploys, as THIS run resolved it.
+
+    The runner's own rule (roles/pazny.apps_runner/tasks/main.yml): off unless
+    apps_runner_enabled (default true); apps_dir/*.yml|*.yaml minus `_*`, minus
+    apps_skip, minus openhuman unless install_openhuman. Only the bool and the
+    ids leave role_vars — `vars` carries secrets.
+    """
+    role_vars = role_vars or {}
+    runner = _truthy(role_vars.get("apps_runner_enabled", True))
+    if not runner:
+        return {"runner_enabled": False, "deployed": []}
+    skip = {str(s) for s in (role_vars.get("apps_skip") or [])}
+    if not _truthy(role_vars.get("install_openhuman", False)):
+        skip.add("openhuman")
+    try:
+        names = os.listdir(expand_path(apps_dir))
+    except OSError:
+        names = []
+    ids = {os.path.splitext(n)[0] for n in names
+           if n.endswith((".yml", ".yaml")) and not n.startswith("_")}
+    return {"runner_enabled": True, "deployed": sorted(ids - skip)}
+
+
 # ---------------------------------------------------------------------------
 # JSON-safe serialization (for Ansible return payloads)
 # ---------------------------------------------------------------------------
@@ -521,6 +552,7 @@ __all__ = [
     "empty_state",
     "expand_path",
     "introspect_all",
+    "introspect_apps",
     "introspect_brew_version",
     "introspect_docker_image",
     "introspect_docker_running",

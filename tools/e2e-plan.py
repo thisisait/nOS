@@ -7,6 +7,8 @@ optional `e2e:` block says what "wired" means after start. This renders both
 against the SAME resolved config nos-smoke probes (tools/nos-smoke.py
 load_vars: defaults → config.yml → ~/.nos/state.yml → domain helpers), so a
 journey can never be written for a service the configuration does not run.
+Enablement — services AND manifest apps — is what the last converge ran
+(state.yml, -e profiles included); stderr names the source it used.
 
   tools/e2e-plan.py                 # JSON plan of the enabled services
   tools/e2e-plan.py --all           # include disabled ones (enabled: false)
@@ -26,7 +28,7 @@ import yaml
 REPO = Path(__file__).resolve().parents[1]
 PLUGINS = REPO / "files/anatomy/plugins"
 sys.path.insert(0, str(REPO / "tools"))
-from nos_identity import SYNTHETIC_FLAG, installed_apps, synthetic_identities  # noqa: E402
+from nos_identity import SYNTHETIC_FLAG, installed_apps, ran, synthetic_identities  # noqa: E402
 MODES = ("native_oidc", "forward_auth", "header_oidc")
 
 _spec = importlib.util.spec_from_file_location("nos_smoke", REPO / "tools/nos-smoke.py")
@@ -197,6 +199,13 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--all", action="store_true", help="include services the config disables")
     a = ap.parse_args(argv)
+    # What is enabled comes from what the last converge RAN (state.yml, -e
+    # included); the layers only when no run is recorded. Say which, on stderr.
+    run = ran()
+    print(f"enablement: {run.provenance()}", file=sys.stderr)
+    if run.source == "state.yml" and run.apps() is None:
+        print("apps: layers (this state.yml predates the apps record; the next converge writes it)",
+              file=sys.stderr)
     json.dump(plan(include_disabled=a.all), sys.stdout, indent=2)
     print()
     return 0

@@ -1011,6 +1011,7 @@ nodes:
   "effector:run-journeys": withheld
   "effector:run-librarian": withheld
   "effector:run-phase5-ceremony": withheld
+  "effector:run-playwright": withheld
   "effector:run-surveyor": withheld
   "effector:run-upgrade-architect": withheld
   "effector:scan-state-snapshot": withheld

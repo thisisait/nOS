@@ -100,6 +100,10 @@ def cmd_provision(args: argparse.Namespace) -> int:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
 
+    if args.iris:  # the thalamus names this login for the run (tests/e2e/lib/iris_map.py)
+        from tests.e2e.lib import iris_map
+        if not iris_map.add(identity.username, identity.group_name):
+            print("WARN: no ~/.nos/identity-map.yml on this host; Iris will refuse the tester", file=sys.stderr)
     payload = _identity_to_payload(identity)
     if args.output == "-":
         json.dump(payload, sys.stdout)
@@ -127,6 +131,8 @@ def cmd_teardown(args: argparse.Namespace) -> int:
     # teardown_tester is best-effort: it logs but never raises. We still
     # exit 0 — the orphan-sweep is the safety net for partial failures.
     teardown_tester(identity)
+    from tests.e2e.lib import iris_map
+    iris_map.remove(identity.username)  # idempotent; a tester never added is a no-op
     return 0
 
 
@@ -140,6 +146,8 @@ def main() -> int:
                         choices=["provider", "manager", "user", "guest"])
     p_prov.add_argument("--output", default="-",
                         help="Output file (- for stdout, default)")
+    p_prov.add_argument("--iris", action="store_true",
+                        help="also name the tester in the thalamus identity map for this run")
     p_prov.set_defaults(func=cmd_provision)
 
     p_down = sub.add_parser("teardown", help="Delete a previously-provisioned tester")

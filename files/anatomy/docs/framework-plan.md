@@ -193,6 +193,15 @@ services:
       version: "12.0.0"
       severity: breaking
       recipe: grafana-11-to-12
+    # enabled: install_<service> as THIS run resolved it, -e included
+
+apps:
+  # The manifest apps (apps/*.yml) pazny.apps_runner deploys, as this run
+  # resolved it: apps_runner_enabled, minus apps_skip, minus openhuman unless
+  # install_openhuman. Replaced whole every converge. Readers prefer it over
+  # the file layers, which cannot see -e (tools/nos_identity.py ran()).
+  runner_enabled: false
+  deployed: []
 
 identifiers:
   state_dir: "~/.nos"

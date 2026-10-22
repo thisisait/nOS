@@ -12,7 +12,7 @@
     "organism": 0,
     "habitat": 9,
     "sense": 82,
-    "limb": 118,
+    "limb": 119,
     "memory": 41,
     "law": 54,
     "reflex": 43,
@@ -970,6 +970,10 @@
       "kind": "effector"
     },
     "effector:run-phase5-ceremony": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:run-playwright": {
       "level": "limb",
       "kind": "effector"
     },

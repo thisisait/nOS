@@ -398,7 +398,7 @@ def axis_toolchain(res: Result) -> None:
 
 # Layer resolution lives in nos_identity — the same reader discovery-scan and
 # nos-smoke use, so three tools cannot disagree about one flag.
-from nos_identity import default_config_text, install_flags, resolve_flag, services  # noqa: E402
+from nos_identity import UNKNOWN, default_config_text, install_flags, ran, resolve_flag, services  # noqa: E402
 
 
 def axis_config(res: Result, flag: str) -> None:
@@ -422,6 +422,36 @@ def axis_config(res: Result, flag: str) -> None:
     if "config.yml" not in declared_in:
         note += "; config.yml does not override it"
     res.add("config", flag, f"{trail}{note}  ==> {winner[1]}")
+    axis_ran(res, flag, winner[1])
+
+
+def axis_ran(res: Result, flag: str, declared: str) -> None:
+    """What the last converge RESOLVED, beside what the layers declare. The layers
+    cannot see a run's -e (`-e @profiles/core.yml`), so the two can differ, and a
+    difference is a disagreement shown, not a value silently picked."""
+    run = ran()
+    if run.source == UNKNOWN:
+        res.add("config", "ran", run.provenance(), UNREADABLE)
+        return
+    if run.source == "layers":
+        res.add("config", "ran", f"{run.provenance()} — the layers above are all there is")
+        return
+    recorded = run.flag(flag)
+    if not recorded:
+        res.add("config", "ran", "state.yml records no value for this flag (declared only)")
+        return
+    at = (run.state.get("last_run") or {})
+    where = f"last converge {at.get('run_id', '?')} at {at.get('at', '?')} (tags {at.get('tag', '?')})"
+    for subject, value in recorded:
+        if value is None:
+            res.add("config", "ran", f"{where}: {subject} — state.yml holds no value yet")
+            continue
+        word = str(value).lower()
+        if word == declared.lower():
+            res.add("config", "ran", f"{where}: {subject}  ==> {word}")
+        else:
+            res.add("config", "ran", f"{where}: {subject}  ==> {word}  "
+                    f"(declared {declared}: an -e / profile the files do not show)", DISAGREE)
 
 
 # ── axis 5: what each host organ IS, and who it runs as (the medulla's measure) ─

@@ -27,11 +27,25 @@
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, writeFileSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { faceLogin } from './lib/face-login';
 
 const REPO_ROOT = resolve(__dirname, '..', '..');
 const HELPER = join(REPO_ROOT, 'tools', 'e2e-auth-helper.py');
 
 export default async function globalSetup(): Promise<void> {
+  await provision();
+  // Face/Iris journeys: sign the run's tester in once; playwright.config.ts loads the state.
+  if (process.env.FACE_E2E === '1') {
+    const outDir = process.env.PLAYWRIGHT_OUT ?? join(__dirname, '.playwright-out');
+    const who = JSON.parse(readFileSync(process.env.NOS_TESTER_JSON as string, 'utf8'));
+    const faceUrl = process.env.FACE_URL ?? `https://os.${process.env.NOS_HOST ?? 'dev.local'}/`;
+    await faceLogin(faceUrl, who.username, who.password, join(outDir, 'face-state.json'));
+    console.log(`[global-setup] ${who.username} signed in to ${faceUrl}`);
+  }
+}
+
+async function provision(): Promise<void> {
   const outDir = process.env.PLAYWRIGHT_OUT ?? join(__dirname, '.playwright-out');
   mkdirSync(outDir, { recursive: true });
   const identityPath = join(outDir, 'tester.json');
