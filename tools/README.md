@@ -72,7 +72,7 @@ Each line here is a `reader:` node of the anatomy graph, a sense.
 - `identity-status.py` — identity-status — the declared account roster vs what each realm holds.
 - `rbac-status.py` — The permission genome (`state/genome/permissions.yml`, descriptive) as capability × role, then each enforcement point's literal (Wing PHP consts, face/cortex TS consts, Jinja tier expressions, `authentik_rbac_tiers`, agent and Bone scopes) that disagrees with it, by file:line; a point it cannot read is UNKNOWN. Repo only (`--root`), never the live estate.
 - `loader-vars-report.py` — D1 scoping tool (2026-06-11) — the plugin-loader variable contract.
-- `loop-status.py` — Which weakness sources actually produce proposals, and what came of them.
+- `loop-status.py` — Which weakness sources actually produce proposals, and what came of them. `--loop sere|<id> [--since DATE]`: one loop's record — ledger verdicts by gate_set/result, judge runs not passed and awaiting states (SERE), pulse_runs + held jobs + job_readiness (any loop); `registered: false` when no job exists; each source UNKNOWN when unreadable.
 - `geo-status.py` — READER: rows per geo layer counted back from PostGIS, last load beside it; UNKNOWN when unreachable.
 - `npm-ioc-scan.py` — Cross-check every installed npm package against a published IOC list.
 - `plugin-wiring-report.py` — Plugin wiring report — capability matrix + contract checks.
