@@ -6899,15 +6899,18 @@ fn stop_agent_cancels_a_run_she_started_and_she_hears_it() {
 }
 
 #[test]
-fn stop_agent_on_a_run_she_did_not_start_calls_nothing() {
-    let (wing, seen) = fake(vec![format!(r#"!202 {{"session_uuid": "{CHILD}"}}"#)]);
+fn stop_agent_on_a_run_she_did_not_start_is_wings_404() {
+    // Wing is the referee (parent_ref must be this Iris session): tests/anatomy/test_a_session_can_be_stopped.py.
+    let (wing, seen) = fake(vec![r#"!404 {"error": "not_found", "code": 404}"#.into()]);
     let rig = rig_wing("stop-not-hers", admin(), &wing, WING_TOKEN, vec![stop(CHILD), answer("x")]);
-    let (got, _) = tool_turn(&rig, "stop that run");
+    let (got, session) = tool_turn(&rig, "stop that run");
     assert!(!got.iter().any(|m| matches!(m, ToShell::ApprovalRequest { .. })), "a stop asks no card: {got:?}");
+    let p = seen.lock().unwrap().clone();
+    assert_eq!(p.len(), 1, "the stop never reached Wing, the referee: {p:?}");
     let e = tool_result(&rig, 1);
-    assert!(e["error"].as_str().is_some_and(|e| e.contains("not started in this conversation")), "{e}");
-    std::thread::sleep(std::time::Duration::from_millis(200));
-    assert!(seen.lock().unwrap().is_empty(), "a refused stop reached Wing");
+    assert!(e["error"].as_str().is_some_and(|e| e.contains("Wing answered 404")), "{e}");
+    let body: serde_json::Value = serde_json::from_str(&p[0].1).unwrap();
+    assert_eq!(body, serde_json::json!({"parent": format!("thalamus:{session}")}), "Wing hears whose run to check");
 }
 
 #[test]
