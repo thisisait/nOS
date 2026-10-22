@@ -6871,6 +6871,58 @@ fn start_agent_waits_its_turn_behind_an_open_approval() {
     assert!(rig.model.lock().unwrap()[1].1.contains("an approval is already waiting"));
 }
 
+// --- iris-subagent-stop: stop_agent cancels a run this Iris session started, and only that ---
+
+fn stop(uuid: &str) -> String {
+    call("stop_agent", &serde_json::json!({"uuid": uuid}).to_string())
+}
+
+#[test]
+fn stop_agent_cancels_a_run_she_started_and_she_hears_it() {
+    let (wing, seen) = fake(vec![format!(r#"!202 {{"session_uuid": "{CHILD}"}}"#),
+        format!(r#"!202 {{"session_uuid": "{CHILD}", "status": "cancelled", "stop_reason": "cancelled by user:alice-smith"}}"#)]);
+    let rig = rig_wing("stop-ok", admin(), &wing, WING_TOKEN, vec![start("conductor"), answer("Asked."), stop(CHILD), answer("Stopped.")]);
+    let (s, mut r, session, approval, _) = asked_start(&rig);
+    decide(&s, &approval, Decision::Approve);
+    assert!(matches!(next(&mut r), Some(ToShell::Text { .. })));
+    turn(&s, &mut r, Some(session.clone()), "stop it");
+    let p = seen.lock().unwrap().clone();
+    assert_eq!(p.len(), 2, "one start, one stop: {p:?}");
+    let head = p[1].0.to_ascii_lowercase();
+    assert!(head.starts_with(&format!("post /api/v1/agent-sessions/{CHILD}/cancel ")), "{head}");
+    assert!(head.contains(&format!("authorization: bearer {WING_TOKEN}")) && head.contains("x-nos-user-uid: alice-smith"), "{head}");
+    let body: serde_json::Value = serde_json::from_str(&p[1].1).unwrap();
+    assert_eq!(body, serde_json::json!({"parent": format!("thalamus:{session}")}), "Wing checks the run is this session's");
+    let heard = tool_result(&rig, 3);
+    assert_eq!((&heard["status"], &heard["stop_reason"]), (&serde_json::json!("cancelled"), &serde_json::json!("cancelled by user:alice-smith")),
+               "the model hears the outcome: {heard}");
+}
+
+#[test]
+fn stop_agent_on_a_run_she_did_not_start_calls_nothing() {
+    let (wing, seen) = fake(vec![format!(r#"!202 {{"session_uuid": "{CHILD}"}}"#)]);
+    let rig = rig_wing("stop-not-hers", admin(), &wing, WING_TOKEN, vec![stop(CHILD), answer("x")]);
+    let (got, _) = tool_turn(&rig, "stop that run");
+    assert!(!got.iter().any(|m| matches!(m, ToShell::ApprovalRequest { .. })), "a stop asks no card: {got:?}");
+    let e = tool_result(&rig, 1);
+    assert!(e["error"].as_str().is_some_and(|e| e.contains("not started in this conversation")), "{e}");
+    std::thread::sleep(std::time::Duration::from_millis(200));
+    assert!(seen.lock().unwrap().is_empty(), "a refused stop reached Wing");
+}
+
+#[test]
+fn stop_agent_passes_wings_refusal_through() {
+    let (wing, _) = fake(vec![format!(r#"!202 {{"session_uuid": "{CHILD}"}}"#),
+                             r#"!409 {"error": "the session is idle, not running", "code": 409}"#.into()]);
+    let rig = rig_wing("stop-409", admin(), &wing, WING_TOKEN, vec![start("conductor"), answer("Asked."), stop(CHILD), answer("x")]);
+    let (s, mut r, session, approval, _) = asked_start(&rig);
+    decide(&s, &approval, Decision::Approve);
+    assert!(matches!(next(&mut r), Some(ToShell::Text { .. })));
+    turn(&s, &mut r, Some(session), "stop it");
+    let e = tool_result(&rig, 3);
+    assert!(e["error"].as_str().is_some_and(|e| e.contains("Wing answered 409") && e.contains("not running")), "{e}");
+}
+
 // --- read_run joins the runs: Iris's session is a parent, and the runs it started are its children ---
 
 const IRIS_UUID: &str = "e1e1e1e1-0000-4000-8000-000000000001";
