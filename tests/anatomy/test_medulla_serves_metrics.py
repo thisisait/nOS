@@ -88,18 +88,23 @@ def _free_port() -> int:
 def _serve(exe: pathlib.Path, db: pathlib.Path):
     port = _free_port()
     p = subprocess.Popen([str(exe), "wing", "serve", "--db", str(db), "--port", str(port)],
-                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    _wait(p, port, "the medulla answered /api/v1/metrics")
+    return p, port
+
+
+def _wait(p: subprocess.Popen, port: int, what: str) -> None:
     for _ in range(100):
         if p.poll() is not None:
             break
         try:
             socket.create_connection(("127.0.0.1", port), timeout=0.1).close()
-            return p, port
+            return
         except OSError:
             time.sleep(0.05)
     p.kill()
-    out, err = p.communicate()
-    pytest.fail(f"the medulla answered /api/v1/metrics: no (exit {p.returncode}) {out}{err}")
+    out, _ = p.communicate()
+    pytest.fail(f"{what}: no (exit {p.returncode}) {out}")
 
 
 def _get(port: int, path: str) -> tuple[int, str, str]:
@@ -132,32 +137,29 @@ def _samples(body: str) -> set[str]:
     return {ln for ln in body.splitlines() if ln and not ln.startswith("#")}
 
 
-_HARNESS = r"""
-$composer = require $argv[1];
-$home = dirname(realpath($argv[1]), 2);
+_ROUTER = r"""<?php
+// The real MetricsPresenter under `php -S` (the CLI SAPI drops every header), over the scratch H_DB.
+chdir(getenv('H_WING'));
+$composer = require getenv('H_AUTOLOAD');
+$home = dirname(realpath(getenv('H_AUTOLOAD')), 2);
 spl_autoload_register(function ($c) use ($composer, $home) {   // this tree's app/, even with vendor symlinked
   $own = getcwd() . '/app/' . str_replace('\\', '/', substr($c, 4)) . '.php';
   $f = realpath((string) $composer->findFile($c));
   if (str_starts_with($c, 'App\\') && is_file($own)) require $own;
   elseif ($f && str_starts_with($f, $home . '/app/')) require getcwd() . substr($f, strlen($home));
 }, prepend: true);
-$pdo = new Nette\Database\Connection('sqlite:' . $argv[2]);
+$pdo = new Nette\Database\Connection('sqlite:' . getenv('H_DB'));
 $cache = new Nette\Caching\Storages\DevNullStorage;
 $structure = new Nette\Database\Structure($pdo, $cache);
 $db = new Nette\Database\Explorer($pdo, $structure, new Nette\Database\Conventions\DiscoveredConventions($structure), $cache);
 $p = new App\Presenters\Api\MetricsPresenter($db);
-$p->tokenRepo = new App\Model\TokenRepository($db);
 $p->autoCanonicalize = false;
-$req = new Nette\Http\Request(new Nette\Http\UrlScript('http://wing/api/v1/metrics'), method: 'GET');
-$res = new Nette\Http\Response;
-$p->injectPrimary($req, $res);
-ob_start();
+$p->injectPrimary(new Nette\Http\Request(new Nette\Http\UrlScript('http://wing/api/v1/metrics'), method: 'GET'),
+                  new Nette\Http\Response);
 try {
   $p->run(new Nette\Application\Request('Api:Metrics', 'GET', ['action' => 'default']));
 } catch (Nette\Application\AbortException $e) {
 }
-$body = ob_get_clean();
-echo json_encode(['code' => $res->getCode(), 'type' => $res->getHeader('Content-Type'), 'body' => $body]);
 """
 
 
@@ -174,10 +176,18 @@ def test_php_and_the_medulla_answer_metrics_the_same(tmp_path):
     subprocess.run(["php", str(WING / "bin/init-db.php"), f"--data-dir={tmp_path}"], capture_output=True, check=True, timeout=60)
     db = tmp_path / "wing.db"
     _seed(db)
-    r = subprocess.run(["php", "-d", "error_reporting=E_ALL", "-r", _HARNESS, str(AUTOLOAD), str(db)],
-                       capture_output=True, text=True, timeout=120, cwd=WING, check=False)
-    assert r.returncode == 0, r.stdout + r.stderr
-    php = json.loads(r.stdout)
+    router = tmp_path / "router.php"
+    router.write_text(_ROUTER)
+    env = {**os.environ, "H_WING": str(WING), "H_AUTOLOAD": str(AUTOLOAD), "H_DB": str(db)}
+    php_port = _free_port()
+    srv = subprocess.Popen(["php", "-S", f"127.0.0.1:{php_port}", str(router)], cwd=tmp_path, env=env,
+                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    try:
+        _wait(srv, php_port, "php -S answered")
+        php_code, php_type, php_body = _get(php_port, "/api/v1/metrics")
+    finally:
+        srv.kill()
+        srv.wait()
     exe = _medulla(tmp_path)
     proc, port = _serve(exe, db)
     try:
@@ -186,12 +196,12 @@ def test_php_and_the_medulla_answer_metrics_the_same(tmp_path):
         proc.kill()
         proc.wait()
     declared = _declared_codes()
-    assert php["code"] in declared and code in declared, (php["code"], code, declared)
-    assert code == php["code"] == 200
-    for t in (php["type"], ctype):
+    assert php_code in declared and code in declared, (php_code, code, declared, php_body)
+    assert code == php_code == 200, php_body
+    for t in (php_type, ctype):
         assert t.replace(" ", "").startswith("text/plain;version=0.0.4"), t
-    assert _samples(php["body"]), "the seed produced no PHP samples"
-    assert _samples(body) == _samples(php["body"]), (sorted(_samples(body) ^ _samples(php["body"])))
+    assert _samples(php_body), "the seed produced no PHP samples"
+    assert _samples(body) == _samples(php_body), sorted(_samples(body) ^ _samples(php_body))
 
 
 @needs_cargo
