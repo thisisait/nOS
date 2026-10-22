@@ -414,6 +414,14 @@
 
 # ── Caddyfile + launchd plist ────────────────────────────────────────────────
 
+- name: "[pazny.wing] A moved route waits until Wing's data leaves $HOME"
+  ansible.builtin.assert:
+    that:
+      - not (medulla_routes | length and (nos_system_user | default('') | length))
+    fail_msg: >-
+      medulla_routes is set while nos_system_user runs the medulla: the nos user cannot read
+      wing.db under the operator's $HOME. Empty medulla_routes, or move Wing's data first.
+
 - name: "[pazny.wing] Render Caddyfile"
   ansible.builtin.template:
     src: wing.Caddyfile.j2
