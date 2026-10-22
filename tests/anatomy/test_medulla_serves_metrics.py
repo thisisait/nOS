@@ -49,7 +49,7 @@ def _default_config() -> dict:
 
 def test_the_caddyfile_hands_a_moved_prefix_to_the_medulla():
     site = _render(["metrics"]).split(":9000 {", 1)[1]
-    m = re.search(r"^\s*handle /api/v1/metrics\* \{\s*reverse_proxy 127\.0\.0\.1:8095\s*\}", site, re.M)
+    m = re.search(r"^\s*handle /api/v1/metrics\* \{[^{}]*(?:\{[^{}]*\}[^{}]*)*reverse_proxy 127\.0\.0\.1:8095\s*\}", site, re.M)
     assert m, "no `handle /api/v1/metrics*` block proxying to the medulla in Wing's site"
     assert site.index("bind 127.0.0.1") < m.start() < site.index("php_server"), "the handle is not before php_server"
     assert "handle /api/v1/" not in _render([]), "an empty medulla_routes still hands a prefix away"
