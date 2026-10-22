@@ -20,7 +20,7 @@ tenant_domain_is_local: "{{ (tenant_domain | default('')).endswith(('.local', '.
 def _layers(tmp_path, config: str, monkeypatch) -> list[Path]:
     ni.local_tld_suffixes()  # cached from the real defaults before REPO points at tmp_path
     monkeypatch.setattr(ni, "REPO", tmp_path)  # resolve_flag names each layer relative to the repo
-    d, c = tmp_path / "default.config.yml", tmp_path / "config.yml"
+    d, c = tmp_path / "defaults.yml", tmp_path / "config.yml"
     d.write_text(DEFAULT)
     c.write_text(config)
     return [d, c]
