@@ -91,3 +91,23 @@ def test_detached_head_without_refspec_is_refused_by_name(tmp_path):
     got = _push(tools, work, str(bare))
     assert got.returncode != 0
     assert "detached" in (got.stdout + got.stderr).lower()
+
+
+def test_a_checkout_of_another_repo_is_refused(tmp_path):
+    """2026-10-22: run from a worktree of the PRIVATE seed repo (nested under an nOS worktree),
+    nos-push pushed to the nOS origin: a stray branch on the public repo, and the next time it
+    could have been the seed's history. nos-push pushes checkouts of ITS repo only: the push
+    target must be the origin the script's own checkout pushes to."""
+    bare, tools, work = _estate(tmp_path)
+    other_bare = tmp_path / "other.git"
+    _git(tmp_path, "init", "-q", "--bare", str(other_bare))
+    other = tmp_path / "other"
+    _git(tmp_path, "clone", "-q", str(other_bare), str(other))
+    _commit(other, "private")
+    _git(other, "push", "-q", "origin", "HEAD:refs/heads/main")
+    before = _git(bare, "rev-parse", "refs/heads/dev")
+    got = _push(tools, other, "origin", "HEAD:main")
+    assert got.returncode != 0, f"a foreign checkout was pushed:\n{got.stdout}{got.stderr}"
+    assert "this repo only" in (got.stdout + got.stderr).lower(), got.stdout + got.stderr
+    assert _git(bare, "rev-parse", "refs/heads/dev") == before
+    assert not (tmp_path / "synced").exists()
