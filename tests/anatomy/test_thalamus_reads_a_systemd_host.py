@@ -34,12 +34,24 @@ def test_the_shared_socket_is_judged_against_its_own_mode():
         srv = socket.socket(socket.AF_UNIX)
         srv.bind(str(path))
         srv.listen(1)
+        # judge_socket proves serving with a connect() nobody accepts here; drain the backlog after
+        # each judgement, or listen(1) on Darwin refuses the next connect (red on macOS, green on Linux).
+        srv.settimeout(1)
+
+        def judged(*args):
+            v = r.judge_socket(*args)
+            try:
+                srv.accept()[0].close()
+            except OSError:
+                pass
+            return v["state"]
+
         try:
             os.chmod(path, 0o666)
-            assert r.judge_socket(path, 0o666)["state"] == "OK"
-            assert r.judge_socket(path)["state"] == "RED", "a private socket at 0666 is open to every login"
+            assert judged(path, 0o666) == "OK"
+            assert judged(path) == "RED", "a private socket at 0666 is open to every login"
             os.chmod(path, 0o600)
-            assert r.judge_socket(path)["state"] == "OK"
+            assert judged(path) == "OK"
         finally:
             srv.close()
 
