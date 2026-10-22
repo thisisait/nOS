@@ -84,6 +84,49 @@ def test_a_manifest_the_validator_refuses_is_not_scheduled(tmp_path, monkeypatch
         f"the refusal was not said: {out.err!r}")
 
 
+def _tmp_loop(root, loop_id, runner):
+    loops = root / "files/anatomy/loops"
+    loops.mkdir(parents=True, exist_ok=True)
+    m = yaml.safe_load((REPO / "files/anatomy/loops/repo-check.loop.yml").read_text(encoding="utf-8"))
+    m["id"] = loop_id
+    m["run"] = "{{ playbook_dir }}/tools/loops/" + runner
+    (loops / f"{loop_id}.loop.yml").write_text(yaml.safe_dump(m), encoding="utf-8")
+
+
+def test_run_resolves_against_the_checkout_that_is_scheduled(tmp_path, monkeypatch, capsys):
+    """Pulse execs `run` under NOS_PLAYBOOK_DIR, so the existence check reads
+    THAT checkout, not the one discover-pulse-catalog.py happens to sit in."""
+    d = _disc()
+    (tmp_path / "tools/loops").mkdir(parents=True)
+    (tmp_path / "tools/loops/only-here.py").write_text("", encoding="utf-8")
+    _tmp_loop(tmp_path, "only-here", "only-here.py")          # exists only in tmp
+    _tmp_loop(tmp_path, "only-in-repo", "repo-check.py")      # exists only in REPO
+    monkeypatch.setenv("NOS_PLAYBOOK_DIR", str(tmp_path))
+    monkeypatch.delenv("NOS_INSTALL_FLAGS", raising=False)
+    assert d.main() == 0
+    out = capsys.readouterr()
+    names = [c["job"].get("name") for c in json.loads(out.out)]
+    assert "only-here" in names, f"a runner present in NOS_PLAYBOOK_DIR was refused: {out.err!r}"
+    assert "only-in-repo" not in names, "a runner missing from NOS_PLAYBOOK_DIR was scheduled"
+
+
+def test_a_broken_validator_refuses_loops_not_the_catalog(tmp_path, monkeypatch, capsys):
+    """loop-graph-gen.py imports bone modules; if that import fails, plugin
+    jobs still discover, loops are refused (fail closed), and it is said."""
+    d = _disc()
+    broken = tmp_path / "loop-graph-gen.py"
+    broken.write_text("raise ImportError('boom')\n", encoding="utf-8")
+    monkeypatch.setattr(d, "_LOOP_GEN", str(broken), raising=False)
+    monkeypatch.setenv("NOS_PLAYBOOK_DIR", str(REPO))
+    monkeypatch.delenv("NOS_INSTALL_FLAGS", raising=False)
+    assert d.main() == 0
+    out = capsys.readouterr()
+    cat = json.loads(out.out)
+    assert any(c["plugin_name"] != "loop" for c in cat), "plugin jobs vanished with the validator"
+    assert not [c for c in cat if c["plugin_name"] == "loop"], "a loop was scheduled unvalidated"
+    assert "boom" in out.err, f"the validator failure was not said: {out.err!r}"
+
+
 def test_anatomy_graph_harvests_generated_loop_jobs():
     """The pulse catalog already globs *.loop.yml; anatomy-graph-gen.py did not.
     Face Runs replay walks anatomy pulse nodes, so loop:news-scout was
