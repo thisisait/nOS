@@ -25,7 +25,7 @@ final class AgentSessionsPresenter extends BaseApiPresenter
 		parent::__construct();
 	}
 
-	protected array $bffActions = ['default', 'cancel'];
+	protected array $bffActions = ['default'];
 
 	protected array $thalamusActions = ['cancel'];
 
@@ -46,9 +46,9 @@ final class AgentSessionsPresenter extends BaseApiPresenter
 	}
 
 	/**
-	 * A person stops their own run (Tier 1: any); the thalamus only a run its Iris session
-	 * started, named as `parent` in the body; a bearer with no person needs wing.operator.
-	 * Not-yours answers like absent. The row turns `cancelled` here; the Runner reads it.
+	 * The thalamus stops, for its person, only a run its Iris session started (named as
+	 * `parent` in the body); a bearer with no person needs wing.operator; face-bff never
+	 * reaches this. Not-yours answers like absent. The row turns `cancelled`; the Runner reads it.
 	 */
 	public function actionCancel(string $uuid): void
 	{
