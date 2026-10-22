@@ -11,12 +11,14 @@ says what the deployed daemon was handed.
 THE FIVE SOURCES, and each is read rather than inferred:
 
   * `files/anatomy/agents/<caddy>/agent.yml`  — the DECLARED backend (git)
-  * the deployed wing launchd plist        — NOS_ARMED_BACKENDS and the model
+  * the deployed wing definition           — NOS_ARMED_BACKENDS and the model
                                              ids the RUNTIME holds, which is the
                                              only place arming is a fact
+                                             (the launchd plist, or the
+                                             systemd unit + its env file)
   * the live KEAP tables                   — whether the definitions were
                                              applied, and what Jeff has run
-  * `launchctl` + `~/ears/state.json`      — whether the ear is loaded, and
+  * the service manager + `~/ears/state.json` — whether the ear is loaded, and
                                              whether it is HEARING anything;
                                              a denied microphone leaves a
                                              perfectly healthy-looking process
@@ -40,9 +42,7 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import pathlib
-import plistlib
 import subprocess
 import sys
 import time
@@ -52,11 +52,12 @@ import urllib.request
 REPO = pathlib.Path(__file__).resolve().parents[1]
 KEAP = "http://127.0.0.1:8091/api/tables"
 from keap_api import human_headers  # noqa: E402 — sibling helper in tools/
+import nos_host  # noqa: E402 — launchd or systemd --user, by platform fact
 
 #: X-Authentik-* admin identity + the SEC-02 x-keap-proxy-secret (resolved once
 #: by keap_api). Without the secret every /api call here 401s since KEAP P1.
 HEADERS = human_headers()
-PLIST = pathlib.Path.home() / "Library/LaunchAgents/eu.thisisait.nos.wing.plist"
+WING_LABEL = "eu.thisisait.nos.wing"
 AGENTS = REPO / "files/anatomy/agents"
 
 
@@ -80,12 +81,11 @@ def _table_rows(table_id: str):
 
 def _runtime_env() -> tuple[dict, str]:
     """What the DEPLOYED wing daemon was handed. Not what the repo declares."""
-    if not PLIST.is_file():
-        return {}, f"no plist at {PLIST}"
-    try:
-        env = plistlib.loads(PLIST.read_bytes()).get("EnvironmentVariables", {})
-    except Exception as exc:                                    # noqa: BLE001
-        return {}, f"unreadable plist: {type(exc).__name__}"
+    # Only the three non-secret keys below leave this function.
+    d = nos_host.service_definition(WING_LABEL)
+    if d is None:
+        return {}, f"no readable {WING_LABEL} definition (plist / systemd unit)"
+    env = d["env"]
     keep = ("NOS_ARMED_BACKENDS", "NOS_LOCAL_MODEL", "NOS_MINIMAX_MODEL")
     return {k: (env.get(k) or "") for k in keep}, ""
 
@@ -168,9 +168,8 @@ def _listener() -> dict:
     # detected — and reported as deaf, because that is what it is here.
     foreground = subprocess.run(["pgrep", "-f", "ears-listen.py --listen"],
                                 capture_output=True, text=True).stdout.split()
-    daemonised = subprocess.run(
-        ["launchctl", "print", f"gui/{os.getuid()}/{LISTENER_LABEL}"],
-        capture_output=True, text=True).returncode == 0
+    job = nos_host.service_state(LISTENER_LABEL)
+    daemonised = bool(job and job["loaded"])
     loaded = bool(foreground) or daemonised
 
     state, detail = {}, ""
@@ -181,6 +180,8 @@ def _listener() -> dict:
             detail = f"state.json unreadable: {exc}"
     elif loaded:
         detail = "loaded, but it has never written state.json"
+    elif job is None and not foreground:
+        detail = f"service manager unreadable ({nos_host.SYSTEM}): whether a job is loaded is UNKNOWN"
 
     beat = state.get("heartbeat")
     return {
