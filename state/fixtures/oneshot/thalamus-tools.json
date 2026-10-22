@@ -1479,5 +1479,49 @@
       }
     },
     "type": "function"
+  },
+  {
+    "function": {
+      "description": "What one loop did, from tools/loop-status.py --loop (run as the operator). loop: sere (the default: the self-improvement loop's ledger: verdicts by gate set and result, judge runs that did not pass, what awaits an act) or a files/anatomy/loops/<id>.loop.yml id (its pulse runs: count, exit codes, last fired, failures, held runs). since: YYYY-MM-DD, only rows on or after it. Tier 1 only. When no loop job is registered you hear so (install_loops?): that is not an empty history, say it. Unreadable sources are UNKNOWN, never calm. The person sees a timeline of the dated rows, or a table.",
+      "name": "read_loop_runs",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "loop": {
+            "description": "sere (default) or a loops/<id>.loop.yml id, e.g. news-scout",
+            "maxLength": 64,
+            "type": "string"
+          },
+          "since": {
+            "description": "YYYY-MM-DD: only rows on or after it",
+            "maxLength": 10,
+            "minLength": 10,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      }
+    },
+    "type": "function"
+  },
+  {
+    "function": {
+      "description": "Propose an operational loop as its manifest (files/anatomy/loops/<id>.loop.yml), only when the person asked for one. manifest: {id [a-z][a-z0-9-]* (never sere), label, blurb, trigger {cadence: a 5-field cron, or event}, steps [{id, runner tool|agent|query, label, for_each?}], params?, run?, pulse? {category, max_runtime_s, findings_exit_codes?}}. A draft may be graph-only (no run: drawn, never scheduled) or reuse an existing runner under tools/loops/ as run \"{{ playbook_dir }}/tools/loops/<file>\"; a new runner is code and is the operator's: never invent a file. nOS's loop validator checks it: a refusal lists every reason, fix them all before calling again. Accepted, the person sees the whole YAML; an approve writes a draft and never schedules it: the operator copies it into files/anatomy/loops/ and converges. Tier 1 only.",
+      "name": "propose_loop",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "manifest": {
+            "description": "{id, label, blurb, trigger, steps, params?, run?, pulse?} as files/anatomy/loops/<id>.loop.yml holds them",
+            "type": "object"
+          }
+        },
+        "required": [
+          "manifest"
+        ],
+        "type": "object"
+      }
+    },
+    "type": "function"
   }
 ]
