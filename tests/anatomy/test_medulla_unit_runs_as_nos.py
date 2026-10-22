@@ -127,6 +127,25 @@ def test_no_line_of_the_unit_or_env_names_the_operators_home():
     assert f"HOME={HOME}\n" in today and f"NOS_REPO_ROOT={CHECKOUT}\n" in today, "nos_system_user '' keeps today's env"
 
 
+def test_nos_writes_only_its_ledger_never_what_it_reads():
+    """nos owned /var/lib/nos and could rename genome/ or .nos/ and plant its own identity map.
+    The home is root:nos 0750 so no entry in it can be renamed by nos; the one writable path is the ledger."""
+    u = _unit()
+    data = u["ExecStart"][0].split()[4]
+    assert u.get("ReadWritePaths") == [data] == ["/var/lib/nos/thalamus"], f"nos may write only its ledger: {u.get('ReadWritePaths')}"
+    dirs = _task(_tasks(MEDULLA_LINUX), lambda t: "Its directories" in str(t.get("name")), "no directories task")
+    ctx = {"nos_system_home": "/var/lib/nos", "nos_system_user": "nos"}
+    got = {}
+    for it in dirs["loop"]:
+        it = {k: _env().from_string(str(v)).render(**ctx) for k, v in it.items()}
+        got[it["path"]] = (it.get("owner", "root"), it["group"], it["mode"])
+    owner_expr = str(dirs["ansible.builtin.file"]["owner"])
+    assert "item.owner" in owner_expr or owner_expr == "root", owner_expr
+    for path in ("/var/lib/nos", "/var/lib/nos/.nos", "/var/lib/nos/genome"):
+        assert got.get(path) == ("root", "nos", "0750"), f"{path} must be root:nos 0750 (nos reads, never renames): {got.get(path)}"
+    assert got.get(data) == ("nos", "nos", "0700"), f"the ledger dir is nos's own: {got.get(data)}"
+
+
 def _task(tasks, pred, what):
     hit = [t for t in tasks if pred(t)]
     assert hit, f"{what} (no such task)"
