@@ -14,8 +14,9 @@ gates:
 
 ## 1. What it is
 
-The medulla is one static Rust binary (Cargo workspace `files/anatomy/medulla`,
-beside the thalamus and contract crates). It is one process with std threads; no
+The medulla is one static Rust binary (the Cargo workspace rooted at
+`files/anatomy/thalamus/`, members `thalamus`, `contract` and `medulla`; the rename
+of that directory to `files/anatomy/medulla` is a later row the operator rules on). It is one process with std threads; no
 async runtime until one is measured to be needed. It runs the host organs under
 its own identity, not the operator's, and its CLI subcommands replace
 `wing/bin/*.php`.
