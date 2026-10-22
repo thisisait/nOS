@@ -231,9 +231,11 @@ def test_unit_files_skip_aliases_and_masks(tmp_path, monkeypatch):
     (d / "eu.thisisait.nos.backup.service").write_text("[Service]\nExecStart=/usr/bin/restic backup\n")
     (d / "eu.thisisait.nos.backup.timer").write_text("[Timer]\nOnCalendar=daily\n")
     (d / "masked.service").symlink_to("/dev/null")
+    (d / "snap.x.y.service").write_text("[Unit]\nX-Snappy=yes\n[Service]\nExecStart=/usr/bin/snap run x.y\n")
     monkeypatch.setattr(h, "UNIT_DIRS", (d,))
     assert h.unit_files(system="Linux") == {
-        "eu.thisisait.nos.backup": {"path": str(d / "eu.thisisait.nos.backup.service"), "program": "/usr/bin/restic"}}
+        "eu.thisisait.nos.backup": {"path": str(d / "eu.thisisait.nos.backup.service"), "program": "/usr/bin/restic"},
+        "snap.x.y": {"path": str(d / "snap.x.y.service"), "program": "/usr/bin/snap", "generator": "snapd"}}
 
 
 def test_the_running_env_is_read_from_the_job_not_the_file():

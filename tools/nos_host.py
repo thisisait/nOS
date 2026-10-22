@@ -348,10 +348,15 @@ def unit_files(system: str | None = None) -> dict[str, dict]:
                 if label in found and p.suffix == ".timer":
                     continue
                 try:
-                    argv = parse_unit_file(p.read_text(encoding="utf-8", errors="replace"))["argv"]
+                    text = p.read_text(encoding="utf-8", errors="replace")
                 except OSError:
-                    argv = []
+                    text = ""
+                argv = parse_unit_file(text)["argv"]
                 found[label] = {"path": str(p), "program": argv[0] if argv else "?"}
+                # snapd writes a snap's units from the snap's own declaration and
+                # marks them; the distro's package manager, named as such.
+                if re.search(r"^X-Snappy=yes\s*$", text, re.M):
+                    found[label]["generator"] = "snapd"
     return found
 
 
