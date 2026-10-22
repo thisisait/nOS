@@ -340,9 +340,14 @@ def main() -> int:
         is_loop = path.endswith(".loop.yml")
         refused = validate_loop(path, doc, root=playbook_dir) if is_loop else []
         if refused:
-            # A loop the graph refuses must not tick either: no job, and say so.
+            # A loop the graph refuses must not tick either: its job is emitted `installed: false`
+            # with the reasons, so post.yml DELETEs a job an earlier converge registered (review
+            # 2026-10-22, defect 4: dropping it kept the registered job firing) and says why.
             for why in refused:
                 print(f"refused loop {path.split('/anatomy/')[-1]}: {why}", file=sys.stderr)
+            if isinstance(doc.get("id"), str):
+                catalog.append({"source": path.split("/anatomy/")[-1], "plugin_name": "loop",
+                                "job": {"name": doc["id"]}, "installed": False, "refused": refused})
             continue
         block = _loop_pulse_block(doc) if is_loop else (doc.get("pulse") or {})
         plugin_name = "loop" if is_loop else (

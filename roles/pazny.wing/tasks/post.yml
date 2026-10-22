@@ -632,6 +632,15 @@
   ansible.builtin.set_fact:
     _pulse_catalog: "{{ _pulse_catalog_raw.stdout | from_json }}"
 
+- name: "[pazny.wing] Say which loops the validator refused (their jobs are dropped below)"
+  # The discovery task is no_log (secrets ride its env); the refusal reasons are
+  # the validator's words about a manifest, so they can be said here.
+  ansible.builtin.debug:
+    msg: "refused loop {{ item.source }}: {{ item.refused | join('; ') }}"
+  loop: "{{ _pulse_catalog | selectattr('refused', 'defined') | list }}"
+  loop_control:
+    label: "{{ item.source }}"
+
 - name: "[pazny.wing] Drop Pulse jobs of retired agents"
   # Runs BEFORE the upsert, so an id that is still declared wins.
   ansible.builtin.uri:
