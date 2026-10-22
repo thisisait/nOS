@@ -30,6 +30,8 @@ final class AgentSessionsPresenter extends BaseApiPresenter
 
 	protected array $bffActions = ['default'];
 
+	protected array $thalamusReads = ['default'];
+
 	public function actionDefault(string $uuid): void
 	{
 		$session = $this->sessions->findByUuid($uuid);

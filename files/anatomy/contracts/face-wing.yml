@@ -69,8 +69,9 @@ wire:
   # starts an agent session for the person who approved Iris's start_agent card. Same headers, same fold.
   thalamus:
     bearer: "Authorization: Bearer <thalamus_wing_api_token> — the api_tokens row named `thalamus`, scope wing.write. Held only by the thalamus."
-    actions:   # the thalamus bearer reaches this and nothing else (BaseApiPresenter::$thalamusActions)
+    actions:   # the thalamus bearer reaches these and nothing else (BaseApiPresenter::$thalamusActions, $thalamusReads)
       - "POST /api/v1/agents/<name>/sessions   body: {prompt, parent: thalamus:<iris session uuid>}"
+      - "GET  /api/v1/agent-sessions/<uuid>    the run it started, narrowed to the person; Iris hears its end and report"
     refusals:
       - "thalamus bearer without a canonical X-Nos-User-Uid -> 401"
       - "thalamus bearer on any other action or method, operator verbs included -> 403"
