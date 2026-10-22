@@ -63,6 +63,27 @@ def test_discovery_surfaces_the_loop_job_with_tokens_expanded(monkeypatch, capsy
     assert check["category"] == "platform"
 
 
+def test_a_manifest_the_validator_refuses_is_not_scheduled(tmp_path, monkeypatch, capsys):
+    """The scheduler shares tools/loop-graph-gen.py::validate_manifest. A loop
+    the graph refuses must not tick in Pulse; discovery says why on stderr."""
+    d = _disc()
+    loops = tmp_path / "files/anatomy/loops"
+    loops.mkdir(parents=True)
+    bad = yaml.safe_load((REPO / "files/anatomy/loops/repo-check.loop.yml").read_text(encoding="utf-8"))
+    bad["id"] = "refused-loop"
+    bad["steps"][0]["runner"] = "shell"
+    (loops / "refused-loop.loop.yml").write_text(yaml.safe_dump(bad), encoding="utf-8")
+    monkeypatch.setenv("NOS_PLAYBOOK_DIR", str(tmp_path))
+    monkeypatch.delenv("NOS_INSTALL_FLAGS", raising=False)
+    assert d.main() == 0
+    out = capsys.readouterr()
+    names = [c["job"].get("name") for c in json.loads(out.out)]
+    assert "refused-loop" not in names, (
+        "discover-pulse-catalog scheduled a loop manifest the validator refuses")
+    assert "refused-loop" in out.err and "runner must be one of" in out.err, (
+        f"the refusal was not said: {out.err!r}")
+
+
 def test_anatomy_graph_harvests_generated_loop_jobs():
     """The pulse catalog already globs *.loop.yml; anatomy-graph-gen.py did not.
     Face Runs replay walks anatomy pulse nodes, so loop:news-scout was
