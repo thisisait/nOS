@@ -4,6 +4,7 @@ ruled: null
 row: rbac-permission-genome
 gates:
   - tests/anatomy/test_an_app_states_one_tier.py
+  - tests/anatomy/test_rbac_status_reads_the_matrix.py
 ---
 # Permissions — one genome says what each role may do
 

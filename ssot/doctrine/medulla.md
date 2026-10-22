@@ -4,6 +4,7 @@ ruled: null
 row: medulla
 gates:
   - tests/anatomy/test_estate_status_reports_organ_identity.py
+  - tests/anatomy/test_estate_status_symbionts_apart.py
   - tests/anatomy/test_medulla_is_one_static_binary.py
   - tests/anatomy/test_medulla_role.py
 ---
@@ -35,8 +36,8 @@ Default kept from the plan: Bone moves last.
 
 1. thalamus
 2. Pulse's scheduler
-3. the host bridge (§2)
-4. Wing's API, one prefix at a time behind the same `:9000` (§5)
+3. the host bridge (ssot/doctrine/medulla.md §2)
+4. Wing's API, one prefix at a time behind the same `:9000` (ssot/doctrine/medulla.md §5)
 5. receptor
 6. Bone's API, then the loop engine last
 

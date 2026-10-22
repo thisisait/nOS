@@ -9,7 +9,7 @@
 # Roles: tier:1..4 (people, via `tiers:` groups), agent:<name> (files/anatomy/agents/),
 # door:<bearer> (a named Wing bearer), engine:<name> (a non-agent machine identity),
 # operator-local (loopback break-glass).
-# Doors and agents live here beside people: one file (operator to rule, §5.3).
+# Doors and agents live here beside people: one file (ruled by the operator 2026-10-22; ssot/doctrine/permissions.md §5).
 
 version: 1
 mode: descriptive
