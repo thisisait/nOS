@@ -92,7 +92,7 @@ ENVFILE = """\
 # rendered by the role
 THALAMUS_SOCKET=/run/nos/thalamus.sock
 THALAMUS_SOCKET_SHARED=1
-THALAMUS_RELAY_SECRET='fixture-not-a-secret'
+THALAMUS_RELAY_SECRET='x'
 """
 
 # ── Darwin fixtures ──────────────────────────────────────────────────────────
@@ -103,7 +103,7 @@ gui/501/eu.thisisait.nos.wing = {
 \tstate = running
 \tenvironment = {
 \t\tNOS_MINIMAX_MODEL => MiniMax-M2.7
-\t\tWING_API_TOKEN => fixture
+\t\tWING_API_TOKEN => x
 \t}
 \tpid = 4242
 \tlast exit code = (never exited)
@@ -221,7 +221,7 @@ def test_a_unit_file_gives_argv_and_env_like_a_plist(tmp_path, monkeypatch):
     assert d["argv"] == ["/home/u/thalamus/bin/thalamus", "serve", "--data-dir", "/home/u/nos/thalamus data"]
     assert d["env"]["THALAMUS_SOCKET"] == "/run/nos/thalamus.sock"
     assert d["env"]["NOS_TIER"] == "2" and d["env"]["PLAIN"] == "x"
-    assert d["env"]["THALAMUS_RELAY_SECRET"] == "fixture-not-a-secret", "quotes stripped"
+    assert d["env"]["THALAMUS_RELAY_SECRET"] == "x", "quotes stripped"
     assert h.service_definition("eu.thisisait.nos.absent", system="Linux") is None
 
 
@@ -282,3 +282,36 @@ def test_the_env_cli_refuses_a_job_it_cannot_read(monkeypatch, capsys):
     assert h.main(["env", "x"]) == 0
     assert capsys.readouterr().out == "NOS_X => 1\n", "only KEY => value lines a shell can re-read"
     assert h.main([]) == 64
+
+
+# ── the shim only reads ──────────────────────────────────────────────────────
+
+#: Per binary, the verbs a reader may use. Anything else in an argv literal
+#: in nos_host.py is a write the one place every reader trusts must not make.
+READ_VERBS = {"launchctl": {"print", "list"}, "systemctl": {"show", "list-units", "list-sockets"},
+              "journalctl": None, "ss": None, "netstat": None, "lsof": None, "ps": None,
+              "docker": {"ps"}, "log": None}
+FORBIDDEN_FLAGS = {"journalctl": {"--vacuum-size", "--vacuum-time", "--vacuum-files", "--rotate", "--flush",
+                                  "--sync", "--relinquish-var"},
+                   "ss": {"-K", "--kill"}}
+
+
+def test_the_shim_has_no_mutating_verb():
+    import ast  # noqa: PLC0415
+    tree = ast.parse((REPO / "tools" / "nos_host.py").read_text(encoding="utf-8"))
+    seen = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.List) or not node.elts:
+            continue
+        consts = [e.value for e in node.elts if isinstance(e, ast.Constant) and isinstance(e.value, str)]
+        if not consts or not isinstance(node.elts[0], ast.Constant) or consts[0] not in READ_VERBS:
+            continue
+        binary, rest = consts[0], consts[1:]
+        seen.add(binary)
+        verbs = [a for a in rest if not a.startswith("-")]
+        allowed = READ_VERBS[binary]
+        if allowed is not None and verbs:
+            assert verbs[0] in allowed, f"{binary} {verbs[0]}: not a read verb"
+        assert not set(rest) & FORBIDDEN_FLAGS.get(binary, set()), f"{binary} {rest}: a mutating flag"
+    for b in ("launchctl", "systemctl", "journalctl", "ss", "netstat"):
+        assert b in seen, f"the detector no longer sees the shim's {b} call — it is checking nothing"

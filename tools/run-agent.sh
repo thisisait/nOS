@@ -70,7 +70,10 @@ fi
 # the process has is /proc/<MainPID>/environ. tools/nos_host.py asks whichever
 # this host runs and prints the same `KEY => value` lines (stdout is this pipe,
 # never a terminal); it names the reason on stderr when it cannot.
-if ! LOADED="$("${NOS_PYTHON:-python3}" "$REPO_ROOT/tools/nos_host.py" env "$LABEL")"; then
+# nos_host.py is stdlib-only: any python3 will do, and a PATH without one (a
+# bare launchd/systemd environment) falls back to the system interpreter.
+NOS_HOST_PY="${NOS_PYTHON:-$(command -v python3 || echo /usr/bin/python3)}"
+if ! LOADED="$("$NOS_HOST_PY" "$REPO_ROOT/tools/nos_host.py" env "$LABEL")"; then
     echo "[run-agent] ${LABEL} is not loaded/running (launchd or systemd --user) — start Wing first." >&2
     exit 2
 fi
