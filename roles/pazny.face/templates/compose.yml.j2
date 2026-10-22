@@ -93,7 +93,9 @@ services:
       # proves the proxy hop with the secret Traefik's keap-proxy middleware
       # injects, and KEAP enforces that person's access. No estate bearer here.
 {% if install_keap | default(false) | bool %}
-      NOS_KEAP_TABLES_URL: "{{ face_keap_tables_url | default('http://host.docker.internal:' ~ (keap_port | default(8091)) ~ '/api/tables', true) }}"
+      # Over gated_net to KEAP's own :8080, as Traefik reaches it: containers cannot dial KEAP's
+      # loopback publish (that is the host agents' surface), on Linux nor on Docker Desktop.
+      NOS_KEAP_TABLES_URL: "{{ face_keap_tables_url | default('http://keap:8080/api/tables', true) }}"
       KEAP_PROXY_SHARED_SECRET: "{{ keap_proxy_shared_secret | default('') }}"
       # Public KEAP URL the browser iframes for the "Explore" face app (the
       # explore graph). It's a URL, not a secret — Authentik-gated + same

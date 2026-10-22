@@ -343,7 +343,8 @@
   vars:
     su_name: "{{ bone_launchd_label }}"
     su_description: "nOS Bone — local FastAPI bridge (Ansible ↔ Wing)"
-    su_exec_start: "{{ bone_venv }}/bin/uvicorn main:app --host 127.0.0.1 --port {{ bone_port }}"
+    # serve.py: loopback for host callers + the docker bridge for containers (test_container_host_doors.py).
+    su_exec_start: "{{ bone_venv }}/bin/python serve.py --port {{ bone_port }}{% for h in bone_bind_hosts %} --host {{ h }}{% endfor %}"
     su_working_dir: "{{ bone_runtime_dir }}"
     su_environment: "{{ _bone_systemd_env }}"
   when: (nos_service_manager | default('launchd')) == 'systemd-user'
@@ -361,7 +362,7 @@
        Runtime:      {{ bone_runtime_dir }}/
        Venv:         {{ bone_venv }}
        Logs:         {{ bone_log_dir }}/{bone.log,launchd.{out,err}.log}
-       Listening:    127.0.0.1:{{ bone_port }}  (loopback only)
+       Listening:    {{ bone_bind_hosts | join(', ') }} :{{ bone_port }}
        Health:       http://127.0.0.1:{{ bone_port }}/api/health
        URL via TLS:  https://{{ bone_domain }}  (Traefik file-provider →
                      host.docker.internal:{{ bone_port }})
