@@ -86,7 +86,16 @@
       no_log: true
       register: _medulla_sys_env
 
-    # copy makes the missing parents with directory_mode and the owner/group.
+    # copy makes no parent dir for a single-file dest; file makes every missing one with these attrs.
+    - name: "[pazny.medulla] The genome's directories"
+      ansible.builtin.file:
+        path: "{{ nos_system_home }}/genome/{{ item | dirname }}"
+        state: directory
+        owner: root
+        group: "{{ nos_system_user }}"
+        mode: '0750'
+      loop: "{{ medulla_genome }}"
+
     # ponytail: a file dropped from the repo lingers in the genome; prune when one matters.
     - name: "[pazny.medulla] The genome: the repo files serve reads (NOS_REPO_ROOT)"
       ansible.builtin.copy:
