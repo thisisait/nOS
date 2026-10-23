@@ -388,11 +388,27 @@ def test_a_lower_bound_is_closed_by_its_patches(adv, version, affected):
     ("8.5.9", "< 9.0.3, < 8.5.9, < 8.4.10, < 8.3.10, >= 5.3", False),
     ("8.2.0", "< 9.0.3, < 8.5.9, < 8.4.10, < 8.3.10, >= 5.3", True),   # an older line with no patch
     ("5.2.0", "< 9.0.3, < 8.5.9, < 8.4.10, < 8.3.10, >= 5.3", False),  # below the lower bound
-    ("0.63.10", "<55.13, <56.3, <57.1", False),
+    ("63.10", "<55.13, <56.3, <57.1", False),
     ("56.2", "<55.13, <56.3, <57.1", True),
 ])
 def test_several_upper_bounds_are_one_per_line(adv, v, rng, want):
     assert adv.github_range_holds(v, rng) is want, f"{v} vs {rng!r}"
+
+
+def test_strip_major_reads_metabase_as_its_advisories_do(adv):
+    """metabase v0.63.10 matched "<55.13, <56.3, <57.1" (GHSA-2wgg-7r2p-cmqx) live: its tag's
+    leading 0 is the OSS edition, the advisory's 57.1 is the line."""
+    payload = [{"ghsa_id": "GHSA-2wgg-7r2p-cmqx", "severity": "low", "vulnerabilities": [
+        {"package": {"name": "metabase"}, "vulnerable_version_range": "<55.13, <56.3, <57.1",
+         "patched_versions": "55.13, 56.3, 57.1"}]}]
+
+    def stub(url, body=None):
+        return payload if "page=1" in url else []
+    rep = adv.collect(pin_values={"metabase_version": "v0.63.10"},
+                      receptor_map={"metabase_version": {"github": "metabase/metabase", "strip_major": True}},
+                      lockfiles={}, fetch=stub)
+    assert rep["pins"][0]["state"] == "clear", rep["pins"][0]
+    assert adv.coverage({"m_version": "1"}, {"m_version": {"github": "o/r", "strip_major": True}})["malformed"] == []
 
 
 def test_an_open_range_with_no_patch_is_judged_not_counted(adv):
