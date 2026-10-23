@@ -247,6 +247,35 @@ def test_the_running_env_is_read_from_the_job_not_the_file():
     assert h.service_env("eu.thisisait.nos.nope", run=stopped, system="Linux") is None
 
 
+# launchctl print lists `default environment` (launchd's bare PATH) BEFORE the job's own
+# `environment` block; both carry PATH.
+LAUNCHCTL_TWO_PATHS = """\
+gui/501/eu.thisisait.nos.wing = {
+\tstate = running
+\tinherited environment = {
+\t\tSSH_AUTH_SOCK => /private/tmp/agent
+\t}
+\tdefault environment = {
+\t\tPATH => /usr/bin:/bin:/usr/sbin:/sbin
+\t}
+\tenvironment = {
+\t\tPATH => /opt/homebrew/bin:/usr/bin:/bin
+\t\tWING_API_TOKEN => x
+\t}
+\tpid = 4242
+}
+"""
+
+
+def test_the_jobs_own_environment_wins_over_launchds_default():
+    """2026-10-23: every Pulse agent and loop on the Mac died `nos-php: No such file`. The
+    shim kept the FIRST PATH launchctl prints (launchd's default, no /opt/homebrew/bin), so
+    run-agent.sh exported a PATH without php. The plist's own `environment` is the job's."""
+    env = h.service_env("eu.thisisait.nos.wing", run=fake({"launchctl print": (0, LAUNCHCTL_TWO_PATHS)}), system="Darwin")
+    assert env["PATH"] == "/opt/homebrew/bin:/usr/bin:/bin", env
+    assert env["SSH_AUTH_SOCK"] == "/private/tmp/agent", "an inherited name the job does not set still reads"
+
+
 def test_the_journal_is_the_linux_stderr_log():
     run = fake({"journalctl": (0, "thalamus: model bound x\nthalamus: relay closed\n")})
     lines, src = h.service_log("eu.thisisait.nos.thalamus", grep="thalamus: ", run=run, system="Linux")
