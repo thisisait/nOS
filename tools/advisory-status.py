@@ -155,7 +155,11 @@ def range_groups(rng: str) -> list[list[tuple[str, tuple]]]:
                 raise ValueError(f"not a range: {rng!r}")
             op = {"=<": "<=", "=>": ">="}.get(pre, pre) if pre else _POSTFIX.get(post, "=")
             bound = parse_version(ver)
-            if cur and (op in (*_LOWER, "=") and any(o in (*_UPPER, "=") for o, _ in cur)):
+            # A lower bound after a single upper starts a new pair (">=9.2.0 <9.2.10 >=9.3.0");
+            # after a list of uppers it is the list's floor (grafana "< 9.0.3, < 8.5.9, >= 5.3").
+            uppers_so_far = sum(o in _UPPER for o, _ in cur)
+            if cur and op in (*_LOWER, "=") and any(o in (*_UPPER, "=") for o, _ in cur) \
+                    and not (op in _LOWER and uppers_so_far >= 2 and all(o in _UPPER for o, _ in cur)):
                 groups.append(cur)
                 cur = []
             cur.append((op, bound))
@@ -166,9 +170,29 @@ def range_groups(rng: str) -> list[list[tuple[str, tuple]]]:
     return groups
 
 
+def _line_width(bounds: list[tuple]) -> int:
+    """Release lines are major.minor when two bounds share a major (8.5.9, 8.4.10), else major."""
+    majors = [b[0][0] for b in bounds]
+    return 2 if len(majors) != len(set(majors)) else 1
+
+
 def _holds(key: tuple, group: list[tuple[str, tuple]]) -> bool:
-    return all({">=": key >= b, ">": key > b, "<=": key <= b, "<": key < b, "=": key == b}[op]
-               for op, b in group)
+    """AND of the group's bounds, except that SEVERAL upper bounds are one per release line
+    (grafana "< 9.0.3, < 8.5.9, < 8.4.10, >= 5.3"): the one on the version's line applies;
+    a version above every one is past them; one on a line with no bound of its own (an
+    older line) is held by the lowest."""
+    test = {">=": lambda b: key >= b, ">": lambda b: key > b, "<=": lambda b: key <= b,
+            "<": lambda b: key < b, "=": lambda b: key == b}
+    uppers = [(op, b) for op, b in group if op in _UPPER]
+    if len(uppers) < 2:
+        return all(test[op](b) for op, b in group)
+    if not all(test[op](b) for op, b in group if op not in _UPPER):
+        return False
+    width = _line_width([b for _, b in uppers])
+    own = [(op, b) for op, b in uppers if b[0][:width] == key[0][:width]]
+    if own:
+        return all(test[op](b) for op, b in own)
+    return key < max(b for _, b in uppers)
 
 
 def github_range_holds(v: str, rng: str) -> bool:
@@ -241,7 +265,7 @@ def coverage(pin_values: dict, receptor_map: dict) -> dict[str, list[str]]:
     """Pins with no receptor, receptors with no pin, rows of no known kind."""
     malformed = [k for k, r in receptor_map.items()
                  if not isinstance(r, dict) or len([x for x in KINDS if x in r]) != 1
-                 or set(r) - set(KINDS) - {"floating", "product"}
+                 or set(r) - set(KINDS) - {"floating", "product", "strip_major"}
                  or ("tech" in r and not r.get("product"))]
     return {"missing": sorted(set(pin_values) - set(receptor_map)),
             "stale": sorted(set(receptor_map) - set(pin_values)),
@@ -382,10 +406,12 @@ def _match_github(version: str, advisories: list[dict]) -> tuple[list[dict], lis
             pkg = v.get("package") or {}
             # A repo advisory can cover several packages: the hit names the
             # one whose range matched, so a cross-package match is visible.
+            open_ = not patched and not any(op in _UPPER for g in range_groups(v["vulnerable_version_range"])
+                                            if _holds(key, g) for op, _ in g)
             hits.append({"id": a.get("ghsa_id"), "cve": a.get("cve_id"),
                          "severity": a.get("severity"), "range": v["vulnerable_version_range"],
                          "fixed": v.get("patched_versions") or None, "package": pkg.get("name"),
-                         "ecosystem": pkg.get("ecosystem"), "url": a.get("html_url")})
+                         "ecosystem": pkg.get("ecosystem"), "url": a.get("html_url"), "open": open_})
             break
     return hits, unreadable
 
@@ -406,6 +432,23 @@ def _closed_by_patches(key: tuple, rng: str, patched: list[tuple]) -> bool:
     return key > max(patched)
 
 
+def _judge(row: dict, hits: list[dict], unreadable: list) -> None:
+    """A pin is affected by a bounded match. Open-ended matches with no fix published
+    (grafana GHSA-8xmm ">=8.1", patched none) cannot say that: the pin is UNKNOWN and
+    names them for judgement; unreadable advisories alone are UNKNOWN too."""
+    bounded = [h for h in hits if not h.get("open")]
+    if bounded:
+        row["state"] = "affected"
+    elif hits:
+        row["state"] = "UNKNOWN"
+        row["reason"] = f"{len(hits)} open-ended advisories (no fixed version published): judge them"
+    elif unreadable:
+        row["state"] = "UNKNOWN"
+        row["reason"] = f"{len(unreadable)} advisories unreadable"
+    else:
+        row["state"] = "clear"
+
+
 def _match_tech(version: str, product: str | None, entries: list[dict]) -> tuple[list[dict], list[str]]:
     """cve.now entries -> (hits, unreadable ids), by affected[] vendor/product
     ranges. `product` (from the receptor) narrows affected[] to that product;
@@ -421,14 +464,15 @@ def _match_tech(version: str, product: str | None, entries: list[dict]) -> tuple
         try:
             for a in rows:
                 if version in (a.get("versions") or []):
-                    found = {"range": f"= {version} (listed)", "fixed": None}
+                    found = {"range": f"= {version} (listed)", "fixed": None, "open": False}
                 for r in a.get("ranges") or []:
                     ev = {k: r.get(k) for k in ("introduced", "fixed", "last_affected") if r.get(k)}
                     if not ev:
                         raise ValueError("empty range")
                     if in_range(version, **ev) and found is None:
                         found = {"range": _fmt_range(ev.get("introduced"), ev.get("fixed"),
-                                                     ev.get("last_affected")), "fixed": ev.get("fixed")}
+                                                     ev.get("last_affected")), "fixed": ev.get("fixed"),
+                                 "open": not (ev.get("fixed") or ev.get("last_affected"))}
         except ValueError:
             unreadable.append(e.get("id"))
             continue
@@ -542,6 +586,9 @@ def collect(pin_values: dict | None = None, receptor_map: dict | None = None,
         r = receptor_map.get(var)
         row = {"var": var, "version": version, "matches": []}
         out_pins.append(row)
+        if isinstance(r, dict) and r.get("strip_major"):
+            # metabase tags v0.63.10 (OSS) / v1.63.10 (EE); its advisories say "< 57.1"
+            version = re.sub(r"^v?\d+\.", "", str(version))
         if not isinstance(r, dict) or not any(k in r for k in KINDS):
             row.update(receptor={"kind": "missing"}, state="UNKNOWN",
                        reason="no receptor row in state/genome/advisory-receptors.yml")
@@ -599,9 +646,7 @@ def collect(pin_values: dict | None = None, receptor_map: dict | None = None,
             hits, bad = _match_tech(version, r.get("product"), entries)
             unreadable += bad
             row.update(matches=hits, published=len(items), unreadable=unreadable)
-            row["state"] = "affected" if hits else ("UNKNOWN" if unreadable else "clear")
-            if not hits and unreadable:
-                row["reason"] = f"{len(unreadable)} advisories unreadable"
+            _judge(row, hits, unreadable)
         elif kind == "github":
             sources["github"]["asked"] += 1
             try:
@@ -612,9 +657,7 @@ def collect(pin_values: dict | None = None, receptor_map: dict | None = None,
                 row.update(state="UNKNOWN", reason=f"github {r['github']} unreadable: {exc}")
                 continue
             row.update(matches=hits, published=len(advisories), unreadable=unreadable)
-            row["state"] = "affected" if hits else ("UNKNOWN" if unreadable else "clear")
-            if not hits and unreadable:
-                row["reason"] = f"{len(unreadable)} advisories unreadable"
+            _judge(row, hits, unreadable)
         elif kind == "osv":
             osv_queries.append(({"package": {"purl": r["osv"]}, "version": version}, row))
 

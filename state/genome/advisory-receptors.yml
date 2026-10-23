@@ -21,6 +21,8 @@
 #   floating: <reason>   the pin names a moving series or a digest, not a
 #                        release; matching it exactly would be a guess, so the
 #                        reader reports the pin UNKNOWN with this reason.
+#   strip_major: true    the pin's leading major is an edition, not a line (metabase v0.63.10
+#                        is 63.10 in its advisories: "<55.13, <56.3, <57.1").
 #   product: <name>      on a tech: row, the affected[].product to match
 #                        (cve.now feeds mix products: NGINX Plus vs Open Source).
 #                        Required: a feed mixes products (psqlODBC and pgjdbc under
@@ -106,7 +108,7 @@ receptors:
   outline_version: {github: outline/outline}
   mikopbx_version: {github: mikopbx/Core}
   qgis_version: {tech: qgis, product: "QGIS", floating: "`latest` held by digest; the release is not in the pin"}
-  metabase_version: {github: metabase/metabase}
+  metabase_version: {github: metabase/metabase, strip_major: true}  # advisories name 57.1 for v0.57.1/v1.57.1
   superset_version: {github: apache/superset}
   bluesky_pds_version: {github: bluesky-social/pds, floating: "a minor series (0.4); the image patch is not in the pin"}
   paperclip_version: {github: paperclipai/paperclip}
