@@ -47,6 +47,72 @@ _nos_src_env="${NOS_SRC:-}"; _nos_py_env="${NOS_PY:-}"; _nos_seed_env="${NOS_SEE
 [ -n "${NOS_SEED_DIR:-}" ] && export NOS_SEED_DIR
 NOS_SRC="${NOS_SRC:-$HOME/projects/nOS}"
 
+# ── `nos update [ref]` — move the estate checkout, never converge ────────────
+# The estate converges from its OWN clone (~/.nos/estate; NOS_ESTATE_DIR), not
+# from the development tree: a feature branch checked out there used to change
+# what Pulse, the agents and the launchd plists ran (estate-dev-split,
+# 2026-10-23). tools/estate-adopt.sh builds the clone once (it carries
+# config.yml, credentials.yml and the galaxy roles git does not track); this
+# only MOVES it: fetches `ref` (a branch of origin or a tag; default: the ref
+# the estate follows), refuses a dirty clone (3), an unsigned apex ruling at the
+# target (4) and a move that is not a fast-forward (5), checks the target out as
+# branch `estate` and points NOS_SRC at the clone. Gate: test_nos_update_moves_the_estate.py.
+if [ "${1:-}" = "update" ]; then
+  shift
+  _est="${NOS_ESTATE_DIR:-$HOME/.nos/estate}"
+  _ref="${1:-}"
+  if [ ! -d "$_est/.git" ]; then
+    echo "nos update: no estate checkout at $_est. Build it once, dry-run first:" >&2
+    echo "  $NOS_SRC/tools/estate-adopt.sh --dir $_est --from $NOS_SRC --branch ${_ref:-dev}" >&2
+    exit 2
+  fi
+  _dirty="$(git -C "$_est" status --porcelain)"
+  if [ -n "$_dirty" ]; then
+    printf 'nos update: the estate checkout %s has local changes; it moves only clean:\n%s\n' "$_est" "$_dirty" >&2
+    exit 3
+  fi
+  if [ -z "$_ref" ]; then
+    _ref="$(git -C "$_est" rev-parse --abbrev-ref 'estate@{upstream}' 2>/dev/null | sed 's#^origin/##' || true)"
+    [ -n "$_ref" ] || _ref="$(git -C "$_est" config --get nos.estate-ref 2>/dev/null || echo dev)"
+  fi
+  git -C "$_est" fetch -q --tags origin || { echo "nos update: fetch failed" >&2; exit 6; }
+  if git -C "$_est" rev-parse -q --verify "refs/remotes/origin/$_ref" >/dev/null; then
+    _target="refs/remotes/origin/$_ref"; _branch=1
+  elif git -C "$_est" rev-parse -q --verify "refs/tags/$_ref^{commit}" >/dev/null; then
+    _target="refs/tags/$_ref"; _branch=0
+  else
+    echo "nos update: origin has no branch or tag '$_ref'" >&2; exit 2
+  fi
+  _new="$(git -C "$_est" rev-parse "$_target^{commit}")"
+  # The apex ruling decides what the estate says about itself; unsigned code does not ship.
+  if ! git -C "$_est" show "$_new:files/anatomy/apex/ruling.yml" | python3 -c '
+import hashlib, sys
+t = sys.stdin.read()
+have = next((l.split(":", 1)[1].strip() for l in t.splitlines() if l.startswith("signed_digest:")), None)
+body = "".join(l for l in t.splitlines(keepends=True) if not l.startswith("signed_digest:"))
+sys.exit(0 if have == hashlib.sha256(body.encode()).hexdigest() else 1)'; then
+    echo "nos update: the apex ruling at $_ref (${_new:0:9}) is not signed — the operator signs it (tools/apex-sign.py --confirm) before it ships" >&2
+    exit 4
+  fi
+  if git -C "$_est" rev-parse -q --verify refs/heads/estate >/dev/null; then
+    git -C "$_est" merge-base --is-ancestor estate "$_new" || {
+      echo "nos update: ${_new:0:9} ($_ref) is not ahead of the estate's $(git -C "$_est" rev-parse --short estate); a move back or sideways is the operator's: rebuild $_est with tools/estate-adopt.sh" >&2
+      exit 5; }
+  fi
+  git -C "$_est" checkout -q -B estate "$_new" || exit 6
+  if [ "$_branch" = 1 ]; then
+    git -C "$_est" branch -q --set-upstream-to="origin/$_ref" estate
+  else
+    git -C "$_est" branch -q --unset-upstream estate 2>/dev/null || true
+  fi
+  git -C "$_est" config nos.estate-ref "$_ref"
+  # Point the CLI at the estate: replace NOS_SRC, keep every other line.
+  _cli="$HOME/.nos/nos-cli.env"
+  { [ -f "$_cli" ] && grep -v '^NOS_SRC=' "$_cli"; echo "NOS_SRC=$_est"; } > "$_cli.tmp" && mv "$_cli.tmp" "$_cli"
+  echo "nos update: the estate is at $_ref ${_new:0:9} in $_est; the next \`nos\` converges from it"
+  exit 0
+fi
+
 # ── `nos dtt <verb>` — DataTables ops, not a converge ────────────────────────
 # The point of this branch: an INSTALLED `nos` reaches the dtt tools from ANY
 # shell, cwd, or branch (the operator's dev checkout, or another repo entirely),
