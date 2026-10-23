@@ -74,6 +74,27 @@ def test_confirm_builds_the_layout_and_carries_the_config(tmp_path):
     assert (est / "roles" / "elliotweiser.osx-command-line-tools" / "tasks" / "main.yml").exists()
 
 
+def test_confirm_carries_the_tofu_state(tmp_path):
+    """Live 2026-10-23: the first converge from ~/.nos/estate planned to CREATE 13 Authentik
+    proxy providers and nos_roles that already existed (400 "already exists" on each): the
+    tofu state is gitignored in terraform/authentik/, so the clone had none. The state is
+    carried with its backup, 0600 like credentials; a reconcile backup stays behind."""
+    up, old, home = _world(tmp_path)
+    tf = old / "terraform" / "authentik"
+    tf.mkdir(parents=True)
+    for name in ("terraform.tfstate", "terraform.tfstate.backup", "terraform.tfstate.reconcile-bak-20260615-084049"):
+        (tf / name).write_text(f'{{"serial": 6, "name": "{name}"}}\n')
+    est = tmp_path / "estate"
+    r = _run(home, "--dir", str(est), "--from", str(old), "--upstream", str(up), "--confirm")
+    assert r.returncode == 0, r.stderr
+    for name in ("terraform.tfstate", "terraform.tfstate.backup"):
+        got = est / "terraform" / "authentik" / name
+        assert got.read_text() == (tf / name).read_text(), name
+        assert stat.S_IMODE(got.stat().st_mode) == 0o600, name
+    assert not (est / "terraform" / "authentik" / "terraform.tfstate.reconcile-bak-20260615-084049").exists()
+    assert "terraform/authentik/terraform.tfstate" in r.stdout, "the plan names the state it carries"
+
+
 def test_it_refuses_a_directory_in_use_and_a_source_without_config(tmp_path):
     up, old, home = _world(tmp_path)
     busy = tmp_path / "busy"
