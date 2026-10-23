@@ -95,13 +95,16 @@ needs_cargo = pytest.mark.skipif(not shutil.which("cargo"), reason="cargo builds
 
 
 def _medulla(tmp: pathlib.Path) -> pathlib.Path:
-    env = {**os.environ, "CARGO_TARGET_DIR": os.environ.get("CARGO_TARGET_DIR", "/Users/pazny/.cargo-target-nos")}
-    r = subprocess.run(["cargo", "build", "--locked", "-p", "medulla"], cwd=WS, env=env,
+    # The caller's CARGO_TARGET_DIR, else the workspace's own (gitignored) target: a home path
+    # baked in here failed every Linux CI runner (2026-10-23, "failed to create /Users/pazny").
+    target = pathlib.Path(os.environ.get("CARGO_TARGET_DIR") or WS / "target")
+    r = subprocess.run(["cargo", "build", "--locked", "-p", "medulla"], cwd=WS,
+                       env={**os.environ, "CARGO_TARGET_DIR": str(target)},
                        capture_output=True, text=True, timeout=1800, check=False)
     assert r.returncode == 0, r.stderr[-4000:]
     # ponytail: a shared target dir; copied at once so a sibling build cannot swap it mid-test.
     exe = tmp / "medulla"
-    shutil.copy2(pathlib.Path(env["CARGO_TARGET_DIR"]) / "debug/medulla", exe)
+    shutil.copy2(target / "debug/medulla", exe)
     return exe
 
 
