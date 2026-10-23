@@ -31,7 +31,7 @@ COUNT = "SELECT COUNT(*), group_concat(name) FROM api_tokens WHERE scopes IS NUL
 
 def _open(db: pathlib.Path) -> sqlite3.Connection:
     """The live count: Wing writes in WAL mode, so a read must see the -wal file too."""
-    return sqlite3.connect(f"file:{db}?immutable=1", uri=True)
+    return sqlite3.connect(f"file:{db}?mode=ro", uri=True)
 
 
 def test_the_unrestricted_count_never_grows():
