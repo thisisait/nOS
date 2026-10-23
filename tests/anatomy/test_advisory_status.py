@@ -358,6 +358,34 @@ def test_a_semver_minor_between_two_lines_stays_affected(adv):
     assert pin["state"] == "affected"
 
 
+REDIS = [  # api.github.com/repos/redis/redis/security-advisories, transcribed 2026-10-23
+    {"ghsa_id": "GHSA-jhjx-x4cf-4vm8", "severity": "high", "vulnerabilities": [
+        {"package": {"name": "redis"}, "vulnerable_version_range": ">= 8.2.0", "patched_versions": "8.2.3"}]},
+    {"ghsa_id": "GHSA-whxg-wx83-85p5", "severity": "high", "vulnerabilities": [
+        {"package": {"name": "redis"}, "vulnerable_version_range": ">= 2.8.18",
+         "patched_versions": "6.2.16, 7.2.6, 7.4.1"}]},
+]
+
+
+@pytest.mark.parametrize("version, affected", [
+    ("8.10.1", False),  # the estate's pin: above every patch, a lower bound alone does not reach it (live false positive)
+    ("8.2.2", True),
+    ("8.2.3", False),
+    ("7.4.0", True),
+    ("7.4.1", False),
+    ("7.3.0", True),    # a line between two patched lines has no patch of its own
+])
+def test_a_lower_bound_is_closed_by_its_patches(adv, version, affected):
+    _, pin = _github_pin(adv, "redis/redis", None, version, REDIS)
+    assert (pin["state"] == "affected") is affected, pin
+
+
+@pytest.mark.parametrize("v, want", [("3.17.0", False), ("1.0.1", True), ("1.0.2", False)])
+def test_a_semicolon_joins_bounds(adv, v, want):
+    """woodpecker GHSA-4gcf-5m39-98mc ">= 1.0.0; < 1.0.2" matched v3.17.0 live."""
+    assert adv.github_range_holds(v, ">= 1.0.0; < 1.0.2") is want
+
+
 @pytest.mark.parametrize("v, rng, want", [
     ("1.12.0", "v1.11.2=< <=v1.12.2", True),
     ("1.12.3", "v1.11.2=< <=v1.12.2", False),
@@ -468,8 +496,31 @@ def test_a_tech_receptor_reads_the_feed_and_matches_its_product(adv):
 
 
 def test_an_empty_tech_feed_stays_unknown(adv):
-    _, pin = _tech(adv, "2.93", {"tech": "dnsmasq"}, {}, {})
+    _, pin = _tech(adv, "2.93", {"tech": "dnsmasq", "product": "dnsmasq"}, {}, {})
     assert pin["state"] == "UNKNOWN" and "feed is empty" in pin["reason"]
+
+
+def test_a_tech_receptor_without_a_product_is_malformed(adv):
+    """A cve.now feed mixes products: live, tech=postgresql matched psqlODBC and pgjdbc against
+    postgresql 16.15, tech=wordpress matched plugins. Without its product a tech row matches nothing."""
+    cov = adv.coverage({"a_version": "1"}, {"a_version": {"tech": "postgresql"}})
+    assert cov["malformed"] == ["a_version"], cov
+    _, pin = _tech(adv, "1.30.4", {"tech": "nginx"}, {NGINX_FEED: {"items": [{"id": "CVE-A"}]}}, ENTRIES)
+    assert pin["state"] == "UNKNOWN" and "product" in pin["reason"], pin
+
+
+def test_every_tech_receptor_names_its_product(adv):
+    bare = [k for k, r in adv.receptors().items() if "tech" in r and not r.get("product")]
+    assert not bare, f"tech receptors without a product (they would match every product in the feed): {bare}"
+
+
+def test_a_tech_slug_cve_now_refuses_says_so(adv):
+    def stub(url, body=None):
+        raise adv.urllib.error.HTTPError(url, 400, "Bad Request", {}, None)
+    rep = adv.collect(pin_values={"m_version": "11.8.9"}, receptor_map={"m_version": {"tech": "mariadb", "product": "MariaDB"}},
+                      lockfiles={}, fetch=stub)
+    pin = rep["pins"][0]
+    assert pin["state"] == "UNKNOWN" and "cve.now has no tech mariadb" in pin["reason"], pin
 
 
 def test_a_tech_receptor_may_name_its_product(adv):
