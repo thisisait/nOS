@@ -542,6 +542,7 @@ def collect(pin_values: dict | None = None, receptor_map: dict | None = None,
             continue
         if kind == "tech":
             slug = r["tech"]
+            sources["cve.now"]["asked"] += 1
             try:
                 feed = get(CVE_NOW_FEED.format(slug=urllib.parse.quote(str(slug))))
                 items = feed.get("items") if isinstance(feed, dict) else None
@@ -645,7 +646,7 @@ def collect(pin_values: dict | None = None, receptor_map: dict | None = None,
         if s["errors"]:
             s["state"] = "UNKNOWN"
     cve = sources["cve.now"]
-    if not cve["asked"] and "UNKNOWN" in (sources["github"]["state"], sources["osv"]["state"]):
+    if not cve["asked"] and not cve["errors"] and "UNKNOWN" in (sources["github"]["state"], sources["osv"]["state"]):
         # Nothing reached it because nothing upstream could be read: what it
         # would have been asked is unknown too, so it is not "not needed".
         cve.update(state="UNKNOWN", errors=["not asked: the sources that name CVE ids were unreadable"])
