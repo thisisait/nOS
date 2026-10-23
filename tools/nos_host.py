@@ -96,11 +96,19 @@ def parse_launchctl_print(rc: int, text: str) -> dict:
 
 
 def parse_launchctl_env(text: str) -> dict[str, str]:
-    """The `KEY => value` lines of `launchctl print` — the env the job holds."""
-    out = {}
-    for m in re.finditer(r"^\s*([A-Z][A-Z0-9_]*) => (.*)$", text, re.M):
-        out.setdefault(m.group(1), m.group(2).strip())
-    return out
+    """The `KEY => value` lines of `launchctl print` — the env the job holds. A name in
+    several blocks (PATH is in `default environment` too) takes the job's own `environment`."""
+    out, own = {}, {}
+    block = ""
+    for line in text.splitlines():
+        if line.rstrip().endswith("= {"):
+            block = line.strip()
+        m = re.match(r"^\s*([A-Z][A-Z0-9_]*) => (.*)$", line)
+        if m:
+            out.setdefault(m.group(1), m.group(2).strip())
+            if block == "environment = {":
+                own[m.group(1)] = m.group(2).strip()
+    return {**out, **own}
 
 
 def parse_launchctl_list(text: str) -> dict[str, int | None]:
