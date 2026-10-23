@@ -29,18 +29,26 @@ the playbook-side asserts are the real guards.
 
 ## Update nOS (pull, then converge)
 
-nOS updates from its checkout; only a converge moves the new source into the
-running estate.
+The estate runs from its OWN clone, `~/.nos/estate` (`NOS_ESTATE_DIR`), never
+from a development tree: a branch checked out where you develop must not change
+what Pulse, the agents and launchd run. Build the clone once (it carries
+`config.yml`, `credentials.yml` and the galaxy roles git does not track), then
+move it with `nos update`:
 
 ```bash
-cd "$NOS_SRC"   # the checkout nos uses (~/.nos/nos-cli.env; fallback ~/projects/nOS)
-git pull        # new source; nothing running changes yet
-nos             # converge: the estate now runs what was pulled
+tools/estate-adopt.sh --dir ~/.nos/estate --from ~/projects/nOS            # dry run: what it would do
+tools/estate-adopt.sh --dir ~/.nos/estate --from ~/projects/nOS --confirm  # once per host
+nos update [ref]   # fetch a branch or tag (default: the one the estate follows); refuses a
+                   # dirty clone (3), an unsigned apex ruling (4), a non-fast-forward (5)
+nos                # converge: the estate now runs that ref
 ```
 
-A pull keeps your `config.yml` (gitignored); new defaults arrive with
-`default.config.yml`. Verify: `tools/estate-status.py` (host vs repo vs
-origin), then `tools/red-status.py` (what is red after the run).
+With the clone present, preflight refuses a converge from any other tree
+(`-e allow_non_estate_checkout=true` for a deliberate one-off). `config.yml`
+now lives in the estate clone; edit it there. Verify: `tools/estate-status.py`
+(host vs repo vs origin), then `tools/red-status.py`. Without an estate clone
+(a fresh install, CI) nOS converges from the checkout `nos` was run from, as
+before, and preflight prints the adopt command.
 
 ## Usage
 
