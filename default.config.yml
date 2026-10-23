@@ -1867,7 +1867,7 @@ portainer_port: 9002                   # 9000/9001 reserved for RustFS (S3 API +
   # (STS, 2026-08-27) now does. Tag verified pullable on Docker Hub before
   # pinning — the queue records VERSIONS, and a version is not always a tag
   # (node-red's recorded 4.1.13 has no plain tag at all).
-portainer_version: "2.45.2"             # STS; REM-295 bind-mount bypass fixes (LTS 2.39 unpatched)
+portainer_version: "2.45.3"             # GHSA-j3mf-q9qf-5qf8 (critical, <=2.45.2) fixed 2.45.3 [advisory-status 2026-10-23]; REM-295 bind-mount bypass fixes (LTS 2.39 unpatched)
 portainer_admin_password: "{{ nos_derived_secrets.portainer }}"
 # Repair an admin-password DRIFT (admin exists but neither the current nor
 # previous prefix logs in — left by an interrupted/partial provisioning). true =
@@ -2196,7 +2196,7 @@ coexistence_secondary_ttl_days: 7
 # Backward compatibility – old monolithic compose dir (will be removed after migration)
 
 # ── Traefik ────────────────────────────────────────────────────────────────────
-traefik_image_version: "v3.7.13"        # REM-251 GHSA-rf44-j88r-hh8c (aliasHeadersStrategy, floor v3.7.12) + GHSA-v67p-phpq-fc8x trailer bypass (patched v3.7.13). Prior REM-145 CONNECT poisoning. [swept v3.7.10 2026-09-16]
+traefik_image_version: "v3.7.16"        # GHSA-hrpp-p4fc-wwf8, -p8wx-ph99-xgcr, -fh26-gfpp-7xxx, -qvj7-gq9c-hp7q, -53qr-784g-cj35, -rv2h-qh7j-xrjw (high, <=v3.7.13..15) fixed v3.7.16 [advisory-status 2026-10-23]. REM-251 GHSA-rf44-j88r-hh8c (aliasHeadersStrategy, floor v3.7.12) + GHSA-v67p-phpq-fc8x trailer bypass (patched v3.7.13). Prior REM-145 CONNECT poisoning. [swept v3.7.10 2026-09-16]
 traefik_http_port: 80
 traefik_https_port: 443
 traefik_dashboard_port: 8082            # 8080=cadvisor, 8081=tileserver, 8090=freescout — 8082 is the first free slot
@@ -2369,7 +2369,7 @@ erpnext_port: 8087                     # 8082 = Traefik dashboard, 8083-8086 tak
 # in this wave the result cannot be verified against `docker ps`. The tag and
 # its arm64 manifest are verified against the registry; that the service comes
 # up on it is not. First supervised `-e install_erpnext=true` run is the test.
-erpnext_version: "v15.119.3"              # REM-208: GHSA-6w83-8777-v93q SSTI (CVSS 9.9), floor 15.119.1 — pinned above it so the fourth overtake has margin
+erpnext_version: "v15.124.1"              # GHSA-v38v-9h2p-hr8v (critical) + 4 high fixed by 15.121.3 [advisory-status 2026-10-23]. REM-208: GHSA-6w83-8777-v93q SSTI (CVSS 9.9), floor 15.119.1 — pinned above it so the fourth overtake has margin
 # erpnext_data_dir: DEPRECATED since P0.1 migration to a named volume. Sites data
 # lives in Docker named volume `b2b_erpnext_sites` (managed for blank-reset
 # via `compose down -v` + `volume prune -f -a`). External storage can be
@@ -2561,8 +2561,9 @@ landing_host_note: ""                   # one host-specific paragraph (config.ym
 landing_contact: ""                     # who to ask, as text (config.yml)
 # nginx stable-alpine. The tag says what we meant, the digest says what we get
 # (mcp_gateway precedent). Digest is the multi-arch INDEX (arm64 + amd64).
-# Asked at the source registry (Docker Hub library/nginx), 2026-08-17.
-apex_version: "1.30.4-alpine@sha256:97d490c12ba55b4946b01546d1c3ed324e8d41ab1c9fcb2a616aa470620e5b46"
+# Asked at the source registry (Docker Hub library/nginx), 2026-10-23: 1.30.6 fixes
+# CVE-2026-15176, -93479, -95101, -97629, -97205 (nginx.org CHANGES-1.30).
+apex_version: "1.30.6-alpine@sha256:47928bf67eb62a1863cb08d9ecb52d3e704304ba614eaee17884204677702951"
 
 # ==============================================================================
 # KEAP – Knowledge Explorer and Preserver (where nOS keeps its memory)
