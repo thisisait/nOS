@@ -150,9 +150,9 @@ core depends on it.
 
 ### 4.3 Symbiosome and transporter
 
-Ruled 2026-10-23 (row `symbiosome-words`). A **symbiont** lives in the
-**habitat** beside nOS inside its **symbiosome**, the membrane nOS builds
-around it: today one `plugin.yml`. Each wiring block (SSO client,
+Ruled 2026-10-23 (row `symbiosome-words`). A **symbiont** (foreign software
+nOS hosts, unlike the **habitat**, which is the owner's) lives inside its
+**symbiosome**, the membrane nOS builds around it: today one `plugin.yml`. Each wiring block (SSO client,
 notification hook, dashboard, Pulse job, hub card) is one **transporter**;
 nothing crosses except through one. A symbiont fully absorbed becomes an
 organelle: code nOS owns (**self**). Proposed, not ruled: **sanction**, nOS
