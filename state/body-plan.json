@@ -11,7 +11,7 @@
     "organ system": 13,
     "organism": 0,
     "habitat": 9,
-    "sense": 82,
+    "sense": 83,
     "limb": 119,
     "memory": 41,
     "law": 54,
@@ -1336,6 +1336,10 @@
     "pulse:wing:inbox-reconcile": {
       "level": "reflex",
       "kind": "pulse"
+    },
+    "reader:advisory-status": {
+      "level": "sense",
+      "kind": "reader"
     },
     "reader:agent-capability": {
       "level": "sense",
