@@ -1930,7 +1930,7 @@ jellyfin_extra_media_dirs: []
 
 uptime_kuma_domain: "uptime{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 uptime_kuma_port: 3001
-uptime_kuma_version: "2.5.0"        # REM-073 applied 2026-07-24 (was 1.23.13; SSTI CVE-2026-33130 full fix). Role default stays "1"-track (intentional shadow). [swept 2.2.1 2026-08-06]
+uptime_kuma_version: "2.5.7"        # GHSA-wf2j-5mc7-5c4w (high, <=2.5.3) fixed 2.5.4; 2.5.7 ships Node 22.23.4 [advisory-status 2026-10-23]. REM-073 applied 2026-07-24 (was 1.23.13; SSTI CVE-2026-33130 full fix). Role default stays "1"-track (intentional shadow). [swept 2.2.1 2026-08-06]
 uptime_kuma_admin_user: "admin"
 uptime_kuma_admin_password: "{{ nos_derived_secrets.uptime_kuma }}"
 uptime_kuma_auto_monitors: true  # Automatically create monitors for all install_* services
@@ -2303,7 +2303,7 @@ homeassistant_privileged: false
 homeassistant_admin_name: "Admin"
 homeassistant_admin_user: "admin"
 homeassistant_admin_password: "{{ nos_derived_secrets.homeassistant }}"
-homeassistant_auth_oidc_version: "1.1.1"
+homeassistant_auth_oidc_version: "1.2.1"   # GHSA-gg9c-6c2r-6x28 (medium, 1.0.0-1.1.1) fixed 1.2.0 [advisory-status 2026-10-23]
 # REM-168. Home Assistant sets ip_ban_enabled=True by default and then never
 # bans anything: login_attempts_threshold defaults to -1, and ban.py returns
 # from process_wrong_login BEFORE incrementing the counter whenever the

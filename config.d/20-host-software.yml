@@ -281,7 +281,7 @@ homebrew_cask_upgrade_ignore:
 
 # EXACT, not lts/* or a major: either floats and leaves a new node tree per converge.
 # Cortex needs >= 22. A bump is a commit, never a converge.
-node_nvm_version: "24.20.0"
+node_nvm_version: "24.22.1"   # 2026-10-21 security release: 4 high in 24.x (zlib brotli OOB write, TLS identity, dns NUL)
 nvm_git_version: "v0.40.8"   # Linux: nvm cloned from github.com/nvm-sh/nvm at this tag (macOS: Homebrew nvm)
 
 # ── npm supply-chain posture ────────────────────────────────────────────────
