@@ -149,6 +149,44 @@
 # A worktree converge persists the MAIN checkout's paths (plists, Pulse jobs, NOS_REPO_ROOT), and some
 # roles read source from it during the run. 2026-10-14: the main worktree sat 354 commits behind the
 # converged worktree and the thalamus role read a stale tree. Same commit, or stop here.
+# The estate converges from ITS OWN clone (row estate-dev-split, 2026-10-23):
+# ~/.nos/estate, built once by tools/estate-adopt.sh and moved only by
+# `nos update`. Converged from anywhere else, every persisted path above would
+# be re-pointed at that tree. A host without the clone (fresh install, CI, a
+# cloud session) is not refused, only told. Gate: test_a_converge_runs_from_the_estate_checkout.py.
+- name: "[preflight] Stat the estate checkout"
+  ansible.builtin.stat:
+    path: "{{ nos_estate_dir | default(ansible_facts['env']['HOME'] ~ '/.nos/estate') }}/.git"
+  register: _ckt_estate
+  tags: ['always', 'preflight']
+
+- name: "[preflight] REFUSE: the estate converges from its own checkout"
+  ansible.builtin.fail:
+    msg: |
+      This host's estate runs from {{ nos_estate_dir | default(ansible_facts['env']['HOME'] ~ '/.nos/estate') }},
+      but you are converging {{ playbook_dir }}. Everything this run persists (launchd plists,
+      Pulse jobs, the thalamus's NOS_REPO_ROOT) would point back at this tree.
+
+      Move the estate to the code you mean, then converge from it:
+        nos update [ref]     (fetches, refuses an unsigned or non-fast-forward ref)
+        nos                  (converges from the estate checkout)
+
+      Override for a deliberate one-off:  -e allow_non_estate_checkout=true
+  when:
+    - _ckt_estate.stat.exists
+    - (playbook_dir | realpath) != ((nos_estate_dir | default(ansible_facts['env']['HOME'] ~ '/.nos/estate')) | realpath)
+    - not (allow_non_estate_checkout | default(false) | bool)
+  tags: ['always', 'preflight']
+
+- name: "[preflight] No estate checkout yet"
+  ansible.builtin.debug:
+    msg: >-
+      This host has no estate checkout, so it converges from {{ playbook_dir }}.
+      Give the estate its own clone (dry-run first):
+      tools/estate-adopt.sh --dir {{ nos_estate_dir | default(ansible_facts['env']['HOME'] ~ '/.nos/estate') }} --from {{ playbook_dir }}
+  when: not _ckt_estate.stat.exists
+  tags: ['always', 'preflight']
+
 - name: "[preflight] Compare this tree with the main checkout"
   ansible.builtin.shell: |
     set -o pipefail

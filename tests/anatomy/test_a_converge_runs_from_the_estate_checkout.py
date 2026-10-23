@@ -35,6 +35,7 @@ def _holds(when: list[str], **ctx) -> bool:
     env = jinja2.Environment()
     env.filters["bool"] = lambda v: str(v).lower() in ("true", "1", "yes")
     env.filters["realpath"] = lambda v: str(Path(v).resolve())
+    ctx.setdefault("ansible_facts", {"env": {"HOME": "/nonexistent-home"}})
     return all(env.from_string("{{ (" + w + ") | string }}").render(**ctx) == "True" for w in when)
 
 
