@@ -15,7 +15,7 @@
 | **Stack** | `iiab` |
 | **Node id** | `nos.iiab.apex` |
 | **Toggle** | `install_apex: false` — default OFF; flipping it on before the ruling is signed produces a loud converge refusal, not a page |
-| **Image** | `nginx:1.30.4-alpine@sha256:97d490c1…` (`apex_version` — tag AND multi-arch index digest) |
+| **Image** | `nginx:1.30.6-alpine@sha256:47928bf6…` (`apex_version` — tag AND multi-arch index digest) |
 | **Compose** | `~/stacks/iiab/docker-compose.yml` + `~/stacks/iiab/overrides/apex.yml` (role; no plugin compose extension) |
 | **Container** | `iiab-apex-1` |
 | **Data** | None — stateless. The web root `~/stacks/iiab/apex-www` → `/usr/share/nginx/html:ro` is DERIVED content (`build.py --require-signed --out`), rebuilt at converge; a blank may wipe it freely. |
