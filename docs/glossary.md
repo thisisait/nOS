@@ -75,8 +75,14 @@ genome → cell → tissue → organ → organ system → organism → habitat.
   Counter-example: the Wing timeline (what the estate did, not what it offers).
 - **twin** — The second Mac. Not: mirror-parity.
   Counter-example: a coexistence track (a second copy of one service on the same Mac).
-- **plugin** — A plugin.yml declaring how one service is wired to the others (SSO, dashboards, jobs). Not: tissue, gene.
+- **plugin** — A plugin.yml declaring how one service is wired to the others (SSO, dashboards, jobs). Its ruled word is now symbiosome; the path keeps "plugins" until the rename row. Not: tissue, gene.
   Counter-example: an apps/<name>.yml manifest app (it deploys a service; a plugin only wires one).
+- **symbiosome** — The membrane nOS builds around one symbiont it hosts: today one plugin.yml. The symbiont never reaches the rest of nOS directly; everything it exchanges passes through the transporters this membrane declares. Not: symbiont, organelles, tissue.
+  Counter-example: the symbiont's own container or compose file (the guest, not the membrane nOS built around it).
+- **transporter** — One exchange across a symbiosome, owned by nOS: one wiring block of a plugin.yml (an SSO client, a notification hook, a dashboard, a Pulse job, a hub card). Not: symbiosome, limb.
+  Counter-example: a symbiont's own API or webhook (its surface; a transporter is the host's declared use of it).
+- **sanction** (proposed, not yet ruled) — nOS cutting a misbehaving symbiont's supply through its symbiosome: a quarantine effector of the immune system, escalated only with the operator's approval. Not: verdicts, sense.
+  Counter-example: an indicator reporting a symbiont red (a sense reports; a sanction acts).
 - **tier** — The RBAC access level, 1–4, an organ or account requires; each binds to an Authentik group. Declared as `authentik.tier` in a plugin and `rbac_tier` in the manifest. Never a delivery class or a dependency rank — those are role service / manifest app, and layer. Not: layer, role service, manifest app, F1–F4 / H (face-app build cost).
   Counter-example: the infra stack coming up first (a layer, dependency depth; not an access tier).
 - **layer** — The dependency axis of an organ: if this stops, what else stops (ssot/doctrine/layers.md). Derived, never declared on a manifest row; its values are the genome's `axes.layer`. The config layers (the config.d/ files, default.config.yml, config.yml) are an allowed compound: files Ansible loads in order. Not: tier, stack.
