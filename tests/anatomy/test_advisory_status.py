@@ -259,3 +259,49 @@ def test_the_github_token_goes_only_to_github(adv, monkeypatch):
     assert "Authorization" in adv.headers_for("https://api.github.com/repos/a/b/security-advisories")
     for url in ("https://api.osv.dev/v1/querybatch", "https://cve.now/api/v1/entries/CVE-1"):
         assert "Authorization" not in adv.headers_for(url)
+
+
+# --- review findings (CodeRabbit, PR #63) ------------------------------------
+
+def _osv_pin(adv, detail):
+    def stub(url, body=None):
+        if url.endswith("/v1/querybatch"):
+            return {"results": [{"vulns": [{"id": "GHSA-x"}]}]}
+        if url.endswith("/v1/vulns/GHSA-x"):
+            return detail
+        raise OSError(url)
+    rep = adv.collect(pin_values={"jupyterhub_version": "5.0.0"},
+                      receptor_map={"jupyterhub_version": {"osv": "pkg:pypi/jupyterhub"}},
+                      lockfiles={}, fetch=stub)
+    (pin,) = rep["pins"]
+    return rep, pin
+
+
+def test_an_osv_record_not_tied_to_the_package_is_unknown_not_clear(adv):
+    """OSV named the id for this query, but no affected entry carries our purl."""
+    _, pin = _osv_pin(adv, {"id": "GHSA-x", "affected": [
+        {"package": {"ecosystem": "PyPI", "name": "jupyterhub"},
+         "ranges": [{"type": "ECOSYSTEM", "events": [{"introduced": "0"}, {"fixed": "5.1.0"}]}]}]})
+    assert pin["state"] == "UNKNOWN", pin
+    assert pin["unreadable"] == ["GHSA-x"]
+
+
+def test_a_bad_version_in_one_osv_record_leaves_the_report_standing(adv):
+    rep, pin = _osv_pin(adv, {"id": "GHSA-x", "affected": [
+        {"package": {"purl": "pkg:pypi/jupyterhub"},
+         "ranges": [{"type": "ECOSYSTEM", "events": [{"introduced": "0"}, {"fixed": "next-release"}]}]}]})
+    assert pin["state"] == "UNKNOWN" and pin["unreadable"] == ["GHSA-x"]
+    assert rep["sources"]["osv"]["state"] == "UNKNOWN"
+
+
+def test_server_only_ids_are_shown(adv):
+    rep, pin = _osv_pin(adv, {"id": "GHSA-x", "affected": [
+        {"package": {"purl": "pkg:pypi/jupyterhub"},
+         "ranges": [{"type": "ECOSYSTEM", "events": [{"introduced": "6.0.0"}]}]}]})
+    assert pin["state"] == "clear" and pin["server_only"] == ["GHSA-x"]
+    assert "1 OSV id(s) not re-matched" in adv.render(rep)
+
+
+def test_a_github_hit_names_the_package_it_matched(adv):
+    _, pin = _frankenphp(adv, "1.13.1")
+    assert {(m["package"], m["ecosystem"]) for m in pin["matches"]} == {("github.com/dunglas/frankenphp", "go")}
