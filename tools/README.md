@@ -45,6 +45,7 @@ Each line here is a `reader:` node of the anatomy graph, a sense.
 
 - `agent-capability.py` — Derive each agent's nos-work:// capability address from its manifest (the routing projection).
 - `agent-status.py` — What the agents are doing, and what came of the last ones.
+- `advisory-status.py` — READER: which version pins and organ lockfiles sit inside a published advisory range: every `*_version`/`*_tag` pin routed by `state/genome/advisory-receptors.yml` (GitHub repo advisories, OSV), the thalamus/wing/face/cortex lockfiles through OSV querybatch, KEV/EPSS from cve.now by CVE id; exact ranges. Each source UNKNOWN on its own, never "no findings"; `tech:` receptors are declared, not read yet.
 - `app-slots.py` — Which app names, subdomains and host ports are taken (manifest resolved through the layers, apps/ + drafts, roles, Traefik routes, `--live` listening ports) and whether one is free; `--free-port` the lowest free in range. Unreadable source = UNKNOWN, `free: null`. Iris's propose_app and `nos_app_parser --estate`.
 - `app-version.py` — What each container actually RUNS, against what the pin says it bundles.
 - `workload-digest-status.py` — READER: image ID per running container vs the converge's record (`~/.nos/workload-digests.json`); a changed one is DRIFT (red). UNKNOWN without a record or docker.

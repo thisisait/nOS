@@ -1,0 +1,112 @@
+# Advisory receptors — where each version pin hears about its own advisories.
+#
+# WHY. The estate ran FrankenPHP 1.13.1 for two days after php/frankenphp
+# published GHSA-6q3j-62j9-f9hh (high) and three siblings, all fixed in 1.13.2,
+# and nothing noticed: the nightly scan (files/vuln-scan) is a model doing web
+# searches and never reads a pin. Measured 2026-10-23: only GitHub repo
+# advisories (api.github.com/repos/<o>/<r>/security-advisories) carried all
+# four; OSV had one old id; cve.now 404s GHSA-only ids.
+#
+# WHAT. One row per pin — every `*_version` / `*_tag` key of the committed
+# defaults (tools/nos_identity.default_layers()). A row says WHERE to look,
+# never WHAT version: tools/advisory-status.py reads the version from the pin
+# itself, so a bump cannot leave a stale copy here.
+#
+#   github: owner/repo   the upstream repo's published security advisories
+#   osv: <purl>          OSV, package URL without a version (pkg:pypi/x)
+#   tech: <slug>         a cve.now technology slug (declared; not read yet)
+#   none: <reason>       nothing to hear, and why — never an empty answer
+#
+# Optional on any row:
+#   floating: <reason>   the pin names a moving series or a digest, not a
+#                        release; matching it exactly would be a guess, so the
+#                        reader reports the pin UNKNOWN with this reason.
+#
+# A new pin without a row here fails tests/anatomy/test_advisory_status.py,
+# naming the pin. A row whose pin is gone fails the same gate.
+
+version: 1
+
+receptors:
+  # --- host-desktop / host-software (config.d) and host toolchain ---
+  dotfiles_repo_version: {none: "a branch of the operator's own dotfiles repo, not a release"}
+  node_nvm_version: {tech: nodejs}
+  nvm_git_version: {github: nvm-sh/nvm}
+  python_version: {tech: python, floating: "a pyenv series (3.13); the installed patch is not in the pin"}
+  santa_version: {github: northpolesec/santa}
+  ollama_version: {github: ollama/ollama}
+  dnsmasq_version: {tech: dnsmasq}
+
+  # --- wing ---
+  frankenphp_version: {github: php/frankenphp}
+  php_version: {github: php/php-src, floating: "a Homebrew php@ series (8.3); the installed patch is not in the pin"}
+
+  # --- data ---
+  mariadb_version: {tech: mariadb}
+  postgresql_version: {tech: postgresql}
+  postgis_version: {tech: postgis}
+  redis_version: {github: redis/redis}
+
+  # --- observability ---
+  grafana_version: {github: grafana/grafana}
+  grafana_sqlite_plugin_version: {github: fr-ser/grafana-sqlite-datasource}
+  tempo_version: {github: grafana/tempo}
+  loki_version: {github: grafana/loki}
+  prometheus_version: {github: prometheus/prometheus}
+  nginx_prometheus_exporter_version: {github: nginx/nginx-prometheus-exporter}
+  phpfpm_exporter_version: {github: hipages/php-fpm_exporter}
+  postgres_exporter_version: {github: prometheus-community/postgres_exporter}
+  mysqld_exporter_version: {github: prometheus/mysqld_exporter}
+  redis_exporter_version: {github: oliver006/redis_exporter}
+  cadvisor_version: {github: google/cadvisor}
+  blackbox_exporter_version: {github: prometheus/blackbox_exporter}
+
+  # --- edge, identity, secrets ---
+  traefik_image_version: {github: traefik/traefik}
+  authentik_version: {github: goauthentik/authentik}
+  infisical_version: {github: Infisical/infisical}
+  vaultwarden_version: {github: dani-garcia/vaultwarden}
+  apex_version: {tech: nginx}
+  landing_version: {none: "renders as apex_version: the same nginx image, heard through apex_version"}
+
+  # --- iiab and services ---
+  wordpress_version: {tech: wordpress}
+  nextcloud_version: {github: nextcloud/security-advisories, floating: "a major series (33); the image patch is not in the pin"}
+  kiwix_version: {github: kiwix/kiwix-tools}
+  maps_tileserver_version: {github: maptiler/tileserver-gl}
+  maps_planetiler_version: {github: onthegomap/planetiler}
+  geolibre_version: {github: opengeos/geolibre}
+  martin_version: {github: maplibre/martin}
+  gitea_version: {github: go-gitea/gitea}
+  gitlab_version: {tech: gitlab}
+  n8n_version: {github: n8n-io/n8n}
+  jupyterhub_version: {osv: "pkg:pypi/jupyterhub"}
+  jupyterlab_version: {osv: "pkg:pypi/jupyterlab"}
+  jupyterhub_ipykernel_version: {osv: "pkg:pypi/ipykernel"}
+  jupyterhub_oauthenticator_version: {osv: "pkg:pypi/oauthenticator"}
+  jupyterhub_systemdspawner_version: {osv: "pkg:pypi/jupyterhub-systemdspawner"}
+  openwebui_version: {github: open-webui/open-webui}
+  woodpecker_version: {github: woodpecker-ci/woodpecker}
+  portainer_version: {github: portainer/portainer}
+  docker_socket_proxy_version: {github: Tecnativa/docker-socket-proxy}
+  spacetimedb_version: {github: clockworklabs/SpacetimeDB}
+  nos_forum_version: {github: pazny/nos-forum}
+  jellyfin_version: {github: jellyfin/jellyfin}
+  uptime_kuma_version: {github: louislam/uptime-kuma}
+  calibreweb_version: {github: janeczku/calibre-web}
+  homeassistant_version: {github: home-assistant/core}
+  homeassistant_auth_oidc_version: {github: christiaangoossens/hass-oidc-auth}
+  rustfs_version: {github: rustfs/rustfs}
+  erpnext_version: {github: frappe/erpnext}
+  freescout_version: {none: "nfrastack/freescout tags version the wrapper image, not FreeScout (REM-250); the app version is not in the pin"}
+  outline_version: {github: outline/outline}
+  mikopbx_version: {github: mikopbx/Core}
+  qgis_version: {tech: qgis, floating: "`latest` held by digest; the release is not in the pin"}
+  metabase_version: {github: metabase/metabase}
+  superset_version: {github: apache/superset}
+  bluesky_pds_version: {github: bluesky-social/pds, floating: "a minor series (0.4); the image patch is not in the pin"}
+  paperclip_version: {github: paperclipai/paperclip}
+
+  # --- nOS organs built here (their dependencies are read from lockfiles) ---
+  face_version: {none: "the nOS face, built from this repo; its npm tree is read from files/anatomy/face/package-lock.json"}
+  keap_version: {github: thisisait/nos-keap}
