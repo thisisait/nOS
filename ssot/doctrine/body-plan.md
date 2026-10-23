@@ -11,6 +11,7 @@ gates:
   - tests/anatomy/test_lexicon_holds.py
   - tests/anatomy/test_manifest_rows_carry_origin.py
   - tests/anatomy/test_ssot_index.py
+  - tests/anatomy/test_symbiosome_words.py
 ---
 # Body plan — one word, one meaning
 
@@ -146,6 +147,20 @@ level. The manifest row says `joint:` (the spec) or `joint_pending:` (why
 not yet). Gate: `tests/anatomy/test_appendage_is_detachable.py`.
 Counter-example: KEAP has a contract and is not an appendage, because the
 core depends on it.
+
+### 4.3 Symbiosome and transporter
+
+Ruled 2026-10-23 (row `symbiosome-words`). A **symbiont** lives in the
+**habitat** beside nOS inside its **symbiosome**, the membrane nOS builds
+around it: today one `plugin.yml`. Each wiring block (SSO client,
+notification hook, dashboard, Pulse job, hub card) is one **transporter**;
+nothing crosses except through one. A symbiont fully absorbed becomes an
+organelle: code nOS owns (**self**). Proposed, not ruled: **sanction**, nOS
+cutting a misbehaving symbiont's supply (a quarantine effector,
+[`immune-system.md`](immune-system.md)). The biology: in a legume root nodule
+the plant wraps each rhizobium it admits in a symbiosome membrane, so all
+exchange passes through transporters the plant controls, and it sanctions
+cheating rhizobia by cutting their oxygen. No path is renamed by this word.
 
 ## 5. The four old meanings of organ, and where each went
 
