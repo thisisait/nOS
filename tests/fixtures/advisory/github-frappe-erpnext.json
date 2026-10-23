@@ -1,0 +1,30 @@
+[
+  {
+    "ghsa_id": "GHSA-734c-hv9r-mg2c",
+    "cve_id": null,
+    "severity": "medium",
+    "state": "published",
+    "withdrawn_at": null,
+    "html_url": "https://github.com/frappe/erpnext/security/advisories/GHSA-734c-hv9r-mg2c",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "pip",
+          "name": "erpnext"
+        },
+        "vulnerable_version_range": "< 15.112.0",
+        "patched_versions": "15.112.0",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "pip",
+          "name": "erpnext"
+        },
+        "vulnerable_version_range": "< 16.23.0",
+        "patched_versions": "16.23.0",
+        "vulnerable_functions": []
+      }
+    ]
+  }
+]

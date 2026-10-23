@@ -305,3 +305,186 @@ def test_server_only_ids_are_shown(adv):
 def test_a_github_hit_names_the_package_it_matched(adv):
     _, pin = _frankenphp(adv, "1.13.1")
     assert {(m["package"], m["ecosystem"]) for m in pin["matches"]} == {("github.com/dunglas/frankenphp", "go")}
+
+
+# --- operator live-run review (PR #63, 2026-10-23) ---------------------------
+
+def _github_pin(adv, repo, fixture, version, payload=None):
+    if payload is None:
+        payload = json.loads((FIXTURES / fixture).read_text(encoding="utf-8"))
+    base = f"https://api.github.com/repos/{repo}/security-advisories"
+
+    def stub(url, body=None):
+        if url.startswith(base):
+            return payload if "page=1" in url else []
+        raise AssertionError(f"unexpected fetch {url}")
+
+    rep = adv.collect(pin_values={"x_version": version}, receptor_map={"x_version": {"github": repo}},
+                      lockfiles={}, fetch=stub)
+    return rep, rep["pins"][0]
+
+
+@pytest.mark.parametrize("version, affected", [
+    ("2026.5.7", False),   # patched on its own line (2026.5): the 2026.8 line's range does not reach it
+    ("2026.5.6", True),
+    ("2026.8.1", True),
+    ("2026.8.2", False),
+    ("2026.2.7", False),
+    ("2025.12.0", True),   # no line of its own: the ranges still hold
+])
+def test_authentik_reads_each_release_line(adv, version, affected):
+    _, pin = _github_pin(adv, "goauthentik/authentik", "github-goauthentik-authentik.json", version)
+    assert (pin["state"] == "affected") is affected, pin
+    if not affected:
+        assert pin["state"] == "clear"
+
+
+@pytest.mark.parametrize("version, affected", [
+    ("v15.119.3", False),  # the estate's pin: patched on the 15 line, the 16 range does not apply
+    ("v15.111.0", True),
+    ("v16.22.9", True),
+    ("v16.23.0", False),
+])
+def test_erpnext_reads_each_release_line(adv, version, affected):
+    _, pin = _github_pin(adv, "frappe/erpnext", "github-frappe-erpnext.json", version)
+    assert (pin["state"] == "affected") is affected, pin
+
+
+def test_a_semver_minor_between_two_lines_stays_affected(adv):
+    payload = [{"ghsa_id": "GHSA-a", "severity": "low", "vulnerabilities": [
+        {"package": {"name": "p"}, "vulnerable_version_range": "< 1.5.0", "patched_versions": "1.5.0"},
+        {"package": {"name": "p"}, "vulnerable_version_range": "< 1.3.9", "patched_versions": "1.3.9"}]}]
+    _, pin = _github_pin(adv, "o/r", None, "1.4.0", payload)
+    assert pin["state"] == "affected"
+
+
+@pytest.mark.parametrize("v, rng, want", [
+    ("1.12.0", "v1.11.2=< <=v1.12.2", True),
+    ("1.12.3", "v1.11.2=< <=v1.12.2", False),
+    ("1.11.1", "v1.11.2=< <=v1.12.2", False),
+    ("9.2.5", ">=9.2.0 <9.2.10 >=9.3.0 <9.3.4", True),
+    ("9.2.10", ">=9.2.0 <9.2.10 >=9.3.0 <9.3.4", False),
+    ("9.3.3", ">=9.2.0 <9.2.10 >=9.3.0 <9.3.4", True),
+    ("9.3.4", ">=9.2.0 <9.2.10 >=9.3.0 <9.3.4", False),
+    ("1.0.5", "1.0.0 - 1.1.1", True),
+    ("1.1.1", "1.0.0 - 1.1.1", True),
+    ("1.1.2", "1.0.0 - 1.1.1", False),
+    ("2026.5.2", "≤ 2026.5.2", True),
+    ("2026.5.3", "≤ 2026.5.2", False),
+])
+def test_the_range_forms_seen_live_parse(adv, v, rng, want):
+    assert adv.github_range_holds(v, rng) is want, f"{v} vs {rng!r}"
+
+
+def test_an_unreadable_range_raises(adv):
+    with pytest.raises(ValueError):
+        adv.github_range_holds("1.58.0", "x.58.0")
+
+
+def _two_advisories(good):
+    rows = [{"ghsa_id": "GHSA-bad", "severity": "low", "vulnerabilities": [
+        {"package": {"name": "p"}, "vulnerable_version_range": "x.58.0", "patched_versions": ""}]}]
+    if good:
+        rows.append({"ghsa_id": "GHSA-good", "severity": "high", "vulnerabilities": [
+            {"package": {"name": "p"}, "vulnerable_version_range": "<= 1.13.1", "patched_versions": "1.13.2"}]})
+    return rows
+
+
+def test_one_unreadable_advisory_does_not_blank_the_repo(adv):
+    _, pin = _github_pin(adv, "o/r", None, "1.13.1", _two_advisories(good=True))
+    assert pin["state"] == "affected"
+    assert [m["id"] for m in pin["matches"]] == ["GHSA-good"]
+    assert pin["unreadable"] == ["GHSA-bad"]
+
+
+def test_only_unreadable_advisories_make_the_pin_unknown_with_a_count(adv):
+    rep, pin = _github_pin(adv, "o/r", None, "1.13.1", _two_advisories(good=False))
+    assert pin["state"] == "UNKNOWN"
+    assert "1 advisories unreadable" in pin["reason"]
+    assert rep["sources"]["github"]["state"] == "OK"
+
+
+def test_github_pages_up_to_thirty(adv):
+    assert adv.GITHUB_MAX_PAGES == 30
+
+
+def test_the_report_counts_its_calls(adv):
+    rep, _ = _frankenphp(adv, "1.13.1")
+    assert rep["calls"] == 1
+    assert "1 network call" in adv.render(rep)
+
+
+def test_gh_token_is_used_when_github_token_is_not(adv, monkeypatch):
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    monkeypatch.setenv("GH_TOKEN", "t0k")
+    assert adv.headers_for("https://api.github.com/x")["Authorization"] == "Bearer t0k"
+    assert "Authorization" not in adv.headers_for("https://cve.now/feed?tech=nginx&format=json")
+
+
+# --- tech: receptors through the cve.now feed --------------------------------
+
+NGINX_FEED = "https://cve.now/feed?tech=nginx&format=json"
+
+
+def _tech(adv, version, receptor, feed, entries):
+    def stub(url, body=None):
+        if url.startswith("https://cve.now/feed?"):
+            return feed.get(url, {"items": []})
+        if url.startswith("https://cve.now/api/v1/entries/"):
+            return entries[url.rsplit("/", 1)[1]]
+        raise AssertionError(url)
+    rep = adv.collect(pin_values={"apex_version": version}, receptor_map={"apex_version": receptor},
+                      lockfiles={}, fetch=stub)
+    return rep, rep["pins"][0]
+
+
+ENTRIES = {
+    "CVE-A": {"id": "CVE-A", "severity": {"cvss": 7.5},
+              "exploitation": {"kev": {"dateAdded": "2026-10-01"}, "epssReached": None},
+              "affected": [{"vendor": "F5", "product": "NGINX Open Source",
+                            "ranges": [{"introduced": "1.25.0", "fixed": "1.30.5"}]}]},
+    "CVE-B": {"id": "CVE-B", "exploitation": {},
+              "affected": [{"vendor": "F5", "product": "NGINX Plus",
+                            "ranges": [{"introduced": "R17", "fixed": "*"}]}]},
+    "CVE-C": {"id": "CVE-C", "exploitation": {},
+              "affected": [{"vendor": "F5", "product": "NGINX Open Source",
+                            "ranges": [{"introduced": "1.11.4", "fixed": "*"}]}]},
+    "CVE-D": {"id": "CVE-D", "exploitation": {},
+              "affected": [{"vendor": "F5", "product": "NGINX Open Source",
+                            "ranges": [{"introduced": "1.20.0", "fixed": "1.26.3"}]}]},
+}
+
+
+def test_a_tech_receptor_reads_the_feed_and_matches_its_product(adv):
+    feed = {NGINX_FEED: {"items": [{"id": k} for k in ENTRIES]}}
+    rep, pin = _tech(adv, "1.30.4-alpine@sha256:97d4",
+                     {"tech": "nginx", "product": "NGINX Open Source"}, feed, ENTRIES)
+    assert pin["state"] == "affected"
+    (m,) = pin["matches"]
+    assert m["id"] == "CVE-A" and m["fixed"] == "1.30.5" and m["kev"] is True
+    assert pin["unreadable"] == ["CVE-C"]          # fixed "*": no bound to match against
+    assert pin["published"] == 4
+    assert "range ?" not in adv.render(rep)
+
+
+def test_an_empty_tech_feed_stays_unknown(adv):
+    _, pin = _tech(adv, "2.93", {"tech": "dnsmasq"}, {}, {})
+    assert pin["state"] == "UNKNOWN" and "feed is empty" in pin["reason"]
+
+
+def test_a_tech_receptor_may_name_its_product(adv):
+    cov = adv.coverage({"a_version": "1"}, {"a_version": {"tech": "nginx", "product": "NGINX Open Source"}})
+    assert cov["malformed"] == []
+
+
+# --- OSV rows say which range matched ----------------------------------------
+
+def test_an_osv_hit_prints_its_range_and_fix(adv):
+    detail = {"id": "GHSA-x", "affected": [
+        {"package": {"purl": "pkg:pypi/jupyterhub"},
+         "ranges": [{"type": "ECOSYSTEM", "events": [{"introduced": "0"}, {"fixed": "5.1.0"}]}]}]}
+    rep, pin = _osv_pin(adv, detail)
+    (m,) = pin["matches"]
+    assert m["range"] == "< 5.1.0" and m["fixed"] == "5.1.0"
+    text = adv.render(rep)
+    assert "range < 5.1.0 fixed 5.1.0" in text and "range ?" not in text

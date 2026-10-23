@@ -1,0 +1,39 @@
+[
+  {
+    "ghsa_id": "GHSA-cxwx-9x59-28qm",
+    "cve_id": null,
+    "severity": "high",
+    "state": "published",
+    "withdrawn_at": null,
+    "html_url": "https://github.com/goauthentik/authentik/security/advisories/GHSA-cxwx-9x59-28qm",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "go",
+          "name": "goauthentik.io"
+        },
+        "vulnerable_version_range": "<= 2026.8.1",
+        "patched_versions": "2026.8.2",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "go",
+          "name": "goauthentik.io"
+        },
+        "vulnerable_version_range": "<= 2026.5.6",
+        "patched_versions": "2026.5.7",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "go",
+          "name": "goauthentik.io"
+        },
+        "vulnerable_version_range": "<= 2026.2.6",
+        "patched_versions": "2026.2.7",
+        "vulnerable_functions": []
+      }
+    ]
+  }
+]
