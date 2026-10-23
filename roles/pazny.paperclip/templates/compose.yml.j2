@@ -49,6 +49,12 @@ services:
       # back to loopback.
       PAPERCLIP_BIND: "lan"
       PAPERCLIP_LISTEN_PORT: "3100"
+      # The API its agents and MCP servers call. They run in THIS container, so it is the
+      # loopback listener; unset, the server derived http://<domain>:3100 = the host's LAN
+      # address, where 3100 is not published (2026-10-23, every agent "Could not connect").
+      PAPERCLIP_API_URL: "http://localhost:3100"
+      # Its public origin; unset, Better Auth guessed it per request and warned on every start.
+      BETTER_AUTH_URL: "https://{{ paperclip_domain }}"
       # REM-009 pinned `require` on 2026-06-14 and it never rendered:
       # postgresql_ssl_enabled was a pazny.postgresql role default, out of
       # scope here, so this took the `prefer` branch on every host — the live
