@@ -488,3 +488,68 @@ def test_an_osv_hit_prints_its_range_and_fix(adv):
     assert m["range"] == "< 5.1.0" and m["fixed"] == "5.1.0"
     text = adv.render(rep)
     assert "range < 5.1.0 fixed 5.1.0" in text and "range ?" not in text
+
+
+# --- the ETag cache (operator ruling 2026-10-23: a library module) -----------
+#
+# The writes live in tools/_advisory_cache.py, which test_readers_section_only_reads
+# cannot see (its documented blind spot). That was ruled on PR #63, not hidden:
+# these cases pin what the cache may do instead.
+
+class _Resp:
+    def __init__(self, payload, etag=None):
+        self._b = json.dumps(payload).encode()
+        self.headers = {"ETag": etag} if etag else {}
+
+    def read(self):
+        return self._b
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+
+def test_a_304_is_answered_from_the_cache(adv, tmp_path, monkeypatch):
+    import urllib.error
+    seen = []
+
+    def urlopen(req, timeout=None):
+        seen.append(dict(req.header_items()))
+        if len(seen) == 1:
+            return _Resp([{"ghsa_id": "GHSA-1"}], etag='"abc"')
+        raise urllib.error.HTTPError(req.full_url, 304, "Not Modified", {}, None)
+
+    monkeypatch.setattr(adv.urllib.request, "urlopen", urlopen)
+    monkeypatch.setenv("GITHUB_TOKEN", "t0k")
+    adv.use_cache(tmp_path / "c")
+    try:
+        url = "https://api.github.com/repos/o/r/security-advisories?per_page=100&page=1"
+        assert adv.fetch(url) == [{"ghsa_id": "GHSA-1"}]
+        assert adv.fetch(url) == [{"ghsa_id": "GHSA-1"}]
+        assert seen[1].get("If-none-match") == '"abc"'
+        assert adv.CACHE_STATS["not_modified"] == 1
+        stored = "".join(p.read_text() for p in (tmp_path / "c").iterdir())
+        assert "t0k" not in stored, "a token reached the cache"
+    finally:
+        adv.use_cache(None)
+
+
+def test_no_cache_without_the_flag(adv):
+    assert adv.CACHE is None
+
+
+def test_a_cache_dir_inside_the_repo_is_refused(adv, monkeypatch, capsys):
+    monkeypatch.setattr(adv, "fetch", _refuse)
+    inside = REPO / "state" / "advisory-cache-test"
+    assert adv.main(["--json", "--cache-dir", str(inside)]) == 0
+    out = json.loads(capsys.readouterr().out)
+    assert "refused" in out["cache_note"] and not inside.exists()
+    assert adv.CACHE is None
+
+
+def test_the_report_says_what_the_cache_answered(adv):
+    rep, _ = _frankenphp(adv, "1.13.1")
+    rep["cache_note"] = "; 1 answered 304 from cache"
+    assert "1 network call(s); 1 answered 304 from cache" in adv.render(rep)
