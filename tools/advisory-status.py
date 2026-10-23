@@ -48,6 +48,7 @@ import pathlib
 import re
 import sys
 import tomllib
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -55,6 +56,7 @@ import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "tools"))
+import _advisory_cache  # noqa: E402
 import nos_identity as ni  # noqa: E402
 
 RECEPTORS = REPO / "state" / "genome" / "advisory-receptors.yml"
@@ -281,6 +283,19 @@ def headers_for(url: str) -> dict[str, str]:
     return h
 
 
+#: The ETag cache, only when the operator passes --cache-dir (no default).
+#: Its writes live in tools/_advisory_cache.py; see that file for why.
+CACHE: _advisory_cache.Cache | None = None
+CACHE_STATS = {"not_modified": 0}
+
+
+def use_cache(path) -> None:
+    """Point the cache at `path` (None turns it off). ValueError inside the repo."""
+    global CACHE
+    CACHE = None if path is None else _advisory_cache.Cache(path)
+    CACHE_STATS["not_modified"] = 0
+
+
 def fetch(url: str, body: bytes | None = None):
     """GET `url` (or send `body` to it) and parse the JSON answer.
 
@@ -289,11 +304,27 @@ def fetch(url: str, body: bytes | None = None):
     that changes nothing (OSV offers no GET for it).
     """
     headers = headers_for(url)
+    cached = CACHE.get(url) if CACHE is not None and body is None else None
+    if cached:
+        headers["If-None-Match"] = cached["etag"]
     if body is not None:
         headers["Content-Type"] = "application/json"
     req = urllib.request.Request(url, data=body, headers=headers)
-    with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+    try:
+        with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            etag = resp.headers.get("ETag")
+    except urllib.error.HTTPError as exc:
+        if exc.code == 304 and cached:
+            CACHE_STATS["not_modified"] += 1
+            return cached["body"]
+        raise
+    if CACHE is not None and body is None and etag:
+        try:
+            CACHE.put(url, etag, data)
+        except OSError:
+            pass  # a cache that cannot be written only costs the next run a call
+    return data
 
 
 # --- sources -----------------------------------------------------------------
@@ -686,11 +717,21 @@ def _kev(m: dict) -> str:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--cache-dir", help="keep ETags here between runs (outside the repo; no default)")
     args = ap.parse_args(argv)
+    cache_note = ""
+    try:
+        use_cache(args.cache_dir)
+    except ValueError as exc:
+        use_cache(None)
+        cache_note = f"; cache {exc}"
     try:
         rep = collect(fetch=fetch)
+        if CACHE is not None:
+            cache_note = f"; {CACHE_STATS['not_modified']} answered 304 from cache"
+        rep["cache_note"] = cache_note
     except Exception as exc:  # noqa: BLE001 — a reader reports, it does not crash
-        rep = {"verdict": "UNKNOWN", "error": f"{type(exc).__name__}: {exc}",
+        rep = {"verdict": "UNKNOWN", "error": f"{type(exc).__name__}: {exc}", "cache_note": cache_note,
                "sources": {}, "pins": [], "lockfiles": [], "counts": {}}
         if not args.json:
             print(f"advisory-status — UNKNOWN: {rep['error']}")
