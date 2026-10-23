@@ -17,18 +17,23 @@ WHAT IT READS.
   sources    github   api.github.com/repos/<o>/<r>/security-advisories
              osv      api.osv.dev querybatch for lockfiles and `osv:` pins, then
                       each hit's record, re-matched here exactly
-             cve.now  /api/v1/entries/<CVE> for KEV and EPSS, by CVE id only
+             cve.now  /feed?tech=<slug>&format=json for `tech:` pins, each entry
+                      fetched by id and matched on its affected[] product
+                      ranges; /api/v1/entries/<CVE> for KEV and EPSS
 
 MATCHING is exact: introduced <= v < fixed, last_affected inclusive; a
 prerelease sorts before its release; an image variant ("16.15-alpine",
-"-ce.0") and a digest ("@sha256:...") are not part of the version.
+"-ce.0") and a digest ("@sha256:...") are not part of the version. A GitHub
+advisory lists one range per release line; a range whose patch is on another
+line does not count when the version's own line has a patch (release_line()).
 
 WHAT IT DOES NOT DO. It writes nothing and exits 0 whatever it finds. Each
 source is UNKNOWN on its own: an unreachable source makes its pins UNKNOWN,
 never clean, and the report never says "no findings" — a pin is `clear` only
 when its source was read, and the line says how many advisories were read.
-`tech:` receptors are declared but no source reads them yet, so those pins are
-UNKNOWN and say so.
+One advisory that cannot be read is UNKNOWN on its own; a cve.now feed that is
+empty for a slug leaves its pin UNKNOWN. The report says how many network
+calls the run made.
 
     tools/advisory-status.py
     tools/advisory-status.py --json
@@ -68,8 +73,9 @@ GITHUB = "https://api.github.com/repos/{repo}/security-advisories?per_page=100&p
 OSV_BATCH = "https://api.osv.dev/v1/querybatch"
 OSV_VULN = "https://api.osv.dev/v1/vulns/{id}"
 CVE_NOW = "https://cve.now/api/v1/entries/{id}"
+CVE_NOW_FEED = "https://cve.now/feed?tech={slug}&format=json"
 TIMEOUT = 20
-GITHUB_MAX_PAGES = 10
+GITHUB_MAX_PAGES = 30
 OSV_BATCH_SIZE = 1000
 
 
@@ -113,33 +119,88 @@ def in_range(v: str, introduced: str | None = None, fixed: str | None = None,
     return True
 
 
-_CONSTRAINT = re.compile(r"^\s*(>=|<=|>|<|=)?\s*(\S+)\s*$")
+_OP = r"(?:>=|<=|=<|=>|>|<|=)"
+_TOKEN = re.compile(rf"({_OP})?(.+?)({_OP})?")
+#: An operator written AFTER its version reads from the bound's side:
+#: "1.2=<" is 1.2 =< v, a lower bound.
+_POSTFIX = {"=<": ">=", "<=": ">=", "<": ">", "=>": "<=", ">=": "<=", ">": "<", "=": "="}
+_LOWER, _UPPER = (">=", ">"), ("<=", "<")
+
+
+def range_groups(rng: str) -> list[list[tuple[str, tuple]]]:
+    """A vulnerable_version_range as an OR of AND-groups of (op, version key).
+
+    Forms seen live (2026-10-23): "<= 1.13.1", ">= 1.0, < 1.2.3",
+    "v1.11.2=< <=v1.12.2", ">=9.2.0 <9.2.10 >=9.3.0 <9.3.4" (space-joined
+    pairs: a lower bound after an upper starts a new range), "1.0.0 - 1.1.1"
+    (inclusive), "\u2264 2026.5.2". Anything else raises ValueError.
+    """
+    s = str(rng or "").replace("\u2264", "<=").replace("\u2265", ">=")
+    groups: list[list[tuple[str, tuple]]] = []
+    for alt in re.split(r"\|\||;", s):
+        hyphen = re.fullmatch(r"\s*(\S+)\s+-\s+(\S+)\s*", alt)
+        if hyphen:
+            groups.append([(">=", parse_version(hyphen.group(1))),
+                           ("<=", parse_version(hyphen.group(2)))])
+            continue
+        cur: list[tuple[str, tuple]] = []
+        for tok in re.split(r"[,\s]+", re.sub(rf"(^|[\s,])({_OP})\s+", r"\1\2", alt).strip()):
+            if not tok:
+                continue
+            pre, ver, post = _TOKEN.fullmatch(tok).groups()
+            if pre and post:
+                raise ValueError(f"not a range: {rng!r}")
+            op = {"=<": "<=", "=>": ">="}.get(pre, pre) if pre else _POSTFIX.get(post, "=")
+            bound = parse_version(ver)
+            if cur and (op in (*_LOWER, "=") and any(o in (*_UPPER, "=") for o, _ in cur)):
+                groups.append(cur)
+                cur = []
+            cur.append((op, bound))
+        if cur:
+            groups.append(cur)
+    if not groups:
+        raise ValueError(f"not a range: {rng!r}")
+    return groups
+
+
+def _holds(key: tuple, group: list[tuple[str, tuple]]) -> bool:
+    return all({">=": key >= b, ">": key > b, "<=": key <= b, "<": key < b, "=": key == b}[op]
+               for op, b in group)
 
 
 def github_range_holds(v: str, rng: str) -> bool:
-    """GitHub's vulnerable_version_range: comma-joined constraints, all must hold."""
+    """True when `v` sits in any range of `rng` (see range_groups)."""
     key = parse_version(v)
-    for part in rng.split(","):
-        m = _CONSTRAINT.match(part)
-        if not m:
-            raise ValueError(f"not a range: {rng!r}")
-        op, bound = m.group(1) or "=", parse_version(m.group(2))
-        ok = {">=": key >= bound, ">": key > bound, "<=": key <= bound,
-              "<": key < bound, "=": key == bound}[op]
-        if not ok:
-            return False
-    return True
+    return any(_holds(key, g) for g in range_groups(rng))
+
+
+def release_line(key: tuple) -> tuple:
+    """The release line a version belongs to: its major, or major.minor for a
+    calendar version (2026.5.x) and for 0.x, where the minor is the line."""
+    nums = key[0]
+    return nums[:2] if nums[0] >= 1000 or nums[0] == 0 else nums[:1]
+
+
+def _fmt_range(introduced=None, fixed=None, last_affected=None) -> str:
+    parts = [f">= {introduced}"] if introduced not in (None, "0") else []
+    parts += [f"< {fixed}"] if fixed is not None else []
+    parts += [f"<= {last_affected}"] if last_affected is not None else []
+    return ", ".join(parts) or "all versions"
 
 
 def osv_affected_holds(v: str, affected: dict) -> bool:
+    return osv_affected_match(v, affected) is not None
+
+
+def osv_affected_match(v: str, affected: dict) -> dict | None:
     """One OSV `affected` entry: its explicit versions, then its ranges' events.
 
     Events read in order: each `introduced` opens an interval that the next
     `fixed` (exclusive) or `last_affected` (inclusive) closes. GIT ranges carry
-    commits, not versions, and are skipped.
+    commits, not versions, and are skipped. Returns the interval that matched.
     """
     if v in (affected.get("versions") or []):
-        return True
+        return {"range": f"= {v} (listed)", "fixed": None}
     for r in affected.get("ranges") or []:
         if r.get("type") == "GIT":
             continue
@@ -149,15 +210,15 @@ def osv_affected_holds(v: str, affected: dict) -> bool:
                 start = ev["introduced"]
             elif "fixed" in ev and start is not None:
                 if in_range(v, introduced=start, fixed=ev["fixed"]):
-                    return True
+                    return {"range": _fmt_range(start, fixed=ev["fixed"]), "fixed": ev["fixed"]}
                 start = None
             elif "last_affected" in ev and start is not None:
                 if in_range(v, introduced=start, last_affected=ev["last_affected"]):
-                    return True
+                    return {"range": _fmt_range(start, last_affected=ev["last_affected"]), "fixed": None}
                 start = None
         if start is not None and in_range(v, introduced=start):
-            return True
-    return False
+            return {"range": _fmt_range(start), "fixed": None}
+    return None
 
 
 # --- inventory ---------------------------------------------------------------
@@ -177,7 +238,7 @@ def coverage(pin_values: dict, receptor_map: dict) -> dict[str, list[str]]:
     """Pins with no receptor, receptors with no pin, rows of no known kind."""
     malformed = [k for k, r in receptor_map.items()
                  if not isinstance(r, dict) or len([x for x in KINDS if x in r]) != 1
-                 or set(r) - set(KINDS) - {"floating"}]
+                 or set(r) - set(KINDS) - {"floating", "product"}]
     return {"missing": sorted(set(pin_values) - set(receptor_map)),
             "stale": sorted(set(receptor_map) - set(pin_values)),
             "malformed": sorted(malformed)}
@@ -250,25 +311,84 @@ def _github_advisories(repo: str, get) -> list[dict]:
 
 
 def _match_github(version: str, advisories: list[dict]) -> tuple[list[dict], list[str]]:
-    hits, unranged = [], []
+    """-> (hits, unreadable ids). One advisory that cannot be read is UNKNOWN
+    on its own; the rest of the repo is still matched.
+
+    GitHub lists one vulnerabilities[] entry per release line (authentik:
+    "<= 2026.8.1 -> 2026.8.2 ; <= 2026.5.6 -> 2026.5.7"). A range whose patch
+    sits on ANOTHER line does not count against `version` when its own line
+    has a patch of its own: 2026.5.7 is not inside "<= 2026.8.1". A line with
+    no patch of its own (an older line) stays affected.
+    """
+    key, hits, unreadable = parse_version(version), [], []
+    own = release_line(key)
     for a in advisories:
         if a.get("withdrawn_at"):
             continue
         vulns = [v for v in a.get("vulnerabilities") or [] if v.get("vulnerable_version_range")]
-        if not vulns:
-            unranged.append(a.get("ghsa_id"))
+        try:
+            if not vulns:
+                raise ValueError("no range")
+            rows = []
+            for v in vulns:
+                patched = [parse_version(p) for p in re.split(r"[,\s]+", str(v.get("patched_versions") or ""))
+                           if p.strip()]
+                rows.append((v, any(_holds(key, g) for g in range_groups(v["vulnerable_version_range"])),
+                             patched))
+        except ValueError:
+            unreadable.append(a.get("ghsa_id"))
             continue
-        for v in vulns:
-            if github_range_holds(version, v["vulnerable_version_range"]):
-                pkg = v.get("package") or {}
-                # A repo advisory can cover several packages: the hit names the
-                # one whose range matched, so a cross-package match is visible.
-                hits.append({"id": a.get("ghsa_id"), "cve": a.get("cve_id"),
-                             "severity": a.get("severity"), "range": v["vulnerable_version_range"],
-                             "fixed": v.get("patched_versions"), "package": pkg.get("name"),
-                             "ecosystem": pkg.get("ecosystem"), "url": a.get("html_url")})
-                break
-    return hits, unranged
+        own_patched = any(release_line(p) == own for _, _, ps in rows for p in ps)
+        for v, holds, patched in rows:
+            if not holds:
+                continue
+            if own_patched and patched and all(release_line(p) != own for p in patched):
+                continue  # this range is another line's; ours has its own patch
+            pkg = v.get("package") or {}
+            # A repo advisory can cover several packages: the hit names the
+            # one whose range matched, so a cross-package match is visible.
+            hits.append({"id": a.get("ghsa_id"), "cve": a.get("cve_id"),
+                         "severity": a.get("severity"), "range": v["vulnerable_version_range"],
+                         "fixed": v.get("patched_versions") or None, "package": pkg.get("name"),
+                         "ecosystem": pkg.get("ecosystem"), "url": a.get("html_url")})
+            break
+    return hits, unreadable
+
+
+def _match_tech(version: str, product: str | None, entries: list[dict]) -> tuple[list[dict], list[str]]:
+    """cve.now entries -> (hits, unreadable ids), by affected[] vendor/product
+    ranges. `product` (from the receptor) narrows affected[] to that product;
+    an entry with no affected row for it is not about this pin. A bound of
+    "*" or one that names no release makes that entry UNKNOWN."""
+    hits, unreadable = [], []
+    for e in entries:
+        rows = [a for a in e.get("affected") or []
+                if not product or str(a.get("product", "")).casefold() == product.casefold()]
+        if not rows:
+            continue
+        found = None
+        try:
+            for a in rows:
+                if version in (a.get("versions") or []):
+                    found = {"range": f"= {version} (listed)", "fixed": None}
+                for r in a.get("ranges") or []:
+                    ev = {k: r.get(k) for k in ("introduced", "fixed", "last_affected") if r.get(k)}
+                    if not ev:
+                        raise ValueError("empty range")
+                    if in_range(version, **ev) and found is None:
+                        found = {"range": _fmt_range(ev.get("introduced"), ev.get("fixed"),
+                                                     ev.get("last_affected")), "fixed": ev.get("fixed")}
+        except ValueError:
+            unreadable.append(e.get("id"))
+            continue
+        if found:
+            exp = e.get("exploitation") or {}
+            eid = str(e.get("id"))
+            hits.append({"id": eid, "cve": eid if eid.startswith("CVE-") else None,
+                         "severity": (e.get("severity") or {}).get("cvss"), **found,
+                         "kev": exp.get("kev") is not None, "epss": exp.get("epssReached"),
+                         "kev_reason": None, "url": f"https://cve.now/{eid}"})
+    return hits, unreadable
 
 
 def _osv(queries: list[dict], get) -> list[list[str]]:
@@ -309,14 +429,14 @@ def _osv_rematch(name: str, ecosystem: str | None, purl: str | None, version: st
             unreadable.append(vid)  # OSV named it, but no entry here is tied to our package
             continue
         try:
-            held = any(osv_affected_holds(version, a) for a in mine)
+            held = next((m for m in (osv_affected_match(version, a) for a in mine) if m), None)
         except ValueError:
             unreadable.append(vid)  # a version here or in the record names no release
             continue
         if held:
             cve = next((x for x in [d.get("id"), *(d.get("aliases") or [])]
                         if str(x).startswith("CVE-")), None)
-            hits.append({"id": vid, "cve": cve,
+            hits.append({"id": vid, "cve": cve, **held,
                          "severity": (d.get("database_specific") or {}).get("severity"),
                          "url": f"https://osv.dev/vulnerability/{vid}"})
         else:
@@ -326,6 +446,8 @@ def _osv_rematch(name: str, ecosystem: str | None, purl: str | None, version: st
 
 def _enrich(hits: list[dict], get, kev_cache: dict, src: dict) -> None:
     for h in hits:
+        if "kev" in h:
+            continue  # the source already said (cve.now tech entries)
         cve = h.get("cve")
         if not cve:
             h.update(kev=None, epss=None, kev_reason="no CVE id; cve.now is asked by CVE id only")
@@ -349,13 +471,20 @@ def _enrich(hits: list[dict], get, kev_cache: dict, src: dict) -> None:
 
 def collect(pin_values: dict | None = None, receptor_map: dict | None = None,
             lockfiles: dict | None = None, fetch=None) -> dict:
-    get = fetch or globals()["fetch"]
+    raw = fetch or globals()["fetch"]
+    calls = [0]
+
+    def get(url, body=None):
+        calls[0] += 1
+        return raw(url) if body is None else raw(url, body)
+
     pin_values = pins() if pin_values is None else pin_values
     receptor_map = receptors() if receptor_map is None else receptor_map
     lockfiles = LOCKFILES if lockfiles is None else lockfiles
     sources = {n: {"state": "OK", "asked": 0, "errors": []} for n in ("github", "osv", "cve.now")}
     out_pins: list[dict] = []
     osv_queries: list[tuple[dict, dict]] = []  # (query, the row it answers)
+    kev_cache: dict = {}  # cve.now entries by id: tech matching and KEV/EPSS share them
 
     for var in sorted(pin_values):
         version = pin_values[var]
@@ -381,22 +510,53 @@ def collect(pin_values: dict | None = None, receptor_map: dict | None = None,
             row.update(state="UNKNOWN", reason=f"{version!r} names no release to match")
             continue
         if kind == "tech":
-            row.update(state="UNKNOWN", reason="tech: receptors are declared; no source reads them yet")
+            slug = r["tech"]
+            try:
+                feed = get(CVE_NOW_FEED.format(slug=urllib.parse.quote(str(slug))))
+                items = feed.get("items") if isinstance(feed, dict) else None
+                if not isinstance(items, list):
+                    raise ValueError("feed answered a different shape")
+            except Exception as exc:  # noqa: BLE001
+                sources["cve.now"]["errors"].append(f"feed tech={slug}: {exc}")
+                row.update(state="UNKNOWN", reason=f"cve.now feed tech={slug} unreadable: {exc}")
+                continue
+            if not items:
+                row.update(state="UNKNOWN", reason=f"cve.now feed is empty for tech={slug}")
+                continue
+            entries, unreadable = [], []
+            for it in items:
+                eid = str(it.get("id"))
+                if eid not in kev_cache:
+                    try:
+                        kev_cache[eid] = get(CVE_NOW.format(id=eid))
+                    except Exception as exc:  # noqa: BLE001
+                        kev_cache[eid] = exc
+                sources["cve.now"]["asked"] += 1
+                e = kev_cache[eid]
+                if isinstance(e, dict):
+                    entries.append(e)
+                else:
+                    unreadable.append(eid)
+                    sources["cve.now"]["errors"].append(f"{eid}: {e}")
+            hits, bad = _match_tech(version, r.get("product"), entries)
+            unreadable += bad
+            row.update(matches=hits, published=len(items), unreadable=unreadable)
+            row["state"] = "affected" if hits else ("UNKNOWN" if unreadable else "clear")
+            if not hits and unreadable:
+                row["reason"] = f"{len(unreadable)} advisories unreadable"
         elif kind == "github":
             sources["github"]["asked"] += 1
             try:
                 advisories = _github_advisories(r["github"], get)
-                hits, unranged = _match_github(version, advisories)
+                hits, unreadable = _match_github(version, advisories)
             except Exception as exc:  # noqa: BLE001 — this pin is UNKNOWN, the rest stand
                 sources["github"]["errors"].append(f"{r['github']}: {exc}")
                 row.update(state="UNKNOWN", reason=f"github {r['github']} unreadable: {exc}")
                 continue
-            row.update(matches=hits, published=len(advisories))
-            if unranged:
-                row["unranged"] = unranged
-            row["state"] = "affected" if hits else ("UNKNOWN" if unranged else "clear")
-            if not hits and unranged:
-                row["reason"] = f"{len(unranged)} advisories carry no range to match"
+            row.update(matches=hits, published=len(advisories), unreadable=unreadable)
+            row["state"] = "affected" if hits else ("UNKNOWN" if unreadable else "clear")
+            if not hits and unreadable:
+                row["reason"] = f"{len(unreadable)} advisories unreadable"
         elif kind == "osv":
             osv_queries.append(({"package": {"purl": r["osv"]}, "version": version}, row))
 
@@ -447,7 +607,6 @@ def collect(pin_values: dict | None = None, receptor_map: dict | None = None,
                 lf["state"] = ("affected" if lf["matches"] else
                                "UNKNOWN" if lf["unreadable"] else "clear")
 
-    kev_cache: dict = {}
     for holder in [*out_pins, *out_lock]:
         _enrich(holder["matches"], get, kev_cache, sources["cve.now"])
 
@@ -467,7 +626,7 @@ def collect(pin_values: dict | None = None, receptor_map: dict | None = None,
     affected = [r for r in rows if r.get("state") == "affected"]
     unknown = [r for r in rows if r.get("state") == "UNKNOWN"]
     verdict = "AFFECTED" if affected else ("UNKNOWN" if unknown else "CLEAR")
-    return {"verdict": verdict, "sources": sources, "pins": out_pins, "lockfiles": out_lock,
+    return {"verdict": verdict, "calls": calls[0], "sources": sources, "pins": out_pins, "lockfiles": out_lock,
             "counts": {"affected": len(affected), "unknown": len(unknown),
                        "clear": sum(r.get("state") == "clear" for r in rows),
                        "none": sum(r.get("state") == "none" for r in rows)}}
@@ -477,7 +636,7 @@ def render(rep: dict) -> str:
     lines = [f"advisory-status — {rep['verdict']}  "
              f"(affected {rep['counts']['affected']}, unknown {rep['counts']['unknown']}, "
              f"read and unmatched {rep['counts']['clear']}, no receptor source {rep['counts']['none']})",
-             ""]
+             f"  {rep.get('calls', '?')} network call(s){rep.get('cache_note', '')}", ""]
     for name, s in rep["sources"].items():
         err = f" — {s['errors'][0]}" + (f" (+{len(s['errors']) - 1})" if len(s["errors"]) > 1 else "") \
             if s["errors"] else ""
@@ -487,10 +646,11 @@ def render(rep: dict) -> str:
         st = row["state"]
         what = row["receptor"].get("target", "")
         if st == "affected":
-            lines.append(f"  AFFECTED {row['var']} {row['version']} ({what})")
+            bad = len(row.get("unreadable") or [])
+            lines.append(f"  AFFECTED {row['var']} {row['version']} ({what})"
+                         + (f"; {bad} advisories unreadable" if bad else ""))
             for m in row["matches"]:
-                lines.append(f"      {m['id']} {m.get('severity') or '?'} range {m.get('range', '?')}"
-                             f" fixed {m.get('fixed') or '?'} kev {_kev(m)}")
+                lines.append(f"      {_match_line(m)}")
         elif st == "clear":
             seen = (f"0 of {row['published']} advisories match" if "published" in row
                     else "0 OSV ids re-matched")
@@ -505,8 +665,13 @@ def render(rep: dict) -> str:
             lines.append(f"  {'AFFECTED' if lf['matches'] else 'read    '} lockfile {lf['organ']}:"
                          f" {len(lf['matches'])} matches in {lf['packages']} packages" + _server_only(lf))
             for m in lf["matches"]:
-                lines.append(f"      {m['package']} {m['version']} {m['id']} kev {_kev(m)}")
+                lines.append(f"      {m['package']} {m['version']} {_match_line(m)}")
     return "\n".join(lines)
+
+
+def _match_line(m: dict) -> str:
+    return (f"{m['id']} {m.get('severity') or '?'} range {m.get('range') or '?'}"
+            f" fixed {m.get('fixed') or 'none published'} kev {_kev(m)}")
 
 
 def _server_only(row: dict) -> str:

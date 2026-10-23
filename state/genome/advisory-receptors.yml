@@ -14,13 +14,16 @@
 #
 #   github: owner/repo   the upstream repo's published security advisories
 #   osv: <purl>          OSV, package URL without a version (pkg:pypi/x)
-#   tech: <slug>         a cve.now technology slug (declared; not read yet)
+#   tech: <slug>         a cve.now technology feed (cve.now/feed?tech=<slug>)
 #   none: <reason>       nothing to hear, and why — never an empty answer
 #
 # Optional on any row:
 #   floating: <reason>   the pin names a moving series or a digest, not a
 #                        release; matching it exactly would be a guess, so the
 #                        reader reports the pin UNKNOWN with this reason.
+#   product: <name>      on a tech: row, the affected[].product to match
+#                        (cve.now feeds mix products: NGINX Plus vs Open Source).
+#                        Without it every product in the feed is matched.
 #
 # A new pin without a row here fails tests/anatomy/test_advisory_status.py,
 # naming the pin. A row whose pin is gone fails the same gate.
@@ -66,7 +69,7 @@ receptors:
   authentik_version: {github: goauthentik/authentik}
   infisical_version: {github: Infisical/infisical}
   vaultwarden_version: {github: dani-garcia/vaultwarden}
-  apex_version: {tech: nginx}
+  apex_version: {tech: nginx, product: "NGINX Open Source"}
   landing_version: {none: "renders as apex_version: the same nginx image, heard through apex_version"}
 
   # --- iiab and services ---
