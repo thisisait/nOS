@@ -35,7 +35,7 @@
 		"esbuild": "^0.25.12",
 		"tsx": "^4.19.0",
 		"typescript": "^5.5.3",
-		"vitest": "^4.1.11"
+		"vitest": "^4.1.12"
 	},
 	"overrides": {
 		"qs": "^6.16.0",
