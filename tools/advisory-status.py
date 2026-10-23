@@ -254,17 +254,19 @@ def _match_github(version: str, advisories: list[dict]) -> tuple[list[dict], lis
     for a in advisories:
         if a.get("withdrawn_at"):
             continue
-        ranges = [(v.get("vulnerable_version_range"), v.get("patched_versions"))
-                  for v in a.get("vulnerabilities") or []]
-        ranges = [(r, f) for r, f in ranges if r]
-        if not ranges:
+        vulns = [v for v in a.get("vulnerabilities") or [] if v.get("vulnerable_version_range")]
+        if not vulns:
             unranged.append(a.get("ghsa_id"))
             continue
-        for rng, patched in ranges:
-            if github_range_holds(version, rng):
+        for v in vulns:
+            if github_range_holds(version, v["vulnerable_version_range"]):
+                pkg = v.get("package") or {}
+                # A repo advisory can cover several packages: the hit names the
+                # one whose range matched, so a cross-package match is visible.
                 hits.append({"id": a.get("ghsa_id"), "cve": a.get("cve_id"),
-                             "severity": a.get("severity"), "range": rng, "fixed": patched,
-                             "url": a.get("html_url")})
+                             "severity": a.get("severity"), "range": v["vulnerable_version_range"],
+                             "fixed": v.get("patched_versions"), "package": pkg.get("name"),
+                             "ecosystem": pkg.get("ecosystem"), "url": a.get("html_url")})
                 break
     return hits, unranged
 
@@ -303,7 +305,15 @@ def _osv_rematch(name: str, ecosystem: str | None, purl: str | None, version: st
                 if (purl and str(a.get("package", {}).get("purl", "")).split("@")[0] == purl)
                 or (a.get("package", {}).get("name") == name
                     and (ecosystem is None or a.get("package", {}).get("ecosystem") == ecosystem))]
-        if any(osv_affected_holds(version, a) for a in mine):
+        if not mine:
+            unreadable.append(vid)  # OSV named it, but no entry here is tied to our package
+            continue
+        try:
+            held = any(osv_affected_holds(version, a) for a in mine)
+        except ValueError:
+            unreadable.append(vid)  # a version here or in the record names no release
+            continue
+        if held:
             cve = next((x for x in [d.get("id"), *(d.get("aliases") or [])]
                         if str(x).startswith("CVE-")), None)
             hits.append({"id": vid, "cve": cve,
@@ -482,8 +492,10 @@ def render(rep: dict) -> str:
                 lines.append(f"      {m['id']} {m.get('severity') or '?'} range {m.get('range', '?')}"
                              f" fixed {m.get('fixed') or '?'} kev {_kev(m)}")
         elif st == "clear":
-            lines.append(f"  read     {row['var']} {row['version']}: 0 of {row.get('published', '?')}"
-                         f" advisories match ({what})")
+            seen = (f"0 of {row['published']} advisories match" if "published" in row
+                    else "0 OSV ids re-matched")
+            lines.append(f"  read     {row['var']} {row['version']}: {seen} ({what})"
+                         + _server_only(row))
         elif st == "UNKNOWN":
             lines.append(f"  UNKNOWN  {row['var']} {row['version']}: {row.get('reason', '')}")
     for lf in rep["lockfiles"]:
@@ -491,10 +503,15 @@ def render(rep: dict) -> str:
             lines.append(f"  UNKNOWN  lockfile {lf['organ']}: {lf.get('reason', '')}")
         else:
             lines.append(f"  {'AFFECTED' if lf['matches'] else 'read    '} lockfile {lf['organ']}:"
-                         f" {len(lf['matches'])} matches in {lf['packages']} packages")
+                         f" {len(lf['matches'])} matches in {lf['packages']} packages" + _server_only(lf))
             for m in lf["matches"]:
                 lines.append(f"      {m['package']} {m['version']} {m['id']} kev {_kev(m)}")
     return "\n".join(lines)
+
+
+def _server_only(row: dict) -> str:
+    n = len(row.get("server_only") or [])
+    return f"; {n} OSV id(s) not re-matched (server_only)" if n else ""
 
 
 def _kev(m: dict) -> str:
