@@ -1,0 +1,135 @@
+[
+  {
+    "ghsa_id": "GHSA-ccgp-ch9h-533f",
+    "cve_id": null,
+    "severity": "medium",
+    "state": "published",
+    "withdrawn_at": null,
+    "html_url": "https://github.com/php/frankenphp/security/advisories/GHSA-ccgp-ch9h-533f",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "go",
+          "name": "github.com/dunglas/frankenphp"
+        },
+        "vulnerable_version_range": "<= 1.13.1",
+        "patched_versions": "1.13.2",
+        "vulnerable_functions": []
+      }
+    ]
+  },
+  {
+    "ghsa_id": "GHSA-4gfw-9v29-gp9h",
+    "cve_id": null,
+    "severity": "low",
+    "state": "published",
+    "withdrawn_at": null,
+    "html_url": "https://github.com/php/frankenphp/security/advisories/GHSA-4gfw-9v29-gp9h",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "go",
+          "name": "github.com/dunglas/frankenphp"
+        },
+        "vulnerable_version_range": "<= 1.13.1",
+        "patched_versions": "1.13.2",
+        "vulnerable_functions": []
+      }
+    ]
+  },
+  {
+    "ghsa_id": "GHSA-fq24-r53r-xcx3",
+    "cve_id": null,
+    "severity": "medium",
+    "state": "published",
+    "withdrawn_at": null,
+    "html_url": "https://github.com/php/frankenphp/security/advisories/GHSA-fq24-r53r-xcx3",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "go",
+          "name": "github.com/dunglas/frankenphp"
+        },
+        "vulnerable_version_range": "<= 1.13.1",
+        "patched_versions": "1.13.2",
+        "vulnerable_functions": []
+      }
+    ]
+  },
+  {
+    "ghsa_id": "GHSA-6q3j-62j9-f9hh",
+    "cve_id": null,
+    "severity": "high",
+    "state": "published",
+    "withdrawn_at": null,
+    "html_url": "https://github.com/php/frankenphp/security/advisories/GHSA-6q3j-62j9-f9hh",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "go",
+          "name": "github.com/dunglas/frankenphp"
+        },
+        "vulnerable_version_range": "<= 1.13.1",
+        "patched_versions": "1.13.2",
+        "vulnerable_functions": []
+      }
+    ]
+  },
+  {
+    "ghsa_id": "GHSA-qcrp-8483-f2f2",
+    "cve_id": null,
+    "severity": "high",
+    "state": "published",
+    "withdrawn_at": null,
+    "html_url": "https://github.com/php/frankenphp/security/advisories/GHSA-qcrp-8483-f2f2",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "go",
+          "name": "github.com/dunglas/frankenphp"
+        },
+        "vulnerable_version_range": "<= 1.12.7",
+        "patched_versions": "1.13.0",
+        "vulnerable_functions": []
+      }
+    ]
+  },
+  {
+    "ghsa_id": "GHSA-4prg-hv4r-g6mv",
+    "cve_id": null,
+    "severity": "medium",
+    "state": "published",
+    "withdrawn_at": null,
+    "html_url": "https://github.com/php/frankenphp/security/advisories/GHSA-4prg-hv4r-g6mv",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "go",
+          "name": "github.com/dunglas/frankenphp"
+        },
+        "vulnerable_version_range": "<= 1.12.7",
+        "patched_versions": "1.13.0",
+        "vulnerable_functions": []
+      }
+    ]
+  },
+  {
+    "ghsa_id": "GHSA-xxjp-cjxr-2x6m",
+    "cve_id": null,
+    "severity": "medium",
+    "state": "published",
+    "withdrawn_at": null,
+    "html_url": "https://github.com/php/frankenphp/security/advisories/GHSA-xxjp-cjxr-2x6m",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "go",
+          "name": "github.com/dunglas/frankenphp"
+        },
+        "vulnerable_version_range": "<= 1.12.7",
+        "patched_versions": "1.13.0",
+        "vulnerable_functions": []
+      }
+    ]
+  }
+]
