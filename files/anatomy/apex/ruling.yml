@@ -825,6 +825,9 @@ nodes:
   "doctrine:ssot/doctrine/workflows.md#6": withheld
   "reader:agent-capability": withheld
   "reader:agent-status": withheld
+  # 2026-10-23 reader:advisory-status (advisory-receptors-and-matcher): pins and
+  # lockfiles against published advisories. WITHHELD; the published set is unchanged.
+  "reader:advisory-status": withheld
   "effector:agent-token-status": withheld
   "effector:anatomy-measure-margins": withheld
   "reader:app-version": withheld
