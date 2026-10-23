@@ -17,6 +17,9 @@ yet — present so a future feature lights up automatically). The distinction
 drove the 2026-05-23 wiring-unification pass: we backfilled the live-consumer
 gaps and the high-signal metadata, and deliberately left the rest.
 
+In the lexicon a `plugin.yml` is a **symbiosome** (the membrane nOS builds around one
+symbiont) and each wiring block below is one **transporter** across it.
+
 ## Block → consumer map
 
 | Block | Live consumer | Effect when present |
