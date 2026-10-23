@@ -137,9 +137,10 @@ def range_groups(rng: str) -> list[list[tuple[str, tuple]]]:
     pairs: a lower bound after an upper starts a new range), "1.0.0 - 1.1.1"
     (inclusive), "\u2264 2026.5.2". Anything else raises ValueError.
     """
-    s = str(rng or "").replace("\u2264", "<=").replace("\u2265", ">=")
+    # ";" joins bounds like "," (woodpecker ">= 1.0.0; < 1.0.2"); only "||" is OR.
+    s = str(rng or "").replace("\u2264", "<=").replace("\u2265", ">=").replace(";", ",")
     groups: list[list[tuple[str, tuple]]] = []
-    for alt in re.split(r"\|\||;", s):
+    for alt in re.split(r"\|\|", s):
         hyphen = re.fullmatch(r"\s*(\S+)\s+-\s+(\S+)\s*", alt)
         if hyphen:
             groups.append([(">=", parse_version(hyphen.group(1))),
@@ -240,7 +241,8 @@ def coverage(pin_values: dict, receptor_map: dict) -> dict[str, list[str]]:
     """Pins with no receptor, receptors with no pin, rows of no known kind."""
     malformed = [k for k, r in receptor_map.items()
                  if not isinstance(r, dict) or len([x for x in KINDS if x in r]) != 1
-                 or set(r) - set(KINDS) - {"floating", "product"}]
+                 or set(r) - set(KINDS) - {"floating", "product"}
+                 or ("tech" in r and not r.get("product"))]
     return {"missing": sorted(set(pin_values) - set(receptor_map)),
             "stale": sorted(set(receptor_map) - set(pin_values)),
             "malformed": sorted(malformed)}
@@ -375,6 +377,8 @@ def _match_github(version: str, advisories: list[dict]) -> tuple[list[dict], lis
                 continue
             if own_patched and patched and all(release_line(p) != own for p in patched):
                 continue  # this range is another line's; ours has its own patch
+            if _closed_by_patches(key, v["vulnerable_version_range"], patched):
+                continue
             pkg = v.get("package") or {}
             # A repo advisory can cover several packages: the hit names the
             # one whose range matched, so a cross-package match is visible.
@@ -384,6 +388,22 @@ def _match_github(version: str, advisories: list[dict]) -> tuple[list[dict], lis
                          "ecosystem": pkg.get("ecosystem"), "url": a.get("html_url")})
             break
     return hits, unreadable
+
+
+def _closed_by_patches(key: tuple, rng: str, patched: list[tuple]) -> bool:
+    """A range with no upper bound is closed by its patched versions (redis ">= 2.8.18",
+    patched "6.2.16, 7.2.6, 7.4.1" does not reach 8.10.1): fixed when a patch on the
+    version's own line is at or below it, or when the version is above every patch.
+    The line is major.minor when two patches share a major (7.2.6 and 7.4.1), else major,
+    so 7.3.0, between two patched lines, stays affected."""
+    if not patched or any(op in _UPPER for g in range_groups(rng) for op, _ in g):
+        return False
+    majors = [p[0][0] for p in patched]
+    width = 2 if len(majors) != len(set(majors)) else 1
+    line = key[0][:width]
+    if any(p[0][:width] == line and key >= p for p in patched):
+        return True
+    return key > max(patched)
 
 
 def _match_tech(version: str, product: str | None, entries: list[dict]) -> tuple[list[dict], list[str]]:
@@ -542,6 +562,9 @@ def collect(pin_values: dict | None = None, receptor_map: dict | None = None,
             continue
         if kind == "tech":
             slug = r["tech"]
+            if not r.get("product"):  # a feed mixes products (psqlODBC under tech=postgresql)
+                row.update(state="UNKNOWN", reason=f"tech={slug} names no product to match")
+                continue
             sources["cve.now"]["asked"] += 1
             try:
                 feed = get(CVE_NOW_FEED.format(slug=urllib.parse.quote(str(slug))))
@@ -550,7 +573,10 @@ def collect(pin_values: dict | None = None, receptor_map: dict | None = None,
                     raise ValueError("feed answered a different shape")
             except Exception as exc:  # noqa: BLE001
                 sources["cve.now"]["errors"].append(f"feed tech={slug}: {exc}")
-                row.update(state="UNKNOWN", reason=f"cve.now feed tech={slug} unreadable: {exc}")
+                why = (f"cve.now has no tech {slug} (the feed answered 400)"
+                       if isinstance(exc, urllib.error.HTTPError) and exc.code == 400
+                       else f"cve.now feed tech={slug} unreadable: {exc}")
+                row.update(state="UNKNOWN", reason=why)
                 continue
             if not items:
                 row.update(state="UNKNOWN", reason=f"cve.now feed is empty for tech={slug}")

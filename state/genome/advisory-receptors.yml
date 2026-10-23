@@ -23,7 +23,8 @@
 #                        reader reports the pin UNKNOWN with this reason.
 #   product: <name>      on a tech: row, the affected[].product to match
 #                        (cve.now feeds mix products: NGINX Plus vs Open Source).
-#                        Without it every product in the feed is matched.
+#                        Required: a feed mixes products (psqlODBC and pgjdbc under
+#                        tech=postgresql, plugins under tech=wordpress; measured 2026-10-23).
 #
 # A new pin without a row here fails tests/anatomy/test_advisory_status.py,
 # naming the pin. A row whose pin is gone fails the same gate.
@@ -33,21 +34,21 @@ version: 1
 receptors:
   # --- host-desktop / host-software (config.d) and host toolchain ---
   dotfiles_repo_version: {none: "a branch of the operator's own dotfiles repo, not a release"}
-  node_nvm_version: {tech: nodejs}
+  node_nvm_version: {tech: nodejs, product: "Node.js"}
   nvm_git_version: {github: nvm-sh/nvm}
-  python_version: {tech: python, floating: "a pyenv series (3.13); the installed patch is not in the pin"}
+  python_version: {tech: python, product: "Python", floating: "a pyenv series (3.13); the installed patch is not in the pin"}
   santa_version: {github: northpolesec/santa}
   ollama_version: {github: ollama/ollama}
-  dnsmasq_version: {tech: dnsmasq}
+  dnsmasq_version: {tech: dnsmasq, product: "dnsmasq"}
 
   # --- wing ---
   frankenphp_version: {github: php/frankenphp}
   php_version: {github: php/php-src, floating: "a Homebrew php@ series (8.3); the installed patch is not in the pin"}
 
   # --- data ---
-  mariadb_version: {tech: mariadb}
-  postgresql_version: {tech: postgresql}
-  postgis_version: {tech: postgis}
+  mariadb_version: {tech: mariadb, product: "MariaDB"}
+  postgresql_version: {tech: postgresql, product: "PostgreSQL"}
+  postgis_version: {tech: postgis, product: "PostGIS"}
   redis_version: {github: redis/redis}
 
   # --- observability ---
@@ -73,7 +74,7 @@ receptors:
   landing_version: {none: "renders as apex_version: the same nginx image, heard through apex_version"}
 
   # --- iiab and services ---
-  wordpress_version: {tech: wordpress}
+  wordpress_version: {tech: wordpress, product: "WordPress"}
   nextcloud_version: {github: nextcloud/security-advisories, floating: "a major series (33); the image patch is not in the pin"}
   kiwix_version: {github: kiwix/kiwix-tools}
   maps_tileserver_version: {github: maptiler/tileserver-gl}
@@ -81,7 +82,7 @@ receptors:
   geolibre_version: {github: opengeos/geolibre}
   martin_version: {github: maplibre/martin}
   gitea_version: {github: go-gitea/gitea}
-  gitlab_version: {tech: gitlab}
+  gitlab_version: {tech: gitlab, product: "GitLab"}
   n8n_version: {github: n8n-io/n8n}
   jupyterhub_version: {osv: "pkg:pypi/jupyterhub"}
   jupyterlab_version: {osv: "pkg:pypi/jupyterlab"}
@@ -104,7 +105,7 @@ receptors:
   freescout_version: {none: "nfrastack/freescout tags version the wrapper image, not FreeScout (REM-250); the app version is not in the pin"}
   outline_version: {github: outline/outline}
   mikopbx_version: {github: mikopbx/Core}
-  qgis_version: {tech: qgis, floating: "`latest` held by digest; the release is not in the pin"}
+  qgis_version: {tech: qgis, product: "QGIS", floating: "`latest` held by digest; the release is not in the pin"}
   metabase_version: {github: metabase/metabase}
   superset_version: {github: apache/superset}
   bluesky_pds_version: {github: bluesky-social/pds, floating: "a minor series (0.4); the image patch is not in the pin"}
