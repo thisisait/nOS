@@ -5,10 +5,11 @@ development tree: preflight pinned nos_main_checkout to ~/projects/nOS, so a
 feature-branch checkout changed what Pulse, the agents and the launchd plists
 ran, and agent worktrees held branches the operator could not check out. Now the
 estate is its own clone (~/.nos/estate, NOS_ESTATE_DIR overrides) at an explicit
-ref, moved only by `nos update`: it fetches, refuses a dirty clone, refuses a
-move that is not a fast-forward, refuses a ref whose apex ruling is unsigned
-(the signature that gates what ships), checks the ref out as branch nos-estate
-and points the CLI's NOS_SRC at it.
+ref. tools/estate-adopt.sh builds it once (it carries config.yml, credentials.yml
+and the galaxy roles git does not track); `nos update` only moves it: it fetches,
+refuses a dirty clone, refuses a move that is not a fast-forward, refuses a ref
+whose apex ruling is unsigned (the signature that gates what ships), checks the
+ref out as branch `estate` (estate-adopt's) and points the CLI's NOS_SRC at it.
 
 End to end against a bare origin in tmp; HOME is tmp, so nothing of the host is touched.
 """
@@ -53,6 +54,10 @@ def _world(tmp: Path):
     home = tmp / "home"
     (home / ".nos").mkdir(parents=True)
     (home / ".nos" / "nos-cli.env").write_text(f"NOS_SRC={dev}\nNOS_SEED_DIR=/seed\n")
+    # What tools/estate-adopt.sh builds: a clone on branch `estate` tracking origin/dev.
+    est = home / ".nos" / "estate"
+    _git(tmp, "clone", "-q", "--origin", "origin", str(origin), str(est))
+    _git(est, "switch", "-q", "-c", "estate", "--track", "origin/dev")
     return origin, dev, home, sha
 
 
@@ -66,14 +71,23 @@ def _estate(home: Path) -> Path:
     return home / ".nos" / "estate"
 
 
-def test_the_first_update_clones_the_estate_and_points_the_cli_at_it(tmp_path):
+def test_without_an_estate_it_names_estate_adopt_and_touches_nothing(tmp_path):
+    _, dev, home, _ = _world(tmp_path)
+    subprocess.run(["rm", "-rf", str(_estate(home))], check=True)
+    before = (home / ".nos" / "nos-cli.env").read_text()
+    got = _update(home, dev)
+    assert got.returncode == 2 and "estate-adopt.sh" in got.stderr, got.stdout + got.stderr
+    assert not _estate(home).exists() and (home / ".nos" / "nos-cli.env").read_text() == before
+
+
+def test_an_update_points_the_cli_at_the_estate(tmp_path):
     _, dev, home, sha = _world(tmp_path)
     got = _update(home, dev)
     assert got.returncode == 0, got.stdout + got.stderr
     est = _estate(home)
     assert _git(est, "rev-parse", "HEAD") == sha
-    assert _git(est, "symbolic-ref", "--short", "HEAD") == "nos-estate"
-    assert _git(est, "rev-parse", "--abbrev-ref", "nos-estate@{upstream}") == "origin/dev"
+    assert _git(est, "symbolic-ref", "--short", "HEAD") == "estate"
+    assert _git(est, "rev-parse", "--abbrev-ref", "estate@{upstream}") == "origin/dev"
     env = (home / ".nos" / "nos-cli.env").read_text()
     assert f"NOS_SRC={est}\n" in env and "NOS_SEED_DIR=/seed\n" in env, env
 
