@@ -380,6 +380,31 @@ def test_a_lower_bound_is_closed_by_its_patches(adv, version, affected):
     assert (pin["state"] == "affected") is affected, pin
 
 
+@pytest.mark.parametrize("v, rng, want", [
+    # grafana GHSA-mx47-6497-3fv2 and metabase GHSA-2wgg-7r2p-cmqx (live): a comma list of
+    # several upper bounds is one bound per release line, not their AND
+    ("12.4.10", "< 9.0.3, < 8.5.9, < 8.4.10, < 8.3.10, >= 5.3", False),
+    ("8.5.8", "< 9.0.3, < 8.5.9, < 8.4.10, < 8.3.10, >= 5.3", True),
+    ("8.5.9", "< 9.0.3, < 8.5.9, < 8.4.10, < 8.3.10, >= 5.3", False),
+    ("8.2.0", "< 9.0.3, < 8.5.9, < 8.4.10, < 8.3.10, >= 5.3", True),   # an older line with no patch
+    ("5.2.0", "< 9.0.3, < 8.5.9, < 8.4.10, < 8.3.10, >= 5.3", False),  # below the lower bound
+    ("0.63.10", "<55.13, <56.3, <57.1", False),
+    ("56.2", "<55.13, <56.3, <57.1", True),
+])
+def test_several_upper_bounds_are_one_per_line(adv, v, rng, want):
+    assert adv.github_range_holds(v, rng) is want, f"{v} vs {rng!r}"
+
+
+def test_an_open_range_with_no_patch_is_judged_not_counted(adv):
+    """grafana GHSA-8xmm-x63g-f6xv ">=8.1", patched none, matched 12.4.10 live: an open range
+    with no fix published cannot say the pin is affected; the pin says what to judge."""
+    payload = [{"ghsa_id": "GHSA-open", "severity": "high", "vulnerabilities": [
+        {"package": {"name": "p"}, "vulnerable_version_range": ">= 8.1", "patched_versions": ""}]}]
+    _, pin = _github_pin(adv, "o/r", None, "12.4.10", payload)
+    assert pin["state"] == "UNKNOWN" and "open-ended" in pin["reason"], pin
+    assert [m["id"] for m in pin["matches"]] == ["GHSA-open"] and pin["matches"][0]["open"] is True
+
+
 @pytest.mark.parametrize("v, want", [("3.17.0", False), ("1.0.1", True), ("1.0.2", False)])
 def test_a_semicolon_joins_bounds(adv, v, want):
     """woodpecker GHSA-4gcf-5m39-98mc ">= 1.0.0; < 1.0.2" matched v3.17.0 live."""
