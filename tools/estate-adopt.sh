@@ -54,12 +54,17 @@ if [ -n "$FROM" ]; then
   for f in "$FROM"/config.yml "$FROM"/credentials.yml "$FROM"/*.bak.yml; do
     if [ -f "$f" ]; then carry+=("$(basename "$f")"); fi
   done
+  # OpenTofu state is gitignored runtime state of the tree it ran in (live 2026-10-23: without
+  # it the estate planned to re-create 13 Authentik providers that exist). Reconcile backups stay.
+  for f in "$FROM"/terraform/*/terraform.tfstate "$FROM"/terraform/*/terraform.tfstate.backup; do
+    if [ -f "$f" ]; then carry+=("${f#"$FROM"/}"); fi
+  done
 fi
 
 echo "plan:"
 echo "  clone   $UPSTREAM -> $DIR (origin, push disabled), branch estate tracking origin/$BRANCH"
 if [ -n "$FORK" ]; then echo "  remote  fork = $FORK"; fi
-if [ ${#carry[@]} -gt 0 ]; then echo "  copy    ${carry[*]} from $FROM (credentials* chmod 600)"; fi
+if [ ${#carry[@]} -gt 0 ]; then echo "  copy    ${carry[*]} from $FROM (credentials* and tofu state chmod 600)"; fi
 echo "  galaxy  roles from ${FROM:-ansible-galaxy (requirements.yml)} into $DIR/roles"
 echo "  env     NOS_SRC=$DIR in $ENVF (previous kept as $ENVF.prev)"
 if [ "$CONFIRM" -ne 1 ]; then
@@ -72,8 +77,9 @@ git -C "$DIR" remote set-url --push origin DISABLED
 if [ -n "$FORK" ]; then git -C "$DIR" remote add fork "$FORK"; fi
 git -C "$DIR" switch --quiet -c estate --track "origin/$BRANCH"
 for f in "${carry[@]+"${carry[@]}"}"; do
+  mkdir -p "$(dirname "$DIR/$f")"
   cp -p "$FROM/$f" "$DIR/$f"
-  case "$f" in credentials*) chmod 600 "$DIR/$f" ;; esac
+  case "$f" in credentials*|*/terraform.tfstate*) chmod 600 "$DIR/$f" ;; esac
 done
 # Galaxy roles (requirements.yml) install into roles/ but are gitignored, so a clone has none.
 # From the old tree: the roles it ran with, i.e. every roles/ dir the fresh clone does not track.
