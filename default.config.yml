@@ -858,13 +858,15 @@ docker_bin: /usr/local/bin/docker
 # frankenphp_version: pazny.wing fetches exactly this release and refuses a
 # binary whose `frankenphp --version` does not report it. Bump = new version +
 # all four checksums below, in one commit.
-frankenphp_version: "1.13.1"
-# sha256 per release asset (frankenphp-<key>): the release's asset digests;
-# mac-arm64 also measured 2026-10-21 (reports PHP 8.5.11, Caddy 2.11.7).
+frankenphp_version: "1.13.3"
+# sha256 per release asset (frankenphp-<key>), measured 2026-10-23, each one's GitHub build
+# attestation verified (tag v1.13.3, upstream static.yaml); reports PHP 8.5.12, Caddy 2.11.7.
+# 1.13.1 carries GHSA-6q3j (high) + 3 lower advisories fixed in 1.13.2. mac-x86_64 had no
+# 1.13.3 asset yet: its pin is still 1.13.1's, so an Intel Mac fails closed (nOS: Apple Silicon).
 frankenphp_checksums:
-  linux-aarch64: "52849d80dcb30fceaefbe140ee1c16ccebedd96a5719d932f9828e8da7688d02"
-  linux-x86_64: "0b5c93c63f02f796716287790028171dbe3af4740d76e1706e20e731312c4086"
-  mac-arm64: "acf6e2b5bac5e96f8a9cb01746c152dd496bcb0662c1f102348912fb4f6c628e"
+  linux-aarch64: "49f09d389ab7b9e4511001ad670fd8952055f37976ea20ca63d113bf2f5ff802"
+  linux-x86_64: "d802c743a5b1020371a4e788b5a98a435ffa6e5588bead55286b29ef6ce9327a"
+  mac-arm64: "53f69626e8d7c656dfafdbbf65825b24d0e72ff55e71e520e06b988c8e3ced62"
   mac-x86_64: "b9123b427cb357eac076b1f316f71589cfe5c3db4ad2449114e243563d794a89"
 
 # ==============================================================================
