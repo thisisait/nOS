@@ -118,8 +118,10 @@ def test_pins_come_from_the_layers_not_a_copy(adv):
     layered = ni.default_config()
     for var, v in adv.pins().items():
         assert layered[var] == v
-    rec = (REPO / "state/genome/advisory-receptors.yml").read_text(encoding="utf-8")
-    assert "1.13." not in rec, "a version was copied into the receptors file"
+    pins = adv.pins()
+    for var, row in adv.receptors().items():
+        copied = [v for v in map(str, row.values()) if pins.get(var) and pins[var] in v.split()]
+        assert not copied and "version" not in row, f"{var}: the version was copied into its receptor row"
 
 
 def test_a_malformed_receptor_is_named(adv):
