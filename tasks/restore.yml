@@ -91,6 +91,7 @@
       hedgedoc: "{{ hedgedoc_data_dir | default(ansible_facts['env']['HOME'] + '/hedgedoc/uploads') }}"
       outline: "{{ outline_data_dir | default(ansible_facts['env']['HOME'] + '/outline') }}"
       paperclip: "{{ paperclip_data_dir | default(ansible_facts['env']['HOME'] + '/paperclip') }}"
+      paperclip-workspaces: "{{ paperclip_workspaces_dir }}"
       uptime-kuma: "{{ uptime_kuma_data_dir | default(ansible_facts['env']['HOME'] + '/uptime-kuma') }}"
       homeassistant: "{{ homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant') }}"
       openwebui: "{{ openwebui_data_dir | default(ansible_facts['env']['HOME'] + '/openwebui') }}"

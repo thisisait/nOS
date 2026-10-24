@@ -139,4 +139,4 @@ def test_the_cli_exits_0_with_json_on_the_real_repo():
     assert set(out) == {"question", "passages", "service", "unknown"}
     assert out["service"]["converge"] == "nos --tags n8n" and out["service"]["config_line"] == "install_n8n: true"
     up = run("aktualizuj nOS")
-    assert any(p["path"] == "docs/nos-cli.md" and "git pull" in p["text"] for p in up["passages"]), up
+    assert any(p["path"] == "docs/nos-cli.md" and "nos update" in p["text"] for p in up["passages"]), up

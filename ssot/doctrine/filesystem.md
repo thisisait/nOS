@@ -5,6 +5,7 @@ row: null
 gates:
   - tests/anatomy/test_fs_doctrine_paths.py
   - tests/anatomy/test_nextcloud_user_files_bridge.py
+  - tests/anatomy/test_paperclip_agents_have_a_workspace.py
   - tests/bone_vfs/test_vfs_containment.py
 ---
 # Filesystem Doctrine
