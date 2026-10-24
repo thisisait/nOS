@@ -616,6 +616,9 @@ nodes:
   "judge:pytest-anatomy": withheld
 
   # --- withheld: scheduled jobs (when the house is busy stays home, D3) ------
+  # 2026-10-24 advisory patrol (row advisory-patrol): WITHHELD like every
+  # pulse:* node (D3); it publishes nothing, D4's frozen set is untouched.
+  "pulse:advisory-patrol:nightly": withheld
   "pulse:alert-relay:relay-firing": withheld
   "pulse:authentik-tofu-drift:tofu-drift-plan": withheld
   "pulse:backup:backup-restore-drill": withheld
