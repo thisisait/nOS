@@ -13,7 +13,7 @@
 | **Stack** | `iiab` |
 | **Node id** | `nos.iiab.jellyfin` |
 | **Toggle** | `install_jellyfin: false` (**default OFF**) |
-| **Image** | `jellyfin/jellyfin:10.11.10` (`jellyfin_version`; REM-119 / CVE-2026-48793 pin) |
+| **Image** | `jellyfin/jellyfin:12.2` (`jellyfin_version`; GHSA-6828 critical fixed only in 12) |
 | **Config** | `{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/shared/jellyfin/config` → `/config` (default `~/nos/tenants/dev/shared/jellyfin/config`) — SQLite DB, server plugins, `plugins/configurations/SSO-Auth.xml` |
 | **Cache** | `{{ nos_data_root }}/platform/services/jellyfin/cache` → `/cache` (default `~/nos/platform/services/jellyfin/cache`) — regenerable transcode/artwork cache, not user data |
 | **Media** | `~/media/movies`, `~/media/shows`, `~/media/music` → `/media/*` **read-only** (`jellyfin_movies_dir` / `jellyfin_shows_dir` / `jellyfin_music_dir`) |
@@ -35,8 +35,8 @@
   `AuthenticateUserByName` → `POST /Users/{id}/Password`.
 - **Admin password:** `{global_password_prefix}_pw_jellyfin`
 - **SSO:** `native_oidc` (plugin `jellyfin-base`, tier 4 = guest). Not env-driven — SSO is wired by
-  the **jellyfin-plugin-sso server plugin** (`jellyfin_sso_plugin_version: 4.0.0.4`), installed by the
-  role into `/config/plugins` with its config rendered to `plugins/configurations/SSO-Auth.xml`.
+  the **jellyfin-plugin-sso server plugin** (K0lin fork, `jellyfin_sso_plugin_version: 5.1.1`, sha256-pinned), installed by the
+  role into `/config/plugins`; post.yml writes its provider through the plugin API and reads it back.
   - Authentik client `nos-jellyfin`, slug `jellyfin`
   - Redirect URI: `https://{jellyfin_domain}/sso/OID/redirect/Authentik`
   - Scopes: `openid`, `profile`, `email`
@@ -46,8 +46,13 @@
 > The authoritative `authentik.mode` is `native_oidc` (D1.0 correction, 2026-05-05); that
 > compose-extension only sets the `_NOS_PLUGIN` marker env.
 
-> The pinned SSO plugin 4.0.0.4 targets ABI 10.11 and is end-of-line — the 9p4 repo is archived
-> read-only, so a future Jellyfin 10.12 will need a successor plugin.
+> 12.x is a one-way database migration: the converge that crosses it first stops Jellyfin and keeps
+> a verified cold tar of its config in `one_way_upgrade_backup_dir` (tasks/one-way-upgrade-guard.yml);
+> rollback = restore that tar and re-pin 10.11.11 + the 9p4 4.0.0.4 plugin. The `/emby` and
+> `/mediabrowser` routes and legacy authorization are gone in 12. A full library scan follows.
+>
+> A known hole with no fix yet can be cut at the edge without removing the symbiont:
+> `tools/nos-sanction.py jellyfin --level stop --reason <id> --confirm` (stop also closes LAN 8096).
 
 ## API Access
 

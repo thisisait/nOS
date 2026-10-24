@@ -18,8 +18,8 @@ version: 0.1.0
 description: |
   Wiring layer for RustFS (Rust S3-compatible drop-in for MinIO): nightly
   backup destination + S3-API consumer substrate. Console at fs.<tld>;
-  S3 endpoint at the api port. Pinned to 1.0.0-alpha.93 for CVE-2025-68926
-  + alpha.91 multipart auth hardening + OIDC claim matching fix.
+  S3 endpoint at the api port. Pinned to 1.0.3 (GHSA-xm99 high + 5 medium;
+  1.0.0/1.0.1 skipped for GHSA-28w4); one-way metadata, cold copy first.
 upstream: https://rustfs.com/
 license: Apache-2.0
 
@@ -41,7 +41,7 @@ requires:
 lifecycle:
   post_compose:
     # RustFS exposes /health on the S3 API port (NOT the console port).
-    # MinIO-style /minio/health/live is NOT implemented in alpha.x.
+    # MinIO-style /minio/health/live is NOT implemented (alpha through 1.0.x).
     # The role's compose-level healthcheck pings /health internally;
     # this plugin-level wait_health gives the loader a single contract
     # to surface failures into the Wing telemetry stream.

@@ -10,7 +10,7 @@
 | **Port** | `9010` (S3 API on host → `9000` in container), `9001` (console). Both published on `127.0.0.1` only. |
 | **Stack** | `iiab` |
 | **Toggle** | `install_rustfs: true` |
-| **Image** | `rustfs/rustfs:1.0.0-beta.9` (`rustfs_version`) |
+| **Image** | `rustfs/rustfs:1.0.3` (`rustfs_version`; one-way from rc.1, cold copy by tasks/one-way-upgrade-guard.yml) |
 | **Compose** | `~/stacks/iiab/docker-compose.yml` |
 | **Data** | `{{ rustfs_data_dir }}` = `{{ nos_data_root }}/platform/services/rustfs/data` → default `~/nos/platform/services/rustfs/data` |
 | **Container mount** | host data → `/data` (the object store itself) |
