@@ -580,6 +580,25 @@ def _dotted(data, path: str):
     return cur
 
 
+def _refusal(exc: urllib.error.HTTPError) -> str:
+    """The provider's own reason for an HTTP error, bounded: a 400 alone is a dozen facts
+    (no credit, a retired model, a bad body), each with its own fix (2026-10-24)."""
+    try:
+        raw = exc.read(4096).decode("utf-8", "replace")
+    except OSError:
+        raw = ""
+    try:
+        err = json.loads(raw).get("error")
+        if isinstance(err, dict):
+            kind = err.get("type") or err.get("code") or ""
+            return f"{exc.code} {kind}: {str(err.get('message', ''))[:240]}".replace(" : ", ": ")
+        if isinstance(err, str):
+            return f"{exc.code}: {err[:240]}"
+    except (ValueError, AttributeError):
+        pass
+    return f"{exc.code}: {' '.join(raw.split())[:240]}"
+
+
 def _probe_api(entry: dict, ctx, timeout: float) -> tuple[int | None, str | None, str | None]:
     """POST + bearer + a truthiness assertion on the parsed answer.
 
@@ -610,7 +629,7 @@ def _probe_api(entry: dict, ctx, timeout: float) -> tuple[int | None, str | None
         with opener.open(req, timeout=timeout) as resp:
             status, payload = resp.status, resp.read()
     except urllib.error.HTTPError as exc:
-        return exc.code, None, None
+        return exc.code, None, _refusal(exc)
     except (urllib.error.URLError, OSError) as exc:
         return None, f"{type(exc).__name__}: {exc}", None
 
