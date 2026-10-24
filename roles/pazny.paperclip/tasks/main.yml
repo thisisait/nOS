@@ -20,6 +20,33 @@
     state: directory
     mode: '0755'
 
+- name: "[pazny.paperclip] Ensure the agents' workspace root exists"
+  ansible.builtin.file:
+    path: "{{ paperclip_workspaces_dir }}"
+    state: directory
+    mode: '0755'
+
+# A host folder handed to Paperclip's agents is a client's project, never the estate's own
+# state: ~/.nos holds the secrets and the estate checkout, the data root holds every service.
+- name: "[pazny.paperclip] A host workspace is a project folder, not the estate's state"
+  ansible.builtin.assert:
+    that:
+      - item.name is defined and item.name is match('^[a-z0-9][a-z0-9-]*$')
+      - (item.path | realpath) != (ansible_facts['env']['HOME'] | realpath)
+      - not ((item.path | realpath) ~ '/').startswith((ansible_facts['env']['HOME'] | realpath) ~ '/.nos/')
+      - not (((nos_data_root | realpath) ~ '/').startswith((item.path | realpath) ~ '/'))
+    fail_msg: >-
+      paperclip_host_workspaces entry {{ item }} is refused: a workspace is a project folder
+      (e.g. ~/projects/<client>), never $HOME, ~/.nos or a folder containing the data root.
+  loop: "{{ paperclip_host_workspaces | default([]) }}"
+
+- name: "[pazny.paperclip] Ensure each host workspace exists"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    mode: '0755'
+  loop: "{{ paperclip_host_workspaces | default([]) }}"
+
 - name: "[pazny.paperclip] Render compose override fragment"
   ansible.builtin.template:
     src: compose.yml.j2

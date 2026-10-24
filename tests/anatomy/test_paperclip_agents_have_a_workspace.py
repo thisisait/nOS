@@ -12,6 +12,7 @@ checkout), the data root itself, or the whole home are refused.
 """
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import jinja2
@@ -61,6 +62,7 @@ def test_the_estates_own_state_is_never_a_workspace(path):
     that = guard[0]["ansible.builtin.assert"]["that"]
     env = jinja2.Environment()
     env.filters["realpath"] = lambda v: str(Path(v)).rstrip("/") or "/"
+    env.tests["match"] = lambda v, pat: re.match(pat, str(v)) is not None  # ansible's test
     ok = all(env.from_string("{{ (" + c + ") | string }}").render(
         item={"name": "w", "path": path}, nos_data_root="/data",
         ansible_facts={"env": {"HOME": HOME}}) == "True" for c in that)

@@ -19,6 +19,12 @@ services:
 {% endif %}
     volumes:
       - {{ paperclip_data_dir }}:/paperclip
+      # Where agents write files that outlive a run: set a project's workspace under /workspaces
+      # (2026-10-23: without one, a company's work stayed in the container's /tmp).
+      - {{ paperclip_workspaces_dir }}:/workspaces
+{% for w in paperclip_host_workspaces | default([]) %}
+      - {{ w.path }}:/workspaces/{{ w.name }}:{{ w.mode | default('rw') }}
+{% endfor %}
     environment:
       # A WIZARD-WRITTEN CONFIG FILE OUTRANKS THIS BLOCK (measured 2026-08-11).
       #
