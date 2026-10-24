@@ -218,7 +218,7 @@ judges:
     # The floor is set from a vendor-less run of the same tip (7291 passed /
     # 301 skipped), 120 under it per THE RULE — not from the operator's
     # vendored 7432, which the judge can never reach.
-    min_work: 8231   # re-measured 2026-10-21: judge-env (no vendor) 8348 passed + 2 since fixed -> 8351-120; operator (vendor) 8511 / 8682 collected
+    min_work: 8583   # 2026-10-24 DERIVED, not measured: operator (vendor) 8863 / 9041 collected, minus the 10-21 vendor offset (8511-8351=160) -> 8703-120; re-measure on the first judge-env run
     # DECISION 2d: ALWAYS sandboxed, attended and unattended alike.
     # test_genome_contract.py appends HAND_EDITED to a TRACKED file and
     # restores it in a `finally` — a killed run leaves the source corrupted,

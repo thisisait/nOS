@@ -1096,7 +1096,11 @@ MEASURED_WORK = {
     # RE-DERIVED 2026-10-21 — fired at 8682 collected vs 8215 (dendrogram, start_agent, propose_app,
     # grounding, wing multipart, toggles bool). Operator run (vendor): 8510 passed, 171 skipped,
     # 1 failed, so 8511. Judge-env run (no vendor): 8348 passed, 330 skipped, 3 failed (2 since fixed) -> 8351-120.
-    "pytest-anatomy": 8511,
+    # RE-DERIVED 2026-10-24 — fired at 9041 collected vs 8511 (advisory patrol, estate split,
+    # paperclip workspace/drain/leases). Operator run (vendor): 8859 passed, 177 skipped, 5 failed
+    # (4 fixed in the same branch, 1 the apex signature the operator renews), so 8863. NOT re-derived:
+    # min_work from a judge-env run: derived from the 10-21 vendor offset instead (judge-sets.yml).
+    "pytest-anatomy": 8863,
     "cortex-corpus-diff": 1,
 }
 
