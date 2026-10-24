@@ -171,10 +171,17 @@ def read_tips(driver, branch: str) -> dict[str, dict]:
     """
     tips: dict[str, dict] = {}
 
+    # The estate's own clone (branch `estate`, row estate-dev-split) holds no trunk:
+    # `nos update` moves it. Measured 2026-10-24: every loop:repo-check run from it
+    # reported "no local branch 'dev'" (rc 2). Its seat is excused, like a forge off.
+    _, head, _ = _git("symbolic-ref", "--quiet", "--short", "HEAD", check=False)
     rc, sha, _ = _git("rev-parse", "--verify", "--quiet",
                       f"refs/heads/{branch}", check=False)
-    tips["local"] = ({"sha": sha, "error": None} if rc == 0 and sha
-                     else {"sha": None, "error": f"no local branch {branch!r}"})
+    if head == "estate":
+        tips["local"] = {"sha": None, "error": None, "declared_off": True}
+    else:
+        tips["local"] = ({"sha": sha, "error": None} if rc == 0 and sha
+                         else {"sha": None, "error": f"no local branch {branch!r}"})
 
     rc, out, err = _git("ls-remote", "origin", f"refs/heads/{branch}", check=False)
     if rc != 0:
