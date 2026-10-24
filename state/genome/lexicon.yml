@@ -594,7 +594,9 @@ words:
     means: >-
       nOS cutting a misbehaving symbiont's supply through its symbiosome: a quarantine
       effector of the immune system, escalated only with the operator's approval.
-    no_surface_reason: no quarantine effector exists yet; immune-system.md names report as the default.
+    names:
+      - path: tools/nos-sanction.py
+      - path: roles/pazny.traefik/templates/dynamic/sanctions.yml.j2
     not: [verdicts, sense]
     counter_example: "an indicator reporting a symbiont red (a sense reports; a sanction acts)"
 
