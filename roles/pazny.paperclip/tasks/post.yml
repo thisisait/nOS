@@ -161,6 +161,23 @@
   failed_when: "'not allowed' in (_paperclip_reserved.content | default(''))"
   when: "'not allowed' in (_paperclip_served.content | default(''))"
 
+# A restart reaps running runs to "interrupted" but leaves their environment
+# leases active, and every retry of that issue then refuses ("has not released
+# its environment lease"): upstream paperclipai/paperclip#14672, 9 issues stuck
+# on 2026-10-24. Release only leases whose run is over (interrupted). A schema
+# without the table (upstream fixed it differently) skips, not fails.
+# Gate: test_paperclip_releases_orphaned_leases.py.
+- name: "[pazny.paperclip Post] Release leases a restart orphaned (upstream #14672)"
+  ansible.builtin.shell: >
+    {{ docker_bin }} exec infra-postgresql-1 psql -U postgres -d {{ paperclip_db_name }} -tA -v ON_ERROR_STOP=1 -c
+    "UPDATE environment_leases l SET status = 'released', released_at = now(), updated_at = now(),
+    failure_reason = 'orphaned by a restart; released by nOS (paperclipai/paperclip#14672)'
+    FROM heartbeat_runs r WHERE r.id = l.heartbeat_run_id AND l.released_at IS NULL
+    AND r.status = 'interrupted' RETURNING l.id"
+  register: _paperclip_orphans
+  changed_when: (_paperclip_orphans.stdout | default('') | trim | length) > 0
+  failed_when: _paperclip_orphans.rc != 0 and 'does not exist' not in (_paperclip_orphans.stderr | default(''))
+
 # ── CEO bootstrap ─────────────────────────────────────────────────────────
 # Check whether any account rows already exist in the Paperclip DB before
 # calling `auth bootstrap-ceo --force`. The earlier implementation ran
