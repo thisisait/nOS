@@ -90,6 +90,10 @@ STACKS_DIR = pathlib.Path(os.environ.get("NOS_STACKS_DIR", str(pathlib.Path.home
 # schedule instead — see `overdue_jobs` for why a flat threshold is wrong.
 STALE_AFTER = timedelta(days=2)
 SCAN_STALE_AFTER = timedelta(days=3)
+#: The nightly advisory patrol's report (tools/advisory-patrol.py); one day plus slack.
+ADVISORY_SNAPSHOT = pathlib.Path(os.environ.get("NOS_ADVISORY_SNAPSHOT")
+                                 or pathlib.Path.home() / ".nos" / "advisory" / "last.json")
+ADVISORY_STALE_AFTER = timedelta(hours=36)
 
 
 def _now() -> datetime:
@@ -934,6 +938,23 @@ def orphan_extensions() -> list[str] | None:
             for p in mod.stack_orphans(d)]
 
 
+def advisories() -> dict | None:
+    """Unjudged HIGH/CRITICAL/KEV matches from the last patrol, and its age. None = UNKNOWN."""
+    import importlib.util  # noqa: PLC0415 — sibling reader, not a package
+
+    try:
+        rep = json.loads(ADVISORY_SNAPSHOT.read_text(encoding="utf-8"))
+        spec = importlib.util.spec_from_file_location("_advisory", REPO / "tools" / "advisory-status.py")
+        adv = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(adv)
+        bad = adv.unjudged(rep, adv.judgements(), _now().date())
+    except Exception:  # noqa: BLE001 — absent or unreadable is the same answer: cannot ask
+        return None
+    at = _parse_iso(rep.get("at"))
+    return {"unjudged": bad, "age": _age(at), "stale": at is None or at < _now() - ADVISORY_STALE_AFTER,
+            "blind": [n for n, s in rep.get("sources", {}).items() if s.get("state") == "UNKNOWN"]}
+
+
 def _digest_report() -> dict:
     import importlib.util  # noqa: PLC0415 — sibling reader, not a package
 
@@ -1031,6 +1052,7 @@ def collect() -> dict:
 
     for label, path, fn in (
         ("security_scan", SCAN_STATE, security_scan),
+        ("advisories", ADVISORY_SNAPSHOT, advisories),
         ("backups", pathlib.Path(f"{BACKUP_STATUS} (copy #1) | {BACKUP_RESTIC_STATUS} (direct)"), backups),
         ("orphan_extensions", STACKS_DIR, orphan_extensions),
         ("loop_verdicts", REPO / "tools" / "loop-status.py", stalled_verdicts),
@@ -1132,6 +1154,14 @@ def reds(report: dict) -> list[str]:
             f"({scan['age']}), the committed copy at {scan['promoted_cycle']} "
             f"({scan['promoted_age']}); a fresh checkout reads the older one"
         )
+    ad = report.get("advisories")
+    if ad and ad["unjudged"]:
+        shown = "; ".join(f"{u['subject']} {u['id']} (fixed {u['fixed'] or 'none'})" for u in ad["unjudged"][:6])
+        more = f" +{len(ad['unjudged']) - 6}" if len(ad["unjudged"]) > 6 else ""
+        out.append(f"advisories: {len(ad['unjudged'])} unjudged HIGH/CRITICAL/KEV — {shown}{more} "
+                   "(tools/advisory-status.py; judge in state/genome/advisory-judgements.yml)")
+    if ad and ad["stale"]:
+        out.append(f"advisory patrol stale — last run {ad['age']}")
     bk = report.get("backups")
     absent = (bk or {}).get("absent")
     if absent == "backrest":

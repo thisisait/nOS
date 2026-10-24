@@ -733,6 +733,43 @@ def collect(pin_values: dict | None = None, receptor_map: dict | None = None,
                        "none": sum(r.get("state") == "none" for r in rows)}}
 
 
+# --- what is serious, and what the operator already judged ---------------------
+
+#: The operator's verdicts on matches: id + subject (a pin var, or organ:package),
+#: accepted | not-applicable, a reason, and an until date after which it is red again.
+JUDGEMENTS = REPO / "state" / "genome" / "advisory-judgements.yml"
+
+
+def _serious(m: dict) -> bool:
+    s = m.get("severity")
+    if m.get("kev"):
+        return True
+    if isinstance(s, (int, float)):
+        return s >= 7.0
+    return str(s).upper() in ("HIGH", "CRITICAL")
+
+
+def judgements(path: pathlib.Path = JUDGEMENTS) -> dict[tuple[str, str], dict]:
+    doc = yaml.safe_load(path.read_text(encoding="utf-8")) if path.is_file() else None
+    return {(str(j["id"]), str(j["subject"])): j for j in (doc or {}).get("judgements") or []}
+
+
+def unjudged(rep: dict, judged: dict, today) -> list[dict]:
+    """HIGH / CRITICAL / KEV matches no judgement in force covers (until >= today)."""
+    out = []
+    rows = [(r["var"], r.get("version"), m) for r in rep["pins"] for m in r.get("matches") or []]
+    rows += [(f"{lf['organ']}:{m.get('package')}", m.get("version"), m)
+             for lf in rep["lockfiles"] for m in lf.get("matches") or []]
+    for subject, version, m in rows:
+        j = judged.get((str(m["id"]), subject))
+        if not _serious(m) or (j and str(j.get("until")) >= str(today)):
+            continue
+        out.append({"subject": subject, "version": version, "id": m["id"], "severity": m.get("severity"),
+                    "fixed": m.get("fixed"), "kev": m.get("kev"),
+                    **({"expired": str(j.get("until"))} if j else {})})
+    return out
+
+
 def render(rep: dict) -> str:
     lines = [f"advisory-status — {rep['verdict']}  "
              f"(affected {rep['counts']['affected']}, unknown {rep['counts']['unknown']}, "

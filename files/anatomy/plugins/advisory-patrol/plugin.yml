@@ -1,0 +1,69 @@
+# =============================================================================
+# advisory-patrol — nightly exact match of every pin against public advisories
+#
+# BORN 2026-10-24 (row advisory-patrol). The estate ran FrankenPHP 1.13.1 for
+# two days after upstream published a high advisory fixed in 1.13.2; the reader
+# that would have said so (tools/advisory-status.py) only ran when the operator
+# asked. This job runs it every night, keeps the report in
+# ~/.nos/advisory/last.json and tools/red-status.py reads that file.
+#
+# Not a Docker service — a host-side Python script, same shape as gitleaks.
+# =============================================================================
+
+name: advisory-patrol
+version: 0.1.0
+description: |
+  Matches every version pin of the committed defaults and the organ lockfiles
+  against GitHub repo advisories, OSV and cve.now, exactly (OSV range
+  semantics). A model never decides the match; the operator judges a match in
+  state/genome/advisory-judgements.yml.
+
+type:
+  - skill
+  - scheduled-job
+
+requires:
+  feature_flag: install_pulse
+  variables:
+    - playbook_dir         # repo root → tools/advisory-patrol.py
+
+# =============================================================================
+# PULSE JOB — the verdict is pulse_runs.exit_code, written by the patrol:
+#   0  every source read, no unjudged HIGH / CRITICAL / KEV match
+#   1  an unjudged serious match
+#   2  a source unreadable (rate limit, offline): NOTHING SERIOUS FOUND IS NOT CLEAN
+#
+# 03:50 UTC: before the 04:20 npm IOC scan and the 04:15+ KEAP chain.
+# What leaves the host: repo names, purls and ids (the inventory is public in
+# this repo); never a host name or a secret.
+# =============================================================================
+
+pulse:
+  jobs:
+    - name: nightly
+      category: security
+      runner: subprocess
+      command: "{{ playbook_dir }}/tools/advisory-patrol.py"
+      schedule: "50 3 * * *"
+      jitter_min: 7
+      max_runtime_s: 1800       # ~800 calls, paced by GitHub's API
+      max_concurrent: 1
+      env: {}
+
+gdpr:
+  purpose: "Matching installed software versions against public security advisories"
+  legal_basis: legitimate_interests
+  data_categories:
+    - software_inventory      # pin names, versions, package names only
+  data_subjects: [operators]
+  retention_days: 365
+  processors: []              # public advisory APIs read-only; no personal data sent
+  eu_residency: true
+
+e2e:
+  enabled: "{{ (install_wing | default(false)) }}"
+  probes:
+    - name: advisory-patrol-registered-in-wing
+      url: http://127.0.0.1:{{ wing_port }}/api/v1/pulse_jobs
+      auth: {bearer: wing_api_token, headers: {X-Wing-Edge-Token: wing_edge_token}}
+      expect: {json_equals: {"jobs.advisory-patrol:nightly.id": "advisory-patrol:nightly"}}

@@ -1,0 +1,16 @@
+# Advisory judgements — the operator's verdict on a match the patrol found.
+#
+# WHY. tools/advisory-status.py matches exactly and cannot know that nOS never
+# uses the affected feature, or that the fix lives only on a line we cannot move
+# to yet (Jellyfin 12, nginx mainline). Without a place to say so, the same red
+# line stands every night and gets ignored, which hides the next real one.
+#
+# One row per (id, subject). subject is the pin var (apex_version) or
+# organ:package for a lockfile match (cortex:zod). A judgement silences that
+# pair only, and only until `until`; then red-status shows it again.
+#
+#   verdict: accepted        the risk is real here; we carry it until the date
+#            not-applicable  the affected code is not reachable in nOS (say how)
+#
+# The operator writes these; an agent proposes them in a PR, never commits one.
+judgements: []

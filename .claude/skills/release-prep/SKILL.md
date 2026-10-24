@@ -51,6 +51,10 @@ decision for the operator, not a default.
      then name the source you used (a RELEASE.md line, the operator's word).
    - `tools/red-status.py`: every red line is either fixed, owned by a roadmap row,
      or written as a hidden fee (step 3). UNKNOWN is not green.
+   - Advisories, fresh (`GITHUB_TOKEN=$(gh auth token) tools/advisory-status.py`):
+     an unjudged HIGH/CRITICAL/KEV match on a pin or organ lockfile is a BLOCKER
+     until it is bumped or the operator judges it in
+     `state/genome/advisory-judgements.yml`; a source UNKNOWN is DEBT, named.
 2. **Roadmap revision.** `tools/roadmap-status.py --status active,next,blocked`
    and `--all` since the last tag. Each row touched in this release gets a verdict
    with `nos dtt verify` (what proves it), a stale `active` gets its real status

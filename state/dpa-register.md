@@ -20,8 +20,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 118 (93 core services, 3 manifest apps)
-- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (106)
+- **Processing activities:** 119 (94 core services, 3 manifest apps)
+- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (107)
 - **Transfers outside the EU:** 12 activities
 - **Activities engaging a third-party processor:** 18
 
@@ -1291,6 +1291,17 @@ reasoning.
 - **Transfers outside EU:** **Yes**
 - **Retention:** 3650 days (~10y)
 - **Storage:** KEAP DataTables (libsql) on the host — repo / application / package
+- **Security measures:** platform baseline (see above)
+
+#### Advisory Patrol — `svc_advisory-patrol`
+- **Purpose:** Matching installed software versions against public security advisories
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`
+- **Data categories:** `software_inventory`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** 365 days (~1y)
+- **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
 
 #### Alert Relay — `svc_alert-relay`
