@@ -26,7 +26,7 @@ def test_stdb_lane_routes_to_spacetimedb_with_strip_and_exact_paths():
     assert "PathPrefix" not in r["rule"], "a prefix lane would open the whole SpacetimeDB API"
     assert "Path(`/stdb/v1/identity/websocket-token`)" in r["rule"]
     assert "Path(`/stdb/v1/database/nos-forum/subscribe`)" in r["rule"]
-    assert r["middlewares"][0] == "nos-forum-stdb-strip"
+    assert r["middlewares"][:2] == ["sanction-nos-forum@file", "nos-forum-stdb-strip"]  # the cut, then the strip
     assert "authentik@file" not in r["middlewares"]
     assert http["services"]["nos-forum-stdb"]["loadBalancer"]["servers"] == [{"url": "http://spacetimedb:3000"}]
     assert http["middlewares"]["nos-forum-stdb-strip"] == {"stripPrefix": {"prefixes": ["/stdb"]}}
@@ -38,7 +38,7 @@ def test_stdb_lane_routes_to_spacetimedb_with_strip_and_exact_paths():
 def test_plain_lanes_are_unchanged():
     keap = _doc()["routers"]["keap-agent"]
     assert keap["service"] == "keap" and "PathPrefix(`/agent/v1`)" in keap["rule"]
-    assert keap["middlewares"] == ["security-headers@file", "compress@file"]
+    assert keap["middlewares"] == ["sanction-keap@file", "security-headers@file", "compress@file"]
 
 
 def test_red_without_the_keys():
