@@ -55,6 +55,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import plistlib
 import re
 import shlex
@@ -241,6 +242,30 @@ def axis_repos(res: Result, do_fetch: bool) -> None:
         unmerged = [b.strip().lstrip("* ") for b in (git(path, "branch", "--no-merged", branch) or "").splitlines() if b.strip()]
         if unmerged:
             res.add("repo", f"{name} unmerged", ", ".join(unmerged))
+    axis_estate(res, do_fetch)
+
+
+def axis_estate(res: Result, do_fetch: bool) -> None:
+    """The clone the converge runs from (row estate-dev-split), at the ref `nos update` recorded."""
+    est = Path(os.environ.get("NOS_ESTATE_DIR") or Path.home() / ".nos" / "estate")
+    if not (est / ".git").exists():
+        res.add("repo", "estate", f"{est} absent — the converge runs from a dev tree (tools/estate-adopt.sh)", UNREADABLE)
+        return
+    if do_fetch and git(est, "fetch", "--tags", "--quiet", timeout=120) is None:
+        res.add("repo", "estate", "fetch failed; refs may be stale — NOT compared", UNREADABLE)
+        return
+    ref = git(est, "config", "--get", "nos.estate-ref") or "dev"
+    target = f"origin/{ref}" if git(est, "rev-parse", "-q", "--verify", f"refs/remotes/origin/{ref}") else ref
+    head = git(est, "rev-parse", "--short", "HEAD") or "?"
+    dirty = bool(git(est, "status", "--porcelain"))
+    counts = git(est, "rev-list", "--left-right", "--count", f"{target}...HEAD")
+    if counts and len(counts.split()) == 2:
+        behind, ahead = (int(n) for n in counts.split())
+        drift = f"{ahead} ahead, {behind} behind {target}" + ("; `nos update` moves it" if behind else "")
+        state = DISAGREE if ahead or dirty else OK
+    else:
+        drift, state = f"no {target} to compare against", UNREADABLE
+    res.add("repo", f"estate @{ref}", f"{head}{' [dirty]' if dirty else ''} · {drift}", state)
 
 
 # ── axis 2: the organs, asked rather than inferred ──────────────────────────
