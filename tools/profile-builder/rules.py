@@ -9,6 +9,7 @@ the offline sweep that proves the page cannot write a config they refuse.
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -38,6 +39,7 @@ _ENV = lp._jinja_env()
 _ENV.tests.update(match=lambda v, p: re.match(p, str(v)) is not None, search=lambda v, p: re.search(p, str(v)) is not None,
                   contains=lambda v, x: x in v, **{k: (lambda v: False) for k in ("skipped", "failed", "changed", "succeeded", "success")})
 _ENV.filters["regex_search"] = lambda v, p, ignorecase=False: (m.group(0) if (m := re.search(p, str(v), re.I if ignorecase else 0)) else None)
+_ENV.filters["realpath"] = os.path.realpath  # Ansible's; pazny.paperclip asserts on resolved paths
 _Y = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
 
 
