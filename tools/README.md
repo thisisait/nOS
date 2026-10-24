@@ -282,6 +282,7 @@ posts, restarts or renders something.
 Imported by the tools above; not run on their own, not graph nodes.
 
 - `_ledger_open.py` — One way to open the Wing ledger read-only, for readers that must not write.
+- `nos-sanction.py` — EFFECTOR, operator-armed: sanction a symbiont through its symbiosome. `edge` narrows its routers' `sanction-<router>@file` to 127.0.0.1/32 (403, live at once), `stop` also stops its containers; data untouched; record `~/.nos/sanctions.yml` (the converge renders the same cut); plan without `--confirm`, `--lift` reverses; red-status shows each as a HOLD.
 - `advisory-patrol.py` — EFFECTOR (Pulse `advisory-patrol:nightly`): runs `advisory-status.py`, keeps the report in `~/.nos/advisory/last.json` (0600) for red-status, exits 0 clean / 1 unjudged HIGH/CRITICAL/KEV / 2 a source unreadable; judgements in `state/genome/advisory-judgements.yml`.
 - `_advisory_cache.py` — The opt-in ETag cache behind `advisory-status.py --cache-dir` (no default, refused inside the repo, never stores a header). It writes, so it is not in the reader: operator ruling on PR #63, 2026-10-23.
 - `_geo_db.py` — The shared "is there a geo database here" check: absent idles, a stopped container is an outage.

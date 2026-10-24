@@ -1,0 +1,13 @@
+# {{ ansible_managed }}
+# Sanctions — the immune system's edge cut (tools/nos-sanction.py, ssot/doctrine/immune-system.md).
+# Every manifest router carries sanction-<router>@file first. Open (every source) unless
+# ~/.nos/sanctions.yml holds the row id: then 127.0.0.1/32 only, so every caller gets 403.
+# nos-sanction.py flips one entry here at runtime (Traefik watches conf.d); this render
+# reads the same record, so a converge keeps a sanction instead of lifting it.
+http:
+  middlewares:
+{% for s in nos_manifest.services | default([]) %}
+    sanction-{{ s.id | replace('_', '-') }}:
+      ipAllowList:
+        sourceRange: {{ (['127.0.0.1/32'] if s.id in nos_sanctions else ['0.0.0.0/0', '::/0']) | to_json }}
+{% endfor %}

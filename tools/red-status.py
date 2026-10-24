@@ -94,6 +94,8 @@ SCAN_STALE_AFTER = timedelta(days=3)
 ADVISORY_SNAPSHOT = pathlib.Path(os.environ.get("NOS_ADVISORY_SNAPSHOT")
                                  or pathlib.Path.home() / ".nos" / "advisory" / "last.json")
 ADVISORY_STALE_AFTER = timedelta(hours=36)
+#: Sanctions in force (tools/nos-sanction.py); shown as holds.
+SANCTIONS = pathlib.Path(os.environ.get("NOS_SANCTIONS_FILE") or pathlib.Path.home() / ".nos" / "sanctions.yml")
 
 
 def _now() -> datetime:
@@ -1094,6 +1096,12 @@ def collect() -> dict:
     # Not a red source: None means "loops running", the healthy default, so it
     # never becomes an UNKNOWN. Its presence is a HOLD, reported by hold_lines().
     report["loops_paused"] = loops_paused()
+    import yaml  # noqa: PLC0415 — only this source is YAML
+    try:  # a held sanction is a HOLD like a pause: deliberate, neither red nor silent
+        held = yaml.safe_load(SANCTIONS.read_text(encoding="utf-8")) if SANCTIONS.is_file() else None
+        report["sanctions"] = (held or {}).get("sanctions") or {}
+    except (OSError, yaml.YAMLError, AttributeError):
+        report["sources_missing"].append(str(SANCTIONS))
     return report
 
 
@@ -1315,6 +1323,9 @@ def hold_lines(report: dict) -> list[str]:
         out.append(
             f"{r['job']} last run skipped — loops paused (maintenance) ({r['age']})"
         )
+    for sid, s in sorted((report.get("sanctions") or {}).items()):
+        out.append(f"{sid} sanctioned ({s.get('level')}) since {s.get('at')} — {s.get('reason', '')} "
+                   f"(tools/nos-sanction.py {sid} --lift)")
     if (report.get("backups") or {}).get("copy1") is False:
         out.append("copy #1 not installed (no RustFS) — restic takes the dumps directly")
     if off := (report.get("backups") or {}).get("backed_up_while_off"):

@@ -61,6 +61,9 @@ http:
    that injects X-Wing-Edge-Token. Wing's BasePresenter rejects requests
    without it (closing the direct-loopback bypass class). #}
 {% set _extra_mw = ['wing-edge@file'] if s.id == 'wing' else [] %}
+{# The sanction cut comes FIRST on every router and lane (sanctions.yml.j2): a
+   sanctioned symbiont answers 403 before any auth or app hop runs. #}
+{% set _cut = ['sanction-' ~ _router ~ '@file'] %}
 {# nOS face: same edge-trust pattern — inject X-Face-Edge-Token so the BFF
    trusts the Authentik identity headers only for edge-transited requests. #}
 {% if s.id == 'face' %}{% set _extra_mw = _extra_mw + ['face-edge@file'] %}{% endif %}
@@ -89,9 +92,9 @@ http:
       service: "{{ _router }}"
       tls: {{ _tls | to_json }}
 {% if _auth == 'proxy' %}
-      middlewares: {{ (['authentik@file', 'security-headers@file', 'compress@file'] + _extra_mw) | to_json }}
+      middlewares: {{ (_cut + ['authentik@file', 'security-headers@file', 'compress@file'] + _extra_mw) | to_json }}
 {% else %}
-      middlewares: {{ (['security-headers@file', 'compress@file'] + _extra_mw) | to_json }}
+      middlewares: {{ (_cut + ['security-headers@file', 'compress@file'] + _extra_mw) | to_json }}
 {% endif %}
 {% endfor %}
 {# ── Machine lanes ────────────────────────────────────────────────────────
@@ -121,7 +124,7 @@ http:
 {% else %}
 {%   set _match = 'PathPrefix(' ~ (_lane.prefixes | map('regex_replace', '^(.*)$', '`\\1`') | join(', ')) ~ ')' %}
 {% endif %}
-{% set _lane_mw = (['authentik@file'] if _lane.gated | default(false) else []) + ([_router ~ '-' ~ _lane.name ~ '-strip'] if _lane.strip_prefix | default(false) else []) + ['security-headers@file', 'compress@file'] %}
+{% set _lane_mw = _cut + (['authentik@file'] if _lane.gated | default(false) else []) + ([_router ~ '-' ~ _lane.name ~ '-strip'] if _lane.strip_prefix | default(false) else []) + ['security-headers@file', 'compress@file'] %}
 {% for _sfx, _ep, _tls in _doors %}
     {{ _router }}-{{ _lane.name }}{{ _sfx }}:
       rule: "Host(`{{ _host }}`) && {{ _match }}"

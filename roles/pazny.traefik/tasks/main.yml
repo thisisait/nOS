@@ -103,6 +103,19 @@
     - "{{ traefik_config_dir }}/cloudflare-origin-pull-ca.crt"
   when: not (traefik_origin_pull_enabled | default(false) | bool)
 
+# Sanctions (immune effector, tools/nos-sanction.py): one sanction-<router> middleware per
+# manifest router, open unless ~/.nos/sanctions.yml holds the id. Rendered BEFORE the
+# routers that reference it, so a router never points at an undefined middleware.
+# Gate: test_a_sanction_cuts_a_symbiont_at_the_edge.py.
+- name: "[pazny.traefik] Render sanctions (every router's cut, open unless sanctioned)"
+  ansible.builtin.template:
+    src: dynamic/sanctions.yml.j2
+    dest: "{{ traefik_dynamic_dir }}/sanctions.yml"
+    mode: '0644'
+  vars:
+    nos_manifest: "{{ lookup('file', playbook_dir ~ '/state/manifest.yml') | from_yaml }}"
+    nos_sanctions: "{{ (lookup('file', ansible_facts['env']['HOME'] ~ '/.nos/sanctions.yml', errors='ignore') | default('', true) | from_yaml or {}).get('sanctions') or {} }}"
+
 - name: "[pazny.traefik] Render Tier-1 services (auto-derived from manifest + install_* flags)"
   ansible.builtin.template:
     src: dynamic/services.yml.j2
