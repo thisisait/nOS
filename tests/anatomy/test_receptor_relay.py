@@ -85,9 +85,17 @@ def _run(logins: dict, extra: str = "", secret: str = "s3cret", raw: bytes | Non
                 break
             time.sleep(0.05)
         mode = sock.stat().st_mode & 0o777
-        c = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        c.settimeout(15)  # a relay that waits on a body it was promised must fail, not hang
-        c.connect(str(sock))
+        # The socket file exists before listen(): under load (parallel shards) a first
+        # connect is refused. Wait for a connect, not only for the file.
+        for _ in range(100):
+            c = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            c.settimeout(15)  # a relay that waits on a body it was promised must fail, not hang
+            try:
+                c.connect(str(sock))
+                break
+            except ConnectionRefusedError:
+                c.close()
+                time.sleep(0.05)
         c.sendall(raw or ("GET /api/tables HTTP/1.1\r\nHost: keap\r\n" + extra + "Connection: close\r\n\r\n").encode())
         reply = b""
         try:
