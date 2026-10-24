@@ -34,5 +34,7 @@ def test_the_wait_counts_every_run_not_yet_over():
 
 
 def test_the_timeout_has_a_default():
-    text = (REPO / "default.config.yml").read_text(encoding="utf-8")
-    assert "\npaperclip_drain_timeout_s: " in text
+    import sys
+    sys.path.insert(0, str(REPO / "tools"))
+    import nos_identity as ni
+    assert ni.resolve_flag("paperclip_drain_timeout_s", ni.default_layers()), "no default for the drain timeout"
