@@ -30,15 +30,15 @@ jellyfin_mem_limit: "{{ docker_mem_limit_critical | default('2g') }}"
 jellyfin_cpus: "{{ docker_cpus_standard | default('1.0') }}"
 
 # ----------------------------------------------------------------------------
-# Native OIDC via jellyfin-plugin-sso (https://github.com/9p4/jellyfin-plugin-sso)
-# v4.0.0.4 — targetAbi 10.11.0.0, matches jellyfin_version 10.11.8. The old
-# 3.5.2.4 pin (targetAbi 10.9) was NotSupported on 10.11 → /sso/OID/* returned
-# 404 and the SSO login button never worked (live-verified 2026-06-02). NB the
-# 9p4 repo is archived read-only — 4.0.0.4 is end-of-line; a future Jellyfin
-# 10.12 will need a successor plugin.
+# Native OIDC via jellyfin-plugin-sso — K0lin's maintained fork of the archived 9p4.
+# 5.1.1: targetAbi 12.0.0.0, same GUID 505ce9d1-…, same OID/* routes (checked from
+# the zip's meta.json, 2026-10-24). A plugin whose targetAbi misses the server is
+# NotSupported → /sso/OID/* 404s (3.5.2.4 on 10.11, live 2026-06-02; 9p4 4.0.0.4 on 12).
+# The zip is verified against its sha256 before it is unpacked.
 # ----------------------------------------------------------------------------
-jellyfin_sso_plugin_version: "4.0.0.4"
-jellyfin_sso_plugin_url: "https://github.com/9p4/jellyfin-plugin-sso/releases/download/v{{ jellyfin_sso_plugin_version }}/sso-authentication_{{ jellyfin_sso_plugin_version }}.zip"
+jellyfin_sso_plugin_version: "5.1.1"
+jellyfin_sso_plugin_url: "https://github.com/K0lin/jellyfin-plugin-sso/releases/download/v{{ jellyfin_sso_plugin_version }}/sso-authentication_{{ jellyfin_sso_plugin_version }}.zip"
+jellyfin_sso_plugin_sha256: "db126b4763bda3a3754fa2103232fc03ef1bf929cfeda35f2e9af39c875233b1"
 
 # Authentik OIDC provider config (matches the jellyfin-base plugin's authentik: block).
 jellyfin_oidc_provider_name: "Authentik"

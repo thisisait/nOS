@@ -1,0 +1,58 @@
+---
+# One-way upgrade guard — a cold, verified copy before an image that cannot be rolled back.
+#
+# Jellyfin 12 rewrites its database ("no rolling back without a full restore") and
+# RustFS 1.0.x rewrites its metadata (upstream: downgrade unsupported); the converge
+# that bumps the pin is the moment the old data is last intact. Measured 2026-10-24:
+# the rustfs recipe's own "snapshot" was `cp -al` (hardlinks: rustfs rewriting in
+# place rewrites the snapshot too). So: when the running tag differs from the pin,
+# stop the container, tar the data dir to another volume, verify the archive holds
+# every file, and only then let compose recreate it. No running container (first
+# install) = nothing to protect. Rollback: restore the tar, re-pin the old tag.
+# Gate: tests/anatomy/test_a_one_way_upgrade_keeps_a_cold_copy.py.
+#
+# Inputs: owg_name (jellyfin), owg_service (compose service label), owg_pin (the
+# tag the converge will run), owg_data_dir (what the migration rewrites).
+
+- name: "[one-way {{ owg_name }}] Which tag runs now"
+  ansible.builtin.shell: >
+    {{ docker_bin }} ps -a --filter "label=com.docker.compose.service={{ owg_service }}"
+    --format '{{ '{{' }}.Image{{ '}}' }}' | head -1
+  register: _owg_running
+  changed_when: false
+  check_mode: false
+
+- name: "[one-way {{ owg_name }}] Cold copy when the running tag is not the pin"
+  when:
+    - _owg_running.stdout | trim | length > 0
+    - (_owg_running.stdout | trim).split(':') | last != owg_pin
+  block:
+    - name: "[one-way {{ owg_name }}] Stop the container so the copy is consistent"
+      ansible.builtin.shell: |
+        for c in $({{ docker_bin }} ps -q --filter "label=com.docker.compose.service={{ owg_service }}"); do
+          {{ docker_bin }} stop -t 60 "$c"
+        done
+      changed_when: true
+
+    - name: "[one-way {{ owg_name }}] Archive the data dir to another volume"
+      ansible.builtin.shell: |
+        set -euo pipefail
+        dest="{{ one_way_upgrade_backup_dir }}"
+        mkdir -p "$dest" && chmod 700 "$dest"
+        out="$dest/{{ owg_name }}-$(echo '{{ _owg_running.stdout | trim }}' | sed 's/.*://')-$(date -u +%Y%m%dT%H%M%SZ).tar.gz"
+        parent="$(dirname '{{ owg_data_dir }}')"; base="$(basename '{{ owg_data_dir }}')"
+        export COPYFILE_DISABLE=1   # macOS tar would add ._ AppleDouble members and pad the count
+        tar -czf "$out" -C "$parent" "$base"
+        chmod 600 "$out"
+        # Every file by name, not a count: a missing file is a refusal.
+        missing=$(comm -23 <(cd "$parent" && find "$base" -type f | sort) <(tar -tzf "$out" | sed 's|^\./||' | grep -v '/$' | sort) | wc -l | tr -d ' ')
+        [ "$missing" = 0 ] || { echo "archive misses $missing file(s) of $base: $out" >&2; exit 1; }
+        echo "$out ($(tar -tzf "$out" | grep -cv '/$') files)"
+      args:
+        executable: /bin/bash
+      register: _owg_archive
+      changed_when: true
+
+    - name: "[one-way {{ owg_name }}] Where the copy is (rollback: restore it, re-pin the old tag)"
+      ansible.builtin.debug:
+        msg: "{{ _owg_archive.stdout }}"

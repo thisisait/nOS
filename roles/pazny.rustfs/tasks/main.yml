@@ -19,6 +19,16 @@
     - "{{ rustfs_data_dir }}"
     - "{{ ansible_facts['env']['HOME'] }}/agents/log"
 
+# 1.0.x rewrites metadata on first boot and upstream supports no downgrade; this
+# organ holds the backups, so a bad boot and a lost restore path arrive together.
+- name: "[pazny.rustfs] One-way upgrade guard"
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/tasks/one-way-upgrade-guard.yml"
+  vars:
+    owg_name: rustfs
+    owg_service: rustfs
+    owg_pin: "{{ rustfs_version }}"
+    owg_data_dir: "{{ rustfs_data_dir }}"
+
 - name: "[pazny.rustfs] Render compose override fragment"
   ansible.builtin.template:
     src: compose.yml.j2

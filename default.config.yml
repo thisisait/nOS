@@ -446,6 +446,7 @@ configure_backup: false
 # the DB dumps itself and snapshots them with the data dirs (ruling 2026-10-16).
 backup_copy1_enabled: "{{ (install_backup | default(false)) and (install_rustfs | default(false)) }}"
 backup_staging_dir: "{{ ansible_facts['env']['HOME'] }}/backups/staging"
+one_way_upgrade_backup_dir: "{{ ansible_facts['env']['HOME'] }}/backups/pre-upgrade"  # tasks/one-way-upgrade-guard.yml: cold copy before a migration with no rollback (keep it off nos_data_root's volume)
 backup_restic_status_file: "{{ ansible_facts['env']['HOME'] }}/.nos/backup-restic-status.json"
 restic_repo: ""
 # S3-compatible targets only (restic_repo starts with "s3:"): the key pair the
@@ -1915,7 +1916,7 @@ nos_forum_cloudflare_turn_key_id: ""    # Cloudflare dashboard → Realtime → 
 
 jellyfin_domain: "media{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 jellyfin_port: 8096
-jellyfin_version: "10.11.11"            # REM-119: CVE-2026-48793 (Jun-2026 advisory); prior 10.11.8 CVE-2025-31499 (FFmpeg arg injection → RCE) [swept 10.11.10 2026-08-06]
+jellyfin_version: "12.2"                # GHSA-6828 (critical traversal) + GHSA-cf3c (high) fixed only in 12; one-way DB migration, cold copy first (one-way-upgrade-guard)
 jellyfin_lan_access: true              # true = port reachable from LAN (for TVs, mobile clients)
 jellyfin_cache_dir: "{{ nos_data_root }}/platform/services/jellyfin/cache"
 jellyfin_movies_dir: "{{ ansible_facts['env']['HOME'] }}/media/movies"   # Override to your library
@@ -2347,7 +2348,7 @@ authentik_oidc_homeassistant_client_secret: "{{ nos_derived_secrets.oidc_homeass
 # RUSTFS – S3-compatible object storage
 # ==============================================================================
 
-rustfs_version: "1.0.0-rc.1"            # REM-059 (PENTEST-005): constant-time internode RPC signature compare, CWE-208; CVE-2025-68926 baseline kept
+rustfs_version: "1.0.3"                 # GHSA-xm99 (high) + 5 medium; skip 1.0.0/1.0.1 (GHSA-28w4); one-way metadata, cold copy first (one-way-upgrade-guard)
 rustfs_api_port: 9010               # S3 API (aws-cli, rclone, restic, SDK...) – 9000 taken by PHP-FPM
 rustfs_console_port: 9001           # Web console
 rustfs_domain: "fs{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"

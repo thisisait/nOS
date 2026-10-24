@@ -10,6 +10,16 @@
 # tasks/post.yml — called from stack-up.yml az PO compose up.
 # ==============================================================================
 
+# 12.0 rewrites the database with no rollback but a restore: copy it cold first,
+# before the plugin swap below touches the config dir.
+- name: "[pazny.jellyfin] One-way upgrade guard"
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/tasks/one-way-upgrade-guard.yml"
+  vars:
+    owg_name: jellyfin
+    owg_service: jellyfin
+    owg_pin: "{{ jellyfin_version }}"
+    owg_data_dir: "{{ jellyfin_config_dir }}"
+
 - name: "[pazny.jellyfin] Ensure config, cache and media directories exist"
   ansible.builtin.file:
     path: "{{ item }}"
@@ -79,9 +89,19 @@
   register: _jf_sso_installed
   when: install_authentik | default(false) | bool
 
-- name: "[pazny.jellyfin] Download + unpack jellyfin-plugin-sso {{ jellyfin_sso_plugin_version }}"
+- name: "[pazny.jellyfin] Download jellyfin-plugin-sso {{ jellyfin_sso_plugin_version }} (sha256-verified)"
+  ansible.builtin.get_url:
+    url: "{{ jellyfin_sso_plugin_url }}"
+    dest: "{{ jellyfin_cache_dir }}/sso-authentication_{{ jellyfin_sso_plugin_version }}.zip"
+    checksum: "sha256:{{ jellyfin_sso_plugin_sha256 }}"
+    mode: '0644'
+  when:
+    - install_authentik | default(false)
+    - not (_jf_sso_installed.stat.exists | default(false))
+
+- name: "[pazny.jellyfin] Unpack jellyfin-plugin-sso {{ jellyfin_sso_plugin_version }}"
   ansible.builtin.unarchive:
-    src: "{{ jellyfin_sso_plugin_url }}"
+    src: "{{ jellyfin_cache_dir }}/sso-authentication_{{ jellyfin_sso_plugin_version }}.zip"
     dest: "{{ jellyfin_config_dir }}/plugins/SSO-Auth_{{ jellyfin_sso_plugin_version }}.0"
     remote_src: true
     mode: '0755'

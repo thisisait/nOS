@@ -4,10 +4,12 @@ allow_shell: true   # upgrade recipes need exec.shell for backup/pg_dump/image b
 docs_url: "https://github.com/rustfs/rustfs"
 maintainers: ["pazny"]
 notes: |
-  RustFS is still in alpha (1.0.0-alpha.x); every image bump may change
-  wire format / on-disk layout. Buckets and objects live at
+  RustFS reached 1.0 (stable 1.0.3, 2026-10-17); 1.0.x rewrites metadata on
+  first boot and upstream supports no downgrade. Buckets and objects live at
   {{ rustfs_data_dir }}. Access keys come from role defaults.
-  Rolling-release: pin the tag tightly and verify bucket listing after.
+  No rung below matches 1.0.0-rc.*: the converge itself protects that bump
+  (tasks/one-way-upgrade-guard.yml, a verified cold tar on another volume).
+  The alpha rung's `cp -al` snapshot is hardlinks, not a copy: do not trust it.
 
 recipes:
   - id: "rustfs-alpha-bump"

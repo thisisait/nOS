@@ -6,9 +6,10 @@
 # Does not declare top-level networks: — iiab_net and {{ stacks_shared_network }}
 # are defined in base templates/stacks/iiab/docker-compose.yml.j2.
 #
-# Object Lock COMPLIANCE is honored on rustfs 1.0.0-rc.1 (live probe 403 on
-# version-delete). The digest raw archive is bucket `raw-archive`, never
-# `backups` — see docs/plans/raw-archive-store.md.
+# Object Lock COMPLIANCE was honored on rustfs 1.0.0-rc.1 (live probe 403 on
+# version-delete); on 1.0.3 it is NOT yet re-proven (row rustfs-1-0-3-upgrade:
+# get-object-lock-configuration on `raw-archive` after the first boot). The digest
+# raw archive is bucket `raw-archive`, never `backups` — docs/plans/raw-archive-store.md.
 # =============================================================================
 
 services:
@@ -27,7 +28,7 @@ services:
     environment:
       RUSTFS_ACCESS_KEY: "{{ rustfs_access_key }}"
       RUSTFS_SECRET_KEY: "{{ rustfs_secret_key }}"
-    # RustFS 1.0.0-alpha.x does NOT implement the MinIO-style
+    # RustFS (alpha through 1.0.x) does NOT implement the MinIO-style
     # /minio/health/live endpoint (unlike what the earlier README claimed);
     # the real liveness probe is the native /health route, which returns
     # {"status":"ok","ready":true} once IAM + storage subsystems load.
