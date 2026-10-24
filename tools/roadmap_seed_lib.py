@@ -134,6 +134,15 @@ INDEX_PATH = "state/roadmap/index.yml"
 _INDEX_FIELDS = ("slug", "parent", "track")
 
 
+def is_estate_checkout(repo_root: str) -> bool:
+    """True for the estate's own clone (branch `estate`, built by tools/estate-adopt.sh): a
+    committed file regenerated there dirties it and `nos update` refuses to move it."""
+    import subprocess  # noqa: PLC0415 — only this check shells out
+    r = subprocess.run(["git", "-C", repo_root, "symbolic-ref", "--quiet", "--short", "HEAD"],
+                       capture_output=True, text=True)
+    return r.returncode == 0 and r.stdout.strip() == "estate"
+
+
 def write_index(rows: list[dict], repo_root: str) -> str:
     """Write the structural slug index (public) from loaded rows. Returns its path."""
     idx = sorted(

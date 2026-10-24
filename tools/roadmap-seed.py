@@ -32,7 +32,7 @@ import urllib.error
 import urllib.request
 
 from keap_api import human_base, human_headers, paged, write_row  # noqa: E402 — sibling helper in tools/
-from roadmap_seed_lib import GIT_OWNED, load_rows, seed_dir, write_index  # noqa: E402
+from roadmap_seed_lib import GIT_OWNED, is_estate_checkout, load_rows, seed_dir, write_index  # noqa: E402
 
 _REPO = __import__("os").path.abspath(__import__("os").path.join(
     __import__("os").path.dirname(__file__), ".."))
@@ -74,7 +74,11 @@ if not DRY_RUN:
     # The public index belongs to the ESTATE roadmap in the nOS checkout; a
     # personal/project table (dtt-per-user-tables) has no public half, and a
     # non-maintainer cannot write the checkout anyway.
-    if TABLE in ("roadmap", "2d498264-bc9a-4324-9935-489e5e4d92f3") and os.access(
+    if is_estate_checkout(_REPO):
+        # The index is source: it reaches the estate by a commit and `nos update`, never by a write here.
+        print(f"index: not written into the estate checkout {_REPO}; regenerate it in your development "
+              "tree (NOS_SRC=<dev tree> nos dtt seed) and commit it")
+    elif TABLE in ("roadmap", "2d498264-bc9a-4324-9935-489e5e4d92f3") and os.access(
             os.path.join(_REPO, "state", "roadmap"), os.W_OK):
         print(f"index: wrote {write_index(R, _REPO)}")
     else:
