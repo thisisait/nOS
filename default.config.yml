@@ -2687,6 +2687,7 @@ paperclip_native_oidc_enabled: false
 # (the role refuses those). In config.yml, e.g.:
 #   paperclip_host_workspaces: [{name: hnedweb, path: /Users/<you>/projects/hnedweb}]
 paperclip_host_workspaces: []
+paperclip_drain_timeout_s: 900                     # a converge waits this long for agent runs to finish before a restart; 0 = restart now
 
 # ==============================================================================
 # IIAB TERMINAL – public SSH TUI hub for LAN users

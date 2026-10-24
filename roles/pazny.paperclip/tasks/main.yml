@@ -47,6 +47,34 @@
     mode: '0755'
   loop: "{{ paperclip_host_workspaces | default([]) }}"
 
+# A recreate kills every run in flight, and its working files with it (2026-10-23:
+# six runs lost to one restart). Wait until no run is going; on timeout refuse, so
+# the operator chooses: wait more, or `-e paperclip_drain_timeout_s=0` to restart now.
+# No database yet (first install) counts as idle. Gate: test_paperclip_drains_before_a_restart.py.
+- name: "[pazny.paperclip] Drain: wait until no agent run is in flight"
+  ansible.builtin.shell: >
+    {{ docker_bin }} exec infra-postgresql-1 psql -U postgres -d {{ paperclip_db_name }} -tA -c
+    "SELECT count(*) FROM heartbeat_runs WHERE status NOT IN ('succeeded', 'failed', 'cancelled', 'interrupted')"
+    2>/dev/null || echo 0
+  register: _paperclip_inflight
+  changed_when: false
+  check_mode: false
+  until: (_paperclip_inflight.stdout | trim | int) == 0
+  retries: "{{ ((paperclip_drain_timeout_s | int) / 15) | round(0, 'ceil') | int }}"
+  delay: 15
+  failed_when: false
+  when: (paperclip_drain_timeout_s | int) > 0
+
+- name: "[pazny.paperclip] Drain: refuse to restart over runs in flight"
+  ansible.builtin.fail:
+    msg: >-
+      Paperclip still has {{ _paperclip_inflight.stdout | trim }} agent run(s) in flight after
+      {{ paperclip_drain_timeout_s }} s; a restart would kill them and their working files.
+      Re-run when they finish, or `-e paperclip_drain_timeout_s=0` to restart now.
+  when:
+    - (paperclip_drain_timeout_s | int) > 0
+    - (_paperclip_inflight.stdout | default('0') | trim | int) > 0
+
 - name: "[pazny.paperclip] Render compose override fragment"
   ansible.builtin.template:
     src: compose.yml.j2
