@@ -2553,7 +2553,7 @@
       "source": "state/judge-sets.yml",
       "deterministic": true,
       "mutates_worktree": true,
-      "min_work": 8231,
+      "min_work": 8583,
       "argv": [
         "python3",
         "-m",
@@ -2564,7 +2564,7 @@
       "claims": [],
       "requires": [],
       "anchor": "02.02.04",
-      "description": "Loop judge: gate command `python3 -m pytest tests/anatomy -q` — work floor min_work=8231, deterministic=True"
+      "description": "Loop judge: gate command `python3 -m pytest tests/anatomy -q` — work floor min_work=8583, deterministic=True"
     },
     "lock:agent-run-lock": {
       "kind": "lock",
@@ -8104,7 +8104,7 @@
       "from": "reader:red-status",
       "to": "doctrine:ssot/doctrine/loop-contract.md#7",
       "kind": "governed_by",
-      "via": "cited at tools/red-status.py:793",
+      "via": "cited at tools/red-status.py:795",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"

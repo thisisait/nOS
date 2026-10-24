@@ -3358,6 +3358,7 @@ backup_coverage:
   iiab_terminal_config_dir:    { class: derived, why: "rendered config" }
   node_exporter_textfile_dir:  { class: derived, why: "metrics scratch" }
   backup_staging_dir:          { class: store, why: "tonight's plaintext dumps — the restic source, rewritten every run" }
+  one_way_upgrade_backup_dir:  { class: store, why: "cold tars before a migration with no rollback (one-way-upgrade-guard); the operator prunes" }
 
 backup_databases_mariadb: "{{ install_mariadb | default(false) }}"        # the installed set (manifest forced_by applied at run time)
 backup_databases_postgresql: "{{ install_postgresql | default(false) }}"
