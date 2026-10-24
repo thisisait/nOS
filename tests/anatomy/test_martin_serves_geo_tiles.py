@@ -153,7 +153,7 @@ def test_tiles_ride_the_atlas_gate(martin_on):
         assert r is None and "geolibre-tiles" not in http["services"]
         return
     assert r["rule"] == "Host(`atlas.example.eu`) && PathPrefix(`/tiles`)"
-    assert r["middlewares"][0] == "authentik@file", "party-derived tiles are tier 3, never public"
+    assert r["middlewares"][:2] == ["sanction-geolibre@file", "authentik@file"], "party-derived tiles are tier 3, never public"
     assert http["services"]["geolibre-tiles"]["loadBalancer"]["servers"] == [{"url": "http://martin:3000"}]
 
 
