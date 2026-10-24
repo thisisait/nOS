@@ -51,7 +51,7 @@ def test_no_task_hand_lists_a_forced_provider() -> None:
 
 def test_installed_counts_a_forced_provider(tmp_path: Path, monkeypatch) -> None:
     """Every forced_by entry switches its provider on in install_flags, and core runs redis."""
-    defaults = [p for p in ni.layer_paths() if p != REPO / "config.yml"]
+    defaults = [p for p in ni.layer_paths() if p.name != "config.yml"]
     monkeypatch.setattr(ni, "REPO", Path("/"))  # resolve_flag names layers relative to REPO
     for rid, flag in FORCED.items():
         for trigger in ROWS[rid]["forced_by"]:

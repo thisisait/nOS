@@ -41,6 +41,8 @@ import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 TOOL = REPO / "tools" / "estate-status.py"
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 
 
 def run(*args: str, timeout: int = 180) -> subprocess.CompletedProcess:
@@ -163,7 +165,7 @@ def test_the_config_axis_reads_every_layer(flag: str) -> None:
     assert "default.config.yml=" in out, (
         f"resolving {flag} did not read the committed default at all."
     )
-    if (REPO / "config.yml").exists():
+    if ni.operator_file("config.yml").exists():
         assert re.search(rf"(?<![.\w]){re.escape('config.yml')}=", out), (
             f"resolving {flag} did not show the operator's config.yml layer. "
             "Reading the committed default alone is what turned sixteen enabled "

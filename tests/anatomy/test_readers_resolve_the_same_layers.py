@@ -84,7 +84,7 @@ def test_every_manifest_port_var_resolves_for_both_readers():
 
 def test_the_smoke_loopback_probe_resolves_the_role_default():
     """The concrete drop: cortex is unrouted, so its probe IS the loopback one."""
-    vars_dict = SMOKE.merge_config(*ni.default_layers(), REPO / "config.yml")
+    vars_dict = SMOKE.merge_config(*ni.default_layers(), ni.operator_file("config.yml"))
     rows = yaml.safe_load((REPO / "state/manifest.yml").read_text(encoding="utf-8"))["services"]
     cortex = next(r for r in rows if r["id"] == "cortex")
     probe = SMOKE._loopback_probe(cortex, vars_dict)

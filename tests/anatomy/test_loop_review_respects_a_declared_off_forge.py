@@ -39,7 +39,7 @@ import nos_identity as ni  # noqa: E402
 
 
 def _resolved_flag() -> str:
-    for f in (REPO / "config.yml", *reversed(ni.default_layers())):
+    for f in (ni.operator_file("config.yml"), *reversed(ni.default_layers())):
         if not f.is_file():
             continue
         m = re.search(r"^install_gitlab:\s*(\S+)", f.read_text(encoding="utf-8"), re.M)

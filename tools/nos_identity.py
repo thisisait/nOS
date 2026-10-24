@@ -41,10 +41,27 @@ SYNTHETIC_PROFILE = REPO / "profiles" / "test-users.yml"
 SYNTHETIC_FLAG = "nos_test_users_enabled"
 
 
+def operator_file(name: str) -> Path:
+    """A gitignored operator file (config.yml, credentials.yml) as the converge
+    reads it: the estate clone's (NOS_ESTATE_DIR, default ~/.nos/estate, since
+    2026-10-23), else the main checkout's (a worktree has none), else this one's."""
+    est = Path(os.environ.get("NOS_ESTATE_DIR") or Path.home() / ".nos" / "estate")
+    if (est / ".git").exists() and (est / name).is_file():
+        return est / name
+    import subprocess
+    try:
+        common = subprocess.run(["git", "-C", str(REPO), "rev-parse", "--path-format=absolute", "--git-common-dir"],
+                                capture_output=True, text=True, timeout=10).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        common = ""
+    main = Path(common).parent / name if common else None
+    return main if main and main.is_file() else REPO / name
+
+
 def layer_paths() -> list[Path]:
     """The layers that exist, LOWEST precedence first. One list, every reader."""
     return [p for p in (*sorted((REPO / "roles").glob("*/defaults/main.yml")),
-                        *default_layers(), REPO / "config.yml")
+                        *default_layers(), operator_file("config.yml"))
             if p.exists()]
 
 
@@ -93,7 +110,8 @@ def resolve_flag(flag: str, paths: list[Path] | None = None) -> list[tuple[str, 
     for path in layer_paths() if paths is None else paths:
         m = pattern.search(path.read_text(encoding="utf-8"))
         if m:
-            seen.append((str(path.relative_to(REPO)), m.group(1).strip().strip('"\'')))
+            label = str(path.relative_to(REPO)) if path.is_relative_to(REPO) else path.name
+            seen.append((label, m.group(1).strip().strip('"\'')))
     return seen
 
 
@@ -133,7 +151,7 @@ def resolve_list(name: str, paths: list[Path] | None = None) -> list:
 
 def profile_layers(profile: Path) -> list[Path]:
     """The committed layers with `profile` on top (as `-e @profile`), no config.yml."""
-    return [p for p in layer_paths() if p != REPO / "config.yml"] + [profile]
+    return [p for p in layer_paths() if p.name != "config.yml"] + [profile]
 
 
 def forced_installs() -> dict[str, list[str]]:

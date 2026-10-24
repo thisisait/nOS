@@ -116,7 +116,7 @@ def test_infra_main_yml_switches_on_counts_as_installed() -> None:
     Authentik (REVIEW I3: core and the defaults dropped redis, the defaults postgresql)."""
     seed = json.loads(SEED.read_text())["components"]
     for layers in (_core_flags(), ni.install_flags(ni.profile_layers(REPO / "profiles" / "all-on.yml")),
-                   ni.install_flags([p for p in ni.layer_paths() if p != REPO / "config.yml"])):
+                   ni.install_flags([p for p in ni.layer_paths() if p.name != "config.yml"])):
         assert {"redis", "postgres", "postgresql"} <= set(ni.installed_names(seed, layers)), layers
 
 

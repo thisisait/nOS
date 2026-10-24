@@ -86,7 +86,7 @@ def _token_status(url: str, client_id: str, secret: str) -> str:
 
 def main() -> int:
     base = ni.default_config()
-    over = _yaml(REPO / "config.yml")
+    over = _yaml(ni.operator_file("config.yml"))
     merged = {**base, **over}
     secrets = _yaml(SECRETS)
 

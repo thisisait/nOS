@@ -53,6 +53,9 @@ def host(tmp_path, monkeypatch):
     """A hermetic host: HOME and the state file are the test's, config.yml is absent."""
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.setenv(STATE_ENV, str(tmp_path / "state.yml"))
+    (tmp_path / "estate" / ".git").mkdir(parents=True)  # an estate whose config.yml is empty
+    (tmp_path / "estate" / "config.yml").write_text("")
+    monkeypatch.setenv("NOS_ESTATE_DIR", str(tmp_path / "estate"))
     monkeypatch.setattr(smoke, "operator_file", lambda name: tmp_path / name)
     monkeypatch.setattr(plan_mod.smoke, "operator_file", lambda name: tmp_path / name)
     return tmp_path

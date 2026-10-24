@@ -180,7 +180,7 @@ def test_every_backend_ships_prepared_not_armed(tmp_path):
     may default armed, but only through llm_on_host — off, it is off.
     """
     cfg = ni.default_config()
-    layers = [p for p in ni.layer_paths() if p != REPO / "config.yml"]
+    layers = [p for p in ni.layer_paths() if p.name != "config.yml"]
     plist = (REPO / "roles/pazny.wing/templates/wing.plist.j2").read_text()
     problems = []
     for name, b in _registry().items():

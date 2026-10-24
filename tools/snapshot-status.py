@@ -95,7 +95,7 @@ def _run(argv: list[str]) -> tuple[int, str]:
 
 
 def _config_scalar(key: str) -> str | None:
-    for path in (REPO / "config.yml", *reversed(ni.default_layers())):
+    for path in (ni.operator_file("config.yml"), *reversed(ni.default_layers())):
         if not path.exists():
             continue
         m = re.search(rf"^{re.escape(key)}:\s*[\"']?([^\"'#\n]+)",

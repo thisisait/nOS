@@ -138,7 +138,7 @@ def _forge_installed(name: str) -> bool:
     declared-off GitLab is a decision, not a failure — MEASURED 2026-09-03:
     the landing half died because this driver pushed to a forge that no
     longer exists. Gitea carries the CI either way."""
-    flag = _yaml_lookup(f"install_{name}", REPO / "config.yml",
+    flag = _yaml_lookup(f"install_{name}", ni.operator_file("config.yml"),
                         *reversed(ni.default_layers()))
     if not flag:
         return name == "gitea"
@@ -192,15 +192,15 @@ def _yaml_lookup(key: str, *files: pathlib.Path) -> str:
 def _forge(name: str) -> dict:
     """Token, domain, owner and repo for one forge, or raise Refused."""
     keys = FORGE_KEYS[name]
-    here = [REPO / "credentials.yml", REPO / "config.yml",
+    here = [ni.operator_file("credentials.yml"), ni.operator_file("config.yml"),
             pathlib.Path.home() / ".nos" / "secrets.yml"]
-    conf = [REPO / "config.yml", *reversed(ni.default_layers()),
+    conf = [ni.operator_file("config.yml"), *reversed(ni.default_layers()),
             REPO / keys["role_defaults"]]
 
     token = os.environ.get(keys["token_env"]) or _yaml_lookup(keys["token_key"], *here)
     domain = os.environ.get(keys["domain_env"]) or _yaml_lookup(keys["domain_key"], *here[:2])
     if not domain:
-        tenant = _yaml_lookup("tenant_domain", REPO / "config.yml", *reversed(ni.default_layers()))
+        tenant = _yaml_lookup("tenant_domain", ni.operator_file("config.yml"), *reversed(ni.default_layers()))
         domain = f"{keys['domain_prefix']}.{tenant}" if tenant else ""
     if not token or not domain:
         raise Refused(
@@ -320,7 +320,7 @@ def _open_merge_request(forge: dict, branch: str, base: str,
     segments and GitLab 400s. Measured 2026-06-10 and rediscovered since; the
     git push keeps the domain because a git URL has no %2F in it.
     """
-    port = _yaml_lookup("gitlab_http_port", REPO / "config.yml",
+    port = _yaml_lookup("gitlab_http_port", ni.operator_file("config.yml"),
                         *reversed(ni.default_layers()),
                         REPO / "roles/pazny.gitlab/defaults/main.yml") or "8929"
     project = f"{forge['owner']}%2F{forge['repo']}"
@@ -385,7 +385,7 @@ def _base_exists(forge: dict, base: str) -> tuple[bool, str]:
     Fails CLOSED: an unreachable forge is not permission to push.
     """
     if forge["name"] == "gitlab":
-        port = _yaml_lookup("gitlab_http_port", REPO / "config.yml",
+        port = _yaml_lookup("gitlab_http_port", ni.operator_file("config.yml"),
                             *reversed(ni.default_layers()),
                             REPO / "roles/pazny.gitlab/defaults/main.yml") or "8929"
         url = (f"http://127.0.0.1:{port}/api/v4/projects/"
@@ -435,7 +435,7 @@ def _remote_tip(forge: dict, branch: str) -> tuple[str | None, str | None]:
     its forge rather than to a tidy-looking rule.
     """
     if forge["name"] == "gitlab":
-        port = _yaml_lookup("gitlab_http_port", REPO / "config.yml",
+        port = _yaml_lookup("gitlab_http_port", ni.operator_file("config.yml"),
                             *reversed(ni.default_layers()),
                             REPO / "roles/pazny.gitlab/defaults/main.yml") or "8929"
         encoded = urllib.parse.quote(branch, safe="")

@@ -145,9 +145,9 @@ def ci_verdict(sha: str, driver) -> tuple[str, str]:
     — that is a different commit's answer wearing this one's name.
     """
     token = driver._yaml_lookup(
-        "woodpecker_api_token", REPO / "credentials.yml", REPO / "config.yml",
+        "woodpecker_api_token", ni.operator_file("credentials.yml"), ni.operator_file("config.yml"),
         pathlib.Path.home() / ".nos" / "secrets.yml")
-    port = driver._yaml_lookup("woodpecker_port", REPO / "config.yml",
+    port = driver._yaml_lookup("woodpecker_port", ni.operator_file("config.yml"),
                                *reversed(ni.default_layers())) or "8060"
     if not token:
         return INDETERMINATE, "no woodpecker_api_token — CI state cannot be read"
@@ -158,13 +158,13 @@ def ci_verdict(sha: str, driver) -> tuple[str, str]:
     # the literal fallback asked woodpecker about `nos/nOS`, a repo that does
     # not exist, and would have reported "no pipeline" for a healthy one.
     gitea = driver.FORGE_KEYS["gitea"]
-    owner = (driver._yaml_lookup("woodpecker_nos_repo_owner", REPO / "config.yml")
-             or driver._yaml_lookup(gitea["owner_key"], REPO / "config.yml",
+    owner = (driver._yaml_lookup("woodpecker_nos_repo_owner", ni.operator_file("config.yml"))
+             or driver._yaml_lookup(gitea["owner_key"], ni.operator_file("config.yml"),
                                     *reversed(ni.default_layers()),
                                     REPO / gitea["role_defaults"])
              or gitea["owner_default"])
-    name = (driver._yaml_lookup("woodpecker_nos_repo_name", REPO / "config.yml")
-            or driver._yaml_lookup(gitea["name_key"], REPO / "config.yml",
+    name = (driver._yaml_lookup("woodpecker_nos_repo_name", ni.operator_file("config.yml"))
+            or driver._yaml_lookup(gitea["name_key"], ni.operator_file("config.yml"),
                                    *reversed(ni.default_layers()),
                                    REPO / gitea["role_defaults"])
             or gitea["name_default"])
@@ -261,7 +261,7 @@ def _same_change(judged: str, offered: str) -> bool:
 
 def _gitlab(driver) -> tuple[dict, str]:
     forge = driver._forge("gitlab")
-    port = driver._yaml_lookup("gitlab_http_port", REPO / "config.yml",
+    port = driver._yaml_lookup("gitlab_http_port", ni.operator_file("config.yml"),
                                *reversed(ni.default_layers()),
                                REPO / "roles/pazny.gitlab/defaults/main.yml") or "8929"
     project = f"{forge['owner']}%2F{forge['repo']}"
@@ -434,7 +434,7 @@ def main() -> int:
         # REM-239/REM-244, nothing could land). The decision now has a
         # consequence instead of a hole: the PR lives on Gitea, which
         # carries the CI anyway. Unreachable-while-true stays rc=2.
-        flag = driver._yaml_lookup("install_gitlab", REPO / "config.yml",
+        flag = driver._yaml_lookup("install_gitlab", ni.operator_file("config.yml"),
                                    *reversed(ni.default_layers()))
         gitea_mode = str(flag).lower() == "false"
         if gitea_mode:

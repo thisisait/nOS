@@ -25,7 +25,7 @@ CATALOG = REPO / "files/anatomy/scripts/discover-pulse-catalog.py"
 PLUGINS = {p.parent.name: yaml.safe_load(p.read_text(encoding="utf-8")) or {}
            for p in (REPO / "files/anatomy/plugins").glob("*/plugin.yml")}
 LOOPS = sorted((REPO / "files/anatomy/loops").glob("*.loop.yml"))
-DEFAULTS = [p for p in ni.layer_paths() if p != REPO / "config.yml"]
+DEFAULTS = [p for p in ni.layer_paths() if p.name != "config.yml"]
 #: Development-loop jobs and invoice-vision (needs Ollama), each a core-host stray.
 NOT_ON_CORE = {"loop:repo-check", "loop:news-scout", "loop:vision-bench", "loop:pipeline-exercise",
                "loop-base:propose", "loop-base:drive", "loop-base:review",

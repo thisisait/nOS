@@ -59,13 +59,15 @@ eval "$(python3 - <<'PY'
 import os, pathlib, re, shlex, sys
 
 repo = pathlib.Path.cwd()
+sys.path.insert(0, str(repo / "tools"))
+from nos_identity import operator_file
 home = pathlib.Path.home()
 
 
 def from_config(key: str, default: str = "") -> str:
     value = default
     for layer in ("default.config.yml", "config.yml"):
-        path = repo / layer
+        path = operator_file(layer) if layer == "config.yml" else repo / layer
         if not path.exists():
             continue
         m = re.search(rf"^{re.escape(key)}:\s*(\S+)", path.read_text(encoding="utf-8"), re.M)

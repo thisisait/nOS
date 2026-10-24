@@ -958,16 +958,8 @@ def emit_jsonl(path: pathlib.Path, run_id: str, results: list[ProbeResult]) -> N
 # ---------------------------------------------------------------------------
 
 def operator_file(name: str) -> pathlib.Path:
-    """A gitignored operator file (config.yml): a worktree has none, so read the
-    main checkout's — the parent of git's common dir — else this checkout's."""
-    import subprocess
-    try:
-        common = subprocess.run(["git", "-C", str(REPO), "rev-parse", "--path-format=absolute", "--git-common-dir"],
-                                capture_output=True, text=True, timeout=10).stdout.strip()
-    except (OSError, subprocess.SubprocessError):
-        common = ""
-    main = pathlib.Path(common).parent / name if common else None
-    return main if main and main.is_file() else REPO / name
+    """The estate's config.yml / credentials.yml; one answer for every reader."""
+    return nos_identity.operator_file(name)
 
 
 def load_vars(host_alias: str | None = None, tenant_domain: str | None = None,

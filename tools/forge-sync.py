@@ -192,7 +192,7 @@ def read_tips(driver, branch: str) -> dict[str, dict]:
         # Same rule for Gitea (GitLab as drop-in replacement): install_<forge>
         # false excuses that seat. Excused ≠ ignored; flipping the flag
         # restores it.
-        flag = driver._yaml_lookup(f"install_{name}", REPO / "config.yml",
+        flag = driver._yaml_lookup(f"install_{name}", ni.operator_file("config.yml"),
                                    *reversed(ni.default_layers()))
         if str(flag).lower() == "false":
             tips[name] = {"sha": None, "error": None, "declared_off": True}

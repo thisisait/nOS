@@ -36,7 +36,7 @@ def _load(name: str, path: str):
 
 def _resolved(tmp_path, top: str = "") -> dict:
     """The committed layers, plus `top` as the host's config.yml."""
-    paths = [p for p in nos_identity.layer_paths() if p != REPO / "config.yml"]
+    paths = [p for p in nos_identity.layer_paths() if p.name != "config.yml"]
     if top:
         (tmp_path / "config.yml").write_text(top)
         paths.append(tmp_path / "config.yml")
@@ -168,7 +168,7 @@ def test_a_named_vision_model_arms_the_switch(tmp_path):
     """W1: a config.yml that names a vision model (from before the switches) keeps invoice intake."""
     got = _resolved(tmp_path, 'ollama_vision_model: "qwen2.5vl:3b"\n')
     assert (got["vlm_on_host"], got["vlm_model"], got["ollama_enabled"]) == (True, "qwen2.5vl:3b", True)
-    paths = [p for p in nos_identity.layer_paths() if p != REPO / "config.yml"] + [tmp_path / "config.yml"]
+    paths = [p for p in nos_identity.layer_paths() if p.name != "config.yml"] + [tmp_path / "config.yml"]
     assert nos_identity.install_flags(paths).get("vlm_on_host") is True, "readers miss the armed switch"
     alone = _resolved(tmp_path, "vlm_on_host: true\n")
     assert alone["vlm_model"] == "qwen2.5vl:7b", "the switch alone names no model"

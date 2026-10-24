@@ -43,7 +43,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 SECRETS = Path.home() / ".nos/secrets.yml"
 sys.path.insert(0, str(REPO / "tools"))
-from nos_identity import SYNTHETIC_FLAG, default_config, synthetic_identities  # noqa: E402
+from nos_identity import SYNTHETIC_FLAG, default_config, operator_file, synthetic_identities  # noqa: E402
 
 OK, MISSING, UNDECLARED, UNKNOWN = "ok", "MISSING", "UNDECLARED", "?"
 REALMS = ("authentik", "gitea", "woodpecker", "unix")
@@ -81,8 +81,8 @@ def declared_roster(merged: dict | None = None) -> tuple[list[dict], dict]:
         base = default_config()
         # credentials.yml joins the merge for TOKEN lookup only (loop-review.py
         # precedent); config.yml wins last, as in the playbook's vars_files order.
-        creds = _yaml(REPO / "credentials.yml")
-        over = _yaml(REPO / "config.yml")
+        creds = _yaml(operator_file("credentials.yml"))
+        over = _yaml(operator_file("config.yml"))
         merged = {**base, **creds, **over}
     ctx = {
         "ansible_facts": {"user_id": getpass.getuser()},
