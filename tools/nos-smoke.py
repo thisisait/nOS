@@ -959,7 +959,7 @@ def emit_jsonl(path: pathlib.Path, run_id: str, results: list[ProbeResult]) -> N
 
 def operator_file(name: str) -> pathlib.Path:
     """The estate's config.yml / credentials.yml; one answer for every reader."""
-    return nos_identity.operator_file(name)
+    return nos_identity.operator_file(name, REPO)
 
 
 def load_vars(host_alias: str | None = None, tenant_domain: str | None = None,

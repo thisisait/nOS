@@ -28,6 +28,10 @@ for _p in (_REPO_ROOT, _ANATOMY, _HERE):
 # CI splits the suite across runners (NOS_PYTEST_SHARD=k/N); unset = everything.
 from _shard import pytest_collection_modifyitems  # noqa: E402,F401
 
+# The estate clone's config.yml (nos_identity.operator_file) is the operator's live
+# answer; a test that wants one sets NOS_ESTATE_DIR itself (test_readers_read_the_estate_config).
+os.environ.setdefault("NOS_ESTATE_DIR", os.path.join(os.environ.get("TMPDIR", "/tmp"), "nos-pytest-no-estate"))
+
 # A test's playbook run must not write the operator's ~/.nos/ansible.log:
 # after a leave it recreated ~/.nos, and its expected fatals read as a failed run.
 os.environ.setdefault("ANSIBLE_LOG_PATH", os.path.join(

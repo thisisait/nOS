@@ -41,21 +41,24 @@ SYNTHETIC_PROFILE = REPO / "profiles" / "test-users.yml"
 SYNTHETIC_FLAG = "nos_test_users_enabled"
 
 
-def operator_file(name: str) -> Path:
+def operator_file(name: str, repo: Path | None = None) -> Path:
     """A gitignored operator file (config.yml, credentials.yml) as the converge
     reads it: the estate clone's (NOS_ESTATE_DIR, default ~/.nos/estate, since
-    2026-10-23), else the main checkout's (a worktree has none), else this one's."""
+    2026-10-23), else the main checkout's (a worktree has none), else this one's.
+    Reads files only, never runs git (a reader may precede a forge check)."""
+    repo = REPO if repo is None else repo
     est = Path(os.environ.get("NOS_ESTATE_DIR") or Path.home() / ".nos" / "estate")
     if (est / ".git").exists() and (est / name).is_file():
         return est / name
-    import subprocess
-    try:
-        common = subprocess.run(["git", "-C", str(REPO), "rev-parse", "--path-format=absolute", "--git-common-dir"],
-                                capture_output=True, text=True, timeout=10).stdout.strip()
-    except (OSError, subprocess.SubprocessError):
-        common = ""
-    main = Path(common).parent / name if common else None
-    return main if main and main.is_file() else REPO / name
+    main = None
+    try:  # a worktree's .git is "gitdir: <main>/.git/worktrees/<wt>"
+        dotgit = repo / ".git"
+        if dotgit.is_file():
+            gitdir = Path(dotgit.read_text(encoding="utf-8").split("gitdir:", 1)[1].strip())
+            main = (gitdir / (gitdir / "commondir").read_text(encoding="utf-8").strip()).resolve().parent / name
+    except (OSError, IndexError):
+        main = None
+    return main if main and main.is_file() else repo / name
 
 
 def layer_paths() -> list[Path]:
