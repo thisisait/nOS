@@ -18,6 +18,7 @@ fn serve(db: &std::path::Path) -> Served {
     let port = TcpListener::bind("127.0.0.1:0").unwrap().local_addr().unwrap().port();
     let child = Command::new(env!("CARGO_BIN_EXE_medulla"))
         .args(["wing", "serve", "--db", db.to_str().unwrap(), "--port", &port.to_string()])
+        .env("NOS_HALT_FILE", db.with_file_name("halt")) // never the operator's ~/.nos/halt
         .stdout(Stdio::null())
         .spawn()
         .unwrap();
@@ -78,6 +79,16 @@ fn metrics_match_the_php_exposition() {
     }
     assert!(!r.contains("job_id=\"z\""), "a removed job is reported");
     assert!(get(s.1, "/api/v1/other").starts_with("HTTP/1.1 404"));
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[test]
+fn the_halt_file_halts_every_job_not_paused_by_hand() {
+    let (dir, db) = scratch();
+    std::fs::write(db.with_file_name("halt"), "{\"by\":\"op\"}\n").unwrap();
+    let s = serve(&db);
+    let r = get(s.1, "/api/v1/metrics");
+    assert!(r.lines().any(|l| l == "nos_pulse_jobs{job_id=\"y\",state=\"emergency_halted\"} 1"), "{r}");
     let _ = std::fs::remove_dir_all(dir);
 }
 

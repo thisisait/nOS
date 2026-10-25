@@ -61,11 +61,17 @@ def _now_iso() -> str:
 
 
 def paused_hold(job_id: str) -> "sp_runner.RunResult | None":
-    """Exit 3 for a loop:* job while `nos loops pause` holds the estate.
+    """Exit 3 for EVERY job while the emergency halt holds (~/.nos/halt), and for a
+    loop:* job while `nos loops pause` holds the estate.
 
-    Agents meet the pause in agent-run-lock.sh; loop runners take no lock, so
-    without this they ran (and failed) under a pause. Same sentinel, same code.
+    The halt is one file, not a flag on each job row (row medulla-admin-halt,
+    2026-10-25): it works with Wing down and leaves manual pauses alone. Agents
+    meet the loops pause in agent-run-lock.sh; loop runners take no lock.
     """
+    halt = os.environ.get("NOS_HALT_FILE") or os.path.expanduser("~/.nos/halt")
+    if os.path.isfile(halt):
+        return sp_runner.RunResult(exit_code=3, duration_s=0.0, stdout_tail="", timed_out=False,
+                                   stderr_tail=f"PAUSED: emergency halt in force ({halt}) — {job_id} held")
     sentinel = os.environ.get("NOS_LOOPS_PAUSED_FILE") or os.path.expanduser("~/.nos/loops-paused")
     if not job_id.startswith("loop:") or not os.path.isfile(sentinel):
         return None

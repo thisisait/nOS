@@ -317,33 +317,51 @@ LOOPS
   esac
 fi
 
-# ── `nos halt [--status]` / `nos resume` — emergency-halt break-glass ─────────
-# Wing's POST /api/v1/admin/{halt,resume} over LOOPBACK :9000, so it works with
-# face, Traefik and Authentik down. The proof is the wing-halt bearer (scope
-# wing.halt), held only here in ~/.nos/secrets.yml — no agent or container.
+# ── `nos halt [--status]` / `nos resume` — emergency halt ─────────────────────
+# The halt IS one file, ~/.nos/halt (NOS_HALT_FILE): every scheduler holds every
+# due job while it exists (row medulla-admin-halt, 2026-10-25). This shell writes
+# it first, so the halt needs neither Wing, nor Traefik, nor a token. Then it asks
+# Wing over loopback :9000 (wing-halt bearer, ~/.nos/secrets.yml) to RECORD the
+# act; a record that could not be made is said, and the halt stands regardless.
 if [ "${1:-}" = "halt" ] || [ "${1:-}" = "resume" ]; then
   verb="$1"; shift
   [ "$verb" = "halt" ] && [ "${1:-}" = "--status" ] && { verb="state"; shift; }
   [ $# -eq 0 ] || { echo "nos $verb: takes no arguments (nos halt [--status] | nos resume)" >&2; exit 64; }
-  command -v curl >/dev/null 2>&1 || { echo "nos $verb: curl not found" >&2; exit 69; }
+  _halt="${NOS_HALT_FILE:-$HOME/.nos/halt}"
+  case "$verb" in
+    halt)
+      mkdir -p "$(dirname "$_halt")" || exit 1
+      [ -f "$_halt" ] || printf '{"by": "%s", "at": "%s"}\n' "${USER:-operator}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$_halt" \
+        || { echo "nos halt: could not write $_halt — NOT halted" >&2; exit 1; }
+      echo "halt in force: $_halt (every Pulse job is held until nos resume)" ;;
+    resume)
+      rm -f "$_halt" || { echo "nos resume: could not remove $_halt — still halted" >&2; exit 1; }
+      echo "halt lifted: $_halt removed" ;;
+    state)
+      if [ -f "$_halt" ]; then echo "halt in force since $(cat "$_halt")"; else echo "no halt ($_halt absent)"; fi ;;
+  esac
   tok="${WING_HALT_TOKEN:-}"
   if [ -z "$tok" ] && [ -f "$HOME/.nos/secrets.yml" ]; then
     tok="$(grep -E '^wing_halt_token:' "$HOME/.nos/secrets.yml" 2>/dev/null \
            | head -1 | sed -E 's/^[^:]+:[[:space:]]*//; s/^["'"'"']//; s/["'"'"']$//' || true)"
   fi
   case "$tok" in ""|placeholder*)
-    echo "nos $verb: no wing_halt_token in ~/.nos/secrets.yml — a converge with --tags wing mints it" >&2; exit 69 ;;
+    [ "$verb" = "state" ] || echo "nos $verb: the act is NOT recorded — no wing_halt_token (a converge with --tags wing mints it)" >&2
+    exit 0 ;;
   esac
+  command -v curl >/dev/null 2>&1 || { echo "nos $verb: curl not found — the act is NOT recorded" >&2; exit 0; }
   method=POST; [ "$verb" = "state" ] && method=GET
   url="${NOS_WING_URL:-http://127.0.0.1:${WING_PORT:-9000}}/api/v1/admin/$verb"
   if ! out="$(curl -sS -m 10 -X "$method" -H "Authorization: Bearer $tok" -w '\n%{http_code}' "$url" 2>&1)"; then
-    echo "nos $verb: Wing did not answer at $url — UNKNOWN, nothing was changed by this call" >&2
-    printf '%s\n' "$out" >&2; exit 69
+    [ "$verb" = "state" ] || echo "nos $verb: Wing did not answer at $url — the act is NOT recorded" >&2
+    exit 0
   fi
   code="${out##*$'\n'}"; body="${out%$'\n'*}"
-  printf '%s\n' "$body"
-  case "$code" in 2*) exit 0 ;; esac
-  echo "nos $verb: Wing refused (HTTP $code)" >&2; exit 1
+  case "$code" in
+    2*) printf '%s\n' "$body" ;;
+    *) echo "nos $verb: Wing refused to record it (HTTP $code) — the act is NOT recorded" >&2; exit 1 ;;
+  esac
+  exit 0
 fi
 
 usage() {

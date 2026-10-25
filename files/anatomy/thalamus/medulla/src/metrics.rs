@@ -95,6 +95,13 @@ fn g<'a>(r: &'a rusqlite::Row, i: usize) -> ValueRef<'a> {
     r.get_ref(i).unwrap_or(ValueRef::Null)
 }
 
+/// The emergency halt's one file; every scheduler and reader names it the same way.
+pub fn halt_file() -> PathBuf {
+    std::env::var_os("NOS_HALT_FILE").map(PathBuf::from).unwrap_or_else(|| {
+        PathBuf::from(std::env::var_os("HOME").unwrap_or_default()).join(".nos/halt")
+    })
+}
+
 fn esc(v: &str) -> String {
     v.replace('\\', "\\\\").replace('"', "\\\"").replace('\n', "\\n")
 }
@@ -156,11 +163,18 @@ pub fn render(db: &Path) -> rusqlite::Result<String> {
         "# HELP nos_pulse_jobs Pulse job catalog state (1 = matches state, 0 otherwise).".into(),
         "# TYPE nos_pulse_jobs gauge".into(),
     ]);
+    // The emergency halt is one file (NOS_HALT_FILE, else ~/.nos/halt; row medulla-admin-halt):
+    // while it exists every job not paused by hand is emergency_halted.
+    let halted = halt_file().is_file();
     l.extend(rows(&db,
         "SELECT id, CASE WHEN paused = 1 AND paused_reason LIKE 'emergency-halt:%' THEN 'emergency_halted'
                          WHEN paused = 1 THEN 'manually_paused' ELSE 'unpaused' END AS state
          FROM pulse_jobs WHERE removed_at IS NULL",
-        |r| format!("nos_pulse_jobs{{job_id=\"{}\",state=\"{}\"}} 1", esc(&text(g(r, 0))), esc(&text(g(r, 1)))),
+        |r| {
+            let state = text(g(r, 1));
+            let state = if halted && state == "unpaused" { "emergency_halted".to_string() } else { state };
+            format!("nos_pulse_jobs{{job_id=\"{}\",state=\"{}\"}} 1", esc(&text(g(r, 0))), esc(&state))
+        },
     )?);
     Ok(l.join("\n") + "\n")
 }

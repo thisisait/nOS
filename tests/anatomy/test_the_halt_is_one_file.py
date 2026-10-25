@@ -10,7 +10,7 @@ neither set nor lifted by a halt.
 """
 from __future__ import annotations
 
-import importlib.util
+import importlib
 import json
 import subprocess
 import sys
@@ -22,10 +22,7 @@ sys.path.insert(0, str(REPO / "files" / "anatomy" / "pulse"))
 
 
 def _daemon():
-    spec = importlib.util.spec_from_file_location("_pulse_daemon_halt", REPO / "files/anatomy/pulse/pulse/daemon.py")
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+    return importlib.import_module("pulse.daemon")  # a package: relative imports
 
 
 def test_pulse_holds_every_job_while_the_file_exists(tmp_path, monkeypatch):

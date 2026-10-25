@@ -618,72 +618,62 @@ final class PulseRepository
 		return $out;
 	}
 
-	// ── Emergency halt (A12 — /admin big-red-button, 2026-05-07) ─────────
+	// ── Emergency halt (A12 2026-05-07; one file since 2026-10-25) ───────
 	//
-	// Sentinel prefix in pulse_jobs.paused_reason — operator-set "manual:*"
-	// pauses must NOT be auto-resumed when the operator clicks Resume after
-	// emergency halt. Only halt-set pauses (with this prefix) are eligible
-	// for the bulk un-pause.
+	// The halt IS ~/.nos/halt (NOS_HALT_FILE): every scheduler holds every
+	// due job while it exists, `nos halt` writes it without Wing, and this
+	// repository no longer flips pulse_jobs.paused (row medulla-admin-halt).
+	// Rows still carrying the old 'emergency-halt:' reason are a halt set
+	// before the move: they count as halted and resume lifts them; manual
+	// pauses are never touched. Gate: test_the_halt_is_one_file.py.
 	private const HALT_REASON_PREFIX = 'emergency-halt:';
 
-	/**
-	 * Pause every currently-unpaused job. Returns the number of jobs that
-	 * actually transitioned (already-paused jobs are NOT touched —
-	 * preserves the operator's manual pause intent across halt cycles).
-	 *
-	 * The reason field encodes "who halted, when" so the resume sweep
-	 * can target only halt-set pauses without disturbing manual ones.
-	 */
+	public static function haltFile(): string
+	{
+		return (string) (getenv('NOS_HALT_FILE') ?: rtrim((string) getenv('HOME'), '/') . '/.nos/halt');
+	}
+
+	/** Write the halt (idempotent). Returns how many unpaused jobs it now holds. */
 	public function emergencyHaltAll(string $operator): int
 	{
-		$now = date('c');
-		$reason = self::HALT_REASON_PREFIX . $operator . ':' . $now;
-
-		$affected = $this->db->table('pulse_jobs')
-			->where('paused', 0)
-			->where('removed_at', null)
-			->update([
-				'paused'        => 1,
-				'paused_reason' => $reason,
-				'updated_at'    => $now,
-			]);
-		return (int) $affected;
+		$file = self::haltFile();
+		if (!is_file($file)) {
+			@mkdir(dirname($file), 0700, true);
+			if (file_put_contents($file, json_encode(['by' => $operator, 'at' => date('c')]) . "\n") === false) {
+				throw new \RuntimeException("could not write the halt file $file");
+			}
+		}
+		return $this->countUnpaused();
 	}
 
-	/**
-	 * Resume only the jobs paused by an emergency halt (paused_reason
-	 * starts with the sentinel prefix). Manual pauses (paused_reason
-	 * starting with 'manual:' or anything else) are NOT touched.
-	 */
+	/** Lift the halt: remove the file and the pre-move halt rows. Manual pauses stay. */
 	public function emergencyResumeAll(): int
 	{
-		$now = date('c');
-		$pattern = self::HALT_REASON_PREFIX . '%';
-
-		$affected = $this->db->table('pulse_jobs')
+		$held = is_file(self::haltFile()) ? $this->countUnpaused() : 0;
+		if (is_file(self::haltFile()) && !unlink(self::haltFile())) {
+			throw new \RuntimeException('could not remove the halt file ' . self::haltFile());
+		}
+		$legacy = $this->db->table('pulse_jobs')
 			->where('paused', 1)
-			->where('paused_reason LIKE ?', $pattern)
+			->where('paused_reason LIKE ?', self::HALT_REASON_PREFIX . '%')
 			->where('removed_at', null)
-			->update([
-				'paused'        => 0,
-				'paused_reason' => null,
-				'updated_at'    => $now,
-			]);
-		return (int) $affected;
+			->update(['paused' => 0, 'paused_reason' => null, 'updated_at' => date('c')]);
+		return $held + (int) $legacy;
 	}
 
-	/**
-	 * Whether at least one job is currently in emergency-halted state.
-	 * Used by the layout header to decide whether to show the red banner.
-	 */
+	/** The layout header's red banner: the file, or a halt row from before the move. */
 	public function isEmergencyHaltActive(): bool
 	{
-		$pattern = self::HALT_REASON_PREFIX . '%';
-		return (bool) $this->db->table('pulse_jobs')
+		return is_file(self::haltFile()) || (bool) $this->db->table('pulse_jobs')
 			->where('paused', 1)
-			->where('paused_reason LIKE ?', $pattern)
+			->where('paused_reason LIKE ?', self::HALT_REASON_PREFIX . '%')
 			->where('removed_at', null)
 			->count('*');
+	}
+
+	private function countUnpaused(): int
+	{
+		return (int) $this->db->table('pulse_jobs')->where('paused', 0)->where('removed_at', null)->count('*');
 	}
 
 	/**
@@ -698,9 +688,11 @@ final class PulseRepository
 	{
 		$pattern = self::HALT_REASON_PREFIX . '%';
 		$tbl = fn() => $this->db->table('pulse_jobs')->where('removed_at', null);
+		$unpaused = (int) $tbl()->where('paused', 0)->count('*');
+		$filed = is_file(self::haltFile());  // the halt file holds every job not paused by hand
 		return [
-			'unpaused'         => (int) $tbl()->where('paused', 0)->count('*'),
-			'emergency_halted' => (int) $tbl()->where('paused', 1)
+			'unpaused'         => $filed ? 0 : $unpaused,
+			'emergency_halted' => ($filed ? $unpaused : 0) + (int) $tbl()->where('paused', 1)
 				->where('paused_reason LIKE ?', $pattern)->count('*'),
 			'manually_paused'  => (int) $tbl()->where('paused', 1)
 				->where('paused_reason NOT LIKE ?', $pattern)->count('*'),

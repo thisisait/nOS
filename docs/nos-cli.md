@@ -145,18 +145,22 @@ not a timeout. Run it after a loop, or before a converge you need to trust.
 
 ## `nos halt` / `nos resume` — the emergency halt, break-glass
 
-The same act as the big red button on Wing's `/admin` page: pause every unpaused
-Pulse job, and later lift only the emergency halt (manual pauses stay paused).
+The same act as the big red button on Wing's `/admin` page. **The halt is one file,
+`~/.nos/halt`** (`NOS_HALT_FILE`): while it exists every scheduler holds every due
+Pulse job (the run ends `exit 3, PAUSED: emergency halt`). It flips no job row, so a
+manual pause is neither set nor lifted by it (operator ruling 2026-10-25, row
+medulla-admin-halt).
 
 ```
-nos halt               # POST /api/v1/admin/halt   — every Pulse job stops firing
-nos halt --status      # GET  /api/v1/admin/state  — is a halt active, job counts
-nos resume             # POST /api/v1/admin/resume — lift the emergency halt only
+nos halt               # write ~/.nos/halt, then ask Wing to record the act
+nos halt --status      # is the file there; Wing's GET /api/v1/admin/state if it answers
+nos resume             # remove the file (and any pre-2026-10-25 halt rows), record it
 ```
 
-**It needs neither face, Traefik nor Authentik.** It calls Wing on loopback
-(`http://127.0.0.1:9000`, override `NOS_WING_URL` / `WING_PORT`). The Wing API
-asks for a bearer, not the edge token; only the browser pages ask for that.
+**It needs neither Wing, face, Traefik nor Authentik.** The shell writes the file
+itself. Recording the act goes to Wing on loopback (`http://127.0.0.1:9000`,
+override `NOS_WING_URL` / `WING_PORT`); when Wing is down or the token missing,
+the halt still stands and the CLI says the act is NOT recorded.
 
 **The proof is the `wing-halt` bearer**, scope `wing.halt`, read from
 `wing_halt_token` in `~/.nos/secrets.yml` (or `WING_HALT_TOKEN`). It is minted
