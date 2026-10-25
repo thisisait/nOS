@@ -1,0 +1,481 @@
+{
+ "contract_version": 1,
+ "why": "files/anatomy/contracts/redact.yml as cases. kv/cli/headers: [input, expected]; clean: inputs that must come back unchanged. Every expected value is also a fixed point (scrubbed again it stays). Both pulse/redact.py and medulla redact.rs are held to these bytes.",
+ "kv": [
+  [
+   "WING_API_TOKEN=FAKE_pw_wing_api next",
+   "WING_API_TOKEN=<REDACTED> next"
+  ],
+  [
+   "WING_API_TOKEN=FAKE_pw_a",
+   "WING_API_TOKEN=<REDACTED>"
+  ],
+  [
+   "wing_api_token=fake_value_1 x",
+   "wing_api_token=<REDACTED> x"
+  ],
+  [
+   "Db_Password: fakefake",
+   "Db_Password: <REDACTED>"
+  ],
+  [
+   "API_KEY=\"fake-value-123\" rest",
+   "API_KEY=\"<REDACTED>\" rest"
+  ],
+  [
+   "API_KEY='fake-value-123' rest",
+   "API_KEY='<REDACTED>' rest"
+  ],
+  [
+   "API_KEY=\"fake-value-123' mismatched",
+   "API_KEY=<REDACTED> mismatched"
+  ],
+  [
+   "API_KEY=\"fake5\" five",
+   "API_KEY=\"<REDACTED>\" five"
+  ],
+  [
+   "API_KEY=fake5",
+   "API_KEY=<REDACTED>"
+  ],
+  [
+   "API_KEY=fake66",
+   "API_KEY=<REDACTED>"
+  ],
+  [
+   "API_KEY=fakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKE",
+   "API_KEY=<REDACTED>"
+  ],
+  [
+   "API_KEY=fakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEX",
+   "API_KEY=<REDACTED>"
+  ],
+  [
+   "API_KEY=fakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEXY tail",
+   "API_KEY=<REDACTED> tail"
+  ],
+  [
+   "API_KEY = spaced_fake_value",
+   "API_KEY = <REDACTED>"
+  ],
+  [
+   "API_KEY:fakevalue1",
+   "API_KEY:<REDACTED>"
+  ],
+  [
+   "API_KEY= fakevalue1",
+   "API_KEY= <REDACTED>"
+  ],
+  [
+   "API_KEY\u001f=\u001ffakevalue1",
+   "API_KEY\u001f=\u001f<REDACTED>"
+  ],
+  [
+   "TOKEN=fake_token_1",
+   "TOKEN=<REDACTED>"
+  ],
+  [
+   "PASSWORD=hunter2hunter2",
+   "PASSWORD=<REDACTED>"
+  ],
+  [
+   "1API_KEY=fakevalue1",
+   "1API_KEY=<REDACTED>"
+  ],
+  [
+   "éAPI_KEY=fakevalue1",
+   "éAPI_KEY=<REDACTED>"
+  ],
+  [
+   "-API_KEY=fakevalue1",
+   "-API_KEY=<REDACTED>"
+  ],
+  [
+   "path/API_KEY=fake_value",
+   "path/API_KEY=<REDACTED>"
+  ],
+  [
+   "API_KEY=fake$val!",
+   "API_KEY=<REDACTED>"
+  ],
+  [
+   "MY_PASSWORD: p@ss w0rd",
+   "MY_PASSWORD: <REDACTED> w0rd"
+  ],
+  [
+   "MY_ıTOKEN=fakevalue1",
+   "MY_ıTOKEN=<REDACTED>"
+  ],
+  [
+   "API_KEY=fake_value_one\nline2",
+   "API_KEY=<REDACTED>\nline2"
+  ],
+  [
+   "line1\nAPI_KEY=fakevalue1\nline3",
+   "line1\nAPI_KEY=<REDACTED>\nline3"
+  ],
+  [
+   "A_TOKEN=fakeone1 B_SECRET=faketwo2",
+   "A_TOKEN=<REDACTED> B_SECRET=<REDACTED>"
+  ],
+  [
+   "Chyba: přihlášení selhalo, API_KEY=fake_heslo_123 — znovu",
+   "Chyba: přihlášení selhalo, API_KEY=<REDACTED> — znovu"
+  ],
+  [
+   "SECRET: fake_s",
+   "SECRET: <REDACTED>"
+  ],
+  [
+   "PASSWD=fakepw1",
+   "PASSWD=<REDACTED>"
+  ],
+  [
+   "API_KEY=fake$val!@x tail",
+   "API_KEY=<REDACTED> tail"
+  ],
+  [
+   "DB_PASSWORD=\"two fake words\" next",
+   "DB_PASSWORD=\"<REDACTED>\" next"
+  ],
+  [
+   "API_KEY='fake value' x",
+   "API_KEY='<REDACTED>' x"
+  ],
+  [
+   "API_KEY=fakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKE tail",
+   "API_KEY=<REDACTED> tail"
+  ],
+  [
+   "apiKey=fakevalue",
+   "apiKey=<REDACTED>"
+  ],
+  [
+   "accessToken: fakevalue",
+   "accessToken: <REDACTED>"
+  ],
+  [
+   "x-api-key: fakevalue",
+   "x-api-key: <REDACTED>"
+  ],
+  [
+   "{\"password\": \"fake pw\", \"user\": \"bob\"}",
+   "{\"password\": \"<REDACTED>\", \"user\": \"bob\"}"
+  ],
+  [
+   "{'client_secret': 'fake', 'id': 3}",
+   "{'client_secret': '<REDACTED>', 'id': 3}"
+  ],
+  [
+   "\"token\":\"fa\\\"ke\" next",
+   "\"token\":\"<REDACTED>\" next"
+  ],
+  [
+   "MYSQL_PWD=fakepw",
+   "MYSQL_PWD=<REDACTED>"
+  ],
+  [
+   "PASSWORD1=fakepw",
+   "PASSWORD1=<REDACTED>"
+  ],
+  [
+   "SESSION_COOKIE=fakecookie",
+   "SESSION_COOKIE=<REDACTED>"
+  ],
+  [
+   "GET /cb?access_token=fakevalue&state=1 200",
+   "GET /cb?access_token=<REDACTED> 200"
+  ],
+  [
+   "auth.token: fake",
+   "auth.token: <REDACTED>"
+  ],
+  [
+   "NOS_AGENT_CLIENT_SECRET=fake_client_secret",
+   "NOS_AGENT_CLIENT_SECRET=<REDACTED>"
+  ],
+  [
+   "WING_API_TOKEN=<REDACTED>",
+   "WING_API_TOKEN=<REDACTED>"
+  ]
+ ],
+ "cli": [
+  [
+   "--password=hunter2 ok",
+   "--password=<REDACTED> ok"
+  ],
+  [
+   "--password hunter2 ok",
+   "--password <REDACTED> ok"
+  ],
+  [
+   "--token=fakefake1234 next",
+   "--token=<REDACTED> next"
+  ],
+  [
+   "--bearer XXXyyyZZZ end",
+   "--bearer <REDACTED> end"
+  ],
+  [
+   "--api-key abcdef123456 end",
+   "--api-key <REDACTED> end"
+  ],
+  [
+   "-password=fakepw",
+   "-password=<REDACTED>"
+  ],
+  [
+   "--PASSWORD=Fake1",
+   "--PASSWORD=<REDACTED>"
+  ],
+  [
+   "--pwd fake",
+   "--pwd <REDACTED>"
+  ],
+  [
+   "--api_key=fake",
+   "--api_key=<REDACTED>"
+  ],
+  [
+   "--apikey fake",
+   "--apikey <REDACTED>"
+  ],
+  [
+   "--secret=fake end",
+   "--secret=<REDACTED> end"
+  ],
+  [
+   "--pass fake",
+   "--pass <REDACTED>"
+  ],
+  [
+   "--passwd fake",
+   "--passwd <REDACTED>"
+  ],
+  [
+   "--password  fake",
+   "--password  <REDACTED>"
+  ],
+  [
+   "x--token=fake",
+   "x--token=<REDACTED>"
+  ],
+  [
+   "--token=fake\tnext",
+   "--token=<REDACTED>\tnext"
+  ],
+  [
+   "--token=fake\u001fnext",
+   "--token=<REDACTED>\u001fnext"
+  ],
+  [
+   "---token=fake",
+   "---token=<REDACTED>"
+  ],
+  [
+   "--password=\"quoted fake\" end",
+   "--password=\"<REDACTED>\" end"
+  ],
+  [
+   "-token fake",
+   "-token <REDACTED>"
+  ],
+  [
+   "🔒 --token=fakeéé 🔑",
+   "🔒 --token=<REDACTED> 🔑"
+  ],
+  [
+   "--password=\"two fake words\" end",
+   "--password=\"<REDACTED>\" end"
+  ],
+  [
+   "--token 'fake tok' end",
+   "--token '<REDACTED>' end"
+  ],
+  [
+   "--api-key=fake$!@",
+   "--api-key=<REDACTED>"
+  ],
+  [
+   "--pwd\tfake",
+   "--pwd\t<REDACTED>"
+  ],
+  [
+   "--PASSWORD Fake1",
+   "--PASSWORD <REDACTED>"
+  ],
+  [
+   "mariadb-upgrade --password=fakepw --force",
+   "mariadb-upgrade --password=<REDACTED> --force"
+  ],
+  [
+   "--password fake",
+   "--password <REDACTED>"
+  ]
+ ],
+ "headers": [
+  [
+   "Authorization: Bearer abc123def456ghi789",
+   "Authorization: Bearer <REDACTED>"
+  ],
+  [
+   "Authorization: Basic dXNlcjpwYXNzd29yZA==",
+   "Authorization: Basic <REDACTED>"
+  ],
+  [
+   "Bearer abc123def456ghi789jkl context",
+   "Bearer <REDACTED> context"
+  ],
+  [
+   "authorization: bearer fakefaketoken",
+   "authorization: bearer <REDACTED>"
+  ],
+  [
+   "Authorization : Digest fake1234",
+   "Authorization : Digest <REDACTED>"
+  ],
+  [
+   "Authorization: Bearer short7",
+   "Authorization: Bearer <REDACTED>"
+  ],
+  [
+   "Authorization: Bearer abcdefgh",
+   "Authorization: Bearer <REDACTED>"
+  ],
+  [
+   "Authorization:Basic\tZmFrZTpmYWtl",
+   "Authorization:Basic\t<REDACTED>"
+  ],
+  [
+   "Authorization: Basic fakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEZ",
+   "Authorization: Basic <REDACTED>"
+  ],
+  [
+   "Authorization: Token fakefakefake",
+   "Authorization: Token <REDACTED>"
+  ],
+  [
+   "Proxy-Authorization: Basic ZmFrZTpmYWtl",
+   "Proxy-Authorization: Basic <REDACTED>"
+  ],
+  [
+   "Bearer 1234567890123456",
+   "Bearer <REDACTED>"
+  ],
+  [
+   "bearer fakefakefakefake12",
+   "bearer <REDACTED>"
+  ],
+  [
+   "Bearer fakefakefakefake==",
+   "Bearer <REDACTED>"
+  ],
+  [
+   "Bearer fakefakefakefake1é",
+   "Bearer <REDACTED>"
+  ],
+  [
+   "Bearer fakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEZ",
+   "Bearer <REDACTED>"
+  ],
+  [
+   "Bearer fake.fakefake.fakefake-_ ok",
+   "Bearer <REDACTED> ok"
+  ],
+  [
+   "Bearer\n\nfakefakefakefake12",
+   "Bearer\n\n<REDACTED>"
+  ],
+  [
+   "API_KEY=fakevalue1 --password=fake2 Authorization: Bearer fakefaketoken99",
+   "API_KEY=<REDACTED> --password=<REDACTED> Authorization: Bearer <REDACTED>"
+  ],
+  [
+   "日本語 Bearer fakefakefakefake16 終わり",
+   "日本語 Bearer <REDACTED> 終わり"
+  ],
+  [
+   "authorization: apikey fakekey",
+   "authorization: apikey <REDACTED>"
+  ],
+  [
+   "> Authorization: Bearer fake",
+   "> Authorization: Bearer <REDACTED>"
+  ],
+  [
+   "Authorization: Digest username=\"fake\", realm=\"x\", response=\"fakehash\"",
+   "Authorization: Digest <REDACTED>"
+  ],
+  [
+   "Cookie: sid=fake; theme=dark",
+   "Cookie: <REDACTED>"
+  ],
+  [
+   "Set-Cookie: sid=fake; HttpOnly\nnext line",
+   "Set-Cookie: <REDACTED>\nnext line"
+  ],
+  [
+   "{\"Authorization\": \"Bearer fakefaketoken\", \"x\": 1}",
+   "{\"Authorization\": \"Bearer <REDACTED>\", \"x\": 1}"
+  ],
+  [
+   "BEARER fakefakefakefake12",
+   "BEARER <REDACTED>"
+  ],
+  [
+   "Bearer fakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKE",
+   "Bearer <REDACTED>"
+  ]
+ ],
+ "clean": [
+  "WING_API_TOKEN=<REDACTED>",
+  "",
+  "normal log with /path/to/file.txt",
+  "2026-05-23T10:30:00Z some event",
+  "HTTP 200 /api/v1/hub/health 23ms",
+  "docker exec mariadb-1 ls /var/lib/mysql",
+  "XTOKEN=fake_tok_1",
+  "MYTOKEN_FAKE=fake_tok_1",
+  "API_KEY=fakevalue1",
+  "MY_ſECRET=fakevalue1",
+  "GIT_AUTHOR_NAME=Pazny",
+  "GIT_AUTHOR_NAME=Operator1",
+  "MONKEY=banana",
+  "SORT_KEY: created_at",
+  "API_KEY=",
+  "-p 1234",
+  "--password=",
+  "--toKen=fake",
+  "Bearer 123456789012345",
+  "xBearer fakefakefakefake12",
+  "日本語Bearer fakefakefakefake16",
+  "PWD=/Users/fake/projects",
+  "OLDPWD=/tmp",
+  "--- PASS: TestFake (0.00s)",
+  "KeyError: 'WING_API_URL'",
+  "PASSWORD_FILE=/run/secrets/db_password",
+  "KEY_NAME=deploy",
+  "API_KEY_ID=key-fake-01",
+  "TOKEN_TYPE=Bearer",
+  "PRIMARY_KEY=id",
+  "SECRET_NAME: wing_api_token",
+  "TOKEN_URL=https://auth.example/token",
+  "the bearer of bad news",
+  "--password-file /run/secrets/x",
+  "mysql --password -u root",
+  "Authorization: required",
+  "Bearer 123456789012345",
+  "PASSWORD=\"\"",
+  "API_KEY=",
+  "API_KEY == fake",
+  "auth_key::new()",
+  "token expired at 2026-10-25T08:00:00Z",
+  "pulled sha256:bfdad534d6a64d21f3f58cc2ba91076525828205f14bbab64c529af59468d42d",
+  "image ghcr.io/x/y@sha256:bfdad534d6a64d21f3f58cc2ba91076525828205f14bbab64c529af59468d42d ok",
+  "commit bfdad534d6a64d21f3f58cc2ba91076525828205f14bbab64c529af59468d42d",
+  "run bfdad534-d6a6-4d21-f3f5-8cc2ba910765 done",
+  "volume IKgZ37vy3g6lu9YedkOiwQw9RlFkViUEvnmJ9No9Viw mounted",
+  "/var/lib/docker/volumes/nos_keap/_data",
+  "GIT_AUTHOR_NAME=Operator1"
+ ]
+}

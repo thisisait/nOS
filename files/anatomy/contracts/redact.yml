@@ -1,0 +1,103 @@
+# The output scrub: what a Pulse run's stdout/stderr loses before anything stores it.
+# Protocol: ssot/doctrine/cross-repo-contracts.md §1 (spec + fixture + gates over the
+# same bytes). An ALGORITHM, not regexes: the medulla has no regex crate, so both
+# sides hand-roll the same steps and the fixture holds them to one answer.
+contract_version: 1
+fixture: files/anatomy/contracts/redact.fixture.json
+
+producer:
+  organ: pulse
+  code:
+    - files/anatomy/pulse/pulse/redact.py              # scrub_text
+    - files/anatomy/thalamus/medulla/src/pulse/redact.rs   # redact, the same algorithm
+consumer:
+  organ: pulse
+  code:
+    - files/anatomy/pulse/pulse/daemon.py              # stdout, stderr and the daemon-exception message
+    - files/anatomy/thalamus/medulla/src/pulse/exec.rs # tail(): the WHOLE stream, then the 2000-char cut
+    - files/anatomy/scripts/stack-health-probe.py      # container logs on a failed health-wait
+gates:
+  python: tests/anatomy/test_pulse_redact.py
+  rust: files/anatomy/thalamus/medulla/src/pulse/redact.rs   # mod tests reads the same fixture
+
+marker: >-
+  `<REDACTED>`, with no length: a length tells a guesser how long to guess. The label that
+  named the secret (the key, the flag, the header and its scheme) stays, so the operator still
+  sees WHICH value went.
+
+sections: [kv, cli, headers, clean]
+
+characters: >-
+  Positions are Unicode code points (Python str index, Rust Vec<char>). whitespace = Python
+  str.isspace (Rust: char::is_whitespace plus U+001C..U+001F). gap = whitespace that is not
+  \r or \n: a separator never reaches onto the next line. Key and flag names are ASCII only,
+  compared ASCII case-insensitively: a homoglyph (Kelvin K, long s) is not a letter of a key.
+
+value: >-
+  At position i, after the gap. Nothing there, or whitespace: no value, no match. A quote
+  (" or '): the chars up to the same quote on the same line, a backslash skipping the next
+  char; the quotes stay around the marker, so a JSON dump stays JSON and a second pass finds
+  the same quoted marker. An empty pair ("") is no match: an empty secret hides nothing and
+  says something. No closing quote on the line: read it as unquoted. Unquoted: a run to the
+  next whitespace, with no length cap and no character class ($ ! @ % are value, not end).
+  So `PASSWORD: two words` loses only `two`: unquoted, the end of a value is unknowable.
+
+layers:
+  order: [headers, bearer, cli, kv]
+  scan: >-
+    Each layer is one left-to-right pass over the whole text: try the layer at every position;
+    on a match keep text up to the value, write the marker, resume after the value. A later
+    layer sees the earlier one's markers, and a marker is itself a value: re-scrubbing writes
+    the same marker, so scrub(scrub(x)) == scrub(x).
+  headers: >-
+    `authorization` not preceded by an ASCII letter (so Proxy-Authorization counts), an
+    optional quote, gap, `:`, gap, an optional quote, a scheme of bearer|basic|digest|token|apikey,
+    then a non-empty gap. The value: for digest the rest of the line (its parameters are many);
+    otherwise a token, a run of chars that are not whitespace and not " ' , ; (no credential
+    holds those, and stopping there keeps a JSON dump's quotes). No minimum: the header says it
+    is a credential. `cookie` (so Set-Cookie counts), same colon rule: the rest of the line,
+    since a cookie header holds several secrets separated by `; `.
+  bearer: >-
+    `bearer`, any case, not preceded by a word char (Unicode letter, digit or _), then at least
+    one whitespace (a line break allowed), then a token as above of at least 16 chars. 16 is the
+    floor that keeps English prose ("the bearer of bad news"); real bearer tokens are 20 or more.
+  cli: >-
+    `-` or `--`, not preceded by a key char, then one of password passwd pass pwd token secret
+    api-key api_key apikey bearer (longest first), then `=` or a gap. After `=` the value is
+    anything. After a gap, a value that starts with `-` is the next flag (`mysql --password -u`
+    prompts): no match. The flag must end there: --password-file is not a password.
+  kv: >-
+    A key is a maximal run of ASCII [A-Za-z0-9_.-] (not preceded by one), then an optional quote
+    (a JSON or Python dict key), gap, `=` or `:` not doubled (`==` and `::` are code), gap, value.
+    The key is secret-shaped by its SEGMENTS: split on _ - . and where lower case meets upper
+    case or a letter meets a digit (apiKey -> api key; PASSWORD1 -> password 1), upper-cased.
+
+keywords:
+  strong: [TOKEN, SECRET, PASSWORD, PASSWD, APIKEY, HMAC, JWT, CREDENTIAL, CREDENTIALS, PASSPHRASE]
+  weak: [PASS, PWD, KEY, AUTH, BEARER, COOKIE]
+  rule: >-
+    Secret-shaped if any segment equals a strong keyword, or the key has two or more segments
+    and one equals a weak keyword. Whole segments, never substrings: MONKEY, GIT_AUTHOR_NAME and
+    XTOKEN are not keys of a secret. A weak keyword alone is not: PWD= is the shell's working
+    directory in every env dump, `--- PASS: TestX` is a test verdict, `Key:` and `Auth:` are
+    prose. MYSQL_PWD, SESSION_COOKIE and API_KEY are secrets.
+
+allow:
+  keys:
+    SORT_KEY: "names a column to sort by"
+    PRIMARY_KEY: "names a column"
+    FOREIGN_KEY: "names a column"
+  last_segment:
+    NAME: "SECRET_NAME, KEY_NAME name a secret, never hold one"
+    TYPE: "TOKEN_TYPE=Bearer is a scheme"
+    FILE: "the Docker *_FILE convention: PASSWORD_FILE holds a path to the secret"
+    PATH: "a location, as FILE"
+    URL: "TOKEN_URL is an endpoint; a password in a URL is the userinfo shape's job"
+    ERROR: "KeyError: 'X', TokenError: ... are tracebacks, and the key they name is the diagnostic"
+    EXCEPTION: "as ERROR"
+  key_id: "a key ending in KEY then ID (API_KEY_ID, AWS_ACCESS_KEY_ID) is an identifier; only after KEY, because Vault's SECRET_ID is a secret"
+
+visible: >-
+  Paths, ISO dates, uuids, sha256:<64 hex>, image digests, bare 64-hex and bare 43-char base64url
+  strings stay: measured 2026-10-25, the 496 bare hex64 strings in wing.db events are digests,
+  and a run log that loses them loses the diagnosis (operator ruling).

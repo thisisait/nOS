@@ -1,131 +1,68 @@
-"""Anatomy gate — Pulse stdout/stderr scrub (SEC-9, 2026-05-23).
+"""Anatomy gate — the Pulse output scrub, held to files/anatomy/contracts/redact.yml.
 
-Subprocess output forwarded by Pulse to Wing events can carry secrets
-(env var dumps, CLI password flags, Bearer headers in tracebacks,
-gitleaks-captured-secret previews). Without scrubbing, these persist
-to wing.db.events → /audit timeline → host launchd.err.log.
-
-`pulse.redact.scrub_text(s)` runs a small set of focused regexes that
-target common secret shapes and replace the value with `<REDACTED>`,
-preserving the labeled prefix so the operator still sees which key
-was redacted.
-
-This gate pins:
-  * scrub_text function exists in pulse.redact module
-  * Idempotent (double-application same as single)
-  * Covers env-assignment / CLI-flag / Authorization-header / Bearer
-  * daemon.py applies scrub_text to BOTH stdout_tail + stderr_tail
-    before sending to Wing
+Subprocess output forwarded by Pulse to Wing can carry secrets (env dumps, CLI
+password flags, Authorization headers in tracebacks). `pulse.redact.scrub_text`
+is the contract's algorithm; medulla/src/pulse/redact.rs is the same algorithm
+and its own tests read the same fixture, so the two cannot drift apart.
 """
 
 from __future__ import annotations
 
+import json
 import pathlib
 import sys
 
+import yaml
+
 REPO = pathlib.Path(__file__).resolve().parents[2]
 PULSE_PKG = REPO / "files/anatomy/pulse"
+SPEC = REPO / "files/anatomy/contracts/redact.yml"
+FIXTURE = REPO / "files/anatomy/contracts/redact.fixture.json"
 
-# Make pulse module importable for runtime tests.
 if str(PULSE_PKG) not in sys.path:
 	sys.path.insert(0, str(PULSE_PKG))
 
+from pulse.redact import scrub_text  # type: ignore[import-not-found]  # noqa: E402
 
-def test_redact_module_present():
-	assert (PULSE_PKG / "pulse/redact.py").is_file(), \
-		"files/anatomy/pulse/pulse/redact.py missing — SEC-9 contract"
-
-
-def test_scrub_text_redacts_env_assignments():
-	from pulse.redact import scrub_text  # type: ignore[import-not-found]
-	out = scrub_text("WING_API_TOKEN=kloFas7_pw_wing_api next")
-	assert "kloFas7" not in out
-	assert "<REDACTED>" in out
-	assert "WING_API_TOKEN" in out, "must preserve the labeled prefix"
+FX = json.loads(FIXTURE.read_text(encoding="utf-8"))
+SPEC_DOC = yaml.safe_load(SPEC.read_text(encoding="utf-8"))
+PAIRS = [(sec, i, o) for sec in SPEC_DOC["sections"] if sec != "clean" for i, o in FX[sec]]
 
 
-def test_scrub_text_redacts_cli_password_flags():
-	"""Long-form flags only (--password, --token, …). Single-char `-p`
-	intentionally NOT matched: too high false-positive risk (port,
-	progress, etc.) — most operators use the long form in scripts."""
-	from pulse.redact import scrub_text  # type: ignore[import-not-found]
-	for line in (
-		"--password=hunter2 ok",
-		"--password hunter2 ok",
-		"--token=abc123def456 next",
-		"--bearer XXXyyyZZZ end",
-		"--api-key abcdef123456 end",
-	):
-		out = scrub_text(line)
-		assert "<REDACTED>" in out, f"CLI flag not scrubbed: {line!r} → {out!r}"
+def test_the_spec_names_this_fixture_and_these_files():
+	assert REPO / SPEC_DOC["fixture"] == FIXTURE
+	assert SPEC_DOC["contract_version"] == FX["contract_version"]
+	for side in ("producer", "consumer"):
+		for path in SPEC_DOC[side]["code"]:
+			assert (REPO / path).is_file(), f"{side} names a missing file: {path}"
+	assert set(SPEC_DOC["sections"]) == set(FX) - {"contract_version", "why"}
 
 
-def test_scrub_text_redacts_http_authorization():
-	from pulse.redact import scrub_text  # type: ignore[import-not-found]
-	for line in (
-		"Authorization: Bearer abc123def456ghi789",
-		"Authorization: Basic dXNlcjpwYXNzd29yZA==",
-		"Bearer abc123def456ghi789jkl context",
-	):
-		out = scrub_text(line)
-		assert "<REDACTED>" in out, f"auth header not scrubbed: {line!r}"
+def test_every_section_holds():
+	bad = [(sec, i, o, scrub_text(i)) for sec, i, o in PAIRS if scrub_text(i) != o]
+	bad += [("clean", c, c, scrub_text(c)) for c in FX["clean"] if scrub_text(c) != c]
+	assert not bad, "\n".join(f"[{s}] {i!r}\n   want {w!r}\n    got {g!r}" for s, i, w, g in bad)
 
 
-def test_scrub_text_idempotent():
-	from pulse.redact import scrub_text  # type: ignore[import-not-found]
-	s = "WING_API_TOKEN=kloFas7_pw_a"
-	first = scrub_text(s)
-	twice = scrub_text(first)
-	assert first == twice, f"scrub_text not idempotent: {first!r} vs {twice!r}"
+def test_scrub_is_idempotent():
+	moved = [o for _, _, o in PAIRS if scrub_text(o) != o]
+	assert not moved, f"scrubbing an expected value changed it again: {moved}"
 
 
-def test_scrub_text_safe_on_empty_and_none():
-	from pulse.redact import scrub_text  # type: ignore[import-not-found]
+def test_the_fixture_is_not_trivial():
+	assert all(len(FX[s]) >= 5 for s in SPEC_DOC["sections"])
+	assert sum(i != o for _, i, o in PAIRS) >= 80
+
+
+def test_safe_on_empty_and_none():
 	assert scrub_text("") == ""
 	assert scrub_text(None) == ""
 
 
-def test_scrub_text_does_not_false_positive_on_paths():
-	"""Legitimate diagnostic strings (file paths, ISO dates, URLs that
-	don't carry secrets) MUST pass through unchanged. False positives
-	make logs harder to read + may cause operators to disable scrub."""
-	from pulse.redact import scrub_text  # type: ignore[import-not-found]
-	for clean in (
-		"normal log with /path/to/file.txt",
-		"2026-05-23T10:30:00Z some event",
-		"HTTP 200 /api/v1/hub/health 23ms",
-		"docker exec mariadb-1 ls /var/lib/mysql",
-	):
-		assert scrub_text(clean) == clean, f"false positive on: {clean!r}"
-
-
 def test_daemon_applies_scrub_before_posting():
-	"""pulse/daemon.py must import the redact module + apply
-	scrub_text to BOTH stdout_tail and stderr_tail before calling
-	wing.post_run_finish."""
+	"""Both tails and the daemon-exception message pass through scrub_text."""
 	src = (PULSE_PKG / "pulse/daemon.py").read_text()
-	# Import.
-	assert "from . import redact" in src or "from pulse import redact" in src, \
-		"daemon.py must import the redact module"
-	# Both tails must be scrubbed.
-	assert "redact.scrub_text(result.stdout_tail)" in src, \
-		"daemon.py must scrub_text(stdout_tail)"
-	assert "redact.scrub_text(result.stderr_tail)" in src, \
-		"daemon.py must scrub_text(stderr_tail)"
-
-
-REDACT_PAIRS = __import__("json").loads((REPO / "tests/fixtures/pulse_redact.json").read_text(encoding="utf-8"))["pairs"]
-
-
-def test_shared_pairs_hold_for_python():
-	"""tests/fixtures/pulse_redact.json is the truth medulla/src/pulse/redact.rs is held to;
-	this keeps it the Python's truth."""
-	from pulse.redact import scrub_text  # type: ignore[import-not-found]
-	bad = [(i, want, scrub_text(i)) for i, want in REDACT_PAIRS if scrub_text(i) != want]
-	assert not bad, "\n".join(f"{i!r}\n   want {w!r}\n    got {g!r}" for i, w, g in bad)
-
-
-def test_shared_pairs_are_not_trivial():
-	assert len(REDACT_PAIRS) >= 30
-	assert sum(i != want for i, want in REDACT_PAIRS) >= 15
-	assert sum(i == want for i, want in REDACT_PAIRS) >= 10
+	assert "from . import redact" in src
+	for site in ("redact.scrub_text(result.stdout_tail", "redact.scrub_text(result.stderr_tail",
+	             'redact.scrub_text(f"daemon exception: {e}"'):
+		assert site in src, f"daemon.py must call {site}…)"
