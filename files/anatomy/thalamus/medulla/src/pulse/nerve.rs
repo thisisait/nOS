@@ -38,6 +38,24 @@ impl Nerve {
         Err(format!("Wing answered {code}{}", why.map(|w| format!(": {w}")).unwrap_or_default()))
     }
 
+    /// The due feed (PulseRepository::listDue): Wing's predicate and clock, the one Python polls too.
+    pub fn due(&self) -> Result<Vec<Value>, String> {
+        let mut r = self.agent.get(format!("{}/api/v1/pulse_jobs/due", self.base))
+            .header("Authorization", format!("Bearer {}", self.token))
+            .header("User-Agent", "nos-medulla")
+            .call()
+            .map_err(|e| format!("Wing unreachable: {e}"))?;
+        let code = r.status().as_u16();
+        if code != 200 {
+            return Err(format!("Wing answered {code} to the due feed"));
+        }
+        let mut v: Value = r.body_mut().read_json().map_err(|e| format!("due feed: {e}"))?;
+        match if v.get("jobs").is_some() { v["jobs"].take() } else { v } {
+            Value::Array(jobs) => Ok(jobs),
+            _ => Err("due feed: no jobs list".into()),
+        }
+    }
+
     /// The claim before the job runs; refused means the job does not run (a run nobody recorded did not happen).
     pub fn start(&self, job: &str, run_id: &str, fired_at: &str) -> Result<(), String> {
         self.post("/api/v1/pulse_runs", &json!({"job_id": job, "run_id": run_id, "fired_at": fired_at, "actor_action_id": run_id}))
