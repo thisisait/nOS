@@ -120,7 +120,11 @@ pub fn run(db: &str, job: &str) -> Result<serde_json::Value, String> {
         return Err(format!("{job}: runner {runner} is not the medulla's"));
     }
     let args: Vec<String> = serde_json::from_str(&args).map_err(|e| format!("{job}: args_json {e}"))?;
-    let env: serde_json::Map<String, serde_json::Value> = serde_json::from_str(&env).map_err(|e| format!("{job}: env_json {e}"))?;
+    // PHP's json_encode writes an empty env as `[]` (14 of 42 live rows); Python and PHP read it as empty.
+    let env: serde_json::Map<String, serde_json::Value> = match serde_json::from_str(&env).map_err(|e| format!("{job}: env_json {e}"))? {
+        serde_json::Value::Array(a) if a.is_empty() => serde_json::Map::new(),
+        v => serde_json::from_value(v).map_err(|e| format!("{job}: env_json {e}"))?,
+    };
     let mut job_env: Vec<(String, String)> = env.into_iter().map(|(k, v)| (k, v.as_str().unwrap_or_default().to_string())).collect();
     if let Some((k, _)) = job_env.iter().find(|(_, v)| v.starts_with("secret:")) {
         return Err(format!("{job}: {k} is a secret: reference; the medulla does not resolve secrets yet"));

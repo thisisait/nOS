@@ -31,6 +31,7 @@ fn scratch(tag: &str) -> Scratch {
          INSERT INTO pulse_jobs (id, command, env_json) VALUES
            ('a:plain', '{cmd}', '{{\"MARK\": \"{mark}\"}}'),
            ('loop:x',  '{cmd}', '{{\"MARK\": \"{mark}\"}}'),
+           ('c:bare',  '{cmd}', '[]'),
            ('b:secret', '{cmd}', '{{\"MARK\": \"{mark}\", \"WING_API_TOKEN\": \"secret:wing_api_token\"}}');"
     ))
     .unwrap();
@@ -80,6 +81,8 @@ fn a_run_is_scrubbed_and_carries_its_id() {
     let err = v["stderr_tail"].as_str().unwrap();
     assert!(!err.contains("fakefakefake123") && err.contains("MY_TOKEN="), "not scrubbed: {err}");
     assert_eq!(std::fs::read(s.0.join("wing.db")).unwrap(), before, "a run changed wing.db");
+    // PHP writes an empty env as `[]`: measured live, 14 of 42 rows.
+    assert_eq!(json(&run(&s.0, "c:bare", true, false, false))["exit_code"], 4);
 }
 
 #[test]
