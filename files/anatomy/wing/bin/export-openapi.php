@@ -222,6 +222,10 @@ foreach ($matches as $row) {
 				],
 			];
 			if (!$isPublic) {
+				// BaseApiPresenter refuses a bearer whose scopes do not permit the call (2026-10-25:
+				// pulse.run on the run record and the due feed); every bearer route can answer it.
+				$op['responses']['403'] = ['description' => "The token's scopes do not permit this call"];
+				ksort($op['responses']);
 				$op['security'] = [['BearerAuth' => $isOperator ? ['wing.operator'] : []]];
 			}
 

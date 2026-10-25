@@ -32,6 +32,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -50,6 +52,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -68,6 +72,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -85,6 +91,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -101,6 +109,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -118,6 +128,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -141,6 +153,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -164,6 +178,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -187,6 +203,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -204,6 +222,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -227,6 +247,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -249,6 +271,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -272,6 +296,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -289,6 +315,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -306,6 +334,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -323,6 +353,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -347,6 +379,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -376,6 +410,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -400,6 +436,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -424,6 +462,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -448,6 +488,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -472,6 +514,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -496,6 +540,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -520,6 +566,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -536,6 +584,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -553,6 +603,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -575,6 +627,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -598,6 +652,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -615,6 +671,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -647,6 +705,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -708,6 +768,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -724,6 +786,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -741,6 +805,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -764,6 +830,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -787,6 +855,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -803,6 +873,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -820,6 +892,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -843,6 +917,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -860,6 +936,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -877,6 +955,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -899,6 +979,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -922,6 +1004,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -938,6 +1022,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -955,6 +1041,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -978,6 +1066,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1016,6 +1106,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1032,6 +1124,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1049,6 +1143,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1072,6 +1168,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1088,6 +1186,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1105,6 +1205,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1128,6 +1230,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1152,6 +1256,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1190,6 +1296,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1207,6 +1315,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1224,6 +1334,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1247,6 +1359,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1271,6 +1385,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1294,6 +1410,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1318,6 +1436,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1335,6 +1455,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1351,6 +1473,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1368,6 +1492,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1385,6 +1511,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1407,6 +1535,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1430,6 +1560,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1454,6 +1586,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1477,6 +1611,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1500,6 +1636,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1523,6 +1661,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1539,6 +1679,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1556,6 +1698,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1579,6 +1723,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1595,6 +1741,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1612,6 +1760,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1634,6 +1784,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1657,6 +1809,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1680,6 +1834,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1703,6 +1859,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1727,7 +1885,7 @@ paths:
         '401':
           description: Authentication required
         '403':
-          description: The token's scopes lack wing.read/wing.write, or a face-bff person below Tier 1, or the thalamus bearer
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1744,6 +1902,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1762,7 +1922,7 @@ paths:
         '401':
           description: Authentication required
         '403':
-          description: The token lacks pulse.run (or pulse.write); the feed carries env unfiltered
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1780,6 +1940,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1803,6 +1965,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1817,7 +1981,7 @@ paths:
   /api/v1/pulse_runs:
     get:
       summary: 'recent runs, newest first (?job_id, ?limit 1..500, ?failed=1, ?since, ?until)'
-      operationId: Pulse_runs_list_get
+      operationId: Pulse_runs_get
       tags:
         - Pulse
       responses:
@@ -1828,7 +1992,7 @@ paths:
         '401':
           description: Authentication required
         '403':
-          description: The token's scopes lack wing.read/wing.write, or a face-bff person below Tier 1, or the thalamus bearer
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1846,7 +2010,7 @@ paths:
         '401':
           description: Authentication required
         '403':
-          description: The token lacks pulse.run (or pulse.write); an agent's wing.write is not enough
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1865,7 +2029,7 @@ paths:
         '401':
           description: Authentication required
         '403':
-          description: The token's scopes lack wing.read/wing.write, or a face-bff person below Tier 1, or the thalamus bearer
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1884,7 +2048,7 @@ paths:
         '401':
           description: Authentication required
         '403':
-          description: The token's scopes lack wing.read/wing.write, or a face-bff person below Tier 1, or the thalamus bearer
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1909,7 +2073,7 @@ paths:
         '401':
           description: Authentication required
         '403':
-          description: The token lacks pulse.run (or pulse.write); an agent's wing.write is not enough
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1933,6 +2097,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1949,6 +2115,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1966,6 +2134,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -1983,6 +2153,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -2000,6 +2172,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -2022,6 +2196,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -2045,6 +2221,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -2068,6 +2246,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -2085,6 +2265,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -2102,6 +2284,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -2119,6 +2303,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -2142,6 +2328,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -2159,6 +2347,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -2176,6 +2366,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -2193,6 +2385,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -2210,6 +2404,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -2233,6 +2429,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -2250,6 +2448,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -2267,6 +2467,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -2284,6 +2486,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -2301,6 +2505,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -2324,6 +2530,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -2352,6 +2560,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -2381,6 +2591,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -2410,6 +2622,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -2438,6 +2652,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:
@@ -2467,6 +2683,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
       security:

@@ -15,6 +15,7 @@ use Nette\Http\IResponse;
  * POST /api/v1/pulse_jobs                — upsert a job (plugin loader post_compose hook)
  * GET  /api/v1/pulse_jobs                — list all registered jobs (admin/debug)
  * GET  /api/v1/pulse_jobs/<id>           — single job by plugin_name:job_name id
+ * GET  /api/v1/pulse_runs                — recent runs, newest first (?job_id, ?limit 1..500, ?failed=1, ?since, ?until)
  * POST /api/v1/pulse_runs                — Pulse claims a fired job (start row)
  * POST /api/v1/pulse_runs/<id>/finish    — Pulse posts the run's exit_code + tails
  * GET  /api/v1/pulse_runs/<id>           — poll-after-trigger view of one run
