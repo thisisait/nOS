@@ -5,7 +5,10 @@ on what the wire names. A component the shell cannot decode must surface
 as `refused`, never vanish (ssot/doctrine/cross-repo-contracts.md §4
 visibility). This runs nos-contract's `wire_fixture` example on
 files/anatomy/contracts/thalamus-shell.fixture.json and checks every sample
-re-encodes to itself and every refused line is refused.
+re-encodes to itself and every refused line is refused. The refused samples
+also pin ssot/doctrine/generative-ui.md §2 for Iris: a source carries no URL and
+no name of the model's, a model's step is never done or failed, and a callout
+carries no marker field (the shell draws "Iris says").
 """
 from __future__ import annotations
 

@@ -2,7 +2,8 @@
 in_force: true
 ruled: null
 row: null
-gates: []
+gates:
+  - tests/anatomy/test_thalamus_shell_contract.py
 ---
 # Generative UI
 
@@ -51,6 +52,16 @@ advice.
   partially-applied AND selects different rows and labels them with the author's
   confident words. What was dropped SHALL be REPORTED (`viewDropped`), never
   swallowed.
+- **A source is only what this person was shown in this session**, named by
+  the thalamus. The model MAY say which shown row a claim came from; it MUST
+  NOT supply the name, a URL or a quote (Iris `sources`, `serve.rs opened`).
+- **A verdict is not the model's.** A step the model fills is `pending` or
+  `active`; `done` and `failed` are the thalamus's to say.
+- **The model's voice is marked by the shell.** A model's `callout` is headed
+  "Iris says" by every shell, never by a field the model fills.
+  Also pinned outside `gates:` (not pytest): thalamus `tests/serve.rs`
+  `a_source_is_a_row_the_person_was_shown`, `a_models_steps_never_say_done_or_failed`,
+  the terminal snapshot `callout.txt`, face `src/lib/iris/followup.test.ts`.
 
 ## 3. The action catalog is code
 
