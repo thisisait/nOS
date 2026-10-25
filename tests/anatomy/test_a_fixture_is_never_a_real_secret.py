@@ -49,6 +49,8 @@ FIXTURE_GLOBS = (
     "files/anatomy/face/src/**/*.spec.ts",
     "tests/**/*.py",
     "tests/**/*.ts",
+    "tests/fixtures/**/*.json",
+    "files/anatomy/contracts/*.fixture.json",
 )
 EXCLUDE_PARTS = {"node_modules", ".svelte-kit", "build", "dist", "__pycache__"}
 
@@ -170,6 +172,9 @@ def test_the_sweep_actually_reads_fixtures():
     assert any(p.name == "pulse.test.ts" for p in files), (
         "the file this gate was written for is not in the sweep"
     )
+    # JSON fixtures hold the same kind of literals (pulse env pairs, contract samples).
+    names = {p.name for p in files}
+    assert {"pulse_env.json", "thalamus-shell.fixture.json"} <= names, "JSON fixtures left the sweep"
 
 
 def test_no_fixture_assigns_a_credential_shaped_literal():
