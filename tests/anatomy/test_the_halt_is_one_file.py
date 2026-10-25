@@ -54,3 +54,13 @@ def test_nos_halt_needs_no_wing(tmp_path):
     r = _nos(tmp_path, "resume")
     assert r.returncode == 0 and not (tmp_path / "halt").exists(), r.stdout + r.stderr
     assert "no halt" in _nos(tmp_path, "halt", "--status").stdout
+
+
+def test_red_status_names_the_halt():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("_red_halt", REPO / "tools" / "red-status.py")
+    red = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(red)
+    lines = red.hold_lines({"halt": '{"by": "op"}', "paused_runs": [{"job": "b:n", "age": "1m", "why": "emergency halt"}]})
+    assert any(ln.startswith("EMERGENCY HALT in force") for ln in lines), lines
+    assert any("b:n last run skipped — emergency halt" in ln for ln in lines), lines

@@ -287,6 +287,7 @@ def paused_runs(conn: sqlite3.Connection) -> list[dict]:
             "job": row["job_id"],
             "fired_at": row["fired_at"],
             "age": _age(_parse_iso(row["fired_at"])),
+            "why": "emergency halt" if "emergency halt" in (row["marker"] or "") else "loops paused (maintenance)",
         })
     return out
 
@@ -1118,6 +1119,12 @@ def collect() -> dict:
     # Not a red source: None means "loops running", the healthy default, so it
     # never becomes an UNKNOWN. Its presence is a HOLD, reported by hold_lines().
     report["loops_paused"] = loops_paused()
+    # The emergency halt (one file, tools/nos halt): a HOLD in plain words, never silence.
+    halt = pathlib.Path(os.environ.get("NOS_HALT_FILE") or pathlib.Path.home() / ".nos" / "halt")
+    try:
+        report["halt"] = halt.read_text(encoding="utf-8").strip() if halt.is_file() else None
+    except OSError:
+        report["sources_missing"].append(str(halt))
     import yaml  # noqa: PLC0415 — only this source is YAML
     try:  # a held sanction is a HOLD like a pause: deliberate, neither red nor silent
         held = yaml.safe_load(SANCTIONS.read_text(encoding="utf-8")) if SANCTIONS.is_file() else None
@@ -1336,6 +1343,8 @@ def hold_lines(report: dict) -> list[str]:
     """Intentional holds — distinct from red and from healthy. A pause is an
     operator's deliberate act, so it is neither news to act on nor silence."""
     out: list[str] = []
+    if report.get("halt") is not None:
+        out.append(f"EMERGENCY HALT in force since {report['halt'] or '?'} — every Pulse job is held (nos resume)")
     lp = report.get("loops_paused")
     if lp and lp.get("paused"):
         reason = f" — {lp['reason']}" if lp.get("reason") else ""
@@ -1343,7 +1352,7 @@ def hold_lines(report: dict) -> list[str]:
         out.append(f"loops paused (maintenance){reason}{since}")
     for r in report.get("paused_runs", []):
         out.append(
-            f"{r['job']} last run skipped — loops paused (maintenance) ({r['age']})"
+            f"{r['job']} last run skipped — {r.get('why', 'loops paused (maintenance)')} ({r['age']})"
         )
     for sid, s in sorted((report.get("sanctions") or {}).items()):
         out.append(f"{sid} sanctioned ({s.get('level')}) since {s.get('at')} — {s.get('reason', '')} "
