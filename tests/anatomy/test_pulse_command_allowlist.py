@@ -317,6 +317,25 @@ def test_a_declared_command_runs(command, args, why, monkeypatch):
 	run.validate_command(command, args)
 
 
+def _rust_list(name: str) -> tuple[str, ...]:
+	src = (REPO / "files/anatomy/thalamus/medulla/src/pulse/allow.rs").read_text()
+	m = re.search(rf"const {name}: &\[&str\] = &\[(.*?)\];", src, re.S)
+	assert m, f"medulla allow.rs::{name} not found"
+	return tuple(re.findall(r'"([^"]+)"', m.group(1)))
+
+
+def test_the_medulla_declares_the_same_trees():
+	"""Third copy, checked before the medulla fires (row medulla-scheduler): its constants, parsed."""
+	run = _runner()
+	assert _rust_list("SYSTEM_BINARIES") == run._SYSTEM_BINARIES
+	assert _rust_list("HOME_BINARIES") == run._HOME_BINARIES
+	assert _rust_list("BANNED_BASENAMES") == tuple(sorted(run._BANNED_BASENAMES))
+	assert _rust_list("REPO_TREES") == run._REPO_TREES
+	assert _rust_list("HOME_TREES") == run._HOME_TREES
+	rust = set(_rust_list("INTERPRETERS")) | {"python[0-9.]*"}
+	assert rust == set(run._INTERPRETER_RE.pattern.strip("^$()").split("|"))
+
+
 def test_repo_trees_need_the_daemons_to_know_the_checkout():
 	"""NOS_REPO_ROOT unset = no repo tree = every repo job refused. Both daemons get it."""
 	assert "<key>NOS_REPO_ROOT</key>" in (REPO / "roles/pazny.pulse/templates/pulse.plist.j2").read_text()
