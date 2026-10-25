@@ -22,7 +22,7 @@ ANSIBLE = {"ansible_facts", "playbook_dir", "item", "inventory_hostname", "hostv
 def _probe_tasks() -> list[dict]:
     tasks = yaml.safe_load((REPO / "roles/pazny.thalamus/tasks/macos.yml").read_text(encoding="utf-8"))
     out = [t for t in tasks if "medulla_pulse_probe" in str(t.get("when", ""))]
-    assert len(out) == 2, f"the probe's two tasks moved: {[t.get('name') for t in out]}"
+    assert len(out) >= 2, f"the probe's tasks moved: {[t.get('name') for t in out]}"
     return out
 
 
@@ -55,8 +55,10 @@ def test_every_variable_the_probe_renders_is_visible():
     env.filters, env.tests = _Any(env.filters), _Any(env.tests)
     used = set()
     for t in _probe_tasks():
-        templated = [str(t.get("ansible.builtin.command")), str(t.get("environment"))]
+        check = t.get("ansible.builtin.assert") or {}
+        templated = [str(t.get("ansible.builtin.command")), str(t.get("environment")), str(check.get("fail_msg"))]
         bare = [str(c) for k in ("when", "failed_when") for c in ([t[k]] if isinstance(t.get(k), str) else t.get(k) or [])]
+        bare += [str(check["that"])] if check.get("that") else []
         for s in templated + ["{{ " + b + " }}" for b in bare]:
             used |= jinja2.meta.find_undeclared_variables(env.parse(s))
     missing = sorted(v for v in used if v not in seen and v not in {"true", "false", "none"})
