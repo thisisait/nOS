@@ -2,7 +2,7 @@
 # Protocol: ssot/doctrine/cross-repo-contracts.md §1 (spec + fixture + gates
 # over the same bytes). Both sides link one Rust crate (nos-contract), so the
 # gate is the crate decoding the fixture; one copy only, both sides cite this.
-contract_version: 11   # 11: dendrogram; 10: knowledge_tree, widget spec knowledge; 9: resume workspace, clear, branch, stop, model_state; 8: catalogue (both ways), limbs, act, acted, action_approval; 7: resume, workspace_load, workspace_save, workspace, said, replay; 6: dashboard, kpi, working_for, model_options, model_pick; 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice, delta, sequence; 5: row_diff_approval op/title/read_from
+contract_version: 12   # 12: callout, steps, sources, follow_up; 11: dendrogram; 10: knowledge_tree, widget spec knowledge; 9: resume workspace, clear, branch, stop, model_state; 8: catalogue (both ways), limbs, act, acted, action_approval; 7: resume, workspace_load, workspace_save, workspace, said, replay; 6: dashboard, kpi, working_for, model_options, model_pick; 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice, delta, sequence; 5: row_diff_approval op/title/read_from
 fixture: files/anatomy/contracts/thalamus-shell.fixture.json
 
 producer:
@@ -239,6 +239,21 @@ components:
       is refused), and an approval_request never carries a choice. The pupil draws native radios (checkboxes
       when multi) with the suggestion preselected and marked "navrženo", and sends choice_reply once on
       "Odpovědět"; the terminal numbers the options and answers with /choose 2 (or 1,3)
+    # v12: four kinds whose names and prop shapes follow OpenUI's genui-lib (MIT; docs/systems/thalamus/genui-vocabulary.md).
+    # The model fills them through show; none rides an approval or a widget, none carries a URL, a style or an action.
+    callout: >-
+      a note not to miss (show tool): {tone ok|info|warn|bad, title 1-120, text 1-2000}; both shells say the tone as a word,
+      warn and bad drawn as warnings; text only, links as text
+    steps: >-
+      a plan's steps in order (show tool): {title?, items[{title 1-120, status pending|active|done|failed, detail? <=2000}]
+      1-20}; at most one active. The status is the model's claim, said as a word; a verdict stays with a reader
+    sources: >-
+      the rows a claim came from (show tool): {title?, items[{table, row, name, note? <=200}] 1-20}; serve refuses an item
+      that is not a row query_rows showed this person in this session, sets table to its id and name to its title (the
+      model never sends name; a render without it is refused); a (table, row) once. No url, no file path
+    follow_up: >-
+      next prompts the person may send (show tool): {prompts[] 1-4, each 1-200 chars, unique case aside}; the pupil puts a
+      clicked prompt in the composer and the person sends it as their own turn; the terminal lists them. Never an action
     knowledge_tree: >-
       the ontology around one node of our knowledge (read_node, or a knowledge widget; v10): {title?, focus, nodes[{id,
       name, parent?, child_count?, text?}], hidden}; ids [A-Za-z0-9._-]{1,128}, unique; focus names a node; a parent
@@ -315,7 +330,8 @@ invariants:
 open:
   - >-
     Since v4 the model chooses a renderer through the `show` tool, for table,
-    list, record, chart, tree, timeline, graph, sequence, choice and kpi (plain text already draws as markdown); table_results,
+    list, record, chart, tree, timeline, graph, sequence, choice, kpi and (v12) callout, steps, sources and
+    follow_up (plain text already draws as markdown); table_results,
     row_diff_approval and the
     control views stay chosen by their tool or control, and an approval is
     minted by propose_row_edit (insert, delete, propose_table_create for a new table, propose_column_add for new columns), or by a widget form the person submits

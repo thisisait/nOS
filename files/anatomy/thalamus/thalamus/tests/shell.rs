@@ -59,8 +59,8 @@ fn every_fixture_component_matches_its_snapshot() {
     }
     kinds.sort();
     kinds.dedup();
-    assert_eq!(kinds, ["action_approval", "approvals_list", "chart", "choice", "column_add_approval", "dashboard", "dendrogram", "graph", "inbox_list", "knowledge_tree", "kpi", "list", "markdown", "record", "red_status", "row_diff_approval", "sequence",
-                       "table", "table_results", "table_schema_approval", "timeline", "tree"],
+    assert_eq!(kinds, ["action_approval", "approvals_list", "callout", "chart", "choice", "column_add_approval", "dashboard", "dendrogram", "follow_up", "graph", "inbox_list", "knowledge_tree", "kpi", "list", "markdown", "record", "red_status", "row_diff_approval", "sequence",
+                       "sources", "steps", "table", "table_results", "table_schema_approval", "timeline", "tree"],
                "one snapshot per component in the closed vocabulary");
 }
 

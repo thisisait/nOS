@@ -39,6 +39,10 @@ const PROPS: Record<string, string[]> = {
 	dendrogram: ['hidden', 'nodes', 'root', 'title'],
 	form: ['fields', 'form', 'omitted', 'prefill', 'table', 'title'],
 	choice: ['id', 'multi', 'options', 'question', 'suggested'],
+	callout: ['text', 'title', 'tone'],
+	steps: ['items', 'title'],
+	sources: ['items', 'title'],
+	follow_up: ['prompts'],
 	dashboard: ['dropped', 'lens', 'name', 'widgets'],
 	kpi: ['delta', 'delta_label', 'source', 'title', 'unit', 'value']
 };

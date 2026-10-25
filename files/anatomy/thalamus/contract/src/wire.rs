@@ -498,6 +498,9 @@ fn check_shell(m: &ToShell) -> Result<(), String> {
             if matches!(component, Component::ActionApproval(_)) {
                 return Err("an action is asked only as an approval, never drawn as a render".into());
             }
+            if matches!(component, Component::Sources(x) if x.items.iter().any(|i| i.name.is_none())) {
+                return Err("a source the thalamus sends carries the table name it resolved".into());
+            }
             if matches!(component, Component::Choice(c) if c.id.is_none()) {
                 return Err("a choice the thalamus sends carries the id it minted".into());
             }
@@ -518,6 +521,9 @@ fn check_shell(m: &ToShell) -> Result<(), String> {
                 Component::Kpi(_) => Err("a kpi is drawn in a render or a widget, never in an approval".into()),
                 Component::KnowledgeTree(_) => Err("a knowledge tree is drawn in a render or a widget, never in an approval".into()),
                 Component::Dendrogram(_) => Err("a run tree is drawn in a render, never in an approval".into()),
+                Component::Callout(_) | Component::Steps(_) | Component::Sources(_) | Component::FollowUp(_) => {
+                    Err("a callout, steps, sources or follow_up is drawn in a render, never in an approval".into())
+                }
                 _ => Ok(()),
             }
         }

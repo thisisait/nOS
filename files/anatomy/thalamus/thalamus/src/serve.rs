@@ -816,7 +816,8 @@ see its rows. A widget that does not fit its table is left out and you are told 
 
 /// The kinds the model may choose; the rest are drawn by a tool or a control, never by show.
 /// No markdown: plain text already draws as markdown, and a markdown show was then said again as text.
-pub const SHOW_KINDS: [&str; 10] = ["table", "list", "record", "chart", "tree", "timeline", "graph", "sequence", "choice", "kpi"];
+pub const SHOW_KINDS: [&str; 14] = ["table", "list", "record", "chart", "tree", "timeline", "graph", "sequence", "choice", "kpi",
+    "callout", "steps", "sources", "follow_up"];
 
 /// The props a kind accepts, so a refusal can show the shape to retry.
 pub const SHOW_SHAPE: &[(&str, &str)] = &[
@@ -837,6 +838,10 @@ dashed for a reply) or {note, over[]} (note <=200 over 1-2 participants) or {pha
     ("choice", "{question (<=15 words, <=120 chars), options[{label, note?}] 2-6 (label <=60, unique; note <=200), \
 suggested[] (option labels: exactly 1, or 1 or more when multi), multi}; never an id: the thalamus mints it"),
     ("kpi", "{title, unit?} with show's source {query {table, q?, where?}, op count|sum|avg, y?}; never a value: the thalamus computes it"),
+    ("callout", "{tone ok|info|warn|bad, title (<=120), text (<=2000)}; plain text, no link"),
+    ("steps", "{title?, items[{title (<=120), status pending|active|done|failed, detail? (<=2000)}] 1-20}; at most one active"),
+    ("sources", "{title?, items[{table, row, note? (<=200)}] 1-20}; table and row are a row query_rows showed this session (its __id); no url"),
+    ("follow_up", "{prompts[] 1-4, each <=200 chars, unique}; words the person may send next, never an action"),
 ];
 
 /// When to reach for each kind: one sentence the model reads beside its shape (Ollama keeps descriptions only).
@@ -851,6 +856,10 @@ pub const SHOW_ABOUT: &[(&str, &str)] = &[
     ("sequence", "Who sends what to whom in order, such as a protocol or a handoff between people or systems."),
     ("choice", "A question at a fork where the person's answer changes what you do next; never yes or no on a write."),
     ("kpi", "One headline number from a table, computed by the thalamus from source, never by you."),
+    ("callout", "A note the person must not miss, such as a risk, a caveat or what an approval would cost."),
+    ("steps", "A plan's steps in order and how far each one is, as you know it."),
+    ("sources", "Which rows a claim or an extraction came from, so the person can check it against them."),
+    ("follow_up", "Up to four next questions the person might ask, put at the end of an answer."),
 ];
 
 fn expected_shape(kind: &str) -> String {
@@ -941,7 +950,22 @@ multi}; suggested names your pick among the options, exactly 1 unless multi; nev
                 "suggested": {"type": "array", "minItems": 1, "maxItems": 6, "items": {"type": "string"}},
                 "multi": {"type": "boolean"}}))),
         branch("kpi", "one number on a tile, only with show's `source` {query, op, y?}: {title, unit?}; the thalamus computes the number",
-            closed(&["title"], json!({"title": title, "unit": {"type": "string", "maxLength": 16}})))]}}})
+            closed(&["title"], json!({"title": title, "unit": {"type": "string", "maxLength": 16}}))),
+        branch("callout", "a note not to miss: {tone, title, text}",
+            closed(&["tone", "title", "text"], json!({"tone": {"enum": ["ok", "info", "warn", "bad"]}, "title": title,
+                "text": {"type": "string", "maxLength": 2000}}))),
+        branch("steps", "a plan's steps: {title?, items[{title, status, detail?}] 1-20}, at most one active",
+            closed(&["items"], json!({"title": title, "items": {"type": "array", "minItems": 1, "maxItems": 20, "items": closed(&["title", "status"], json!({
+                "title": {"type": "string", "maxLength": 120}, "status": {"enum": ["pending", "active", "done", "failed"]},
+                "detail": {"type": "string", "maxLength": 2000}}))}}))),
+        branch("sources", "the rows a claim came from: {title?, items[{table, row, note?}] 1-20}, each a row query_rows showed",
+            closed(&["items"], json!({"title": title, "items": {"type": "array", "minItems": 1, "maxItems": 20, "items": closed(&["table", "row"], json!({
+                "table": {"type": "string", "description": "the table's id or title as query_rows showed it"},
+                "row": {"type": "string", "description": "the row's __id from query_rows"},
+                "note": {"type": "string", "maxLength": 200}}))}}))),
+        branch("follow_up", "next questions the person may send: {prompts[] 1-4}",
+            closed(&["prompts"], json!({"prompts": {"type": "array", "minItems": 1, "maxItems": 4, "uniqueItems": true,
+                "items": {"type": "string", "minLength": 1, "maxLength": 200}}})))]}}})
 }
 
 const QUERY_KEYS: [&str; 9] = ["table", "q", "where", "columns", "order_by", "limit", "group_by", "op", "y"];
@@ -5075,6 +5099,15 @@ pub fn source_spec(c: &Component, src: Value) -> Result<ChartSpec, String> {
 
 /// A choice the model asked, with the id serve mints and stored as open; any other component as it is.
 fn opened(o: &mut Open, c: Component) -> Result<Component, String> {
+    // A source is a row this person was shown; serve names it by id and title, or refuses it.
+    if let Component::Sources(mut x) = c {
+        for i in &mut x.items {
+            let (table, name) = shown_row(&o.shown, &i.table, &i.row).map_err(|e| format!("show sources: {e}"))?;
+            (i.table, i.name) = (table.clone(), Some(name.clone()));
+        }
+        let c = Component::Sources(x);
+        return c.check().map(|_| c).map_err(|e| format!("show sources: {e}"));
+    }
     let Component::Choice(mut ch) = c else { return Ok(c) };
     if o.choices.len() >= MAX_CHOICES {
         return Err(format!("this session holds {MAX_CHOICES} open choices; wait for the person's answer"));
@@ -5537,6 +5570,10 @@ fn show(args: &Value) -> Result<(Component, Option<Value>), String> {
     }
     if kind == "choice" && args.pointer("/component/props/id").is_some() {
         return Err(bad("`id` is minted by the thalamus; leave it out".into()));
+    }
+    let items = args.pointer("/component/props/items").and_then(Value::as_array);
+    if kind == "sources" && items.is_some_and(|i| i.iter().any(|i| i.get("name").is_some())) {
+        return Err(bad("a source's `name` is the thalamus's (the table's title); leave it out".into()));
     }
     let c = serde_json::from_value::<Component>(args["component"].clone()).map_err(|e| bad(e.to_string()))?;
     c.check().map_err(bad)?;

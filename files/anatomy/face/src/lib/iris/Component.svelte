@@ -6,7 +6,7 @@
 <script lang="ts">
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import StatusNote from '$lib/components/ui/StatusNote.svelte';
-	import { severityTone } from '$lib/components/ui/tone';
+	import { severityTone, toneVars, type Tone } from '$lib/components/ui/tone';
 	import Chart from './Chart.svelte';
 	import Form from './Form.svelte';
 	import Graph from './Graph.svelte';
@@ -42,9 +42,12 @@
 		view = $bindable('changes'),
 		onread,
 		open,
-		onexpand
+		onexpand,
+		onsuggest
 	}: {
 		component: Component;
+		/** follow_up: a click puts the prompt in the person's composer; they send it. Absent: drawn, not clickable. */
+		onsuggest?: (text: string) => void;
 		view?: View;
 		onread?: (id: string, name: string) => void;
 		open?: Record<string, WidgetState | undefined>;
@@ -54,6 +57,13 @@
 	const switchName = $props.id();
 	// A column whose text runs long reads as prose under its row, not as a column that starves the rest.
 	const LONG = (s: string) => s.length > 80 || s.includes('\n');
+	// A step's status as a word on a tone; the word is the fact, the colour only on top.
+	const STEP_TONE: Record<string, Tone> = {
+		done: 'ok',
+		active: 'info',
+		pending: 'neutral',
+		failed: 'bad'
+	};
 </script>
 
 <!-- The mark is text (+ − ~) and its word for a screen reader; the colour is only on top. -->
@@ -379,6 +389,42 @@
 		<Sequence sequence={component.props} />
 	{:else if component.kind === 'form'}
 		<Form form={component.props} />
+	{:else if component.kind === 'callout'}
+		{@const c = component.props}
+		{@const v = toneVars(c.tone)}
+		<div class="callout" role="note" style="--ink: {v.ink}; --soft: {v.soft}">
+			<h3><Badge tone={c.tone}>{c.tone}</Badge>{c.title}</h3>
+			<p>{c.text}</p>
+		</div>
+	{:else if component.kind === 'steps'}
+		{@const p = component.props}
+		{#if p.title}<h3>{p.title}</h3>{/if}
+		<ol class="steps">
+			{#each p.items as x}
+				<li data-status={x.status} aria-current={x.status === 'active' ? 'step' : undefined}>
+					<Badge tone={STEP_TONE[x.status]}>{x.status}</Badge>
+					{x.title}{#if x.detail}<span class="muted">{' — '}{x.detail}</span>{/if}
+				</li>
+			{/each}
+		</ol>
+	{:else if component.kind === 'sources'}
+		{@const x = component.props}
+		<h3>{x.title ?? 'sources'}</h3>
+		<ul>
+			{#each x.items as i}
+				<li>
+					{i.name ?? i.table}{' '}<span class="muted mono">({i.table}) / {i.row}</span
+					>{#if i.note}<span class="muted">{' — '}{i.note}</span>{/if}
+				</li>
+			{/each}
+		</ul>
+	{:else if component.kind === 'follow_up'}
+		<p class="muted">you could ask:</p>
+		<div class="follow-up">
+			{#each component.props.prompts as p}
+				<button type="button" disabled={!onsuggest} onclick={() => onsuggest?.(p)}>{p}</button>
+			{/each}
+		</div>
 	{:else}
 		<!-- Unreachable past the bridge's decoder; said aloud if it ever is. -->
 		<StatusNote kind="error" title="refused"
@@ -388,6 +434,29 @@
 </section>
 
 <style>
+	.callout {
+		border-left: 3px solid var(--ink);
+		background: var(--soft);
+		padding: 6px 10px;
+		border-radius: 6px;
+	}
+	.callout p {
+		margin: 0;
+		white-space: pre-wrap;
+	}
+	.steps li {
+		margin: 3px 0;
+	}
+	.follow-up {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+	}
+	.follow-up button {
+		font: inherit;
+		font-size: 12px;
+		text-align: left;
+	}
 	.component {
 		padding: 10px 12px;
 		border: 1px solid var(--glass-brd);
