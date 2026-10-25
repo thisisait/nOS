@@ -67,3 +67,5 @@ thalamus_unit_name: "eu.thisisait.nos.thalamus"
 thalamus_env_home: "{{ nos_system_home if nos_system_user | default('') | length else ansible_facts['env']['HOME'] }}"
 thalamus_repo_root: "{{ nos_system_home ~ '/genome' if nos_system_user | default('') | length else nos_main_checkout }}"
 thalamus_env_path: "{{ '' if nos_system_user | default('') | length else nos_tools_venv ~ '/bin:' }}/usr/local/bin:/usr/bin:/bin"
+# The job the opt-in nerve probe fires (-e medulla_pulse_probe=true): read-only, no secret: env.
+medulla_pulse_probe_job: "npm-supply-chain:daily-ioc-scan"

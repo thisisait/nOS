@@ -100,3 +100,33 @@
      | rejectattr('state', 'equalto', 'OK') | list | length) > 0
   ignore_errors: true  # noqa: ignore-errors - a warning by ruling, counted as ignored in the recap
   tags: ['verify']
+
+# The nerve, proven live (row medulla-scheduler, c2): fire ONE read-only job through the medulla with
+# --report and read its row back. Opt-in (-e medulla_pulse_probe=true): it really runs the job.
+# Gate for the shape: medulla/tests/pulse_report.rs; this is the effect. macOS only for now.
+- name: "[pazny.thalamus] Verify — one job fired by the medulla is recorded by Wing"
+  ansible.builtin.command:
+    argv: ["{{ medulla_bin }}", pulse, run, "{{ medulla_pulse_probe_job }}", --report, --db, "{{ wing_data_dir }}/wing.db"]
+  environment:
+    MEDULLA_PULSE: "1"
+    MEDULLA_WING_TOKEN: "{{ medulla_wing_api_token }}"
+    NOS_WING_URL: "http://127.0.0.1:{{ wing_port | default(9000) }}"
+    NOS_REPO_ROOT: "{{ playbook_dir }}"
+  register: _medulla_probe
+  changed_when: true
+  no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
+  when: medulla_pulse_probe | default(false) | bool
+  tags: ['verify']
+
+- name: "[pazny.thalamus] Verify — Wing holds that run, by the medulla, finished"
+  ansible.builtin.command:
+    argv: [sqlite3, -readonly, "{{ wing_data_dir }}/wing.db",
+           "SELECT actor_id || '|' || IFNULL(exit_code, 'open') FROM pulse_runs WHERE run_id = '{{ (_medulla_probe.stdout | from_json).run_id }}'"]
+  register: _medulla_probe_row
+  changed_when: false
+  failed_when: >-
+    _medulla_probe_row.stdout.split('|') | first != 'medulla'
+    or _medulla_probe_row.stdout.split('|') | last == 'open'
+    or (_medulla_probe.stdout | from_json).reported is not sameas true
+  when: medulla_pulse_probe | default(false) | bool
+  tags: ['verify']
