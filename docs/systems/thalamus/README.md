@@ -9,7 +9,7 @@
 | | |
 |---|---|
 | **Type** | Host organ (non-Docker), one Rust binary in two modes |
-| **Daemon** | `thalamus serve` on `~/.nos/thalamus.sock`, mode 0600 |
+| **Daemon** | `~/thalamus/bin/nos-thalamus serve` on `~/.nos/thalamus.sock`, mode 0600; shows as `nos-thalamus` in Activity Monitor and `top` |
 | **Shell** | `~/thalamus/bin/thalamus` (no argument) |
 | **Toggle** | `install_thalamus` (default `false`; needs `install_receptor`) |
 | **Map** | the receptor's `~/.nos/identity-map.yml` (`nos_identity_map`) |

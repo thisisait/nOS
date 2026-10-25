@@ -87,13 +87,15 @@
   when: _thalamus_signing.stdout_lines | default([]) | length > 0  # --check mints nothing
   notify: Restart thalamus
 
-# A copy, not a link: the kernel resolves a link (proc_pidpath), so launchd's exe would read
-# bin/medulla and the TCC entry and NOS_DECIDER_EXES name bin/thalamus. Same signed bytes, same path.
-- name: "[pazny.medulla] thalamus is the medulla"
+# Copies, not links: a symlink shows the target's name and proc_pidpath reads a hardlink's first
+# name (measured 2026-10-25), so the TCC entry and NOS_DECIDER_EXES would see bin/medulla. A copy
+# keeps the embedded signature. thalamus is the CLI; nos-thalamus is what the plist runs.
+- name: "[pazny.medulla] thalamus and nos-thalamus are the medulla"
   ansible.builtin.copy:
     src: "{{ medulla_bin }}"
-    dest: "{{ thalamus_bin }}"
+    dest: "{{ item }}"
     remote_src: true
     mode: '0755'
+  loop: ["{{ thalamus_bin }}", "{{ thalamus_serve_bin }}"]
   ignore_errors: "{{ ansible_check_mode }}"  # --check builds nothing: a fresh host has no medulla to copy
   notify: Restart thalamus

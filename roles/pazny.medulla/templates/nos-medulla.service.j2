@@ -8,7 +8,7 @@ Wants=network-online.target
 [Service]
 User={{ nos_system_user }}
 Group={{ nos_system_user }}
-ExecStart=/usr/local/libexec/nos/medulla thalamus serve --data-dir {{ nos_system_home }}/thalamus
+ExecStart=/usr/local/libexec/nos/nos-thalamus serve --data-dir {{ nos_system_home }}/thalamus
 WorkingDirectory={{ nos_system_home }}
 EnvironmentFile=/etc/nos/medulla.env
 ProtectSystem=strict

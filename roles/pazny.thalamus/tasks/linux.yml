@@ -111,7 +111,7 @@
   vars:
     su_name: "{{ thalamus_unit_name }}"
     su_description: "nOS thalamus — Iris for every login (shared socket, peer-named)"
-    su_exec_start: "{{ thalamus_bin }} serve --data-dir {{ thalamus_data_dir }}"
+    su_exec_start: "{{ thalamus_serve_bin }} serve --data-dir {{ thalamus_data_dir }}"
     su_working_dir: "{{ thalamus_home }}"
     su_environment_file: "{{ thalamus_home }}/thalamus.env"
     su_restart_sec: 30
