@@ -3,7 +3,7 @@
 Walks the full halt/resume flow:
   1. Verify /admin requires nos-providers group (403 without)
   2. With nos-providers, GET /admin renders 200 (HTML)
-  3. POST /admin/halt — assert all unpaused jobs become emergency-halted,
+  3. POST /admin/halt — assert the halt file (~/.nos/halt) is written and no job row is flipped,
      manual pauses preserved
   4. POST /admin/resume — assert emergency-halted jobs unpaused, manual
      pauses still preserved
@@ -37,17 +37,25 @@ ADMIN_HEADERS = {
 }
 
 
+HALT_FILE = os.environ.get("NOS_HALT_FILE") or os.path.expanduser("~/.nos/halt")
+
+
 def _emergency_halted() -> list[str]:
-    """READER: pulse jobs still under an emergency halt. A crash between the
-    halt POST and the resume POST leaves EVERY scheduled job on the estate
-    paused — the worst residue any journey here can leave — and until
-    2026-08-19 nothing looked."""
+    """READER: is an emergency halt still in force. Since 2026-10-25 the halt is
+    one file (test_the_halt_is_one_file); rows with the old 'emergency-halt:'
+    reason are a halt from before the move. A crash between halt and resume
+    leaves EVERY scheduled job held — the worst residue a journey here leaves."""
     with sqlite3.connect(WING_DB) as conn:
         rows = conn.execute(
             "SELECT id FROM pulse_jobs WHERE paused=1 "
             "AND paused_reason LIKE 'emergency-halt:%'"
         ).fetchall()
-    return [r[0] for r in rows]
+    return ([HALT_FILE] if os.path.isfile(HALT_FILE) else []) + [r[0] for r in rows]
+
+
+def _paused_rows() -> int:
+    with sqlite3.connect(WING_DB) as conn:
+        return conn.execute("SELECT COUNT(*) FROM pulse_jobs WHERE paused=1 AND removed_at IS NULL").fetchone()[0]
 
 
 RESIDUE_PROBES = (
@@ -125,11 +133,8 @@ def test_halt_and_resume_audit_chain(journey):
             assert "Platform" in body, "admin page missing 'Platform' string"
             s.note = "admin page renders"
 
-        with j.step("halt_pauses_unpaused_jobs") as s:
-            with sqlite3.connect(WING_DB) as conn:
-                pre = conn.execute(
-                    "SELECT COUNT(*) FROM pulse_jobs WHERE paused=0 AND removed_at IS NULL"
-                ).fetchone()[0]
+        with j.step("halt_writes_the_halt_file") as s:
+            paused_pre = _paused_rows()
             # A13.7: /admin/halt is POST-only. SEC-14: it CSRF-validates, so we
             # GET /admin first (mint session + token) then POST with _csrf.
             status, _, loc = csrf_post(
@@ -145,16 +150,9 @@ def test_halt_and_resume_audit_chain(journey):
             j.mutates("emergency_halt", "pulse_jobs", _undo_halt)
             assert status in (302, 303), f"expected 302/303 redirect, got {status}"
             assert "/admin" in loc, f"redirect should go to /admin, got {loc}"
-            with sqlite3.connect(WING_DB) as conn:
-                emergency = conn.execute(
-                    "SELECT COUNT(*) FROM pulse_jobs WHERE paused=1 "
-                    "AND paused_reason LIKE 'emergency-halt:%'"
-                ).fetchone()[0]
-            assert emergency >= pre, (
-                f"halt didn't transition all unpaused jobs: pre={pre}, "
-                f"emergency-halted now={emergency}"
-            )
-            s.note = f"unpaused_pre={pre}, emergency_post={emergency}"
+            assert os.path.isfile(HALT_FILE), f"halt did not write {HALT_FILE}"
+            assert _paused_rows() == paused_pre, "the halt flipped pulse_jobs.paused; it must only write the file"
+            s.note = f"halt file written, paused rows unchanged ({paused_pre})"
 
         with j.step("resume_unhalts_emergency_only") as s:
             with sqlite3.connect(WING_DB) as conn:
@@ -182,8 +180,8 @@ def test_halt_and_resume_audit_chain(journey):
                     "AND paused_reason NOT LIKE 'emergency-halt:%' "
                     "AND paused_reason IS NOT NULL"
                 ).fetchone()[0]
-            assert emergency_post == 0, (
-                f"resume didn't unhalt emergency-halted: still {emergency_post}"
+            assert emergency_post == 0 and not os.path.isfile(HALT_FILE), (
+                f"resume left a halt: rows {emergency_post}, file {os.path.isfile(HALT_FILE)}"
             )
             assert manual_post == manual_pre, (
                 f"resume mutated manual pauses: pre={manual_pre}, post={manual_post}"

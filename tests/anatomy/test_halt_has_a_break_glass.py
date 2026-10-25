@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import http.server
 import json
+import os
 import pathlib
 import re
 import shutil
@@ -85,10 +86,13 @@ def test_nos_halt_and_resume_reach_the_api_with_the_halt_bearer(tmp_path, wing):
 
 
 def test_no_halt_token_sends_nothing(tmp_path, wing):
+    # Since 2026-10-25 the halt is ~/.nos/halt (test_the_halt_is_one_file): with no token it
+    # still halts, says the act is NOT recorded, and sends nothing.
     r = _nos(tmp_path, wing, "halt", token=None)
-    assert r.returncode == 69 and "wing_halt_token" in r.stderr, r.stdout + r.stderr
+    assert r.returncode == 0 and "NOT recorded" in r.stderr and "wing_halt_token" in r.stderr, r.stdout + r.stderr
+    assert (tmp_path / ".nos/halt").is_file()
     r = _nos(tmp_path, wing, "halt", token="placeholder-regenerated-on-first-run")
-    assert r.returncode == 69, r.stdout + r.stderr
+    assert r.returncode == 0 and "NOT recorded" in r.stderr, r.stdout + r.stderr
     assert _Wing.seen == []
 
 
@@ -98,13 +102,14 @@ def test_a_refusal_is_not_success(tmp_path, wing):
     assert r.returncode == 1 and "HTTP 403" in r.stderr, r.stdout + r.stderr
 
 
-def test_wing_down_is_unknown_not_ok(tmp_path, wing):
+def test_wing_down_still_halts_and_says_the_record_is_missing(tmp_path, wing):
     port = wing.server_port
     wing.shutdown(); wing.server_close()
     env = {"HOME": str(tmp_path), "PATH": "/usr/bin:/bin", "WING_HALT_TOKEN": "f" * 64,
            "NOS_WING_URL": f"http://127.0.0.1:{port}"}
     r = subprocess.run(["bash", str(NOS), "halt"], env=env, capture_output=True, text=True, timeout=30)
-    assert r.returncode == 69 and "UNKNOWN" in r.stderr, r.stdout + r.stderr
+    assert r.returncode == 0 and "NOT recorded" in r.stderr, r.stdout + r.stderr
+    assert (tmp_path / ".nos/halt").is_file(), "Wing down must not mean no halt"
 
 
 # ── who holds wing.halt ─────────────────────────────────────────────────────
@@ -175,6 +180,7 @@ foreach (json_decode($argv[3], true) as $c) {
     $payload = 'reached';
   }
   $out[] = ['code' => $res->getCode(), 'payload' => $payload, 'halt_active' => $pulse->isEmergencyHaltActive(),
+            'paused_rows' => (int) $pdo->fetchField('SELECT COUNT(*) FROM pulse_jobs WHERE paused = 1'),
             'last_actor' => $pdo->fetchField("SELECT actor_id FROM events WHERE type LIKE 'admin_emergency_%' ORDER BY id DESC LIMIT 1")];
 }
 echo json_encode($out);
@@ -184,7 +190,8 @@ echo json_encode($out);
 def _run(tmp_path, cases):
     subprocess.run(["php", str(WING / "bin/init-db.php"), f"--data-dir={tmp_path}"], capture_output=True, check=True, timeout=60)
     r = subprocess.run(["php", "-d", "error_reporting=E_ALL", "-r", _HARNESS, str(AUTOLOAD), str(tmp_path / "wing.db"),
-                        json.dumps(cases)], capture_output=True, text=True, timeout=120, cwd=WING, check=False)
+                        json.dumps(cases)], capture_output=True, text=True, timeout=120, cwd=WING, check=False,
+                       env={**os.environ, "NOS_HALT_FILE": str(tmp_path / "halt")})
     assert r.returncode == 0, r.stdout + r.stderr
     return json.loads(r.stdout)
 
@@ -206,6 +213,7 @@ def test_the_api_halts_for_the_operator_and_refuses_agents(tmp_path):
         assert got[i]["code"] == 403 and not got[i]["halt_active"], got[i]
         assert "operator decision" in got[i]["payload"]["error"], got[i]
     assert got[3]["code"] == 200 and got[3]["halt_active"], got[3]
+    assert got[3]["paused_rows"] == 0, "the halt is the file; it must not flip pulse_jobs.paused (test_the_halt_is_one_file)"
     assert got[3]["last_actor"] == "wing-halt" and got[3]["payload"]["jobs_affected"] == 1, got[3]
     assert got[4]["code"] == 200 and got[4]["payload"]["halt_active"] is True, got[4]
     assert got[5]["code"] == 200 and not got[5]["halt_active"], got[5]

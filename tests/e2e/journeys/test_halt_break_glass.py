@@ -52,7 +52,7 @@ def _three_readers_say(halted: bool) -> str:
     _, state = _api("GET", "/api/v1/admin/state", HALT)
     assert state.get("halt_active") is halted, f"API state disagrees: {state}"
     cli = _nos("halt", "--status")
-    assert cli.returncode == 0 and json.loads(cli.stdout).get("halt_active") is halted, cli.stdout + cli.stderr
+    assert cli.returncode == 0 and json.loads(cli.stdout.strip().splitlines()[-1]).get("halt_active") is halted, cli.stdout + cli.stderr
     return f"page/api/cli all say halted={halted}"
 
 
@@ -68,7 +68,7 @@ def test_break_glass_halts_and_resumes(journey):
             r = _nos("halt")
             j.mutates("emergency_halt", "pulse_jobs", _undo_halt)
             assert r.returncode == 0, r.stdout + r.stderr
-            assert json.loads(r.stdout).get("actor_id") == "wing-halt", r.stdout
+            assert json.loads(r.stdout.strip().splitlines()[-1]).get("actor_id") == "wing-halt", r.stdout
             s.note = _three_readers_say(True)
 
         with j.step("cli_resumes") as s:
