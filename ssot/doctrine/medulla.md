@@ -3,13 +3,14 @@ in_force: false
 ruled: null
 row: medulla
 gates:
+  - tests/anatomy/test_a_host_job_runs_under_its_organ_name.py
   - tests/anatomy/test_estate_status_reports_organ_identity.py
   - tests/anatomy/test_estate_status_symbionts_apart.py
   - tests/anatomy/test_medulla_is_one_static_binary.py
   - tests/anatomy/test_medulla_role.py
-  - tests/anatomy/test_medulla_unit_runs_as_nos.py
   - tests/anatomy/test_medulla_serves_metrics.py
   - tests/anatomy/test_medulla_serves_pulse_reads.py
+  - tests/anatomy/test_medulla_unit_runs_as_nos.py
 ---
 # Medulla — one binary runs the estate under its own identity
 
