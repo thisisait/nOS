@@ -42,14 +42,19 @@ fn handle(mut s: TcpStream, db: &Path) -> std::io::Result<()> {
     let mut lines = head.split("\r\n");
     let mut req = lines.next().unwrap_or_default().split(' ');
     let (method, target) = (req.next().unwrap_or_default(), req.next().unwrap_or_default());
-    let too_big = lines.filter_map(|l| l.split_once(':')).any(|(k, v)| {
-        k.eq_ignore_ascii_case("content-length") && v.trim().parse::<usize>().map_or(true, |n| n > MAX_HEAD)
-    });
-    if too_big {
+    let headers: Vec<(String, String)> = lines.filter_map(|l| l.split_once(':')).map(|(k, v)| (k.trim().to_ascii_lowercase(), v.trim().to_owned())).collect();
+    let header = |name: &str| headers.iter().find(|(k, _)| k == name).map(|(_, v)| v.clone());
+    if headers.iter().any(|(k, v)| k == "content-length" && v.parse::<usize>().map_or(true, |n| n > MAX_HEAD)) {
         return respond(&mut s, "413 Payload Too Large", "text/plain", b"request too large\n", false);
     }
-    let path = target.split('?').next().unwrap_or_default();
+    let (path, query) = target.split_once('?').unwrap_or((target, ""));
     let head_only = method == "HEAD";
+    if method == "GET" {
+        if let Some((code, body)) = crate::pulse_reads::answer(db, path, query, &header) {
+            let status = match code { 200 => "200 OK", 401 => "401 Unauthorized", 403 => "403 Forbidden", 404 => "404 Not Found", _ => "500 Internal Server Error" };
+            return respond(&mut s, status, "application/json; charset=utf-8", body.to_string().as_bytes(), false);
+        }
+    }
     if !(method == "GET" || head_only) || path != "/api/v1/metrics" {
         return respond(&mut s, "404 Not Found", "text/plain", b"not found\n", head_only);
     }

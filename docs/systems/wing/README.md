@@ -39,6 +39,10 @@ Two layers:
   the route: `metrics` is an anonymous loopback read (Alloy scrapes it with no bearer), and it opens
   `wing.db` read-only, so PHP stays the one writer. On Linux with `nos_system_user` set, a moved route is
   refused until Wing's data leaves `$HOME`. Gate: `tests/anatomy/test_medulla_serves_metrics.py`.
+- **Reads ahead of writes:** `medulla_read_routes: [pulse]` (default `[]`) hands the medulla only
+  `GET /api/v1/pulse_jobs`, `/pulse_runs`, `/pulse_runs/summary` and `/pulse_runs/<id>`, with PHP's
+  token check and JSON; every write, HEAD, `/pulse_jobs/due`, `/pulse_jobs/<id>` and a `?since`/`?until`
+  window stay PHP's. Gate: `tests/anatomy/test_medulla_serves_pulse_reads.py`.
 
 ## Dependencies
 

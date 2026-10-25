@@ -9,6 +9,7 @@ gates:
   - tests/anatomy/test_medulla_role.py
   - tests/anatomy/test_medulla_unit_runs_as_nos.py
   - tests/anatomy/test_medulla_serves_metrics.py
+  - tests/anatomy/test_medulla_serves_pulse_reads.py
 ---
 # Medulla — one binary runs the estate under its own identity
 
@@ -52,6 +53,10 @@ or Rust writes it, never both.
 
 A move takes a whole `/api/v1/<prefix>`, never one route of it. Each moved
 prefix gets its own Caddy `handle`; whatever is not handled still reaches PHP.
+
+Reads may move before their writes (operator ruling 2026-10-25): a named read set in
+`medulla_read_routes` hands the medulla only the GETs its matcher names, and every other method
+on that prefix still reaches PHP, which keeps writing the record.
 
 ## 6. What stays separate
 

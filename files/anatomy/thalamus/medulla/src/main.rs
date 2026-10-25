@@ -4,6 +4,7 @@ use std::process::ExitCode;
 
 mod metrics;
 mod pulse;
+mod pulse_reads;
 
 fn main() -> ExitCode {
     let mut argv = std::env::args();

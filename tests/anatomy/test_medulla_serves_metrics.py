@@ -273,8 +273,9 @@ def _thalamus_env(**over) -> tuple[str, dict]:
 
 
 def test_the_env_carries_the_wing_db_only_when_a_route_moved():
-    for routes, user, moved in (([], "", False), (["metrics"], "", True), (["metrics"], "nos", False)):
-        envfile, plist = _thalamus_env(medulla_routes=routes, nos_system_user=user)
+    for routes, reads, user, moved in (([], [], "", False), (["metrics"], [], "", True), (["metrics"], [], "nos", False),
+                                       ([], ["pulse"], "", True), ([], ["pulse"], "nos", False)):
+        envfile, plist = _thalamus_env(medulla_routes=routes, medulla_read_routes=reads, nos_system_user=user)
         lines = set(envfile.splitlines())
         assert ("NOS_WING_DB=/h/wing/app/data/wing.db" in lines) is moved, (routes, user, envfile)
         assert ("MEDULLA_HTTP_PORT=8095" in lines) is moved, (routes, user)
@@ -295,6 +296,8 @@ def test_wing_refuses_a_moved_route_under_the_nos_user():
     env = jinja2.Environment()
     when = guard["when"]
     fires = lambda **ctx: all(env.from_string("{{ " + c + " }}").render(**ctx) == "True" for c in when)
-    assert not fires(medulla_routes=["metrics"]) and not fires(medulla_routes=[], nos_system_user="nos")
-    assert fires(medulla_routes=["metrics"], nos_system_user="nos")
+    assert not fires(medulla_routes=["metrics"], medulla_read_routes=[])
+    assert not fires(medulla_routes=[], medulla_read_routes=[], nos_system_user="nos")
+    assert fires(medulla_routes=["metrics"], medulla_read_routes=[], nos_system_user="nos")
+    assert fires(medulla_routes=[], medulla_read_routes=["pulse"], nos_system_user="nos")
 

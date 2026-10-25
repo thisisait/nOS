@@ -423,10 +423,10 @@
 - name: "[pazny.wing] A moved route waits until Wing's data leaves $HOME"
   ansible.builtin.fail:
     msg: >-
-      medulla_routes is set while nos_system_user runs the medulla: the nos user cannot read
-      wing.db under the operator's $HOME. Empty medulla_routes, or move Wing's data first.
+      medulla_routes or medulla_read_routes is set while nos_system_user runs the medulla: the nos user cannot read
+      wing.db under the operator's $HOME. Empty both, or move Wing's data first.
   when:
-    - (medulla_routes | length) > 0
+    - ((medulla_routes + medulla_read_routes) | length) > 0
     - (nos_system_user | default('') | length) > 0
 
 - name: "[pazny.wing] Render Caddyfile"

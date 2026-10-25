@@ -73,6 +73,24 @@
         reverse_proxy 127.0.0.1:{{ medulla_http_port }}
     }
 {% endfor %}
+    # A read set (medulla_read_routes, ruling 2026-10-25): only a GET its matcher names goes to the
+    # medulla; every write and every other method on the same prefix still reaches PHP below.
+    # A windowed run list (?since/?until) stays PHP's: strtotime()'s grammar is PHP's own.
+{% set _medulla_reads = {'pulse': ['path_regexp ^/api/v1/(pulse_jobs|pulse_runs|pulse_runs/summary|pulse_runs/[^/]+)$', 'not query since=*', 'not query until=*']} %}
+{% for name in medulla_read_routes | default([]) %}
+    @medulla_read_{{ name }} {
+        method GET
+{% for line in _medulla_reads[name] %}
+        {{ line }}
+{% endfor %}
+    }
+    handle @medulla_read_{{ name }} {
+        respond @multipart "Wing accepts no multipart bodies" 415 {
+            close
+        }
+        reverse_proxy 127.0.0.1:{{ medulla_http_port }}
+    }
+{% endfor %}
 
     # PHP routing — front-controller pattern (Wing is a Nette app).
     # `php_server` is FrankenPHP's high-level shortcut: it wires up
