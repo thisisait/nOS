@@ -112,3 +112,20 @@ def test_daemon_applies_scrub_before_posting():
 		"daemon.py must scrub_text(stdout_tail)"
 	assert "redact.scrub_text(result.stderr_tail)" in src, \
 		"daemon.py must scrub_text(stderr_tail)"
+
+
+REDACT_PAIRS = __import__("json").loads((REPO / "tests/fixtures/pulse_redact.json").read_text(encoding="utf-8"))["pairs"]
+
+
+def test_shared_pairs_hold_for_python():
+	"""tests/fixtures/pulse_redact.json is the truth medulla/src/pulse/redact.rs is held to;
+	this keeps it the Python's truth."""
+	from pulse.redact import scrub_text  # type: ignore[import-not-found]
+	bad = [(i, want, scrub_text(i)) for i, want in REDACT_PAIRS if scrub_text(i) != want]
+	assert not bad, "\n".join(f"{i!r}\n   want {w!r}\n    got {g!r}" for i, w, g in bad)
+
+
+def test_shared_pairs_are_not_trivial():
+	assert len(REDACT_PAIRS) >= 30
+	assert sum(i != want for i, want in REDACT_PAIRS) >= 15
+	assert sum(i == want for i, want in REDACT_PAIRS) >= 10

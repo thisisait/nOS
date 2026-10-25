@@ -4,6 +4,8 @@
 //! what one Pulse tick would do with each due job, in the Python daemon's order of checks.
 pub mod allow;
 pub mod cron;
+#[allow(dead_code)] // the fire path (next commit) is its first caller
+pub mod redact;
 
 use std::process::ExitCode;
 
