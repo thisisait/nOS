@@ -52,7 +52,7 @@ def _flow() -> list[dict]:
 def _plist(**over) -> dict:
     env = jinja2.Environment(undefined=jinja2.StrictUndefined)
     env.filters["bool"] = bool
-    ctx = {"thalamus_launchd_label": "eu.thisisait.nos.thalamus", "thalamus_bin": "/h/thalamus/bin/thalamus",
+    ctx = {"thalamus_launchd_label": "eu.thisisait.nos.thalamus", "thalamus_bin": "/h/thalamus/bin/thalamus", "thalamus_serve_bin": "/h/thalamus/bin/nos-thalamus",
            "thalamus_home": "/h/thalamus", "thalamus_log_dir": "/h/thalamus/log",
            "thalamus_data_dir": "/n/platform/services/thalamus/data", "nos_main_checkout": "/repo",
            "nos_tools_venv": "/h/.nos/tools-venv", "homebrew_prefix": "/opt/homebrew",
@@ -93,7 +93,7 @@ def test_the_plist_names_the_tier_two_groups_from_the_rbac_tiers():
 
 def test_the_plist_runs_serve_and_keeps_the_secret_out_of_argv():
     p = _plist()
-    assert p["ProgramArguments"] == ["/h/thalamus/bin/thalamus", "serve",
+    assert p["ProgramArguments"] == ["/h/thalamus/bin/nos-thalamus", "serve",
                                      "--data-dir", "/n/platform/services/thalamus/data"]
     env = p["EnvironmentVariables"]
     assert env["KEAP_PROXY_SHARED_SECRET"] == "s3cret"
