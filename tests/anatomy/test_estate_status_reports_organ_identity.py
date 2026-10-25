@@ -258,7 +258,7 @@ def test_a_system_unit_whose_ps_uid_is_nos_reads_run_as_other(tmp_path):
     system = tmp_path / "etc/systemd/system"
     system.mkdir(parents=True)
     (system / f"{row['launchd_label']}.service").write_text(text)
-    ps = ["990 nos /usr/local/libexec/nos/medulla thalamus serve --data-dir /var/lib/nos/thalamus"]
+    ps = ["990 nos /usr/local/libexec/nos/nos-thalamus serve --data-dir /var/lib/nos/thalamus"]
     res = mod.Result()
     mod.axis_identity(res, root=tmp_path, home=home, ps_lines=ps)
     got = {x.subject: x for x in lines(res)}

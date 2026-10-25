@@ -109,8 +109,8 @@ def test_the_unit_runs_as_nos_confined_to_its_home():
     assert u.get("NoNewPrivileges") == ["yes"], u
     assert u.get("EnvironmentFile") == ["/etc/nos/medulla.env"], u
     exec_start = u["ExecStart"][0].split()
-    assert exec_start[0].startswith("/usr/local/libexec/"), "ProtectHome hides ~/thalamus/bin"
-    assert exec_start[1:4] == ["thalamus", "serve", "--data-dir"] and exec_start[4].startswith("/var/lib/nos/"), exec_start
+    assert exec_start[0] == "/usr/local/libexec/nos/nos-thalamus", "ProtectHome hides ~/thalamus/bin; the name is the organ's"
+    assert exec_start[1:3] == ["serve", "--data-dir"] and exec_start[3].startswith("/var/lib/nos/"), exec_start
     assert u.get("RuntimeDirectory") == ["nos"], "the shared socket dir /run/nos belongs to nos"
     assert u.get("WantedBy") == ["multi-user.target"], u
 
@@ -130,7 +130,7 @@ def test_nos_writes_only_its_ledger_never_what_it_reads():
     """nos owned /var/lib/nos and could rename genome/ or .nos/ and plant its own identity map.
     The home is root:nos 0750 so no entry in it can be renamed by nos; the one writable path is the ledger."""
     u = _unit()
-    data = u["ExecStart"][0].split()[4]
+    data = u["ExecStart"][0].split()[3]
     assert u.get("ReadWritePaths") == [data] == ["/var/lib/nos/thalamus"], f"nos may write only its ledger: {u.get('ReadWritePaths')}"
     dirs = _task(_tasks(MEDULLA_LINUX), lambda t: "Its directories" in str(t.get("name")), "no directories task")
     ctx = {"nos_system_home": "/var/lib/nos", "nos_system_user": "nos"}
@@ -162,7 +162,7 @@ def test_the_medulla_renders_its_env_0640_root_nos_and_its_system_unit():
     unit = _task(tasks, lambda t: "nos-medulla.service.j2" in str((t.get("ansible.builtin.template") or {}).get("src")),
                  "pazny.medulla linux.yml renders no nos-medulla.service.j2")
     assert unit["ansible.builtin.template"]["dest"] == "/etc/systemd/system/{{ thalamus_unit_name }}.service"
-    binary = _task(tasks, lambda t: (t.get("ansible.builtin.copy") or {}).get("dest") == "/usr/local/libexec/nos/medulla",
+    binary = _task(tasks, lambda t: (t.get("ansible.builtin.copy") or {}).get("dest") == "/usr/local/libexec/nos/nos-thalamus",
                    "the binary is not installed outside $HOME")
     assert (binary["ansible.builtin.copy"].get("owner"), str(binary["ansible.builtin.copy"].get("mode"))) == ("root", "0755")
     svc = _task(tasks, lambda t: "ansible.builtin.systemd_service" in t, "no systemd_service task starts the unit")

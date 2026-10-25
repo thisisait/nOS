@@ -95,8 +95,10 @@ def test_thalamus_bin_is_a_copy_the_kernel_names_as_itself():
     for name in ("macos.yml", "linux.yml"):
         tasks = _tasks(ROLE, name)
         assert not _links(name), f"{name}: thalamus_bin is a link to the medulla"
-        at = next((i for i, t in enumerate(tasks) if t.get("ansible.builtin.copy", {}).get("dest") == "{{ thalamus_bin }}"), None)
-        assert at is not None, f"{name}: nothing installs thalamus_bin"
+        # thalamus_bin is the CLI; thalamus_serve_bin is the copy the daemon runs (its name in ps).
+        at = next((i for i, t in enumerate(tasks) if {"{{ thalamus_bin }}", "{{ thalamus_serve_bin }}"} <= set(t.get("loop") or [])
+                   and t.get("ansible.builtin.copy", {}).get("dest") == "{{ item }}"), None)
+        assert at is not None, f"{name}: nothing installs thalamus_bin and thalamus_serve_bin"
         cp = tasks[at]["ansible.builtin.copy"]
         assert cp["src"] == "{{ medulla_bin }}" and cp["remote_src"] is True, (name, cp)
         if name == "macos.yml":  # the signed bytes are what is copied

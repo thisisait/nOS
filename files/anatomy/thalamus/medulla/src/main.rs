@@ -1,5 +1,6 @@
 //! The medulla: one binary for the host organs (ssot/doctrine/medulla.md §1). It carries the thalamus
 //! (`medulla thalamus <args>`, or run as `thalamus`/`iris`) and Wing's moved routes (`medulla wing serve`).
+//! Run as `nos-<organ>` it is `medulla <organ>`: Activity Monitor and top show the file's name.
 use std::process::ExitCode;
 
 mod metrics;
@@ -11,8 +12,10 @@ fn main() -> ExitCode {
     let argv0 = argv.next().unwrap_or_default();
     let args: Vec<String> = argv.collect();
     let name = std::path::Path::new(&argv0).file_name().and_then(|n| n.to_str()).unwrap_or_default();
-    match (name, args.first().map(String::as_str)) {
+    match (name.strip_prefix("nos-").unwrap_or(name), args.first().map(String::as_str)) {
         ("thalamus" | "iris", _) => thalamus(&args),
+        ("wing", _) => wing(&args),
+        ("pulse", _) => pulse::cli(&args),
         (_, Some("thalamus")) => thalamus(&args[1..]),
         (_, Some("wing")) => wing(&args[1..]),
         (_, Some("pulse")) => pulse::cli(&args[1..]),

@@ -25,13 +25,14 @@
     mode: '0644'
   when: _medulla_build is not skipped
 
-# A copy, as on macOS: /proc/<pid>/exe resolves a link, and the unit runs `thalamus`.
-- name: "[pazny.medulla] thalamus is the medulla"
+# Copies, as on macOS: /proc/<pid>/exe resolves a link. thalamus is the CLI; the unit runs nos-thalamus.
+- name: "[pazny.medulla] thalamus and nos-thalamus are the medulla"
   ansible.builtin.copy:
     src: "{{ medulla_bin }}"
-    dest: "{{ thalamus_bin }}"
+    dest: "{{ item }}"
     remote_src: true
     mode: '0755'
+  loop: ["{{ thalamus_bin }}", "{{ thalamus_serve_bin }}"]
   ignore_errors: "{{ ansible_check_mode }}"  # --check builds nothing: a fresh host has no medulla to copy
 
 # nos_system_user set: a system unit runs the medulla as that account (ssot/doctrine/medulla.md §2).
@@ -72,7 +73,7 @@
     - name: "[pazny.medulla] The binary, outside $HOME"
       ansible.builtin.copy:
         src: "{{ medulla_bin }}"
-        dest: /usr/local/libexec/nos/medulla
+        dest: /usr/local/libexec/nos/nos-thalamus  # the process's name (medulla/src/main.rs nos-<organ>)
         remote_src: true
         owner: root
         group: root
