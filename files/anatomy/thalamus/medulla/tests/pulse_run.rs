@@ -21,6 +21,11 @@ fn scratch(tag: &str) -> Scratch {
     // Leaves a mark (so a refusal can prove nothing ran), prints its run id and a fake secret.
     std::fs::write(&script, "#!/bin/sh\ntouch \"$MARK\"\necho \"run=$PULSE_RUN_ID\"\necho \"MY_TOKEN=fakefakefake123\" >&2\nexit 4\n").unwrap();
     std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
+    // Prints a value the medulla handed it, under a key no pattern calls secret.
+    let known = dir.join("repo/tools/known.sh");
+    std::fs::write(&known, "#!/bin/sh\necho \"url?x=$WING_API_TOKEN&y=1\"\n").unwrap();
+    std::fs::set_permissions(&known, std::fs::Permissions::from_mode(0o755)).unwrap();
+    let known = known.to_str().unwrap();
     let c = rusqlite::Connection::open(dir.join("wing.db")).unwrap();
     let cmd = script.to_str().unwrap();
     let mark = dir.join("ran").to_str().unwrap().to_string();
@@ -32,6 +37,7 @@ fn scratch(tag: &str) -> Scratch {
            ('a:plain', '{cmd}', '{{\"MARK\": \"{mark}\"}}'),
            ('loop:x',  '{cmd}', '{{\"MARK\": \"{mark}\"}}'),
            ('c:bare',  '{cmd}', '[]'),
+           ('d:known', '{known}', '{{\"WING_API_TOKEN\": \"fake-known-value-1\"}}'),
            ('b:secret', '{cmd}', '{{\"MARK\": \"{mark}\", \"WING_API_TOKEN\": \"secret:wing_api_token\"}}');"
     ))
     .unwrap();
@@ -96,4 +102,11 @@ fn a_held_or_secret_job_never_starts() {
     let o = run(&s.0, "b:secret", true, false, false);
     assert!(!o.status.success() && String::from_utf8_lossy(&o.stderr).contains("secret:"));
     assert!(!s.0.join("ran").exists(), "a held or secret-bearing job ran");
+}
+
+#[test]
+fn a_value_the_medulla_passed_is_scrubbed_under_any_key() {
+    let s = scratch("known");
+    let v = json(&run(&s.0, "d:known", true, false, false));
+    assert_eq!(v["stdout_tail"].as_str().unwrap(), "url?x=<REDACTED>&y=1\n", "{v}");
 }

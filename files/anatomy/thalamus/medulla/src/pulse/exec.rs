@@ -22,9 +22,10 @@ pub struct RunResult {
 }
 
 /// Scrubbed WHOLE, then cut, as daemon.py then wing_client.py do: a cut first could drop the
-/// `TOKEN=` a pattern needs and pass the value through.
-fn tail(bytes: &[u8]) -> String {
-    let s = super::redact::redact(&String::from_utf8_lossy(bytes));
+/// `TOKEN=` a pattern needs and pass the value through. `known`: values the run handed the job.
+fn tail(bytes: &[u8], known: &[String]) -> String {
+    let known: Vec<&str> = known.iter().map(String::as_str).collect();
+    let s = super::redact::redact(&String::from_utf8_lossy(bytes), &known);
     let skip = s.chars().count().saturating_sub(TAIL_CHARS);
     s.chars().skip(skip).collect()
 }
@@ -39,10 +40,10 @@ fn drain(r: Option<impl Read + Send + 'static>, tx: mpsc::Sender<(bool, Vec<u8>)
     });
 }
 
-pub fn execute(command: &str, args: &[String], env: &[(String, String)], timeout: Duration, home: Option<&str>, repo: Option<&str>) -> RunResult {
+pub fn execute(command: &str, args: &[String], env: &[(String, String)], known: &[String], timeout: Duration, home: Option<&str>, repo: Option<&str>) -> RunResult {
     let start = Instant::now();
     let done = |exit_code, out: &[u8], err: &[u8], timed_out| RunResult {
-        exit_code, duration_ms: start.elapsed().as_millis() as u64, stdout_tail: tail(out), stderr_tail: tail(err), timed_out,
+        exit_code, duration_ms: start.elapsed().as_millis() as u64, stdout_tail: tail(out, known), stderr_tail: tail(err, known), timed_out,
     };
     if let Err(e) = allow::validate(command, args, home, repo) {
         return done(126, b"", format!("pulse: command rejected by execution-boundary allowlist: {e}").as_bytes(), false);
@@ -118,7 +119,7 @@ mod tests {
         let cmd = r.0.join("tools").join(name);
         let path = [("PATH".to_string(), "/usr/bin:/bin".to_string())];
         let env = if env.is_empty() { &path[..] } else { env };
-        execute(cmd.to_str().unwrap(), &[], env, Duration::from_millis(timeout_ms), None, r.0.to_str())
+        execute(cmd.to_str().unwrap(), &[], env, &[], Duration::from_millis(timeout_ms), None, r.0.to_str())
     }
 
     #[test]
@@ -129,7 +130,7 @@ mod tests {
         let three = run(&r, "three", &[], 2000);
         assert_eq!((three.exit_code, three.stdout_tail.as_str()), (3, "partial\n"));
         assert_eq!(run(&r, "sig", &[], 2000).exit_code, -15);
-        let refused = execute("/etc/passwd", &[], &[], Duration::from_secs(1), None, r.0.to_str());
+        let refused = execute("/etc/passwd", &[], &[], &[], Duration::from_secs(1), None, r.0.to_str());
         assert_eq!(refused.exit_code, 126);
         assert!(refused.stderr_tail.starts_with("pulse: command rejected by execution-boundary allowlist: command path not in"), "{}", refused.stderr_tail);
         let missing = run(&r, "absent", &[], 2000);
@@ -162,8 +163,8 @@ mod tests {
         assert_eq!(res.stdout_tail, sent.chars().skip(sent.chars().count() - TAIL_CHARS).collect::<String>());
         assert_eq!(res.stderr_tail.chars().count(), TAIL_CHARS);
         let s = "ab\u{20ac}".repeat(1000); // 3000 chars, 5000 bytes
-        assert_eq!(tail(s.as_bytes()), s.chars().skip(1000).collect::<String>(), "last 2000 chars, not bytes");
-        assert_eq!(tail(b"ok\xff"), "ok\u{fffd}");
+        assert_eq!(tail(s.as_bytes(), &[]), s.chars().skip(1000).collect::<String>(), "last 2000 chars, not bytes");
+        assert_eq!(tail(b"ok\xff", &[]), "ok\u{fffd}");
     }
 
     #[test]

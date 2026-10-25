@@ -28,6 +28,8 @@ BENIGN_TAILS = frozenset(("NAME", "TYPE", "FILE", "PATH", "URL", "ERROR", "EXCEP
 FLAGS = ("password", "passwd", "api-key", "api_key", "apikey", "secret", "bearer", "token", "pass", "pwd")
 SCHEMES = ("bearer", "basic", "digest", "token", "apikey")
 BEARER_MIN = 16
+#: Shorter known values would eat ordinary words; six is the floor every minted secret clears.
+KNOWN_MIN = 6
 
 _KEY = frozenset(string.ascii_letters + string.digits + "_.-")
 _QUOTES = "\"'"
@@ -183,12 +185,20 @@ def _sub(t: str, match) -> str:
 	return "".join(out)
 
 
-def scrub_text(s: str | None) -> str:
-	"""Every layer of the contract in its order. Idempotent; None and "" give ""."""
+def _known(text: str, known) -> str:
+	"""Every exact occurrence of a value the runner handed the job, longest first."""
+	vals = {str(v) for v in known if v and len(str(v)) >= KNOWN_MIN and str(v) not in R}
+	for v in sorted(vals, key=lambda v: (-len(v), v)):
+		text = text.replace(v, R)
+	return text
+
+
+def scrub_text(s: str | None, known=()) -> str:
+	"""The known values, then every layer of the contract in its order. Idempotent; None and "" give ""."""
 	# ponytail: a pure-Python char scan, ~1.6 s per MB on the job's own thread; a C scan if a job floods.
 	if not s:
 		return ""
-	text = str(s)
+	text = _known(str(s), known)
 	for layer in (_header, _bearer, _cli, _kv):
 		text = _sub(text, layer)
 	return text

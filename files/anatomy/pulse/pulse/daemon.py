@@ -205,6 +205,7 @@ class PulseDaemon:
                        command: str, args: list, timeout_s: float,
                        env: dict[str, str] | None = None) -> None:
         thread = threading.current_thread()
+        known: list[str] = []  # the except branch scrubs with it even when resolution raised
         try:
             # THE RUN IS ITS OWN ACTION. `run_id` is already a uuid4 and is
             # already handed to the child as PULSE_RUN_ID, so using it as the
@@ -237,7 +238,11 @@ class PulseDaemon:
             # secret_ref` is a POINTER (`env:VAR`, `infisical:/path`) resolved at
             # session-open, never a value — and the runtime that actually runs
             # the agents did the opposite. This closes that gap on the Pulse side.
+            raw = env or {}
             env = self._resolve_secrets(env or {})
+            # The values this run knows are secret are scrubbed under ANY key (contracts/redact.yml).
+            known = [v for k, v in env.items() if isinstance(v, str) and (
+                sp_runner._SECRET_KEY_RE.search(k) or str(raw.get(k, "")).startswith(secret_refs.SECRET_PREFIX))]
             # THE RUN ID REACHES THE CHILD. pulse-run-agent.sh has read
             # `PULSE_RUN_ID` since A8 to build its event run_id — and nothing
             # ever set it. MEASURED 2026-08-13: every Pulse-fired ceremony in
@@ -278,8 +283,8 @@ class PulseDaemon:
             self.wing.post_run_finish(
                 run_id, finished_at_iso=_now_iso(),
                 exit_code=result.exit_code,
-                stdout_tail=redact.scrub_text(result.stdout_tail),
-                stderr_tail=redact.scrub_text(result.stderr_tail),
+                stdout_tail=redact.scrub_text(result.stdout_tail, known),
+                stderr_tail=redact.scrub_text(result.stderr_tail, known),
                 duration_ms=round(result.duration_s * 1000),
             )
         except Exception as e:  # noqa: BLE001 — broad catch on purpose; logged
@@ -289,7 +294,7 @@ class PulseDaemon:
                     run_id, finished_at_iso=_now_iso(),
                     exit_code=255,
                     stdout_tail="",
-                    stderr_tail=redact.scrub_text(f"daemon exception: {e}"),
+                    stderr_tail=redact.scrub_text(f"daemon exception: {e}", known),
                 )
             except Exception:  # noqa: BLE001
                 pass

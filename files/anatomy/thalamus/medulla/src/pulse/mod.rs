@@ -142,7 +142,9 @@ pub fn run(db: &str, job: &str) -> Result<serde_json::Value, String> {
             // Not UTF-8 = not passed: std::env::vars() would panic where Python's os.environ escapes.
             let inherited: Vec<(String, String)> = std::env::vars_os().filter_map(|(k, v)| Some((k.into_string().ok()?, v.into_string().ok()?))).collect();
             let timeout = std::time::Duration::from_secs(max_s.clamp(1, 3600) as u64);
-            exec::execute(&command, &args, &env::safe_env(&inherited, &job_env), timeout,
+            // Scrubbed under any key (contracts/redact.yml known_values); resolved secrets join when the medulla resolves them.
+            let known: Vec<String> = job_env.iter().filter(|(k, _)| env::secret_key(k)).map(|(_, v)| v.clone()).collect();
+            exec::execute(&command, &args, &env::safe_env(&inherited, &job_env), &known, timeout,
                           std::env::var("HOME").ok().as_deref(), std::env::var("NOS_REPO_ROOT").ok().as_deref())
         }
     };

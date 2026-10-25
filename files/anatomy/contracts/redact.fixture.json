@@ -1,6 +1,88 @@
 {
  "contract_version": 1,
- "why": "files/anatomy/contracts/redact.yml as cases. kv/cli/headers: [input, expected]; clean: inputs that must come back unchanged. Every expected value is also a fixed point (scrubbed again it stays). Both pulse/redact.py and medulla redact.rs are held to these bytes.",
+ "why": "files/anatomy/contracts/redact.yml as cases. kv/cli/headers: [input, expected]; clean: inputs that must come back unchanged. Every expected value is also a fixed point (scrubbed again it stays). Both pulse/redact.py and medulla redact.rs are held to these bytes. known_values: {in, known, out}, scrubbed with those known values.",
+ "known_values": [
+  {
+   "in": "url?x=fake-known-1&y=2",
+   "known": [
+    "fake-known-1"
+   ],
+   "out": "url?x=<REDACTED>&y=2"
+  },
+  {
+   "in": "connected as fakeuser with fake-known-1 ok",
+   "known": [
+    "fake-known-1"
+   ],
+   "out": "connected as fakeuser with <REDACTED> ok"
+  },
+  {
+   "in": "a fake-known-1 b fake-known-1",
+   "known": [
+    "fake-known-1"
+   ],
+   "out": "a <REDACTED> b <REDACTED>"
+  },
+  {
+   "in": "prefix-fake-known-1-suffix",
+   "known": [
+    "fake-known-1",
+    "fake-known-1-suffix"
+   ],
+   "out": "prefix-<REDACTED>"
+  },
+  {
+   "in": "short fake5 stays",
+   "known": [
+    "fake5",
+    ""
+   ],
+   "out": "short fake5 stays"
+  },
+  {
+   "in": "the marker <REDACTED> holds",
+   "known": [
+    "REDACTED",
+    "EDACT"
+   ],
+   "out": "the marker <REDACTED> holds"
+  },
+  {
+   "in": "x=fakeabcdefg",
+   "known": [
+    "fakeabcdef",
+    "abcdefg"
+   ],
+   "out": "x=<REDACTED>g"
+  },
+  {
+   "in": "x=fakeabcdefg",
+   "known": [
+    "abcdefg",
+    "fakeabcdef"
+   ],
+   "out": "x=<REDACTED>g"
+  },
+  {
+   "in": "NOTE=fake-known-1 API_KEY=other-fake",
+   "known": [
+    "fake-known-1"
+   ],
+   "out": "NOTE=<REDACTED> API_KEY=<REDACTED>"
+  },
+  {
+   "in": "ünï fake-známá-hodnota ✓",
+   "known": [
+    "fake-známá-hodnota"
+   ],
+   "out": "ünï <REDACTED> ✓"
+  },
+  {
+   "in": "no known values given",
+   "known": [],
+   "out": "no known values given"
+  }
+ ],
  "kv": [
   [
    "WING_API_TOKEN=FAKE_pw_wing_api next",

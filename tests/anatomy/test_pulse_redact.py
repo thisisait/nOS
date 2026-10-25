@@ -26,7 +26,7 @@ from pulse.redact import scrub_text  # type: ignore[import-not-found]  # noqa: E
 
 FX = json.loads(FIXTURE.read_text(encoding="utf-8"))
 SPEC_DOC = yaml.safe_load(SPEC.read_text(encoding="utf-8"))
-PAIRS = [(sec, i, o) for sec in SPEC_DOC["sections"] if sec != "clean" for i, o in FX[sec]]
+PAIRS = [(sec, i, o) for sec in SPEC_DOC["sections"] if sec not in ("clean", "known_values") for i, o in FX[sec]]
 
 
 def test_the_spec_names_this_fixture_and_these_files():
@@ -59,10 +59,47 @@ def test_safe_on_empty_and_none():
 	assert scrub_text(None) == ""
 
 
+def test_known_values_go_under_any_key():
+	bad = [(c, scrub_text(c["in"], known=c["known"])) for c in FX["known_values"]
+	       if scrub_text(c["in"], known=c["known"]) != c["out"] or scrub_text(c["out"], known=c["known"]) != c["out"]]
+	assert not bad, "\n".join(f"{c['in']!r} known {c['known']!r}\n   want {c['out']!r}\n    got {g!r}" for c, g in bad)
+
+
+def test_the_daemon_scrubs_the_values_it_handed_the_job(monkeypatch):
+	"""A resolved secret: reference and a literal under a secret-shaped key, printed under keys
+	no pattern calls secret, in both tails and in the daemon-exception message."""
+	from unittest.mock import MagicMock
+
+	from pulse import daemon, secrets
+	from pulse.runners.subprocess import RunResult
+
+	ref, lit = "fake-resolved-value-1", "fake-literal-value-2"
+	monkeypatch.setattr(secrets, "load_store", lambda: {"fake_name": ref})
+	env = {"WING_API_TOKEN": "secret:fake_name", "MAIL_PASSWORD": lit, "NOS_AGENT_NAME": "plain"}
+	out = f"url?x={ref}&y={lit} agent=plain"
+	results = iter([RunResult(0, 0.01, out, f"echo {lit}", False)])
+
+	def execute(command, args, *, timeout_s, env=None, cwd=None):
+		r = next(results, None)
+		if r is None:
+			raise RuntimeError(f"boom {ref}")
+		return r
+
+	monkeypatch.setattr(daemon.sp_runner, "execute", execute)
+	monkeypatch.setattr(daemon, "paused_hold", lambda job: None)
+	d = daemon.PulseDaemon(MagicMock(dry_run=False), wing=MagicMock())
+	for _ in range(2):
+		d._run_in_thread("j", "r", "/bin/true", [], 5.0, dict(env))
+	first, second = (c.kwargs for c in d.wing.post_run_finish.call_args_list)
+	assert first["stdout_tail"] == "url?x=<REDACTED>&y=<REDACTED> agent=plain"
+	assert first["stderr_tail"] == "echo <REDACTED>"
+	assert second["stderr_tail"] == "daemon exception: boom <REDACTED>"
+
+
 def test_daemon_applies_scrub_before_posting():
 	"""Both tails and the daemon-exception message pass through scrub_text."""
 	src = (PULSE_PKG / "pulse/daemon.py").read_text()
 	assert "from . import redact" in src
-	for site in ("redact.scrub_text(result.stdout_tail", "redact.scrub_text(result.stderr_tail",
-	             'redact.scrub_text(f"daemon exception: {e}"'):
-		assert site in src, f"daemon.py must call {site}…)"
+	for site in ("redact.scrub_text(result.stdout_tail, known)", "redact.scrub_text(result.stderr_tail, known)",
+	             'redact.scrub_text(f"daemon exception: {e}", known)'):
+		assert site in src, f"daemon.py must call {site}"

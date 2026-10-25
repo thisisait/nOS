@@ -18,7 +18,7 @@ const SECRET_PARTS: &[&str] = &["SECRET", "TOKEN", "PASSWORD", "CREDENTIAL", "AN
 
 /// `_SECRET_KEY_RE.search(k)` under re.I: Python also folds ſ→S, K (Kelvin)→K, İ/ı→I, and its `$`
 /// matches before one trailing newline. Both kept: a key Python strips, the medulla strips.
-fn secret_key(k: &str) -> bool {
+pub(crate) fn secret_key(k: &str) -> bool {
     let up: String = k
         .chars()
         .map(|c| match c {

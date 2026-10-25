@@ -25,7 +25,7 @@ marker: >-
   named the secret (the key, the flag, the header and its scheme) stays, so the operator still
   sees WHICH value went.
 
-sections: [kv, cli, headers, clean]
+sections: [known_values, kv, cli, headers, clean]
 
 characters: >-
   Positions are Unicode code points (Python str index, Rust Vec<char>). whitespace = Python
@@ -43,12 +43,21 @@ value: >-
   So `PASSWORD: two words` loses only `two`: unquoted, the end of a value is unknowable.
 
 layers:
-  order: [headers, bearer, cli, kv]
+  order: [known_values, headers, bearer, cli, kv]
   scan: >-
     Each layer is one left-to-right pass over the whole text: try the layer at every position;
     on a match keep text up to the value, write the marker, resume after the value. A later
     layer sees the earlier one's markers, and a marker is itself a value: re-scrubbing writes
     the same marker, so scrub(scrub(x)) == scrub(x).
+  known_values: >-
+    Before any pattern: every exact occurrence of a value the runner knows is secret becomes the
+    marker, longest first (ties in code-point order), so `url?x=<value>` loses it under a key no
+    pattern would call secret. A value shorter than 6 chars is skipped (it would eat ordinary
+    words), and so is one inside the marker itself (it would re-scrub the marker). The runner
+    passes: pulse/daemon.py, the values of env keys runners/subprocess.py _SECRET_KEY_RE calls
+    secret plus every value resolved from a `secret:` reference; the medulla, the values of
+    secret-shaped job env keys (env.rs secret_key; it refuses `secret:` jobs today). Wing, the
+    writer, scrubs again with the values it holds (a separate increment).
   headers: >-
     `authorization` not preceded by an ASCII letter (so Proxy-Authorization counts), an
     optional quote, gap, `:`, gap, an optional quote, a scheme of bearer|basic|digest|token|apikey,

@@ -10,6 +10,7 @@ const BENIGN_TAILS: &[&str] = &["NAME", "TYPE", "FILE", "PATH", "URL", "ERROR", 
 const FLAGS: &[&str] = &["password", "passwd", "api-key", "api_key", "apikey", "secret", "bearer", "token", "pass", "pwd"];
 const SCHEMES: &[&str] = &["bearer", "basic", "digest", "token", "apikey"];
 const BEARER_MIN: usize = 16;
+const KNOWN_MIN: usize = 6;
 
 type Hit = Option<(usize, usize)>;
 
@@ -61,7 +62,7 @@ fn segments(key: &[char]) -> Vec<String> {
     segs.into_iter().filter(|s| !s.is_empty()).map(|s| s.to_ascii_uppercase()).collect()
 }
 
-pub fn secret_key(key: &[char]) -> bool {
+fn secret_key(key: &[char]) -> bool {
     let segs = segments(key);
     let tail = |n: usize| &segs[segs.len().saturating_sub(n)..];
     if segs.is_empty() || BENIGN_KEYS.contains(&segs.join("_").as_str()) || BENIGN_TAILS.contains(&segs[segs.len() - 1].as_str()) || tail(2) == ["KEY", "ID"] {
@@ -187,7 +188,12 @@ fn sub(t: Vec<char>, m: fn(&[char], usize) -> Hit) -> Vec<char> {
     out
 }
 
-pub fn redact(text: &str) -> String {
+/// Every exact occurrence of a value the runner handed the job, longest first, then every layer.
+pub fn redact(text: &str, known: &[&str]) -> String {
+    let mut vals: Vec<&str> = known.iter().copied().filter(|v| v.chars().count() >= KNOWN_MIN && !R.contains(v)).collect();
+    vals.sort_by(|a, b| b.chars().count().cmp(&a.chars().count()).then(a.cmp(b)));
+    vals.dedup();
+    let text = vals.into_iter().fold(text.to_string(), |t, v| t.replace(v, R));
     [header, bearer, cli, kv].into_iter().fold(text.chars().collect(), sub).into_iter().collect()
 }
 
@@ -200,13 +206,15 @@ mod tests {
         let (mut bad, mut n) = (Vec::new(), 0);
         for (sec, cases) in v.as_object().unwrap().iter().filter(|(k, _)| !["contract_version", "why"].contains(&k.as_str())) {
             for c in cases.as_array().unwrap() {
-                let (input, want) = match c {
-                    serde_json::Value::String(s) => (s.as_str(), s.as_str()),
-                    p => (p[0].as_str().unwrap(), p[1].as_str().unwrap()),
+                let (input, want, known) = match c {
+                    serde_json::Value::String(s) => (s.as_str(), s.as_str(), vec![]),
+                    serde_json::Value::Object(o) => (o["in"].as_str().unwrap(), o["out"].as_str().unwrap(),
+                                                     o["known"].as_array().unwrap().iter().map(|k| k.as_str().unwrap()).collect()),
+                    p => (p[0].as_str().unwrap(), p[1].as_str().unwrap(), vec![]),
                 };
                 n += 1;
-                let got = super::redact(input);
-                if got != want || super::redact(&got) != got {
+                let got = super::redact(input, &known);
+                if got != want || super::redact(&got, &known) != got {
                     bad.push(format!("[{sec}] {input:?}\n   want {want:?}\n    got {got:?}"));
                 }
             }
