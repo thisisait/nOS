@@ -281,3 +281,21 @@ def test_the_child_receives_the_run_id_the_daemon_minted(monkeypatch):
     assert seen.get("PULSE_RUN_ID") == "job-declared", (
         "a job's own PULSE_RUN_ID was clobbered — setdefault, not assignment"
     )
+
+
+# ── the split: a job the medulla fires is never the daemon's ───────────
+
+def test_tick_skips_the_medullas_jobs(monkeypatch):
+    """PULSE_MEDULLA_JOBS (roles/pazny.pulse) names the jobs the medulla fires; the daemon fires the rest."""
+    monkeypatch.setenv("PULSE_MEDULLA_JOBS", "loop:repo-check,wing:inbox-reconcile")
+    cfg = PulseConfig.from_env()
+    assert cfg.medulla_jobs == frozenset({"loop:repo-check", "wing:inbox-reconcile"})
+    wing = MagicMock()
+    wing.list_due_jobs.return_value = [{"id": "loop:repo-check"}, {"id": "keap:keap-lint"}, {"id": "wing:inbox-reconcile"}]
+    d = PulseDaemon(cfg, wing=wing)
+    seen = []
+    d._dispatch = lambda job: seen.append(job["id"]) or True
+    assert d.tick() == 1
+    assert seen == ["keap:keap-lint"]
+    monkeypatch.delenv("PULSE_MEDULLA_JOBS")
+    assert PulseConfig.from_env().medulla_jobs == frozenset(), "unset must mean the daemon fires every job"
