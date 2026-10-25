@@ -403,7 +403,7 @@ def schedulers(conn: sqlite3.Connection) -> dict | None:
     since = (_now() - timedelta(hours=24)).isoformat(timespec="seconds")
     by: dict[str, set] = {}
     for job, actor in conn.execute(
-            f"SELECT DISTINCT job_id, actor_id FROM pulse_runs WHERE fired_at >= ? AND actor_id IN ({','.join('?' * len(SCHEDULERS))})",
+            "SELECT DISTINCT job_id, actor_id FROM pulse_runs WHERE fired_at >= ? AND actor_id IN (?, ?)",
             (since, *SCHEDULERS)):
         by.setdefault(job, set()).add(actor)
     return {"both": sorted(j for j, a in by.items() if len(a) > 1),

@@ -13,6 +13,9 @@ import json
 import os
 import sys
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "pulse"))
+from pulse import secrets  # noqa: E402 — the one secret: parser (test_secret_resolution_is_shared)
+
 
 def refusals(catalog: list[dict], ids: list[str]) -> list[str]:
     jobs = {f"{e['plugin_name'].removesuffix('-base')}:{e['job']['name']}": e["job"] for e in catalog if "job" in e}
@@ -25,7 +28,7 @@ def refusals(catalog: list[dict], ids: list[str]) -> list[str]:
         if (job.get("runner") or "subprocess") != "subprocess":
             out.append(f"{jid}: runner {job['runner']} — the medulla fires subprocess jobs only")
         env = job.get("env") or {}
-        secret = sorted(k for k, v in (env.items() if isinstance(env, dict) else []) if str(v).startswith("secret:"))
+        secret = sorted(secrets.refs(env if isinstance(env, dict) else {}))
         if secret:
             out.append(f"{jid}: env {', '.join(secret)} is a secret: reference — the medulla does not read secrets.yml")
     return out

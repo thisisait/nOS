@@ -17,7 +17,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 CHECK = REPO / "files/anatomy/scripts/pulse-medulla-split.py"
 CATALOG = [
-    {"plugin_name": "wing-base", "job": {"name": "dispatch", "env": {"WING_API_TOKEN": "secret:wing_api_token"}}},
+    {"plugin_name": "wing-base", "job": {"name": "dispatch", "env": {"WING_API_TOKEN": "secret:FAKE_wing_api_token"}}},
     {"plugin_name": "loop", "job": {"name": "repo-check", "env": {}}},
     {"plugin_name": "hermes-base", "job": {"name": "agent", "runner": "agent", "env": []}},
 ]

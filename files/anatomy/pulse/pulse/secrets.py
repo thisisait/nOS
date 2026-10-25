@@ -78,6 +78,11 @@ def load_store() -> dict:
         return {}
 
 
+def refs(env: dict) -> dict:
+    """The env entries that are ``secret:`` references, value untouched (the one parsing site)."""
+    return {k: v for k, v in (env or {}).items() if isinstance(v, str) and v.startswith(SECRET_PREFIX)}
+
+
 def resolve_env(env: dict) -> dict:
     """``secret:wing_api_token`` → the value from ``~/.nos/secrets.yml``.
 
@@ -85,15 +90,14 @@ def resolve_env(env: dict) -> dict:
     ``UnresolvableSecretError`` naming every missing entry). Literals pass
     through untouched, so unmigrated jobs keep running unchanged.
     """
-    refs = {k: v for k, v in env.items()
-            if isinstance(v, str) and v.startswith(SECRET_PREFIX)}
-    if not refs:
+    refs_ = refs(env)
+    if not refs_:
         return env
 
     store = load_store()
     out = dict(env)
     missing = []
-    for key, ref in refs.items():
+    for key, ref in refs_.items():
         name = ref[len(SECRET_PREFIX):]
         # PRESENCE, not truthiness. `mail_password` is legitimately '' on an
         # estate using mailpit rather than Stalwart, and the first cut of
