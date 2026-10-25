@@ -655,6 +655,7 @@
   "git@github.com:thisisait/nOS.git",
   "mailto:fake@example.com",
   "set_pw_ only",
-  "_pw_name alone"
+  "_pw_name alone",
+  "{\"ok\": true, \"tail_key\": \"current\"}"
  ]
 }

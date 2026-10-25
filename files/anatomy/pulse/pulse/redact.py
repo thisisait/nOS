@@ -22,7 +22,7 @@ STRONG = frozenset((
 #: ...and these only beside another segment: PWD alone is the shell's cwd, PASS alone a test verdict.
 WEAK = frozenset(("PASS", "PWD", "KEY", "AUTH", "BEARER", "COOKIE"))
 #: Keys that name or locate a secret, or index rows (contract: allow).
-BENIGN_KEYS = frozenset(("SORT_KEY", "PRIMARY_KEY", "FOREIGN_KEY"))
+BENIGN_KEYS = frozenset(("SORT_KEY", "PRIMARY_KEY", "FOREIGN_KEY", "TAIL_KEY"))
 BENIGN_TAILS = frozenset(("NAME", "TYPE", "FILE", "PATH", "URL", "ERROR", "EXCEPTION"))
 
 FLAGS = ("password", "passwd", "api-key", "api_key", "apikey", "secret", "bearer", "token", "pass", "pwd")

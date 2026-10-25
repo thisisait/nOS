@@ -5,7 +5,7 @@
 const R: &str = "<REDACTED>";
 const STRONG: &[&str] = &["TOKEN", "SECRET", "PASSWORD", "PASSWD", "APIKEY", "HMAC", "JWT", "CREDENTIAL", "CREDENTIALS", "PASSPHRASE"];
 const WEAK: &[&str] = &["PASS", "PWD", "KEY", "AUTH", "BEARER", "COOKIE"];
-const BENIGN_KEYS: &[&str] = &["SORT_KEY", "PRIMARY_KEY", "FOREIGN_KEY"];
+const BENIGN_KEYS: &[&str] = &["SORT_KEY", "PRIMARY_KEY", "FOREIGN_KEY", "TAIL_KEY"];
 const BENIGN_TAILS: &[&str] = &["NAME", "TYPE", "FILE", "PATH", "URL", "ERROR", "EXCEPTION"];
 const FLAGS: &[&str] = &["password", "passwd", "api-key", "api_key", "apikey", "secret", "bearer", "token", "pass", "pwd"];
 const SCHEMES: &[&str] = &["bearer", "basic", "digest", "token", "apikey"];

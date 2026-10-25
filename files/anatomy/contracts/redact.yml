@@ -110,6 +110,7 @@ allow:
     SORT_KEY: "names a column to sort by"
     PRIMARY_KEY: "names a column"
     FOREIGN_KEY: "names a column"
+    TAIL_KEY: "verify-audit-chain.php says which signing key (current|retired) verified the tail: the diagnostic; 8 of 10 live tails this scrub first changed (2026-10-25)"
   last_segment:
     NAME: "SECRET_NAME, KEY_NAME name a secret, never hold one"
     TYPE: "TOKEN_TYPE=Bearer is a scheme"
