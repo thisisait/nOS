@@ -840,7 +840,18 @@ suggested[] (option labels: exactly 1, or 1 or more when multi), multi}; never a
 ];
 
 /// When to reach for each kind: one sentence the model reads beside its shape (Ollama keeps descriptions only).
-pub const SHOW_ABOUT: &[(&str, &str)] = &[];
+pub const SHOW_ABOUT: &[(&str, &str)] = &[
+    ("table", "Rows you already hold, when the person compares several things across the same fields."),
+    ("list", "A short set of points, findings or options, one line each with an optional detail and tone."),
+    ("record", "One thing's fields side by side, or what an action would change in it."),
+    ("chart", "Numbers compared across categories or over time; with source the thalamus draws a table's own totals."),
+    ("tree", "A hierarchy such as an org chart, an outline or a breakdown, at most four levels deep."),
+    ("timeline", "Events in time order, as dated points or spans on lanes."),
+    ("graph", "Things and the links between them, when how they connect is the point."),
+    ("sequence", "Who sends what to whom in order, such as a protocol or a handoff between people or systems."),
+    ("choice", "A question at a fork where the person's answer changes what you do next; never yes or no on a write."),
+    ("kpi", "One headline number from a table, computed by the thalamus from source, never by you."),
+];
 
 fn expected_shape(kind: &str) -> String {
     SHOW_SHAPE.iter().find(|(k, _)| *k == kind).map(|(_, s)| (*s).to_string()).unwrap_or_else(|| {
@@ -864,7 +875,8 @@ pub fn show_schema() -> Value {
         "op": {"enum": ["count", "sum", "avg"]}}));
     source["description"] = json!("for a bar, line or pie chart of a table's rows, or a kpi's one total: what to aggregate; the drawn numbers are KEAP's");
     // Ollama keeps no oneOf or const (api/types.go ToolProperty): without these the model got component: {} (live 2026-10-17).
-    let told: Vec<String> = SHOW_SHAPE.iter().map(|(k, s)| format!("{k} {s}")).collect();
+    let about = |k: &str| SHOW_ABOUT.iter().find(|(a, _)| *a == k).map_or("", |(_, s)| *s);
+    let told: Vec<String> = SHOW_SHAPE.iter().map(|(k, s)| format!("{k} ({}) {s}", about(k))).collect();
     let about = format!("{{kind, props}}: one kind and its props; a kind's props, exactly: {}", told.join("; "));
     json!({"type": "object", "additionalProperties": false, "required": ["component"], "properties": {"source": source, "component": {
         "type": "object", "description": about, "required": ["kind", "props"], "properties": {
