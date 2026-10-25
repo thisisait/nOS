@@ -182,7 +182,7 @@ jobs:
       - name: Set up Node.
         uses: actions/setup-node@v7
         with:
-          node-version: '22'
+          node-version: '24'   # = node_nvm_version major (test_ci_node_is_the_host_node)
           cache: npm
           cache-dependency-path: files/anatomy/pupil/package-lock.json
 
@@ -245,7 +245,7 @@ jobs:
       - name: Set up Node.
         uses: actions/setup-node@v7
         with:
-          node-version: '22'
+          node-version: '24'   # = node_nvm_version major (test_ci_node_is_the_host_node)
           cache: npm
           cache-dependency-path: files/anatomy/face/package-lock.json
 
@@ -284,7 +284,7 @@ jobs:
       - name: Set up Node.
         uses: actions/setup-node@v7
         with:
-          node-version: '22'
+          node-version: '24'   # = node_nvm_version major (test_ci_node_is_the_host_node)
           cache: npm
           cache-dependency-path: files/anatomy/cortex/package-lock.json
 
