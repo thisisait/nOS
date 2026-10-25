@@ -87,6 +87,12 @@
 		return out;
 	});
 	let column: HTMLElement | undefined = $state();
+	let composer: HTMLTextAreaElement | undefined = $state();
+	// A follow_up prompt lands in the composer, never sent for the person: the turn stays theirs.
+	const suggested = (text: string) => {
+		draft = text;
+		composer?.focus();
+	};
 	let ey = $state(eye());
 	const see = (i: Input) => (ey = step(ey, i));
 	// Choices asked and not yet answered, by id; the eye waits on them as on an approval.
@@ -698,6 +704,7 @@
 					onchoose={answered}
 					onplace={placedOffer}
 					onread={opened}
+					onsuggest={suggested}
 				/>{/if}
 		{/each}
 	</div>
@@ -728,6 +735,7 @@
 						>{:else}{p.text}{/if}{/each}{'​'}
 			</div>
 			<textarea
+				bind:this={composer}
 				bind:value={draft}
 				rows="2"
 				placeholder={q.pending.length ? 'decide the approval first' : 'Ask Iris…'}

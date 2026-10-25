@@ -418,3 +418,55 @@
     - "Travel spend: 12450.5 Kč"
     - "down 320 vs last month"
     - sum of amount over 7 rows of Expenses (kind = travel)
+# v12: callout, steps, sources and follow_up (names and shapes after OpenUI's genui-lib, MIT).
+- id: callout-risk
+  kind: callout
+  component:
+    kind: callout
+    props:
+      tone: bad
+      title: Not backed up
+      text: These rows are in no backup taken today.
+  expect:
+    - "[bad] Not backed up"
+    - These rows are in no backup taken today.
+- id: steps-plan
+  kind: steps
+  component:
+    kind: steps
+    props:
+      title: Close the month
+      items:
+        - title: Import the statement
+          status: done
+        - title: Match invoices
+          status: active
+          detail: 12 of 40
+  expect:
+    - Close the month
+    - "1. [done] Import the statement"
+    - "2. [active] Match invoices — 12 of 40"
+# A source as serve sends it: name is the table title serve resolved from the rows it showed.
+- id: sources-rows
+  kind: sources
+  component:
+    kind: sources
+    props:
+      items:
+        - table: expenses
+          row: e1
+          name: Expenses
+          note: the travel line
+  expect:
+    - sources
+    - "Expenses (expenses) / e1 — the travel line"
+- id: follow-up-next
+  kind: follow_up
+  component:
+    kind: follow_up
+    props:
+      prompts: ["Chart this by month", "Which are unmatched?"]
+  expect:
+    - you could ask
+    - "> Chart this by month"
+    - "> Which are unmatched?"

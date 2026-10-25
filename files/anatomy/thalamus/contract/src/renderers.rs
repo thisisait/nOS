@@ -29,6 +29,10 @@ pub enum Component {
     Dendrogram(Dendrogram),
     Form(Form),
     Choice(Choice),
+    Callout(Callout),
+    Steps(Steps),
+    Sources(Sources),
+    FollowUp(FollowUp),
     Dashboard(Dashboard),
     Kpi(Kpi),
     ActionApproval(ActionApproval),
@@ -474,6 +478,65 @@ impl Component {
                     return Err(format!("a choice suggests exactly 1 option, not {}; multi suggests 1 or more", c.suggested.len()));
                 }
                 Ok(())
+            }
+            Component::Callout(c) => {
+                if c.title.trim().is_empty() || c.text.trim().is_empty() {
+                    return Err("a callout has a title and a text".into());
+                }
+                cap("title", &c.title, NAME_MAX)?;
+                cap("a callout text", &c.text, 2000)
+            }
+            Component::Steps(p) => {
+                title(&p.title)?;
+                if !(1..=20).contains(&p.items.len()) {
+                    return Err(format!("steps: {}, 1 to 20", p.items.len()));
+                }
+                if p.items.iter().filter(|i| i.status == StepStatus::Active).count() > 1 {
+                    return Err("at most one step is active".into());
+                }
+                p.items.iter().try_for_each(|i| {
+                    if i.title.trim().is_empty() {
+                        return Err("a step has no title".to_string());
+                    }
+                    cap("a step title", &i.title, NAME_MAX)?;
+                    i.detail.as_deref().map_or(Ok(()), |d| cap("a step detail", d, 2000))
+                })
+            }
+            Component::Sources(x) => {
+                title(&x.title)?;
+                if !(1..=20).contains(&x.items.len()) {
+                    return Err(format!("sources: {}, 1 to 20", x.items.len()));
+                }
+                let mut seen = std::collections::BTreeSet::new();
+                x.items.iter().try_for_each(|i| {
+                    if i.table.trim().is_empty() || i.row.trim().is_empty() {
+                        return Err("a source names its table and row".to_string());
+                    }
+                    cap("a source table", &i.table, 200)?;
+                    cap("a source row", &i.row, 200)?;
+                    i.name.as_deref().map_or(Ok(()), |n| cap("a source table name", n, NAME_MAX))?;
+                    i.note.as_deref().map_or(Ok(()), |n| cap("a source note", n, 200))?;
+                    if !seen.insert((&i.table, &i.row)) {
+                        return Err(format!("source {} / {} twice", i.table, i.row));
+                    }
+                    Ok(())
+                })
+            }
+            Component::FollowUp(f) => {
+                if !(1..=4).contains(&f.prompts.len()) {
+                    return Err(format!("follow-up prompts: {}, 1 to 4", f.prompts.len()));
+                }
+                let mut seen = std::collections::BTreeSet::new();
+                f.prompts.iter().try_for_each(|p| {
+                    if p.trim().is_empty() {
+                        return Err("a follow-up prompt is empty".to_string());
+                    }
+                    cap("a follow-up prompt", p, 200)?;
+                    if !seen.insert(p.trim().to_lowercase()) {
+                        return Err(format!("follow-up prompt {p:?} twice"));
+                    }
+                    Ok(())
+                })
             }
             Component::Dashboard(d) => {
                 if d.name.trim().is_empty() {
@@ -1133,6 +1196,76 @@ pub struct ChoiceOption {
     pub label: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,
+}
+
+// Callout, steps and follow_up take their names and prop shapes from OpenUI's genui-lib
+// (github.com/thesysdev/openui, MIT, Copyright (c) 2011-2024 Thesys Inc.); notice in
+// docs/systems/thalamus/genui-vocabulary.md. Only the vocabulary: no runtime, no code.
+
+/// A note the person should not miss (a risk, a caveat), in the face's tone words; text only.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Callout {
+    pub tone: Tone,
+    pub title: String,
+    pub text: String,
+}
+
+/// A plan as numbered steps; `status` is the model's claim, said as a word, never a verdict.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Steps {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    pub items: Vec<PlanStep>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PlanStep {
+    pub title: String,
+    pub status: StepStatus,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub detail: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum StepStatus {
+    Pending,
+    Active,
+    Done,
+    Failed,
+}
+
+/// The rows a claim came from: each one a row query_rows showed this session (serve refuses
+/// any other and sets `table` to its id and `name` to its title). No URL, no file path.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Sources {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    pub items: Vec<Source>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Source {
+    pub table: String,
+    pub row: String,
+    /// The table's title, set by serve; a render without it is refused (wire.rs).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+}
+
+/// Next prompts the person may pick: a click puts the text in their composer, they send it.
+/// Text only, never an action, a tool call or a write.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FollowUp {
+    pub prompts: Vec<String>,
 }
 
 /// Rows the model shows: `columns` names each cell of every row, in order.

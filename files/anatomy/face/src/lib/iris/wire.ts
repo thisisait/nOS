@@ -125,6 +125,29 @@ export type Component =
 	| { kind: 'dendrogram'; props: DendrogramProps }
 	| { kind: 'form'; props: FormProps }
 	| { kind: 'choice'; props: ChoiceProps }
+	| {
+			kind: 'callout';
+			props: { tone: 'ok' | 'info' | 'warn' | 'bad'; title: string; text: string };
+	  }
+	| {
+			kind: 'steps';
+			props: {
+				title?: string;
+				items: {
+					title: string;
+					status: 'pending' | 'active' | 'done' | 'failed';
+					detail?: string;
+				}[];
+			};
+	  }
+	| {
+			kind: 'sources';
+			props: {
+				title?: string;
+				items: { table: string; row: string; name?: string; note?: string }[];
+			};
+	  }
+	| { kind: 'follow_up'; props: { prompts: string[] } }
 	| { kind: 'dashboard'; props: DashboardProps }
 	| { kind: 'kpi'; props: KpiProps }
 	| {

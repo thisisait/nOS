@@ -1,0 +1,10 @@
+Close the month
+  1. [done] Import the bank statement
+  2. [active] Match the invoices — 12 of 40 matched
+  3. [pending] Send the summary
+  4. [failed] Fetch the card export — the bank's API timed out
+
+
+
+
+

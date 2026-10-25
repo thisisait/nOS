@@ -7694,3 +7694,32 @@ fn read_loop_runs_is_tier_one_only_and_unknown_when_unreadable() {
         assert!(e["error"].as_str().is_some_and(|e| e.contains(want)), "{name}: {e}");
     }
 }
+
+// --- v12: a source is a row the person was shown, named by serve ---
+
+/// The model cites a row query_rows showed, by the table's title: serve names it by id and title.
+/// A row never shown, or a `name` the model wrote, is refused and the model hears why; nothing is drawn.
+#[test]
+fn a_source_is_a_row_the_person_was_shown() {
+    let cite = |row: &str, extra: &str| call("show", &format!(
+        r#"{{"component": {{"kind": "sources", "props": {{"items": [{{"table": "Todo list", "row": "{row}"{extra}}}]}}}}}}"#));
+    for (name, show, want) in [("src-ok", cite("r1", r#", "note": "alpha""#), None),
+                               ("src-unseen", cite("r9", ""), Some("was not shown")),
+                               ("src-named", cite("r1", r#", "name": "Mine""#), Some("is the thalamus's"))] {
+        let (keap, _) = fake_table(SCHEMA, todo_rows());
+        let rig = rig_at(name, mapped(), keap, vec![query(r#"{"table": "todos", "q": "alpha"}"#), show, answer("Done.")], Some(local()));
+        let (got, _) = tool_turn(&rig, "where is that from?");
+        let src: Vec<_> = got.iter().filter_map(|m| match m {
+            ToShell::Render { component: c @ Component::Sources(_), .. } => Some(serde_json::to_value(c).unwrap()["props"]["items"].clone()),
+            _ => None,
+        }).collect();
+        match want {
+            None => assert_eq!(src, [serde_json::json!([{"table": "todos", "row": "r1", "name": "Todo list", "note": "alpha"}])], "{name}"),
+            Some(why) => {
+                assert!(src.is_empty(), "{name}: drawn anyway: {src:?}");
+                let e = tool_result(&rig, 2);
+                assert!(e["error"].as_str().is_some_and(|e| e.contains(why)), "{name}: the model was not told {why:?}: {e}");
+            }
+        }
+    }
+}

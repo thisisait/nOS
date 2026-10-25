@@ -1,0 +1,10 @@
+you could ask:
+  > Chart this by month
+  > Which invoices are still unmatched?
+
+
+
+
+
+
+
