@@ -157,6 +157,9 @@ final class PulsePresenter extends BaseApiPresenter
 	public function actionJobsDue(): void
 	{
 		$this->requireMethod('GET');
+		// The scheduler's own feed: env goes out WITHOUT withoutSecrets, so only a scheduler reads it.
+		// Measured 2026-10-25: every agent's wing.read passed; today the values are secret: refs only.
+		$this->requireRunScope();
 		$limit = max(1, min(200, (int) ($this->getParameter('limit') ?? 50)));
 		$this->sendSuccess([
 			'generated_at' => gmdate('c'),

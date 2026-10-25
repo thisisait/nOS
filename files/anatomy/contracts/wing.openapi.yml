@@ -1761,6 +1761,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: The token lacks pulse.run (or pulse.write); the feed carries env unfiltered
         '404':
           description: Not found
       security:

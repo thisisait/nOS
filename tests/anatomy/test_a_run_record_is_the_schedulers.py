@@ -59,6 +59,29 @@ def test_only_the_scheduler_records_a_run(tmp_path):
             assert reached, f"{action} as {allowed}: {got}"
 
 
+@verbs.needs_php
+@verbs.needs_vendor
+def test_only_the_scheduler_reads_the_due_feed(tmp_path):
+    """/pulse_jobs/due hands out env unfiltered (the daemon needs it): an agent's wing.read is not enough."""
+    harness = HARNESS.replace("method: 'POST'", "method: 'GET'").replace(
+        "new Nette\\Application\\Request('Api:' . $c['presenter'], 'POST', $params)",
+        "new Nette\\Application\\Request('Api:' . $c['presenter'], 'GET', $params)")
+    assert harness.count("'GET'") >= 2, "the harness's request lines moved"
+    subprocess.run(["php", str(verbs.WING / "bin/init-db.php"), f"--data-dir={tmp_path}"],
+                   capture_output=True, check=True, timeout=60)
+    cases = [{"presenter": "Pulse", "action": "jobsDue", "token": t} for t in WHO.values()]
+    r = subprocess.run(["php", "-d", "error_reporting=E_ALL", "-r", harness, str(verbs.AUTOLOAD),
+                        str(tmp_path / "wing.db"), json.dumps(cases)],
+                       capture_output=True, text=True, timeout=120, check=False, cwd=verbs.WING)
+    assert r.returncode == 0, r.stdout + r.stderr
+    row = dict(zip(WHO, json.loads(r.stdout)["results"]))
+    for denied in ("agent", "legacy_null_scope", "operator_token"):
+        assert row[denied]["code"] == 403 and "pulse.run" in (row[denied]["error"] or ""), f"due as {denied}: {row[denied]}"
+    for allowed in ("scheduler", "medulla"):
+        got = row[allowed]
+        assert got["code"] == "reached" or "before initialization" in (got["error"] or ""), f"due as {allowed}: {got}"
+
+
 def test_the_python_daemon_holds_a_token_that_may():
     """Pulse posts runs with pulse_api_token, which is wing_api_token: minted wing.write,pulse.write."""
     assert 'pulse_api_token: "{{ wing_api_token }}"' in (REPO / "roles/pazny.pulse/defaults/main.yml").read_text()
