@@ -90,7 +90,11 @@ the same newline-JSON wire:
   also in every shell's decoder) and only the model hears why. It can never draw
   an approval or a kind a tool or a control draws. A `kpi` (one number on a tile) is
   drawn only with `source {query, op, y?}`: serve computes the total, drops any number
-  the model sent, and pins `{kpi}` so the tile re-runs. A rows widget exports the rows
+  the model sent, and pins `{kpi}` so the tile re-runs. Each kind carries one
+  sentence saying when to use it (`SHOW_ABOUT`, told beside its shape). A `sources`
+  item must be a row query_rows showed this session; serve names it, or refuses it.
+  A `follow_up` prompt clicked in the pupil lands in the composer, never sent for the
+  person. Vocabulary inventory against OpenUI: [genui-vocabulary.md](genui-vocabulary.md). A rows widget exports the rows
   it shows as CSV (pupil `csv.ts`, formula cells apostrophed) to a new file in Downloads.
 
 The shell raises three views without the model: F2 inbox, F3 approvals
