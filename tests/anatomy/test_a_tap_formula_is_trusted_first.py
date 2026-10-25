@@ -48,7 +48,10 @@ def test_every_tap_formula_install_is_trusted_first():
 
 
 def test_the_homebrew_role_trusts_its_tap_formulae():
-    cfg = yaml.safe_load((REPO / "config.d/20-host-software.yml").read_text(encoding="utf-8"))
+    import sys
+    sys.path.insert(0, str(REPO / "tools"))
+    import nos_identity  # noqa: PLC0415 — the one reader of the committed layers
+    cfg = nos_identity.default_config()
     taps = {t if isinstance(t, str) else t["name"] for t in cfg["homebrew_taps"]}
     trusted = set(cfg.get("homebrew_trusted_formulae") or [])
     assert all(any(f.startswith(tap + "/") for tap in taps) for f in trusted), "a trusted formula from a tap not tapped"
