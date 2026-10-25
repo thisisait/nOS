@@ -369,6 +369,10 @@ mail_digest_cron: "0 9 * * *"
 # return 404 today and Pulse idle-tolerates that gracefully (warns once
 # per minute, no crash-loop). Endpoints land alongside A7 (gitleaks plugin).
 install_pulse: true
+# The jobs the medulla fires (`medulla pulse serve`, eu.thisisait.nos.medulla-pulse); the Python daemon
+# skips exactly these. Empty = the medulla fires nothing. A secret: job is refused at converge (it needs
+# install_thalamus for the binary). Rollback: empty it, then `nos --tags pulse`.
+pulse_medulla_jobs: []
 
 # The maintainer's development loops: loops/*.loop.yml, loop-base (propose,
 # drive, review), trunk-sync and the cells that serve only them (proposer,

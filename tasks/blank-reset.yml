@@ -179,6 +179,7 @@
       - "eu.thisisait.nos.bone.plist"
       - "eu.thisisait.nos.cortex.plist"
       - "eu.thisisait.nos.pulse.plist"
+      - "eu.thisisait.nos.medulla-pulse.plist"
       - "eu.thisisait.nos.wing.plist"
       - "eu.thisisait.nos.hermes.plist"
       - "eu.thisisait.nos.device-gateway.plist"

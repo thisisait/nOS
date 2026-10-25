@@ -44,6 +44,22 @@ pulse_wing_api_base: "http://127.0.0.1:{{ wing_port | default(9000) }}"
 # OIDC client) lands in A10 (audit-trail phase).
 pulse_api_token: "{{ wing_api_token }}"
 
+# The medulla's half of the split (pulse_medulla_jobs, default.config.yml; tasks/medulla-pulse.yml).
+pulse_medulla_label: "eu.thisisait.nos.medulla-pulse"
+# pazny.medulla builds it (install_thalamus); spelled out because that role's vars are private.
+pulse_medulla_bin: "{{ ansible_facts['env']['HOME'] }}/thalamus/bin/medulla"
+pulse_medulla_env:
+  HOME: "{{ ansible_facts['env']['HOME'] }}"
+  PATH: "{{ pulse_python | dirname }}:{{ homebrew_prefix | default('/opt/homebrew') }}/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+  NOS_REPO_ROOT: "{{ nos_main_checkout }}"
+  MEDULLA_PULSE: "1"
+  MEDULLA_WING_TOKEN: "{{ medulla_wing_api_token }}"
+  NOS_WING_URL: "{{ pulse_wing_api_base }}"
+  PULSE_MEDULLA_JOBS: "{{ pulse_medulla_jobs | join(',') }}"
+  PULSE_TICK_INTERVAL_S: "{{ pulse_tick_interval_s | string }}"
+  PULSE_MAX_CONCURRENT: "{{ pulse_max_concurrent | string }}"
+  WING_DB_PATH: "{{ pulse_wing_db_path }}"
+
 # Python interpreter. macOS: the operator's pyenv shim. Linux: the system
 # interpreter (tasks/python.yml apt-installs python3-venv for it).
 pulse_python: "{{ (ansible_facts['env']['HOME'] ~ '/.pyenv/shims/python3') if ansible_os_family == 'Darwin' else (ansible_facts['python']['executable'] | default('/usr/bin/python3', true)) }}"

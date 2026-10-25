@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- {{ ansible_managed }} — roles/pazny.pulse (tasks/medulla-pulse.yml). The medulla fires the
+     jobs in pulse_medulla_jobs; pulse.plist.j2 gives the Python daemon the same list to skip. -->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>{{ pulse_medulla_label }}</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>{{ pulse_medulla_bin }}</string>
+        <string>pulse</string>
+        <string>serve</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>{{ nos_main_checkout }}</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+{% for k, v in pulse_medulla_env.items() %}
+        <key>{{ k }}</key>
+        <string>{{ v }}</string>
+{% endfor %}
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <!-- Above serve's 30 s SIGTERM drain, so launchd does not kill a run it is draining. -->
+    <key>ExitTimeOut</key>
+    <integer>40</integer>
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+
+    <key>StandardOutPath</key>
+    <string>{{ pulse_log_dir }}/medulla-pulse.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>{{ pulse_log_dir }}/medulla-pulse.err.log</string>
+</dict>
+</plist>
