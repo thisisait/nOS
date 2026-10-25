@@ -28,7 +28,7 @@ _spec = importlib.util.spec_from_file_location("_metrics", REPO / "tests/anatomy
 m = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(m)
 
-SECRET = "s3cr3t-value-must-not-leak"
+SECRET = "FAKE_pulse_env_value_never_leaks"
 
 
 def _render(reads: list[str], routes: list[str] | None = None) -> str:
