@@ -616,7 +616,9 @@ version = "0.1.0"
 dependencies = [
  "nos-contract",
  "rusqlite",
+ "serde_json",
  "thalamus",
+ "time",
 ]
 
 [[package]]

@@ -3,6 +3,7 @@
 use std::process::ExitCode;
 
 mod metrics;
+mod pulse;
 
 fn main() -> ExitCode {
     let mut argv = std::env::args();
@@ -13,6 +14,7 @@ fn main() -> ExitCode {
         ("thalamus" | "iris", _) => thalamus(&args),
         (_, Some("thalamus")) => thalamus(&args[1..]),
         (_, Some("wing")) => wing(&args[1..]),
+        (_, Some("pulse")) => pulse::cli(&args[1..]),
         (_, Some("--version")) => {
             println!("medulla {}", env!("CARGO_PKG_VERSION"));
             ExitCode::SUCCESS
@@ -22,7 +24,7 @@ fn main() -> ExitCode {
 }
 
 fn usage() -> ExitCode {
-    eprintln!("usage: medulla thalamus [serve --data-dir <dir>] | medulla wing serve --db <wing.db> --port <n> | medulla --version");
+    eprintln!("usage: medulla thalamus [serve --data-dir <dir>] | medulla wing serve --db <wing.db> --port <n> | medulla pulse plan --db <wing.db> | medulla --version");
     ExitCode::from(2)
 }
 
