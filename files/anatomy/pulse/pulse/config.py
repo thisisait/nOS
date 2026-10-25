@@ -22,6 +22,8 @@ class PulseConfig:
     log_path: pathlib.Path
     max_concurrent_runs: int
     dry_run: bool
+    # The jobs the medulla fires (pulse_medulla_jobs, roles/pazny.pulse); this daemon skips them.
+    medulla_jobs: frozenset = frozenset()
 
     @classmethod
     def from_env(cls) -> "PulseConfig":
@@ -39,6 +41,7 @@ class PulseConfig:
             log_path=log_path,
             max_concurrent_runs=int(os.environ.get("PULSE_MAX_CONCURRENT", "4")),
             dry_run=os.environ.get("PULSE_DRY_RUN", "0") == "1",
+            medulla_jobs=frozenset(j for j in os.environ.get("PULSE_MEDULLA_JOBS", "").split(",") if j),
         )
 
     def ensure_dirs(self) -> None:
