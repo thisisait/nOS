@@ -65,4 +65,22 @@ def test_the_python_daemon_holds_a_token_that_may():
     assert "--scopes=wing.write,pulse.write" in (REPO / "roles/pazny.wing/tasks/post.yml").read_text()
 
 
+@verbs.needs_php
+@pytest.mark.parametrize("name,ok", [("medulla", True), ("ansible-provisioned", True), ("librarian", False),
+                                     ("thalamus", False), ("face-bff", False)])
+def test_only_a_scheduler_can_be_minted_pulse_run(tmp_path, name, ok):
+    db = tmp_path / "w.db"
+    db.write_bytes(b"")  # absent table: a refusal comes before the db is touched
+    out = subprocess.run(["php", str(verbs.WING / "bin/provision-token.php"), f"--db={db}", "--token=x",
+                          f"--name={name}", "--scopes=wing.write,pulse.run"], capture_output=True, text=True, timeout=60)
+    refused = "pulse.run is reserved" in out.stdout and out.returncode == 1
+    assert refused != ok, f"{name}: rc={out.returncode} {out.stdout.strip()[:200]}"
+
+
+def test_the_medulla_is_minted_pulse_run_and_never_pulse_write():
+    post = (REPO / "roles/pazny.wing/tasks/post.yml").read_text()
+    block = post[post.index("--name=medulla"):][:120]
+    assert "--scopes=wing.write,pulse.run\n" in block, block
+
+
 pytestmark = pytest.mark.filterwarnings("ignore::DeprecationWarning")

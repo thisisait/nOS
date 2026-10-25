@@ -391,6 +391,25 @@
   no_log: true
   when: install_thalamus | default(false) | bool
 
+# The medulla's nerve (row medulla-scheduler, c2): it records the Pulse runs it fires. pulse.run, never
+# pulse.write: recording a run is not registering a command. Gate: test_a_run_record_is_the_schedulers.
+- name: "[pazny.wing] Reconverge API token — medulla (records the runs it fires)"
+  ansible.builtin.command:
+    argv:
+      - "{{ wing_php_cli }}"
+      - "{{ wing_app_dir }}/bin/provision-token.php"
+      - --db={{ wing_data_dir }}/wing.db
+      - --token={{ medulla_wing_api_token }}
+      - --name=medulla
+      - --scopes=wing.write,pulse.run
+    chdir: "{{ wing_app_dir }}"
+  register: _wing_medulla_token
+  changed_when: >
+    'Created' in (_wing_medulla_token.stdout | default(''))
+    or 'Updated' in (_wing_medulla_token.stdout | default(''))
+  no_log: true
+  when: install_thalamus | default(false) | bool
+
 # The emergency-halt break-glass (`nos halt`, docs/nos-cli.md). wing.halt reaches
 # Admin:halt/resume and no other operator verb; wing.write: POST. Its only holder
 # is the operator's ~/.nos/secrets.yml, so it works with face and Traefik down.

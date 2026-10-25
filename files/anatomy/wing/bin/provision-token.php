@@ -75,6 +75,12 @@ if (in_array('pulse.write', $requested, true) && $name !== 'ansible-provisioned'
 	echo "pulse.write is reserved for ansible-provisioned, refused for '{$name}'\n";
 	exit(1);
 }
+// pulse.run = recording that a job ran and how it ended (its finish moves next_fire_at). Only the
+// schedulers hold it: the converge's token, which the Python daemon uses, and the medulla's.
+if (in_array('pulse.run', $requested, true) && !in_array($name, ['ansible-provisioned', 'medulla'], true)) {
+	echo "pulse.run is reserved for the schedulers (ansible-provisioned, medulla), refused for '{$name}'\n";
+	exit(1);
+}
 // wing.operator = an operator decision over the API (upgrade, migration, coexistence,
 // patch, approval). Only the face BFF holds it, and Wing still asks its person for Tier 1.
 if (in_array('wing.operator', $requested, true) && $name !== 'face-bff') {

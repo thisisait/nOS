@@ -1,10 +1,12 @@
 //! The Pulse schedule in the medulla (row medulla-scheduler, increments a-c). It never writes: the db
 //! opens read-only. `plan`: Wing's next_fire_at beside the medulla's, and the allowlist verdict, per
 //! job. `tick --dry-run`: what one Pulse tick would do with each due job. `run <job>`: fires that one
-//! job as the daemon would, only with MEDULLA_PULSE=1, and prints the result; no nerve carries it yet.
+//! job as the daemon would, only with MEDULLA_PULSE=1, and prints the result; with --report the
+//! nerve (nerve.rs) carries the start and the finish to the organ that writes the record.
 pub mod allow;
 pub mod cron;
 pub mod env;
+pub mod nerve;
 pub mod exec;
 pub mod redact;
 
@@ -110,7 +112,7 @@ fn uuid4() -> Result<String, String> {
 /// One job, fired as daemon.py::_run_in_thread does: hold, child env, run, scrub, tails.
 /// Refused before anything runs: a runner other than subprocess, and any `secret:` value —
 /// the medulla does not read secrets.yml (row secrets-at-rest decides how it will).
-pub fn run(db: &str, job: &str) -> Result<serde_json::Value, String> {
+pub fn run(db: &str, job: &str, nerve: Option<&nerve::Nerve>) -> Result<serde_json::Value, String> {
     let conn = open(db)?;
     let (runner, command, args, env, max_s): (String, String, String, String, i64) = conn
         .query_row("SELECT runner, command, args_json, env_json, max_runtime_s FROM pulse_jobs WHERE id = ?1 AND removed_at IS NULL",
@@ -135,7 +137,12 @@ pub fn run(db: &str, job: &str) -> Result<serde_json::Value, String> {
             job_env.push((k.to_string(), v)); // setdefault: a job's own value wins
         }
     }
-    let r = match hold(job) {
+    let now = || iso(time::OffsetDateTime::now_utc().unix_timestamp());
+    if let Some(n) = nerve {
+        n.start(job, &run_id, &now()).map_err(|e| format!("{job}: not fired, the start was not recorded ({e})"))?;
+    }
+    let held = hold(job);
+    let r = match held {
         Some(why) => exec::RunResult { exit_code: 3, duration_ms: 0, stdout_tail: String::new(), timed_out: false,
                                        stderr_tail: format!("PAUSED: {why} — {job} held") },
         None => {
@@ -146,8 +153,10 @@ pub fn run(db: &str, job: &str) -> Result<serde_json::Value, String> {
                           std::env::var("HOME").ok().as_deref(), std::env::var("NOS_REPO_ROOT").ok().as_deref())
         }
     };
+    let reported = nerve.map(|n| n.finish(&run_id, &r, &now(), held.is_none()));
     Ok(serde_json::json!({"job": job, "run_id": run_id, "actor_id": "medulla", "exit_code": r.exit_code,
-        "duration_ms": r.duration_ms, "timed_out": r.timed_out, "stdout_tail": r.stdout_tail, "stderr_tail": r.stderr_tail}))
+        "duration_ms": r.duration_ms, "timed_out": r.timed_out, "stdout_tail": r.stdout_tail, "stderr_tail": r.stderr_tail,
+        "reported": match reported { None => serde_json::Value::Null, Some(Ok(())) => true.into(), Some(Err(e)) => e.into() }}))
 }
 
 pub fn cli(args: &[String]) -> ExitCode {
@@ -176,7 +185,14 @@ pub fn cli(args: &[String]) -> ExitCode {
                 eprintln!("medulla pulse run: off (MEDULLA_PULSE=1 arms it; Pulse is the scheduler until the cutover)");
                 return ExitCode::from(2);
             }
-            match args.get(1).filter(|j| !j.starts_with("--")).map(|j| run(db, j)) {
+            let nerve = match args.iter().any(|a| a == "--report").then(nerve::Nerve::from_env).transpose() {
+                Ok(n) => n,
+                Err(e) => {
+                    eprintln!("medulla pulse run: {e}");
+                    return ExitCode::from(2);
+                }
+            };
+            match args.get(1).filter(|j| !j.starts_with("--")).map(|j| run(db, j, nerve.as_ref())) {
                 Some(Ok(v)) => {
                     println!("{v}");
                     ExitCode::SUCCESS
@@ -189,7 +205,7 @@ pub fn cli(args: &[String]) -> ExitCode {
             }
         }
         _ => {
-            eprintln!("usage: medulla pulse plan|tick --dry-run|run <job> --db <wing.db> [--now <epoch>]  (run needs MEDULLA_PULSE=1)");
+            eprintln!("usage: medulla pulse plan|tick --dry-run|run <job> [--report] --db <wing.db> [--now <epoch>]  (run needs MEDULLA_PULSE=1; --report MEDULLA_WING_TOKEN)");
             ExitCode::from(2)
         }
     }

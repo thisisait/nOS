@@ -620,6 +620,7 @@ dependencies = [
  "serde_json",
  "thalamus",
  "time",
+ "ureq",
 ]
 
 [[package]]
