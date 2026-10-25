@@ -167,6 +167,12 @@
         state: present
       loop: "{{ homebrew_taps }}"
 
+    - name: Trust the tap formulae this estate installs (Homebrew 7 refuses an untrusted tap)
+      ansible.builtin.include_tasks: ../../../tasks/brew-trust.yml  # relative: ansible-lint cannot evaluate playbook_dir
+      vars:
+        brew_trust_formulae: "{{ homebrew_trusted_formulae | default([]) }}"
+      when: (homebrew_trusted_formulae | default([])) | length > 0
+
     # Cask.
     - name: Ensure blacklisted cask applications are not installed.
       homebrew_cask:

@@ -1,0 +1,15 @@
+---
+# Homebrew 7 loads a formula from a non-official tap only once it is trusted: the converge of
+# 2026-10-25 died at tasks/bun.yml ("Refusing to load formula oven-sh/bun/bun from untrusted tap").
+# Trust is per FORMULA, never a whole tap: a tap can add formulae nobody here vetted.
+# Caller passes `brew_trust_formulae` (full names). Gate: test_a_tap_formula_is_trusted_first.py.
+- name: "[brew-trust] What Homebrew already trusts"
+  ansible.builtin.command: "{{ homebrew_prefix | default('/opt/homebrew') }}/bin/brew trust --json=v1"
+  register: _brew_trusted
+  changed_when: false
+  check_mode: false
+
+- name: "[brew-trust] Trust {{ brew_trust_formulae | join(', ') }}"
+  ansible.builtin.command: "{{ homebrew_prefix | default('/opt/homebrew') }}/bin/brew trust --formula {{ item }}"
+  loop: "{{ brew_trust_formulae | reject('in', _brew_trusted.stdout) | list }}"
+  changed_when: true

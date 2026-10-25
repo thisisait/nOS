@@ -175,6 +175,10 @@ homebrew_personal_packages:
 homebrew_taps:
   - shivammathur/php
   - infisical/get-cli       # required by `- infisical` formula above
+# Homebrew 7 loads a tap's formula only once trusted (tasks/brew-trust.yml): each formula
+# installed from a tap above, by full name. bun and php-zts trust themselves where installed.
+homebrew_trusted_formulae:
+  - infisical/get-cli/infisical
 
 homebrew_cask_appdir: /Applications
 homebrew_cask_accept_external_apps: true

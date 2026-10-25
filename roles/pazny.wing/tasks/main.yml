@@ -108,6 +108,12 @@
 # ---- macOS: the `php` CLI (composer, bin/*.php, Pulse jobs) ----
 # php-zts used to arrive as the frankenphp formula's dependency; with FrankenPHP
 # off Homebrew it is installed by name. It owns /opt/homebrew/bin/php.
+- name: "[pazny.wing] (macOS) Trust the php-zts formula (Homebrew 7 refuses an untrusted tap)"
+  ansible.builtin.include_tasks: ../../../tasks/brew-trust.yml  # relative: ansible-lint cannot evaluate playbook_dir
+  vars:
+    brew_trust_formulae: [shivammathur/php/php-zts]
+  when: ansible_os_family == 'Darwin'
+
 - name: "[pazny.wing] (macOS) Install the php CLI (php-zts)"
   community.general.homebrew:
     name: shivammathur/php/php-zts

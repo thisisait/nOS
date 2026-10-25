@@ -9,6 +9,12 @@
     state: present
   when: nos_pkg_manager == 'homebrew'
 
+- name: Trust the Bun formula (Homebrew 7 refuses an untrusted tap)
+  ansible.builtin.include_tasks: brew-trust.yml
+  vars:
+    brew_trust_formulae: [oven-sh/bun/bun]
+  when: nos_pkg_manager == 'homebrew'
+
 - name: Install Bun via Homebrew
   community.general.homebrew:
     name: oven-sh/bun/bun
