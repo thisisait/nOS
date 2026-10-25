@@ -7723,3 +7723,17 @@ fn a_source_is_a_row_the_person_was_shown() {
         }
     }
 }
+
+/// Done and failed are verdicts, and a verdict is not the model's to write (ruling 2026-10-25):
+/// a model's steps carry pending and active only; nothing is drawn and the model hears why.
+#[test]
+fn a_models_steps_never_say_done_or_failed() {
+    for status in ["done", "failed"] {
+        let show = call("show", &format!(r#"{{"component": {{"kind": "steps", "props": {{"items": [{{"title": "a", "status": "{status}"}}]}}}}}}"#));
+        let rig = rig_at(&format!("steps-{status}"), mapped(), fake_table(SCHEMA, todo_rows()).0, vec![show, answer("Done.")], Some(local()));
+        let (got, _) = tool_turn(&rig, "plan it");
+        assert!(!got.iter().any(|m| matches!(m, ToShell::Render { component: Component::Steps(_), .. })), "{status}: drawn: {got:?}");
+        let e = tool_result(&rig, 1);
+        assert!(e["error"].as_str().is_some_and(|e| e.contains("the thalamus's to say")), "{status}: {e}");
+    }
+}
