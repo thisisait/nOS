@@ -2,13 +2,15 @@
 //! opens read-only. `plan`: Wing's next_fire_at beside the medulla's, and the allowlist verdict, per
 //! job. `tick --dry-run`: what one Pulse tick would do with each due job. `run <job>`: fires that one
 //! job as the daemon would, only with MEDULLA_PULSE=1, and prints the result; with --report the
-//! nerve (nerve.rs) carries the start and the finish to the organ that writes the record.
+//! nerve (nerve.rs) carries the start and the finish to the organ that writes the record. `serve`
+//! (serve.rs): the schedule for the jobs in PULSE_MEDULLA_JOBS, each fired as `run --report` is.
 pub mod allow;
 pub mod cron;
 pub mod env;
 pub mod nerve;
 pub mod exec;
 pub mod redact;
+pub mod serve;
 
 use std::process::ExitCode;
 
@@ -109,25 +111,59 @@ fn uuid4() -> Result<String, String> {
     Ok(format!("{}-{}-{}-{}-{}", &h[..8], &h[8..12], &h[12..16], &h[16..20], &h[20..]))
 }
 
+/// One job as both sources carry it: the db row (`run`) and the due feed (`serve`).
+pub struct Job {
+    pub id: String,
+    runner: String,
+    command: String,
+    args: Vec<String>,
+    env: Vec<(String, String)>,
+    max_s: i64,
+}
+
+/// PHP's json_encode writes an empty env as `[]` (14 of 42 live rows); Python and PHP read it as empty.
+fn job_env(id: &str, v: serde_json::Value) -> Result<Vec<(String, String)>, String> {
+    let env: serde_json::Map<String, serde_json::Value> = match v {
+        serde_json::Value::Array(a) if a.is_empty() => serde_json::Map::new(),
+        v => serde_json::from_value(v).map_err(|e| format!("{id}: env {e}"))?,
+    };
+    Ok(env.into_iter().map(|(k, v)| (k, v.as_str().unwrap_or_default().to_string())).collect())
+}
+
+impl Job {
+    fn from_db(db: &str, id: &str) -> Result<Job, String> {
+        let (runner, command, args, env, max_s): (String, String, String, String, i64) = open(db)?
+            .query_row("SELECT runner, command, args_json, env_json, max_runtime_s FROM pulse_jobs WHERE id = ?1 AND removed_at IS NULL",
+                       [id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)))
+            .map_err(|e| format!("{id}: {e}"))?;
+        let args = serde_json::from_str(&args).map_err(|e| format!("{id}: args_json {e}"))?;
+        let env = job_env(id, serde_json::from_str(&env).map_err(|e| format!("{id}: env_json {e}"))?)?;
+        Ok(Job { id: id.to_string(), runner, command, args, env, max_s })
+    }
+
+    /// One row of GET /api/v1/pulse_jobs/due (PulseRepository::listDue).
+    pub fn from_feed(v: &serde_json::Value) -> Result<Job, String> {
+        let id = v["id"].as_str().ok_or("due feed: a job without an id")?.to_string();
+        let args = serde_json::from_value(v["args"].clone()).map_err(|e| format!("{id}: args {e}"))?;
+        let env = job_env(&id, if v["env"].is_null() { serde_json::json!({}) } else { v["env"].clone() })?;
+        Ok(Job { runner: v["runner"].as_str().unwrap_or("subprocess").into(), command: v["command"].as_str().unwrap_or_default().into(),
+                 args, env, max_s: v["max_runtime_s"].as_i64().unwrap_or(300), id })
+    }
+}
+
+pub fn run(db: &str, job: &str, nerve: Option<&nerve::Nerve>) -> Result<serde_json::Value, String> {
+    fire(&Job::from_db(db, job)?, nerve)
+}
+
 /// One job, fired as daemon.py::_run_in_thread does: hold, child env, run, scrub, tails.
 /// Refused before anything runs: a runner other than subprocess, and any `secret:` value —
 /// the medulla does not read secrets.yml (row secrets-at-rest decides how it will).
-pub fn run(db: &str, job: &str, nerve: Option<&nerve::Nerve>) -> Result<serde_json::Value, String> {
-    let conn = open(db)?;
-    let (runner, command, args, env, max_s): (String, String, String, String, i64) = conn
-        .query_row("SELECT runner, command, args_json, env_json, max_runtime_s FROM pulse_jobs WHERE id = ?1 AND removed_at IS NULL",
-                   [job], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)))
-        .map_err(|e| format!("{job}: {e}"))?;
-    if runner != "subprocess" {
-        return Err(format!("{job}: runner {runner} is not the medulla's"));
+pub fn fire(j: &Job, nerve: Option<&nerve::Nerve>) -> Result<serde_json::Value, String> {
+    let job = j.id.as_str();
+    if j.runner != "subprocess" {
+        return Err(format!("{job}: runner {} is not the medulla's", j.runner));
     }
-    let args: Vec<String> = serde_json::from_str(&args).map_err(|e| format!("{job}: args_json {e}"))?;
-    // PHP's json_encode writes an empty env as `[]` (14 of 42 live rows); Python and PHP read it as empty.
-    let env: serde_json::Map<String, serde_json::Value> = match serde_json::from_str(&env).map_err(|e| format!("{job}: env_json {e}"))? {
-        serde_json::Value::Array(a) if a.is_empty() => serde_json::Map::new(),
-        v => serde_json::from_value(v).map_err(|e| format!("{job}: env_json {e}"))?,
-    };
-    let mut job_env: Vec<(String, String)> = env.into_iter().map(|(k, v)| (k, v.as_str().unwrap_or_default().to_string())).collect();
+    let mut job_env = j.env.clone();
     if let Some((k, _)) = job_env.iter().find(|(_, v)| v.starts_with("secret:")) {
         return Err(format!("{job}: {k} is a secret: reference; the medulla does not resolve secrets yet"));
     }
@@ -148,8 +184,8 @@ pub fn run(db: &str, job: &str, nerve: Option<&nerve::Nerve>) -> Result<serde_js
         None => {
             // Not UTF-8 = not passed: std::env::vars() would panic where Python's os.environ escapes.
             let inherited: Vec<(String, String)> = std::env::vars_os().filter_map(|(k, v)| Some((k.into_string().ok()?, v.into_string().ok()?))).collect();
-            let timeout = std::time::Duration::from_secs(max_s.clamp(1, 3600) as u64);
-            exec::execute(&command, &args, &env::safe_env(&inherited, &job_env), timeout,
+            let timeout = std::time::Duration::from_secs(j.max_s.clamp(1, 3600) as u64);
+            exec::execute(&j.command, &j.args, &env::safe_env(&inherited, &job_env), timeout,
                           std::env::var("HOME").ok().as_deref(), std::env::var("NOS_REPO_ROOT").ok().as_deref())
         }
     };
@@ -180,6 +216,7 @@ pub fn cli(args: &[String]) -> ExitCode {
                 }
             }
         }
+        (Some("serve"), _) => serve::cli(),
         (Some("run"), Some(db)) => {
             if std::env::var("MEDULLA_PULSE").as_deref() != Ok("1") {
                 eprintln!("medulla pulse run: off (MEDULLA_PULSE=1 arms it; Pulse is the scheduler until the cutover)");
@@ -205,7 +242,7 @@ pub fn cli(args: &[String]) -> ExitCode {
             }
         }
         _ => {
-            eprintln!("usage: medulla pulse plan|tick --dry-run|run <job> [--report] --db <wing.db> [--now <epoch>]  (run needs MEDULLA_PULSE=1; --report MEDULLA_WING_TOKEN)");
+            eprintln!("usage: medulla pulse plan|tick --dry-run|run <job> [--report] --db <wing.db> [--now <epoch>] | serve  (run and serve need MEDULLA_PULSE=1; --report and serve MEDULLA_WING_TOKEN)");
             ExitCode::from(2)
         }
     }
