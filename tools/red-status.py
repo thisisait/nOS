@@ -390,6 +390,26 @@ def overdue_jobs(conn: sqlite3.Connection) -> list[dict]:
     return sorted(out, key=lambda item: item["due_at"])
 
 
+#: The two pulse.run holders provision-token.php allows: the Python daemon's bearer and the medulla's.
+SCHEDULERS = ("ansible-provisioned", "medulla")
+
+
+def schedulers(conn: sqlite3.Connection) -> dict | None:
+    """Who fired each job in the last 24 h, from pulse_runs.actor_id (the spec's two_schedulers()).
+    `both` is red: pulse_medulla_jobs splits the jobs, so one fired by each was fired twice.
+    None when pulse_runs has no actor_id column (UNKNOWN, not calm)."""
+    if not any(c[1] == "actor_id" for c in conn.execute("PRAGMA table_info(pulse_runs)")):
+        return None
+    since = (_now() - timedelta(hours=24)).isoformat(timespec="seconds")
+    by: dict[str, set] = {}
+    for job, actor in conn.execute(
+            f"SELECT DISTINCT job_id, actor_id FROM pulse_runs WHERE fired_at >= ? AND actor_id IN ({','.join('?' * len(SCHEDULERS))})",
+            (since, *SCHEDULERS)):
+        by.setdefault(job, set()).add(actor)
+    return {"both": sorted(j for j, a in by.items() if len(a) > 1),
+            "medulla": sorted(j for j, a in by.items() if "medulla" in a)}
+
+
 def judge_pulse(res: tuple[int, str] | None, src: str) -> dict:
     """(rc, stdout) of the service-manager probe -> running True/False/None (UNKNOWN)."""
     if res is None:
@@ -1062,11 +1082,18 @@ def collect() -> dict:
                 report["paused_runs"] = paused_runs(conn)
                 report["held_needs"] = held_needs(conn)
                 report["overdue_jobs"] = overdue_jobs(conn)
+                report["schedulers"] = schedulers(conn)
                 report["inbox"] = unread_inbox(conn)
                 report["audit_chain"] = audit_chain(conn)
                 orphans = orphaned_sessions(conn)
                 report["orphaned_sessions"] = orphans or []
             report["sources_read"].append(str(WING_DB))
+            if report["schedulers"] is None:
+                report["sources_missing"].append(f"{WING_DB} pulse_runs.actor_id (who fired a job: UNKNOWN)")
+            elif report["schedulers"]["medulla"]:
+                report["info"].append(f"the medulla fired {len(report['schedulers']['medulla'])} job(s) in 24 h: "
+                                      f"{', '.join(report['schedulers']['medulla'])} (actor medulla); declared: "
+                                      "tools/estate-status.py --config pulse_medulla_jobs")
             if orphans is None:
                 report["sources_missing"].append(f"{WING_DB} agent_sessions (unreadable: orphans UNKNOWN)")
         except sqlite3.Error as exc:
@@ -1174,6 +1201,9 @@ def reds(report: dict) -> list[str]:
         out.append(
             f"{job['job']} failing rc={job['exit_code']} ({job['age']}) — {job['last_line']}"
         )
+    for job in (report.get("schedulers") or {}).get("both", []):
+        out.append(f"{job} fired by both schedulers in 24 h (Python Pulse and the medulla) — "
+                   "the split (pulse_medulla_jobs) did not hold, or a manual `medulla pulse run` fired it")
     for need, jobs in (report.get("held_needs") or {}).items():
         out.append(f"{len(jobs)} job(s) held: {need} — {', '.join(jobs)} "
                    "(tools/job_readiness.py)")
