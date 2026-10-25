@@ -260,7 +260,7 @@ def test_the_medulla_listens_on_loopback_only_and_answers_nothing_else(tmp_path)
 def _thalamus_env(**over) -> tuple[str, dict]:
     env = jinja2.Environment(undefined=jinja2.StrictUndefined)
     env.filters["bool"] = bool
-    ctx = {"thalamus_launchd_label": "l", "thalamus_bin": "/h/bin/thalamus", "thalamus_home": "/h",
+    ctx = {"thalamus_launchd_label": "l", "thalamus_serve_bin": "/h/bin/nos-thalamus", "thalamus_home": "/h",
            "thalamus_log_dir": "/h/log", "thalamus_data_dir": "/h/data", "nos_main_checkout": "/repo",
            "nos_tools_venv": "/v", "ansible_facts": {"env": {"HOME": "/h"}}, "keap_proxy_shared_secret": "s",
            "thalamus_shared_socket": "/s", "ansible_managed": "m", "thalamus_roadmap_table_id": "rt",
