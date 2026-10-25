@@ -1,0 +1,19 @@
+[
+  {"why": "secret-shaped inherited keys are stripped; KEYRING, KEY_X and X_KEYS are not",
+   "inherited": [["HOME", "/Users/op"], ["FOO_TOKEN", "t"], ["my_api_key", "k"], ["X_KEY", "x"], ["KEYRING", "r"],
+                 ["Db_Password", "p"], ["ANTHROPIC_BASE_URL", "u"], ["x_hmac", "h"], ["AWS_CREDENTIALS", "c"],
+                 ["KEY_X", "kx"], ["X_KEYS", "xs"], ["PATH", "/usr/bin"]],
+   "job": [],
+   "expected": [["HOME", "/Users/op"], ["KEYRING", "r"], ["KEY_X", "kx"], ["X_KEYS", "xs"], ["PATH", "/usr/bin"]]},
+  {"why": "job keys outside the allow-list are dropped, a listed one overrides in place, daemon keys pass",
+   "inherited": [["PATH", "/usr/bin"], ["KEAP_API_URL", "http://old"], ["LANG", "C"]],
+   "job": [["NODE_OPTIONS", "--require /x"], ["PATH", "/Users/op/Downloads"], ["PHP_INI_SCAN_DIR", "/tmp"],
+           ["KEAP_API_URL", "http://127.0.0.1:8091"], ["PULSE_RUN_ID", "r1"], ["WING_API_TOKEN", "w"]],
+   "expected": [["PATH", "/usr/bin"], ["KEAP_API_URL", "http://127.0.0.1:8091"], ["LANG", "C"],
+                ["PULSE_RUN_ID", "r1"], ["WING_API_TOKEN", "w"]]},
+  {"why": "Python re.I folds long s, Kelvin sign, dotted/dotless i; its $ accepts one trailing newline",
+   "inherited": [["ſECRET", "1"], ["X_KEY", "2"], ["CREDENTİAL", "3"], ["ı_KEEP", "4"],
+                 ["X_KEY\n", "5"], ["X_KEY\n\n", "6"], ["éTOKEN", "7"]],
+   "job": [],
+   "expected": [["ı_KEEP", "4"], ["X_KEY\n\n", "6"]]}
+]
