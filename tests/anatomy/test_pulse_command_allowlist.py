@@ -484,3 +484,25 @@ def test_the_operator_token_is_minted_pulse_write():
 	assert m and "pulse.write" in m.group(1).split(","), "the catalog upsert would 403 on converge"
 	for agent_mint in re.findall(r"--scopes=\{\{.*?\}\}", post):
 		assert "'^wing[.]'" in agent_mint, f"an agent mint is no longer filtered to wing.*: {agent_mint}"
+
+
+# ── The child's environment, second copy in the medulla (medulla/src/pulse/env.rs) ──
+
+ENV_CASES = json.loads((REPO / "tests/fixtures/pulse_env.json").read_text(encoding="utf-8"))
+
+
+def test_the_medulla_passes_the_same_env_keys():
+	src = (REPO / "files/anatomy/thalamus/medulla/src/pulse/env.rs").read_text()
+	run = _runner()
+	for name, py in (("JOB_ENV_KEYS", run._JOB_ENV_KEYS), ("DAEMON_ENV_KEYS", run._DAEMON_ENV_KEYS)):
+		m = re.search(rf"const {name}: &\[&str\] = &\[(.*?)\];", src, re.S)
+		assert m, f"medulla env.rs::{name} not found"
+		assert frozenset(re.findall(r'"([^"]+)"', m.group(1))) == py, name
+
+
+@pytest.mark.parametrize("case", ENV_CASES, ids=[c["why"][:40] for c in ENV_CASES])
+def test_the_shared_env_cases_hold_in_python(case, monkeypatch):
+	import os
+	run = _runner()
+	monkeypatch.setattr(os, "environ", dict(case["inherited"]))
+	assert list(run._safe_env(dict(case["job"])).items()) == [tuple(kv) for kv in case["expected"]]
