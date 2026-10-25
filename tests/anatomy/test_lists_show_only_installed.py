@@ -117,7 +117,7 @@ def test_authentik_presents_a_service_switched_on() -> None:
 # ── Wing /hub + face dock: both read Wing's systems table ────────────────────
 
 PROBE = r"""
-require __DIR__ . '/vendor/autoload.php';
+require getcwd() . '/vendor/autoload.php';   // cwd is Wing; the probe itself lives in tmp
 use Nette\Database\{Connection, Explorer, Structure};
 use Nette\Database\Conventions\DiscoveredConventions;
 use Nette\Caching\Storages\MemoryStorage;
@@ -154,14 +154,13 @@ def _wing(flags: dict, tmp: Path) -> tuple[set[str], list[dict]]:
     if not (WING / "vendor/autoload.php").is_file() or not shutil.which("php"):
         pytest.skip("php or files/anatomy/wing/vendor missing — composer install there")
     ids = _registry(flags, tmp / "service-registry.json")
-    probe = WING / "lists-installed-probe.php"
+    # The probe lives in tmp, never in the source tree: written under files/anatomy/wing it
+    # raced every test that walks that tree in a parallel shard (tests/fast.sh, 2026-10-25).
+    probe = tmp / "lists-installed-probe.php"
     probe.write_text("<?php\n" + PROBE, encoding="utf-8")
-    try:
-        r = subprocess.run(["php", probe.name, str(tmp), str(tmp / "service-registry.json"),
-                            str(REPO / "docs/llm/security")],
-                           cwd=WING, capture_output=True, text=True, timeout=120)
-    finally:
-        probe.unlink(missing_ok=True)
+    r = subprocess.run(["php", str(probe), str(tmp), str(tmp / "service-registry.json"),
+                        str(REPO / "docs/llm/security")],
+                       cwd=WING, capture_output=True, text=True, timeout=120)
     assert r.returncode == 0, r.stderr or r.stdout
     return ids, json.loads(r.stdout.strip().splitlines()[-1])
 

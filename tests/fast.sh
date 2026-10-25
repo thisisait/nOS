@@ -15,17 +15,18 @@ n="${NOS_PYTEST_SHARDS:-$(( $(sysctl -n hw.ncpu 2>/dev/null || nproc) / 2 ))}"  
 [ $# -gt 0 ] || set -- tests/anatomy
 out="$(mktemp -d "${TMPDIR:-/tmp}/nos-fast.XXXXXX")"
 start=$(date +%s)
-# Files that run cargo share each crate's target/ dir: two shards compiling it at once
-# raced ("can't find crate for nos_contract", 2026-10-25). They run together, in one
-# process of their own; every other file goes to the shards.
-cargo_files=$(grep -l -E '"cargo"|cargo (test|build)' tests/anatomy/test_*.py 2>/dev/null)
-ignore=(); for f in $cargo_files; do ignore+=("--ignore=$f"); done
-python3 -m pytest -q -p no:cacheprovider $cargo_files > "$out/shard-cargo.log" 2>&1 &
+# Run APART, after the shards, one process: files that run cargo (two shards compiling
+# one crate's target/ raced, "can't find crate for nos_contract") and files that time
+# themselves (the profile-builder sweep's 60 s budget failed under 7 shards: 64-88 s).
+# Measured 2026-10-25. Every other file goes to the shards.
+apart=$(grep -l -E '"cargo"|cargo (test|build)|too slow' tests/anatomy/test_*.py 2>/dev/null)
+ignore=(); for f in $apart; do ignore+=("--ignore=$f"); done
 for k in $(seq 1 "$n"); do
   NOS_PYTEST_SHARD="$k/$n" python3 -m pytest -q -p no:cacheprovider "$@" "${ignore[@]}" > "$out/shard-$k.log" 2>&1 &
 done
 rc=0
 for job in $(jobs -p); do wait "$job" || rc=$?; done
+python3 -m pytest -q -p no:cacheprovider $apart > "$out/shard-apart.log" 2>&1 || rc=$?
 grep -h -E "^(FAILED|ERROR) " "$out"/shard-*.log | sed 's/ - .*//' | sort -u
 python3 - "$out" <<'PY'
 import pathlib, re, sys
