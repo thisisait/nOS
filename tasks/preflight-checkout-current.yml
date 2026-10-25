@@ -74,6 +74,13 @@
       2026-08-05 exactly this cost a full run: seventeen commits behind, an hour
       spent, everything green, nothing of the work validated.
 
+      {% if _ckt[1] == 'estate' %}
+      This is the estate's own clone (branch `estate`, ~/.nos/estate): it moves
+      with `nos update`, then converge again (docs/nos-cli.md, estate-dev-split).
+
+        nos update
+
+      {% else %}
         cd {{ playbook_dir }} && tools/deploy-sync.sh
 
       deploy-sync makes this checkout a clean mirror of {{ _ckt[2] }}: it
@@ -81,6 +88,7 @@
       {{ _ckt[2] }} already carries it, and fast-forwards — the manual
       stash/pull/pop, done safely and once. Preview with `--dry-run`. Plain
       `git pull --ff-only` still works when the tree is clean.
+      {% endif %}
 
       {% if _ckt[4] | int > 0 %}
       NOTE: you are also {{ _ckt[4] }} commit(s) AHEAD. If that is only the
