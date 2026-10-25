@@ -32,7 +32,7 @@
     dest: "{{ item }}"
     remote_src: true
     mode: '0755'
-  loop: ["{{ thalamus_bin }}", "{{ thalamus_serve_bin }}"]
+  loop: ["{{ thalamus_bin }}", "{{ thalamus_serve_bin }}", "{{ thalamus_home }}/bin/nos-pulse"]
   ignore_errors: "{{ ansible_check_mode }}"  # --check builds nothing: a fresh host has no medulla to copy
 
 # nos_system_user set: a system unit runs the medulla as that account (ssot/doctrine/medulla.md §2).

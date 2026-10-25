@@ -104,6 +104,16 @@
 # The nerve, proven live (row medulla-scheduler, c2): fire ONE read-only job through the medulla with
 # --report and read its row back. Opt-in (-e medulla_pulse_probe=true): it really runs the job.
 # Gate for the shape: medulla/tests/pulse_report.rs; this is the effect. macOS only for now.
+- name: "[pazny.thalamus] Verify — the probe fires a job of the medulla's own set"
+  ansible.builtin.assert:
+    that: medulla_pulse_probe_job in (pulse_medulla_jobs | default([]))
+    fail_msg: >-
+      the probe fires {{ medulla_pulse_probe_job or 'nothing' }}, not a job of pulse_medulla_jobs
+      ({{ pulse_medulla_jobs | default([]) }}): a probe on a Python job made it two-schedulered in
+      red-status (2026-10-25). Put one job in pulse_medulla_jobs first.
+  when: medulla_pulse_probe | default(false) | bool
+  tags: ['verify']
+
 - name: "[pazny.thalamus] Verify — one job fired by the medulla is recorded by Wing"
   ansible.builtin.command:
     argv: ["{{ thalamus_home }}/bin/medulla", pulse, run, "{{ medulla_pulse_probe_job }}", --report, --db, "{{ wing_data_dir }}/wing.db"]

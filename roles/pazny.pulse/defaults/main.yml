@@ -47,7 +47,8 @@ pulse_api_token: "{{ wing_api_token }}"
 # The medulla's half of the split (pulse_medulla_jobs, default.config.yml; tasks/medulla-pulse.yml).
 pulse_medulla_label: "eu.thisisait.nos.medulla-pulse"
 # pazny.medulla builds it (install_thalamus); spelled out because that role's vars are private.
-pulse_medulla_bin: "{{ ansible_facts['env']['HOME'] }}/thalamus/bin/medulla"
+# A signed copy named for its organ: Activity Monitor and ps show nos-pulse (test_a_host_job_runs_under_its_organ_name).
+pulse_medulla_bin: "{{ ansible_facts['env']['HOME'] }}/thalamus/bin/nos-pulse"
 pulse_medulla_env:
   HOME: "{{ ansible_facts['env']['HOME'] }}"
   PATH: "{{ pulse_python | dirname }}:{{ homebrew_prefix | default('/opt/homebrew') }}/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"

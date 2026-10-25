@@ -26,7 +26,7 @@
   vars:
     su_name: "{{ pulse_medulla_label }}"
     su_description: "nOS medulla — fires the Pulse jobs in pulse_medulla_jobs"
-    su_exec_start: "{{ pulse_medulla_bin }} pulse serve"
+    su_exec_start: "{{ pulse_medulla_bin }} serve"
     su_working_dir: "{{ nos_main_checkout }}"
     su_environment: "{{ pulse_medulla_env }}"
   when:
