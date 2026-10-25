@@ -1,14 +1,11 @@
-//! The Pulse schedule in the medulla (row medulla-scheduler, increments a-b): it reads and plans, it
-//! does not fire and does not write (the db opens read-only). `plan` prints one JSON line per live
-//! job: Wing's next_fire_at beside the medulla's, and the allowlist verdict. `tick --dry-run` prints
-//! what one Pulse tick would do with each due job, in the Python daemon's order of checks.
+//! The Pulse schedule in the medulla (row medulla-scheduler, increments a-c). It never writes: the db
+//! opens read-only. `plan`: Wing's next_fire_at beside the medulla's, and the allowlist verdict, per
+//! job. `tick --dry-run`: what one Pulse tick would do with each due job. `run <job>`: fires that one
+//! job as the daemon would, only with MEDULLA_PULSE=1, and prints the result; no nerve carries it yet.
 pub mod allow;
 pub mod cron;
-#[allow(dead_code)] // the fire path (next commit) is its first caller
 pub mod env;
-#[allow(dead_code)] // the fire path (next commit) calls it
 pub mod exec;
-#[allow(dead_code)] // the fire path (next commit) is its first caller
 pub mod redact;
 
 use std::process::ExitCode;
@@ -42,6 +39,19 @@ pub fn plan(db: &str, now: i64) -> Result<(), String> {
     Ok(())
 }
 
+/// daemon.py::paused_hold: every job while ~/.nos/halt exists, loop:* while ~/.nos/loops-paused does.
+fn hold(job: &str) -> Option<&'static str> {
+    let home = std::path::PathBuf::from(std::env::var_os("HOME").unwrap_or_default());
+    let loops = std::env::var_os("NOS_LOOPS_PAUSED_FILE").map(std::path::PathBuf::from).unwrap_or(home.join(".nos/loops-paused"));
+    if crate::metrics::halt_file().is_file() {
+        Some("emergency halt")
+    } else if job.starts_with("loop:") && loops.is_file() {
+        Some("loops paused")
+    } else {
+        None
+    }
+}
+
 fn open(db: &str) -> Result<rusqlite::Connection, String> {
     rusqlite::Connection::open_with_flags(db, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY).map_err(|e| e.to_string())
 }
@@ -63,9 +73,6 @@ pub fn tick(db: &str, now: i64, cap: usize) -> Result<(), String> {
         .query_map([iso(now)], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?, r.get::<_, String>(3)?, r.get::<_, String>(4)?, r.get::<_, i64>(5)?)))
         .map_err(|e| e.to_string())?;
     let free = cap.saturating_sub(busy.len());
-    let halt = crate::metrics::halt_file();
-    let loops = std::env::var_os("NOS_LOOPS_PAUSED_FILE").map(std::path::PathBuf::from)
-        .unwrap_or_else(|| std::path::PathBuf::from(std::env::var_os("HOME").unwrap_or_default()).join(".nos/loops-paused"));
     let (home, repo) = (std::env::var("HOME").ok(), std::env::var("NOS_REPO_ROOT").ok());
     for (i, row) in rows.enumerate() {
         let (id, runner, command, args, schedule, jitter) = row.map_err(|e| e.to_string())?;
@@ -76,10 +83,8 @@ pub fn tick(db: &str, now: i64, cap: usize) -> Result<(), String> {
             "skipped: already in flight".to_string()
         } else if runner != "subprocess" {
             format!("skipped: runner {runner}")
-        } else if halt.is_file() {
-            "held (exit 3): emergency halt".to_string()
-        } else if id.starts_with("loop:") && loops.is_file() {
-            "held (exit 3): loops paused".to_string()
+        } else if let Some(why) = hold(&id) {
+            format!("held (exit 3): {why}")
         } else {
             match allow::validate(&command, &args, home.as_deref(), repo.as_deref()) {
                 Ok(()) => "would fire".to_string(),
@@ -90,6 +95,55 @@ pub fn tick(db: &str, now: i64, cap: usize) -> Result<(), String> {
         println!("{}", serde_json::json!({"job": id, "verdict": verdict, "next": next, "jitter_max_min": jitter}));
     }
     Ok(())
+}
+
+/// A uuid4 from the kernel's random source: run_id, PULSE_RUN_ID and the trace id are one key (daemon.py).
+fn uuid4() -> Result<String, String> {
+    let mut b = [0u8; 16];
+    std::io::Read::read_exact(&mut std::fs::File::open("/dev/urandom").map_err(|e| e.to_string())?, &mut b).map_err(|e| e.to_string())?;
+    b[6] = (b[6] & 0x0f) | 0x40;
+    b[8] = (b[8] & 0x3f) | 0x80;
+    let h: String = b.iter().map(|x| format!("{x:02x}")).collect();
+    Ok(format!("{}-{}-{}-{}-{}", &h[..8], &h[8..12], &h[12..16], &h[16..20], &h[20..]))
+}
+
+/// One job, fired as daemon.py::_run_in_thread does: hold, child env, run, scrub, tails.
+/// Refused before anything runs: a runner other than subprocess, and any `secret:` value —
+/// the medulla does not read secrets.yml (row secrets-at-rest decides how it will).
+pub fn run(db: &str, job: &str) -> Result<serde_json::Value, String> {
+    let conn = open(db)?;
+    let (runner, command, args, env, max_s): (String, String, String, String, i64) = conn
+        .query_row("SELECT runner, command, args_json, env_json, max_runtime_s FROM pulse_jobs WHERE id = ?1 AND removed_at IS NULL",
+                   [job], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)))
+        .map_err(|e| format!("{job}: {e}"))?;
+    if runner != "subprocess" {
+        return Err(format!("{job}: runner {runner} is not the medulla's"));
+    }
+    let args: Vec<String> = serde_json::from_str(&args).map_err(|e| format!("{job}: args_json {e}"))?;
+    let env: serde_json::Map<String, serde_json::Value> = serde_json::from_str(&env).map_err(|e| format!("{job}: env_json {e}"))?;
+    let mut job_env: Vec<(String, String)> = env.into_iter().map(|(k, v)| (k, v.as_str().unwrap_or_default().to_string())).collect();
+    if let Some((k, _)) = job_env.iter().find(|(_, v)| v.starts_with("secret:")) {
+        return Err(format!("{job}: {k} is a secret: reference; the medulla does not resolve secrets yet"));
+    }
+    let run_id = uuid4()?;
+    for (k, v) in [("PULSE_RUN_ID", run_id.clone()), ("TRACEPARENT", format!("00-{}-{}-01", run_id.replace('-', ""), &uuid4()?.replace('-', "")[..16]))] {
+        if !job_env.iter().any(|(j, _)| j == k) {
+            job_env.push((k.to_string(), v)); // setdefault: a job's own value wins
+        }
+    }
+    let r = match hold(job) {
+        Some(why) => exec::RunResult { exit_code: 3, duration_ms: 0, stdout_tail: String::new(), timed_out: false,
+                                       stderr_tail: format!("PAUSED: {why} — {job} held") },
+        None => {
+            // Not UTF-8 = not passed: std::env::vars() would panic where Python's os.environ escapes.
+            let inherited: Vec<(String, String)> = std::env::vars_os().filter_map(|(k, v)| Some((k.into_string().ok()?, v.into_string().ok()?))).collect();
+            let timeout = std::time::Duration::from_secs(max_s.clamp(1, 3600) as u64);
+            exec::execute(&command, &args, &env::safe_env(&inherited, &job_env), timeout,
+                          std::env::var("HOME").ok().as_deref(), std::env::var("NOS_REPO_ROOT").ok().as_deref())
+        }
+    };
+    Ok(serde_json::json!({"job": job, "run_id": run_id, "actor_id": "medulla", "exit_code": r.exit_code,
+        "duration_ms": r.duration_ms, "timed_out": r.timed_out, "stdout_tail": r.stdout_tail, "stderr_tail": r.stderr_tail}))
 }
 
 pub fn cli(args: &[String]) -> ExitCode {
@@ -113,8 +167,25 @@ pub fn cli(args: &[String]) -> ExitCode {
                 }
             }
         }
+        (Some("run"), Some(db)) => {
+            if std::env::var("MEDULLA_PULSE").as_deref() != Ok("1") {
+                eprintln!("medulla pulse run: off (MEDULLA_PULSE=1 arms it; Pulse is the scheduler until the cutover)");
+                return ExitCode::from(2);
+            }
+            match args.get(1).filter(|j| !j.starts_with("--")).map(|j| run(db, j)) {
+                Some(Ok(v)) => {
+                    println!("{v}");
+                    ExitCode::SUCCESS
+                }
+                Some(Err(e)) => {
+                    eprintln!("medulla pulse run: {e}");
+                    ExitCode::FAILURE
+                }
+                None => ExitCode::from(2),
+            }
+        }
         _ => {
-            eprintln!("usage: medulla pulse plan|tick --dry-run --db <wing.db> [--now <epoch>]  (it never fires: no tick without --dry-run yet)");
+            eprintln!("usage: medulla pulse plan|tick --dry-run|run <job> --db <wing.db> [--now <epoch>]  (run needs MEDULLA_PULSE=1)");
             ExitCode::from(2)
         }
     }

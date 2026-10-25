@@ -21,8 +21,10 @@ pub struct RunResult {
     pub timed_out: bool,
 }
 
+/// Scrubbed WHOLE, then cut, as daemon.py then wing_client.py do: a cut first could drop the
+/// `TOKEN=` a pattern needs and pass the value through.
 fn tail(bytes: &[u8]) -> String {
-    let s = String::from_utf8_lossy(bytes);
+    let s = super::redact::redact(&String::from_utf8_lossy(bytes));
     let skip = s.chars().count().saturating_sub(TAIL_CHARS);
     s.chars().skip(skip).collect()
 }
@@ -169,6 +171,8 @@ mod tests {
         let r = repo("env", &[("showenv", "/usr/bin/env")]);
         let env = [("PULSE_RUN_ID".to_string(), "r1".to_string())];
         let res = run(&r, "showenv", &env, 2000);
+        // Failed once in ~15 full runs (2026-10-25, not reproduced): say how, next time.
+        assert!(res.exit_code == 0 && !res.timed_out, "{res:?}");
         let mut keys: Vec<&str> = res.stdout_tail.lines().map(|l| l.split('=').next().unwrap()).collect();
         keys.retain(|k| *k != "PWD" && *k != "SHLVL" && *k != "_"); // /bin/sh adds these itself
         assert_eq!(keys, ["PULSE_RUN_ID"], "{}", res.stdout_tail);
