@@ -179,6 +179,19 @@ holds that token, so it is not a proof that the operator is the caller.
   69 = no token, or Wing did not answer: **UNKNOWN**, never "halted".
 - Gate: `tests/anatomy/test_halt_has_a_break_glass.py`.
 
+## Rotating a leaked secret
+
+```bash
+nos -e secrets_rotate=wing_api_token     # the Wing bearer
+nos -e bone_secret_rotate=true           # the audit-chain key, its own path
+```
+
+A copy of a leaked value in a log, a ledger row or a backup is dead only once the value is
+replaced; a blank does not replace these (it regenerates 7 other keys). Wing drops the old
+bearer when the new one is provisioned. Any other name is refused before a key moves; the
+backup passphrase waits for a rotation that reads its outgoing value from the persisted store
+(test_key_ring_captures_the_retired_key). Gate: `tests/anatomy/test_a_rotation_replaces_the_wing_bearer.py`.
+
 ## Flag → extra-var mapping
 
 | CLI | emits | note |

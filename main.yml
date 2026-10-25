@@ -1928,6 +1928,25 @@
       no_log: true
       tags: ['always']
 
+    # ── Rotation on request ─────────────────────────────────────────────────
+    #   nos -e secrets_rotate=wing_api_token
+    # A leaked value is dead only once it is replaced: the ledger and its backups held it
+    # (2026-10-25, row pulse-redact-gaps); a blank does not replace it. Wing drops the old bearer
+    # when the new one is provisioned. Gate: test_a_rotation_replaces_the_wing_bearer.py.
+    - name: "[Secrets] Resolve what this run rotates"
+      ansible.builtin.set_fact:
+        _rotating_names: "{{ (secrets_rotate | default('')).split(',') | map('trim') | select | list }}"
+      tags: ['always']
+
+    - name: "[Secrets] Refuse a name with no rotation path"
+      ansible.builtin.assert:
+        that: (_rotating_names | reject('in', ['wing_api_token']) | list) | length == 0
+        fail_msg: >-
+          secrets_rotate names {{ _rotating_names | reject('in', ['wing_api_token']) | list }}
+          with no rotation path here. Rotatable: wing_api_token; the chain key has its own
+          (-e bone_secret_rotate=true); the backup passphrase waits for its own (row pulse-redact-gaps).
+      tags: ['always']
+
     # ── Chain-key rotation (opt-in) ─────────────────────────────────────────
     #
     #   ansible-playbook main.yml -e bone_secret_rotate=true
@@ -2050,7 +2069,7 @@
         # bearer + Pulse's launchd plist embed it; regenerating every run churned
         # the token and made the Pulse plist render non-idempotent. Generate once
         # (prefix-default -> random), persist, reuse — like authentik_secret_key.
-        wing_api_token: "{% if '_pw_' in (wing_api_token | default('')) or (wing_api_token | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ wing_api_token }}{% endif %}"
+        wing_api_token: "{% if 'wing_api_token' in (_rotating_names | default([])) or '_pw_' in (wing_api_token | default('')) or (wing_api_token | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ wing_api_token }}{% endif %}"
         # Idempotence (2026-05-31): these four were regen-every-run in the
         # removed "safe group" set_fact above. Each rendered into a service
         # env/config every run, so a steady-state full-playbook re-run reported
