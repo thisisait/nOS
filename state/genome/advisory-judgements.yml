@@ -13,4 +13,31 @@
 #            not-applicable  the affected code is not reachable in nOS (say how)
 #
 # The operator writes these; an agent proposes them in a PR, never commits one.
-judgements: []
+judgements:
+  # ── 2026-10-25, first full patrol; evidence measured that morning, proposed by Claude, landed by the operator ──
+  - {id: CVE-2026-42055, subject: apex_version, verdict: not-applicable, until: 2026-12-31,
+     reason: "ngx_http_proxy_v2/grpc only: apex serves static files, `nginx -T` has no proxy_pass, grpc_pass or http2 upstream"}
+  - {id: CVE-2026-9256, subject: apex_version, verdict: not-applicable, until: 2026-12-31,
+     reason: "ngx_http_rewrite_module: the live apex config (`nginx -T`) has no rewrite directive"}
+  - {id: GHSA-jmr9-98g4-2phv, subject: portainer_version, verdict: not-applicable, until: 2026-12-31,
+     reason: "2.45.3 is above the 2.45-line patch (>=2.40.0,<2.45.2 patched 2.45.2); the open >=2.39.0 range is the unpatched 2.39 LTS line"}
+  - {id: GHSA-365g-vjw2-grx8, subject: n8n_version, verdict: not-applicable, until: 2027-01-31,
+     reason: "Execute Command node is excluded by default at 2.37.10 (nodes.config.ts NODES_EXCLUDE default); our compose does not set NODES_EXCLUDE; no pack uses it"}
+  - {id: CVE-2024-4439, subject: wordpress_version, verdict: not-applicable, until: 2026-12-31,
+     reason: "the advisory's own text: up to 6.5.2; 7.1.2 is past it, the feed's open >=6.0 range is too wide"}
+  - {id: GHSA-cg5w-7g26-p3w9, subject: erpnext_version, verdict: not-applicable, until: 2026-12-31,
+     reason: "ERPNext is not installed anywhere: install_erpnext false and the role is hard-blocked (erpnext_experimental_override)"}
+  - {id: GHSA-qcff-6669-j3gj, subject: erpnext_version, verdict: not-applicable, until: 2026-12-31, reason: "as GHSA-cg5w: role hard-blocked, installed nowhere"}
+  - {id: GHSA-mp29-fjc5-h86p, subject: erpnext_version, verdict: not-applicable, until: 2026-12-31, reason: "as GHSA-cg5w: role hard-blocked, installed nowhere"}
+  - {id: GHSA-c496-q7g2-62vv, subject: erpnext_version, verdict: not-applicable, until: 2026-12-31, reason: "as GHSA-cg5w: role hard-blocked, installed nowhere"}
+  - {id: GHSA-q65v-fm9p-9vh3, subject: erpnext_version, verdict: not-applicable, until: 2026-12-31, reason: "as GHSA-cg5w: role hard-blocked, installed nowhere"}
+  - {id: GHSA-8xmm-x63g-f6xv, subject: grafana_version, verdict: accepted, until: 2026-11-30,
+     reason: "stored XSS in ResourcePicker, no fix published; Grafana sits behind SSO and editing dashboards is admin-tier; re-judge when a patch lands"}
+  - {id: GHSA-6966-vjj6-99xv, subject: jupyterlab_version, verdict: accepted, until: 2026-11-30,
+     reason: "XSS via clipboard paste into notebook cells, no fix; JupyterHub is Linux-only and off on the dev estate; a user must paste hostile content"}
+  - {id: GHSA-5xxm-54w8-h85j, subject: martin_version, verdict: accepted, until: 2026-11-30,
+     reason: "DoS via concurrent Vulkan init/teardown, fixed only in 2.0.0-beta.2; tiles sit behind forward-auth on the atlas host; take 2.0 when stable"}
+  - {id: GHSA-mrhx-c7xc-m3w5, subject: "cortex:zod", verdict: accepted, until: 2026-11-30,
+     reason: "memory exhaustion on oversized constrained collections, fixed only in zod 4 (a major migration); cortex listens on loopback only"}
+  - {id: GHSA-mrhx-c7xc-m3w5, subject: "face:zod", verdict: accepted, until: 2026-11-30,
+     reason: "as cortex:zod; the face validates its own BFF answers behind SSO; zod 4 migration owed"}
