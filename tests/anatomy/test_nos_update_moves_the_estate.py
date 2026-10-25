@@ -152,3 +152,13 @@ def test_update_runs_before_the_converge_exec():
     src = NOS.read_text(encoding="utf-8")
     assert 0 < src.find('= "update" ]') < src.find('"${ARGS[@]}" </dev/null'), (
         "`nos update` must exit before the ansible-playbook exec: an update never converges")
+
+
+def test_every_converge_installs_the_cli():
+    """`nos update` moves the clone, a converge moves it into runtime — the CLI too.
+    Tagged nos-cli only, `nos --tags wing,pulse` left the installed CLI two days old."""
+    import yaml
+    plays = yaml.safe_load((REPO / "main.yml").read_text())
+    tasks = [t for play in plays for key in ("pre_tasks", "tasks") for t in play.get(key) or []]
+    cli = next(t for t in tasks if t.get("ansible.builtin.import_tasks") == "tasks/nos-cli.yml")
+    assert "always" in cli["tags"], cli["tags"]

@@ -2435,9 +2435,11 @@
     # ──────────────────────────────────────────────────────────────────────────
     # nos CLI - operator entry point (tools/nos → platform bin dir)
     # ──────────────────────────────────────────────────────────────────────────
+    # 'always': the CLI is source like any other, and `nos update` moves only the clone.
+    # Tagged nos-cli alone, a `nos --tags wing` left the 23 Oct CLI running new code (2026-10-25).
     - name: "[nos-cli] Install the operator CLI"
       ansible.builtin.import_tasks: tasks/nos-cli.yml
-      tags: ['nos-cli']
+      tags: ['always', 'nos-cli']
 
     # ──────────────────────────────────────────────────────────────────────────
     # Docker stacks - shared network and prerequisites
