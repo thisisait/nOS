@@ -32,6 +32,10 @@ from _shard import pytest_collection_modifyitems  # noqa: E402,F401
 # answer; a test that wants one sets NOS_ESTATE_DIR itself (test_readers_read_the_estate_config).
 os.environ.setdefault("NOS_ESTATE_DIR", os.path.join(os.environ.get("TMPDIR", "/tmp"), "nos-pytest-no-estate"))
 
+# The emergency halt is ONE file (~/.nos/halt) every scheduler obeys. A test that halts
+# must never halt the live estate; a test that wants the file sets NOS_HALT_FILE itself.
+os.environ.setdefault("NOS_HALT_FILE", os.path.join(os.environ.get("TMPDIR", "/tmp"), "nos-pytest-halt"))
+
 # A test's playbook run must not write the operator's ~/.nos/ansible.log:
 # after a leave it recreated ~/.nos, and its expected fatals read as a failed run.
 os.environ.setdefault("ANSIBLE_LOG_PATH", os.path.join(
