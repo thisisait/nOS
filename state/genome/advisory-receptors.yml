@@ -96,7 +96,7 @@ receptors:
   portainer_version: {github: portainer/portainer}
   docker_socket_proxy_version: {github: Tecnativa/docker-socket-proxy}
   spacetimedb_version: {github: clockworklabs/SpacetimeDB}
-  nos_forum_version: {github: pazny/nos-forum}
+  nos_forum_version: {none: "our own app (ghcr.io/pazny/nos-forum-web); no public GitHub repo (404 2026-10-25); its dependencies are not scanned yet — row dependency-supply-genome"}
   jellyfin_version: {github: jellyfin/jellyfin}
   uptime_kuma_version: {github: louislam/uptime-kuma}
   calibreweb_version: {github: janeczku/calibre-web}

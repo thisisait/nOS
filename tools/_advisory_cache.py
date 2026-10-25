@@ -44,9 +44,10 @@ class Cache:
             return None
         return data if isinstance(data, dict) and data.get("etag") else None
 
-    def put(self, url: str, etag: str, body) -> None:
+    def put(self, url: str, etag: str, body, next_url: str | None = None) -> None:
+        """`next_url`: the page after this one (a Link rel=next), kept so a 304 still pages."""
         self.root.mkdir(parents=True, exist_ok=True)
         fd, tmp = tempfile.mkstemp(dir=self.root, suffix=".tmp")
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
-            json.dump({"url": url, "etag": etag, "body": body}, fh)
+            json.dump({"url": url, "etag": etag, "body": body, "next": next_url}, fh)
         os.replace(tmp, self._path(url))

@@ -47,6 +47,7 @@ import os
 import pathlib
 import re
 import sys
+import time
 import tomllib
 import urllib.error
 import urllib.parse
@@ -77,6 +78,8 @@ OSV_VULN = "https://api.osv.dev/v1/vulns/{id}"
 CVE_NOW = "https://cve.now/api/v1/entries/{id}"
 CVE_NOW_FEED = "https://cve.now/feed?tech={slug}&format=json"
 TIMEOUT = 20
+CVE_NOW_GAP_S = 0.3     # ~500 cve.now calls a run: +150 s, inside the patrol's 1800 s
+CVE_NOW_RETRY_S = 20
 GITHUB_MAX_PAGES = 30
 OSV_BATCH_SIZE = 1000
 
@@ -336,33 +339,56 @@ def fetch(url: str, body: bytes | None = None):
     if body is not None:
         headers["Content-Type"] = "application/json"
     req = urllib.request.Request(url, data=body, headers=headers)
+    paced = url.startswith("https://cve.now/")
+    if paced:
+        # 2026-10-25 nightly: 314 of 497 cve.now calls answered 403 in a burst, 200 again
+        # by morning. ponytail: a fixed gap + one retry; a token bucket if they publish a rate.
+        time.sleep(CVE_NOW_GAP_S)
     try:
-        with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
+        try:
+            resp = urllib.request.urlopen(req, timeout=TIMEOUT)
+        except urllib.error.HTTPError as exc:
+            if not (paced and exc.code in (403, 429)):
+                raise
+            time.sleep(CVE_NOW_RETRY_S)
+            resp = urllib.request.urlopen(req, timeout=TIMEOUT)
+        with resp:
             data = json.loads(resp.read().decode("utf-8"))
             etag = resp.headers.get("ETag")
+            m = re.search(r'<([^>]+)>;\s*rel="next"', resp.headers.get("Link") or "")
+            NEXT[url] = m.group(1) if m else None
     except urllib.error.HTTPError as exc:
         if exc.code == 304 and cached:
             CACHE_STATS["not_modified"] += 1
+            NEXT[url] = cached.get("next")
             return cached["body"]
         raise
     if CACHE is not None and body is None and etag:
         try:
-            CACHE.put(url, etag, data)
+            CACHE.put(url, etag, data, NEXT.get(url))
         except OSError:
             pass  # a cache that cannot be written only costs the next run a call
     return data
+
+
+#: url -> the Link rel=next GitHub sent with it. The repo advisories endpoint pages by
+#: cursor (`after`) and ignores `page`: measured 2026-10-25, page 1 and page 2 of
+#: go-gitea/gitea were the same 100 rows, so every repo past 100 read UNKNOWN.
+NEXT: dict[str, str | None] = {}
 
 
 # --- sources -----------------------------------------------------------------
 
 def _github_advisories(repo: str, get) -> list[dict]:
     rows: list[dict] = []
-    for page in range(1, GITHUB_MAX_PAGES + 1):
-        batch = get(GITHUB.format(repo=repo, page=page))
+    url = GITHUB.format(repo=repo, page=1)
+    for _ in range(GITHUB_MAX_PAGES):
+        batch = get(url)
         if not isinstance(batch, list):
             raise ValueError(f"GitHub said: {str(batch)[:120]}")
         rows += batch
-        if len(batch) < 100:
+        url = NEXT.get(url)
+        if len(batch) < 100 or not url:
             return rows
     raise ValueError(f"more than {GITHUB_MAX_PAGES} pages; read stopped short")
 
