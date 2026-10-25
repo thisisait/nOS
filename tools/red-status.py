@@ -170,6 +170,7 @@ def failing_jobs(conn: sqlite3.Connection) -> list[dict]:
     # fact is worse than either being wrong alone, and a reader that cries wolf
     # is one the operator learns to discount — which is the whole thing this
     # file was written to prevent.
+    held = {r["job"] for r in paused_runs(conn)}  # the latest run said PAUSED:
     rows = conn.execute(
         """
         SELECT r.job_id, r.fired_at, r.exit_code, r.duration_ms, r.stdout_tail,
@@ -195,12 +196,10 @@ def failing_jobs(conn: sqlite3.Connection) -> list[dict]:
         if row["job_id"] in seen:
             continue
         seen.add(row["job_id"])
-        # ponytail: exit 3 is reserved estate-wide for the maintenance-pause hold
-        # (agent-run-lock.sh returns it; the runners carry it out). A held run is
-        # not a failure — paused_runs() surfaces it. Reserve a distinct code per
-        # job only if 3 ever means something else for one.
-        if row["exit_code"] in (PAUSED_EXIT, HOLD_EXIT):  # held_needs() says these
-            continue
+        # Exit 3 is the maintenance-pause hold only when the run says PAUSED: (see
+        # _PAUSE_MARK); otherwise it is the job's own code and goes through findings.
+        if row["exit_code"] == HOLD_EXIT or (row["exit_code"] == PAUSED_EXIT and row["job_id"] in held):
+            continue  # held_needs() / paused_runs() say these
         # Declared findings code → the job worked. Unparseable declaration is
         # NOT read as "no codes declared": that would silently restore the old
         # behaviour, so it falls through to reporting the job, which is the
@@ -237,6 +236,15 @@ def failing_jobs(conn: sqlite3.Connection) -> list[dict]:
     return out
 
 
+#: Exit 3 is BOTH the maintenance-pause hold and some loops' findings code (vision-bench:
+#: accuracy below floor, repo-check: a gate step). Measured 2026-10-25: a vision-bench
+#: regression (net/payable/vat 0.000) read "loops paused" with no pause in force. A held
+#: run says so in stderr ("PAUSED: ..." — pulse daemon, agent-run-lock, pulse-run-agent).
+#: A table without stderr_tail (old fixtures) keeps the old reading: every 3 is a pause.
+def _has_stderr(conn: sqlite3.Connection) -> bool:
+    return any(c[1] == "stderr_tail" for c in conn.execute("PRAGMA table_info(pulse_runs)"))
+
+
 def paused_runs(conn: sqlite3.Connection) -> list[dict]:
     """Loop runs whose most recent run was skipped by the maintenance pause.
 
@@ -244,17 +252,31 @@ def paused_runs(conn: sqlite3.Connection) -> list[dict]:
     (agent-run-lock.sh returns PAUSED_EXIT, the runner carries it out). Kept apart
     from `failing_jobs` so a pause never reads as breakage.
     """
-    rows = conn.execute(
-        """
-        SELECT r.job_id, r.fired_at, r.exit_code
-          FROM pulse_runs r
-          JOIN (SELECT job_id, MAX(fired_at) AS latest
-                  FROM pulse_runs GROUP BY job_id) m
-            ON r.job_id = m.job_id AND r.fired_at = m.latest
-         WHERE r.exit_code = 3
-         ORDER BY r.fired_at DESC
-        """
-    ).fetchall()
+    if _has_stderr(conn):
+        rows = conn.execute(
+            """
+            SELECT r.job_id, r.fired_at, r.exit_code, r.stderr_tail AS marker
+              FROM pulse_runs r
+              JOIN (SELECT job_id, MAX(fired_at) AS latest
+                      FROM pulse_runs GROUP BY job_id) m
+                ON r.job_id = m.job_id AND r.fired_at = m.latest
+             WHERE r.exit_code = 3
+             ORDER BY r.fired_at DESC
+            """
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            """
+            SELECT r.job_id, r.fired_at, r.exit_code, 'PAUSED:' AS marker
+              FROM pulse_runs r
+              JOIN (SELECT job_id, MAX(fired_at) AS latest
+                      FROM pulse_runs GROUP BY job_id) m
+                ON r.job_id = m.job_id AND r.fired_at = m.latest
+             WHERE r.exit_code = 3
+             ORDER BY r.fired_at DESC
+            """
+        ).fetchall()
+    rows = [r for r in rows if "PAUSED:" in (r["marker"] or "")]
     seen: set[str] = set()
     out = []
     for row in rows:
