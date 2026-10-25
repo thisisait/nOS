@@ -839,7 +839,7 @@ dashed for a reply) or {note, over[]} (note <=200 over 1-2 participants) or {pha
 suggested[] (option labels: exactly 1, or 1 or more when multi), multi}; never an id: the thalamus mints it"),
     ("kpi", "{title, unit?} with show's source {query {table, q?, where?}, op count|sum|avg, y?}; never a value: the thalamus computes it"),
     ("callout", "{tone ok|info|warn|bad, title (<=120), text (<=2000)}; plain text, no link"),
-    ("steps", "{title?, items[{title (<=120), status pending|active|done|failed, detail? (<=2000)}] 1-20}; at most one active"),
+    ("steps", "{title?, items[{title (<=120), status pending|active, detail? (<=2000)}] 1-20}; at most one active; never done or failed"),
     ("sources", "{title?, items[{table, row, note? (<=200)}] 1-20}; table and row are a row query_rows showed this session (its __id); no url"),
     ("follow_up", "{prompts[] 1-4, each <=200 chars, unique}; words the person may send next, never an action"),
 ];
@@ -857,7 +857,7 @@ pub const SHOW_ABOUT: &[(&str, &str)] = &[
     ("choice", "A question at a fork where the person's answer changes what you do next; never yes or no on a write."),
     ("kpi", "One headline number from a table, computed by the thalamus from source, never by you."),
     ("callout", "A note the person must not miss, such as a risk, a caveat or what an approval would cost."),
-    ("steps", "A plan's steps in order and how far each one is, as you know it."),
+    ("steps", "A plan's steps in order, each pending or active; done and failed are the thalamus's to say, not yours."),
     ("sources", "Which rows a claim or an extraction came from, so the person can check it against them."),
     ("follow_up", "Up to four next questions the person might ask, put at the end of an answer."),
 ];
@@ -956,7 +956,7 @@ multi}; suggested names your pick among the options, exactly 1 unless multi; nev
                 "text": {"type": "string", "maxLength": 2000}}))),
         branch("steps", "a plan's steps: {title?, items[{title, status, detail?}] 1-20}, at most one active",
             closed(&["items"], json!({"title": title, "items": {"type": "array", "minItems": 1, "maxItems": 20, "items": closed(&["title", "status"], json!({
-                "title": {"type": "string", "maxLength": 120}, "status": {"enum": ["pending", "active", "done", "failed"]},
+                "title": {"type": "string", "maxLength": 120}, "status": {"enum": ["pending", "active"]},
                 "detail": {"type": "string", "maxLength": 2000}}))}}))),
         branch("sources", "the rows a claim came from: {title?, items[{table, row, note?}] 1-20}, each a row query_rows showed",
             closed(&["items"], json!({"title": title, "items": {"type": "array", "minItems": 1, "maxItems": 20, "items": closed(&["table", "row"], json!({
@@ -5572,6 +5572,9 @@ fn show(args: &Value) -> Result<(Component, Option<Value>), String> {
         return Err(bad("`id` is minted by the thalamus; leave it out".into()));
     }
     let items = args.pointer("/component/props/items").and_then(Value::as_array);
+    if kind == "steps" && items.is_some_and(|i| i.iter().any(|i| matches!(i["status"].as_str(), Some("done" | "failed")))) {
+        return Err(bad("done and failed are the thalamus's to say, and it has no steps card yet; a step you fill is pending or active".into()));
+    }
     if kind == "sources" && items.is_some_and(|i| i.iter().any(|i| i.get("name").is_some())) {
         return Err(bad("a source's `name` is the thalamus's (the table's title); leave it out".into()));
     }

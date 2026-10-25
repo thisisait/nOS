@@ -242,11 +242,13 @@ components:
     # v12: four kinds whose names and prop shapes follow OpenUI's genui-lib (MIT; docs/systems/thalamus/genui-vocabulary.md).
     # The model fills them through show; none rides an approval or a widget, none carries a URL, a style or an action.
     callout: >-
-      a note not to miss (show tool): {tone ok|info|warn|bad, title 1-120, text 1-2000}; both shells say the tone as a word,
-      warn and bad drawn as warnings; text only, links as text
+      a note not to miss (show tool): {tone ok|info|warn|bad, title 1-120, text 1-2000}; both shells head it "Iris says"
+      (drawn by the shell, never a prop: a marker field is refused) so it never reads as the thalamus's own warning, and say
+      the tone as a word, warn and bad drawn as warnings; text only, links as text
     steps: >-
-      a plan's steps in order (show tool): {title?, items[{title 1-120, status pending|active|done|failed, detail? <=2000}]
-      1-20}; at most one active. The status is the model's claim, said as a word; a verdict stays with a reader
+      a plan's steps in order (show tool): {title?, items[{title 1-120, status pending|active, detail? <=2000}] 1-20}; at most
+      one active. Done and failed are verdicts, the thalamus's to say: refused from the model, and no serve-built steps card
+      exists yet (ruling 2026-10-25)
     sources: >-
       the rows a claim came from (show tool): {title?, items[{table, row, name, note? <=200}] 1-20}; serve refuses an item
       that is not a row query_rows showed this person in this session, sets table to its id and name to its title (the
