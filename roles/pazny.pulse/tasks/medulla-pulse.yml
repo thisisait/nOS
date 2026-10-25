@@ -35,7 +35,7 @@
 - name: "[pazny.pulse] Render the medulla-pulse launchd plist"
   ansible.builtin.template:
     src: medulla-pulse.plist.j2
-    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ pulse_medulla_label }}.plist"
+    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ medulla_pulse_launchd_label }}.plist"
     mode: '0600'  # carries the medulla's Wing bearer
   no_log: true
   register: _pulse_medulla_plist
@@ -48,7 +48,7 @@
     name: pazny.linux.systemd_user
     tasks_from: ensure_unit
   vars:
-    su_name: "{{ pulse_medulla_label }}"
+    su_name: "{{ medulla_pulse_launchd_label }}"
     su_description: "nOS medulla — fires the Pulse jobs in pulse_medulla_jobs"
     su_exec_start: "{{ pulse_medulla_bin }} serve"
     su_working_dir: "{{ nos_main_checkout }}"
@@ -59,7 +59,7 @@
     - (nos_service_manager | default('launchd')) == 'systemd-user'
 
 - name: "[pazny.pulse] Stop the medulla while its set changes (launchd)"
-  ansible.builtin.command: "launchctl bootout gui/{{ ansible_facts['user_uid'] | default(lookup('pipe', 'id -u')) }}/{{ pulse_medulla_label }}"
+  ansible.builtin.command: "launchctl bootout gui/{{ ansible_facts['user_uid'] | default(lookup('pipe', 'id -u')) }}/{{ medulla_pulse_launchd_label }}"
   register: _pulse_medulla_bootout
   changed_when: _pulse_medulla_bootout.rc == 0
   failed_when: false
@@ -69,7 +69,7 @@
 
 - name: "[pazny.pulse] Stop the medulla while its set changes (systemd --user)"  # noqa: command-instead-of-module
   # command, not the systemd module: a unit that never existed errors there.
-  ansible.builtin.command: "{{ nos_user_systemctl | default('systemctl --user') }} {{ 'disable --now' if pulse_medulla_jobs | length == 0 else 'stop' }} {{ pulse_medulla_label }}.service"
+  ansible.builtin.command: "{{ nos_user_systemctl | default('systemctl --user') }} {{ 'disable --now' if pulse_medulla_jobs | length == 0 else 'stop' }} {{ medulla_pulse_launchd_label }}.service"
   register: _pulse_medulla_stop
   changed_when: false
   failed_when: false
@@ -83,6 +83,6 @@
     path: "{{ item }}"
     state: absent
   loop:
-    - "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ pulse_medulla_label }}.plist"
-    - "{{ ansible_facts['env']['HOME'] }}/.config/systemd/user/{{ pulse_medulla_label }}.service"
+    - "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ medulla_pulse_launchd_label }}.plist"
+    - "{{ ansible_facts['env']['HOME'] }}/.config/systemd/user/{{ medulla_pulse_launchd_label }}.service"
   when: pulse_medulla_jobs | length == 0

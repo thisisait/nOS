@@ -45,7 +45,7 @@ pulse_wing_api_base: "http://127.0.0.1:{{ wing_port | default(9000) }}"
 pulse_api_token: "{{ wing_api_token }}"
 
 # The medulla's half of the split (pulse_medulla_jobs, default.config.yml; tasks/medulla-pulse.yml).
-pulse_medulla_label: "eu.thisisait.nos.medulla-pulse"
+medulla_pulse_launchd_label: "eu.thisisait.nos.medulla-pulse"
 # pazny.medulla builds it (install_thalamus); spelled out because that role's vars are private.
 # A signed copy named for its organ: Activity Monitor and ps show nos-pulse (test_a_host_job_runs_under_its_organ_name).
 pulse_medulla_bin: "{{ ansible_facts['env']['HOME'] }}/thalamus/bin/nos-pulse"

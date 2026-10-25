@@ -4714,7 +4714,8 @@
       "category": "automation",
       "install_flag": "install_pulse",
       "launchd_labels": [
-        "eu.thisisait.nos.pulse"
+        "eu.thisisait.nos.pulse",
+        "eu.thisisait.nos.medulla-pulse"
       ],
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.04",
@@ -8104,7 +8105,7 @@
       "from": "reader:red-status",
       "to": "doctrine:ssot/doctrine/loop-contract.md#7",
       "kind": "governed_by",
-      "via": "cited at tools/red-status.py:838",
+      "via": "cited at tools/red-status.py:844",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"

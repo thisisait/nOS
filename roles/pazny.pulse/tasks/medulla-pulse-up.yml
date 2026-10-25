@@ -7,10 +7,10 @@
   ansible.builtin.shell: |
     set -e
     UID_NUM=$(id -u)
-    if launchctl print "gui/${UID_NUM}/{{ pulse_medulla_label }}" >/dev/null 2>&1; then
+    if launchctl print "gui/${UID_NUM}/{{ medulla_pulse_launchd_label }}" >/dev/null 2>&1; then
       echo "already-loaded"
     else
-      launchctl bootstrap "gui/${UID_NUM}" ~/Library/LaunchAgents/{{ pulse_medulla_label }}.plist
+      launchctl bootstrap "gui/${UID_NUM}" ~/Library/LaunchAgents/{{ medulla_pulse_launchd_label }}.plist
       echo "bootstrapped"
     fi
   register: _pulse_medulla_up
@@ -24,7 +24,7 @@
     name: pazny.linux.systemd_user
     tasks_from: ensure_unit
   vars:
-    su_name: "{{ pulse_medulla_label }}"
+    su_name: "{{ medulla_pulse_launchd_label }}"
     su_description: "nOS medulla — fires the Pulse jobs in pulse_medulla_jobs"
     su_exec_start: "{{ pulse_medulla_bin }} serve"
     su_working_dir: "{{ nos_main_checkout }}"

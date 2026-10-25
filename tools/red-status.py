@@ -401,13 +401,19 @@ def schedulers(conn: sqlite3.Connection) -> dict | None:
     if not any(c[1] == "actor_id" for c in conn.execute("PRAGMA table_info(pulse_runs)")):
         return None
     since = (_now() - timedelta(hours=24)).isoformat(timespec="seconds")
-    by: dict[str, set] = {}
-    for job, actor in conn.execute(
-            "SELECT DISTINCT job_id, actor_id FROM pulse_runs WHERE fired_at >= ? AND actor_id IN (?, ?)",
+    runs: dict[str, dict[str, list[str]]] = {}
+    for job, actor, at in conn.execute(
+            "SELECT job_id, actor_id, fired_at FROM pulse_runs WHERE fired_at >= ? AND actor_id IN (?, ?)",
             (since, *SCHEDULERS)):
-        by.setdefault(job, set()).add(actor)
-    return {"both": sorted(j for j, a in by.items() if len(a) > 1),
-            "medulla": sorted(j for j, a in by.items() if "medulla" in a)}
+        runs.setdefault(job, {}).setdefault(actor, []).append(at)
+    # A handover (Python, then the split moves the job, then the medulla) is not twice; a Python run
+    # after the medulla's first one is (live 2026-10-25: 16:22 Python, 20:20 medulla read as "both").
+    both, handed = [], []
+    for job, by in runs.items():
+        if "medulla" in by and "ansible-provisioned" in by:
+            (both if max(by["ansible-provisioned"]) > min(by["medulla"]) else handed).append(job)
+    return {"both": sorted(both), "handed": sorted(handed),
+            "medulla": sorted(j for j, by in runs.items() if "medulla" in by)}
 
 
 def judge_pulse(res: tuple[int, str] | None, src: str) -> dict:

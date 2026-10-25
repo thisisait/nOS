@@ -1180,6 +1180,8 @@ services:
     install_flag: install_pulse
     version_source: launchd
     launchd_label: "eu.thisisait.nos.pulse"
+    # The medulla's half of the split (pulse_medulla_jobs): the same organ, run as nos-pulse.
+    launchd_helpers: ["eu.thisisait.nos.medulla-pulse"]
     # PULSE_STATE_DIR — the role creates it every converge and the daemon is
     # configured to persist into it. Today nothing under pulse/ writes there
     # (run state lives in wing.db via the Wing API); this declares WHERE Pulse's
