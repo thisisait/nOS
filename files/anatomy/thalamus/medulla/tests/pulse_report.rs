@@ -52,14 +52,14 @@ fn scratch(tag: &str) -> PathBuf {
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(dir.join("repo/tools")).unwrap();
     let script = dir.join("repo/tools/job.sh");
-    std::fs::write(&script, "#!/bin/sh\ntouch \"$MARK\"\necho done\nexit 5\n").unwrap();
+    std::fs::write(&script, "#!/bin/sh\ntouch \"$NOS_SCAN_DIR\"\necho done\nexit 5\n").unwrap();
     std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
     let c = rusqlite::Connection::open(dir.join("wing.db")).unwrap();
     c.execute_batch(&format!(
         "CREATE TABLE pulse_jobs (id TEXT PRIMARY KEY, runner TEXT NOT NULL DEFAULT 'subprocess', command TEXT NOT NULL,
             args_json TEXT NOT NULL DEFAULT '[]', env_json TEXT NOT NULL DEFAULT '{{}}', max_runtime_s INTEGER NOT NULL DEFAULT 300,
             removed_at TEXT);
-         INSERT INTO pulse_jobs (id, command, env_json) VALUES ('a:job', '{}', '{{\"MARK\": \"{}\"}}');",
+         INSERT INTO pulse_jobs (id, command, env_json) VALUES ('a:job', '{}', '{{\"NOS_SCAN_DIR\": \"{}\"}}');",
         script.display(), dir.join("ran").display()
     ))
     .unwrap();
@@ -103,6 +103,8 @@ fn the_start_is_claimed_first_and_the_finish_carries_the_result() {
     assert_eq!(fin["exit_code"], 5);
     assert!(fin["stdout_tail"].as_str().unwrap().contains("done") && fin["duration_ms"].is_u64(), "{fin}");
     assert_eq!(std::fs::read(dir.join("wing.db")).unwrap(), before, "the medulla wrote wing.db");
+    // The mark rides an allow-listed job env key: the refused cases below assert its absence.
+    assert!(dir.join("ran").exists(), "the job did not run, so `ran` absent proves nothing below");
 }
 
 #[test]
