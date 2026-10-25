@@ -105,6 +105,83 @@ def _line_end(t: str, i: int) -> int:
 	return i
 
 
+_B64URL = frozenset(string.ascii_letters + string.digits + "_-")
+_IDENT = frozenset(string.ascii_letters + string.digits + "_")
+VENDOR = ("sk-ant-", "github_pat_", "glpat-", "ghp_", "gho_", "ghu_", "ghs_", "ghr_", "xoxa-", "xoxb-", "xoxp-")
+VENDOR_MIN = 8
+_AKIA = frozenset(string.ascii_uppercase + string.digits)
+
+
+def _run(t: str, i: int, ok) -> int:
+	while i < len(t) and t[i] in ok:
+		i += 1
+	return i
+
+
+def _pem(t: str, p: int):
+	if not t.startswith("-----BEGIN ", p):
+		return None
+	h, nl = t.find("PRIVATE KEY-----", p + 11), t.find("\n", p + 11)
+	if h < 0 or 0 <= nl < h:
+		return None
+	e = t.find("-----END ", h)
+	k = t.find("PRIVATE KEY-----", e) if e >= 0 else -1
+	return p, (k + 16 if k >= 0 else len(t))
+
+
+def _jwt(t: str, p: int):
+	j = p
+	for part in range(3):
+		if part < 2 and not t.startswith("eyJ", j):
+			return None
+		e = _run(t, j, _B64URL)
+		if part < 2 and (e - j < 4 or e >= len(t) or t[e] != "."):
+			return None
+		j = e + 1 if part < 2 else e
+	return p, j
+
+
+def _vendor(t: str, p: int):
+	for pre in VENDOR:
+		if t.startswith(pre, p):
+			v = p + len(pre)
+			e = _run(t, v, _B64URL)
+			return (v, e) if e - v >= VENDOR_MIN else None
+	if t.startswith("AKIA", p) and _run(t, p + 4, _AKIA) == p + 20 and not (p + 20 < len(t) and t[p + 20].isascii() and t[p + 20].isalnum()):
+		return p + 4, p + 20
+	return None
+
+
+def _legacy_pw(t: str, p: int):
+	"""`<prefix>_pw_<name>`: the prefix is the secret; the name says which credential."""
+	if p > 0 and t[p - 1] in _IDENT:
+		return None
+	e = _run(t, p, _IDENT)
+	k = t.find("_pw_", p, e)
+	return (p, k) if k > p and k + 4 < e else None
+
+
+def _userinfo(t: str, p: int):
+	"""`scheme://user:pw@host`: the pw, up to the authority's last @."""
+	if not t.startswith("://", p) or p == 0 or not (t[p - 1].isascii() and t[p - 1].isalpha()):
+		return None
+	a = p + 3
+	while a < len(t) and not _space(t[a]) and t[a] not in "/?#\"'":
+		a += 1
+	at, colon = t.rfind("@", p + 3, a), t.find(":", p + 3, a)
+	return (colon + 1, at) if 0 <= colon < at - 1 else None
+
+
+def _shape(t: str, p: int):
+	if p > 0 and t[p - 1] in _B64URL and t[p] != ":":
+		return None
+	for m in (_pem, _jwt, _vendor, _legacy_pw, _userinfo):
+		hit = m(t, p)
+		if hit:
+			return hit
+	return None
+
+
 def _header_colon(t: str, j: int) -> int | None:
 	"""After a header name: optional quote, spaces, `:`, spaces, optional quote."""
 	j = _hspaces(t, j + (j < len(t) and t[j] in _QUOTES))
@@ -199,6 +276,6 @@ def scrub_text(s: str | None, known=()) -> str:
 	if not s:
 		return ""
 	text = _known(str(s), known)
-	for layer in (_header, _bearer, _cli, _kv):
+	for layer in (_shape, _header, _bearer, _cli, _kv):
 		text = _sub(text, layer)
 	return text

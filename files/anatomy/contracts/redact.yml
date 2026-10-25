@@ -25,7 +25,7 @@ marker: >-
   named the secret (the key, the flag, the header and its scheme) stays, so the operator still
   sees WHICH value went.
 
-sections: [known_values, kv, cli, headers, clean]
+sections: [known_values, shapes, kv, cli, headers, clean]
 
 characters: >-
   Positions are Unicode code points (Python str index, Rust Vec<char>). whitespace = Python
@@ -43,7 +43,7 @@ value: >-
   So `PASSWORD: two words` loses only `two`: unquoted, the end of a value is unknowable.
 
 layers:
-  order: [known_values, headers, bearer, cli, kv]
+  order: [known_values, shapes, headers, bearer, cli, kv]
   scan: >-
     Each layer is one left-to-right pass over the whole text: try the layer at every position;
     on a match keep text up to the value, write the marker, resume after the value. A later
@@ -58,6 +58,20 @@ layers:
     secret plus every value resolved from a `secret:` reference; the medulla, the values of
     secret-shaped job env keys (env.rs secret_key; it refuses `secret:` jobs today). Wing, the
     writer, scrubs again with the values it holds (a separate increment).
+  shapes: >-
+    Secrets that say what they are without a key. Tried at a position not preceded by an ASCII
+    letter, digit, _ or - (the userinfo rule starts at its `:`), in this order:
+    PEM: `-----BEGIN `, then `PRIVATE KEY-----` on the same line; the whole block to the
+    `PRIVATE KEY-----` after the next `-----END `, or to the end of the text when the tail cut it
+    (a certificate is public and stays). JWT: `eyJ` + base64url (at least 4 chars in all), `.`,
+    `eyJ` + base64url (4+), `.`, base64url (may be empty): the whole token. Vendor prefixes
+    sk-ant- github_pat_ glpat- ghp_ gho_ ghu_ ghs_ ghr_ xoxa- xoxb- xoxp-, then at least 8
+    base64url chars: the prefix stays (it names the vendor), the body goes. AKIA + exactly 16
+    [A-Z0-9], not followed by a letter or digit: AKIA stays. The nOS legacy form
+    `<prefix>_pw_<name>` in one [A-Za-z0-9_] run: the prefix is the secret and goes, `_pw_<name>`
+    stays (it says which credential). `<letter>://user:pw@host`: in the authority (to whitespace,
+    / ? # or a quote), the pw between the first `:` and the last `@`. Not a shape: bare hex and
+    bare base64url (see visible).
   headers: >-
     `authorization` not preceded by an ASCII letter (so Proxy-Authorization counts), an
     optional quote, gap, `:`, gap, an optional quote, a scheme of bearer|basic|digest|token|apikey,

@@ -1,6 +1,6 @@
 {
  "contract_version": 1,
- "why": "files/anatomy/contracts/redact.yml as cases. kv/cli/headers: [input, expected]; clean: inputs that must come back unchanged. Every expected value is also a fixed point (scrubbed again it stays). Both pulse/redact.py and medulla redact.rs are held to these bytes. known_values: {in, known, out}, scrubbed with those known values.",
+ "why": "files/anatomy/contracts/redact.yml as cases. kv/cli/headers: [input, expected]; clean: inputs that must come back unchanged. Every expected value is also a fixed point (scrubbed again it stays). Both pulse/redact.py and medulla redact.rs are held to these bytes. known_values: {in, known, out}, scrubbed with those known values. The fake PEM cases carry gitleaks:allow: its private-key rule runs from one case's BEGIN to a later case's KEY-----.",
  "known_values": [
   {
    "in": "url?x=fake-known-1&y=2",
@@ -82,6 +82,96 @@
    "known": [],
    "out": "no known values given"
   }
+ ],
+ "shapes": [
+  [
+   "key:\n-----BEGIN RSA PRIVATE KEY-----\nFAKEfakeFAKE\nfakeFAKE\n-----END RSA PRIVATE KEY-----\ndone gitleaks:allow",
+   "key:\n<REDACTED>\ndone gitleaks:allow"
+  ],
+  [
+   "-----BEGIN PRIVATE KEY-----\nFAKEfake\n-----END PRIVATE KEY----- tail gitleaks:allow",
+   "<REDACTED> tail gitleaks:allow"
+  ],
+  [
+   "-----BEGIN OPENSSH PRIVATE KEY-----\nFAKEfake (cut by the tail) gitleaks:allow",
+   "<REDACTED>"
+  ],
+  [
+   "-----BEGIN CERTIFICATE-----\nFAKEfake\n-----END CERTIFICATE-----",
+   "-----BEGIN CERTIFICATE-----\nFAKEfake\n-----END CERTIFICATE-----"
+  ],
+  [
+   "jwt eyJmYWtlIn0.eyJmYWtlIn0.ZmFrZXNpZw ok",
+   "jwt <REDACTED> ok"
+  ],
+  [
+   "unsigned eyJmYWtlIn0.eyJmYWtlIn0. end",
+   "unsigned <REDACTED> end"
+  ],
+  [
+   "xeyJmYWtlIn0.eyJmYWtlIn0.ZmFrZQ",
+   "xeyJmYWtlIn0.eyJmYWtlIn0.ZmFrZQ"
+  ],
+  [
+   "eyJ.eyJmYWtlIn0.x",
+   "eyJ.eyJmYWtlIn0.x"
+  ],
+  [
+   "anthropic sk-ant-api03-FAKEfake-1 ok",
+   "anthropic sk-ant-<REDACTED> ok"
+  ],
+  [
+   "gitlab glpat-FAKEfake1234",
+   "gitlab glpat-<REDACTED>"
+  ],
+  [
+   "github ghp_FAKEfake1234 and gho_FAKEfake5678",
+   "github ghp_<REDACTED> and gho_<REDACTED>"
+  ],
+  [
+   "fine-grained github_pat_FAKE_fake_1234",
+   "fine-grained github_pat_<REDACTED>"
+  ],
+  [
+   "slack xoxb-FAKE-fake-1234 xoxp-FAKEfake99",
+   "slack xoxb-<REDACTED> xoxp-<REDACTED>"
+  ],
+  [
+   "short ghp_FAKE stays",
+   "short ghp_FAKE stays"
+  ],
+  [
+   "aws AKIAFAKEFAKE0189FAKE ok",
+   "aws AKIA<REDACTED> ok"
+  ],
+  [
+   "AKIAFAKEFAKE0189FAKEX is longer",
+   "AKIAFAKEFAKE0189FAKEX is longer"
+  ],
+  [
+   "legacy FAKE_pw_wing_api here",
+   "legacy <REDACTED>_pw_wing_api here"
+  ],
+  [
+   "WING_API_TOKEN=FAKE_pw_wing_api",
+   "WING_API_TOKEN=<REDACTED>"
+  ],
+  [
+   "DSN postgres://fakeuser:fake-pw@db:5432/nos",
+   "DSN postgres://fakeuser:<REDACTED>@db:5432/nos"
+  ],
+  [
+   "redis://:fakepw@redis:6379/0",
+   "redis://:<REDACTED>@redis:6379/0"
+  ],
+  [
+   "https://fakeuser:fa@ke@host/x",
+   "https://fakeuser:<REDACTED>@host/x"
+  ],
+  [
+   "git clone https://oauth2:glpat-FAKEfake1234@gitlab.local/x.git",
+   "git clone https://oauth2:<REDACTED>@gitlab.local/x.git"
+  ]
  ],
  "kv": [
   [
@@ -558,6 +648,13 @@
   "run bfdad534-d6a6-4d21-f3f5-8cc2ba910765 done",
   "volume IKgZ37vy3g6lu9YedkOiwQw9RlFkViUEvnmJ9No9Viw mounted",
   "/var/lib/docker/volumes/nos_keap/_data",
-  "GIT_AUTHOR_NAME=Operator1"
+  "GIT_AUTHOR_NAME=Operator1",
+  "https://fakeuser@host/x",
+  "http://host:8080/path?u=a@b:c",
+  "https://fakeuser:@host/",
+  "git@github.com:thisisait/nOS.git",
+  "mailto:fake@example.com",
+  "set_pw_ only",
+  "_pw_name alone"
  ]
 }

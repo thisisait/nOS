@@ -97,6 +97,97 @@ fn line_end(t: &[char], i: usize) -> usize {
     i + t[i.min(t.len())..].iter().take_while(|c| **c != '\r' && **c != '\n').count()
 }
 
+const VENDOR: &[&str] = &["sk-ant-", "github_pat_", "glpat-", "ghp_", "gho_", "ghu_", "ghs_", "ghr_", "xoxa-", "xoxb-", "xoxp-"];
+const VENDOR_MIN: usize = 8;
+
+fn b64url(c: char) -> bool {
+    c.is_ascii_alphanumeric() || c == '_' || c == '-'
+}
+
+fn ident(c: char) -> bool {
+    c.is_ascii_alphanumeric() || c == '_'
+}
+
+fn run(t: &[char], i: usize, ok: fn(char) -> bool) -> usize {
+    i + t[i.min(t.len())..].iter().take_while(|c| ok(**c)).count()
+}
+
+/// `s` at `i`, case-sensitive (Python str.startswith).
+fn starts(t: &[char], i: usize, s: &str) -> bool {
+    t.len() >= i + s.chars().count() && s.chars().zip(&t[i..]).all(|(a, b)| a == *b)
+}
+
+/// Python str.find(pat, from, to): the first `pat` wholly inside [from, to).
+fn find(t: &[char], from: usize, to: usize, pat: &str) -> Option<usize> {
+    let n = pat.chars().count();
+    (from..to.min(t.len()).saturating_sub(n - 1).max(from)).find(|&i| starts(t, i, pat))
+}
+
+fn pem(t: &[char], p: usize) -> Hit {
+    if !starts(t, p, "-----BEGIN ") {
+        return None;
+    }
+    let h = find(t, p + 11, t.len(), "PRIVATE KEY-----")?;
+    if find(t, p + 11, h, "\n").is_some() {
+        return None;
+    }
+    let k = find(t, h, t.len(), "-----END ").and_then(|e| find(t, e, t.len(), "PRIVATE KEY-----"));
+    Some((p, k.map_or(t.len(), |k| k + 16)))
+}
+
+fn jwt(t: &[char], p: usize) -> Hit {
+    let mut j = p;
+    for part in 0..3 {
+        if part < 2 && !starts(t, j, "eyJ") {
+            return None;
+        }
+        let e = run(t, j, b64url);
+        if part < 2 && (e - j < 4 || t.get(e) != Some(&'.')) {
+            return None;
+        }
+        j = if part < 2 { e + 1 } else { e };
+    }
+    Some((p, j))
+}
+
+fn vendor(t: &[char], p: usize) -> Hit {
+    if let Some(pre) = VENDOR.iter().find(|pre| starts(t, p, pre)) {
+        let v = p + pre.len();
+        let e = run(t, v, b64url);
+        return (e - v >= VENDOR_MIN).then_some((v, e));
+    }
+    let upper = |c: char| c.is_ascii_uppercase() || c.is_ascii_digit();
+    (starts(t, p, "AKIA") && run(t, p + 4, upper) == p + 20 && !t.get(p + 20).is_some_and(|c| c.is_ascii_alphanumeric())).then_some((p + 4, p + 20))
+}
+
+/// `<prefix>_pw_<name>`: the prefix is the secret; the name says which credential.
+fn legacy_pw(t: &[char], p: usize) -> Hit {
+    if p > 0 && ident(t[p - 1]) {
+        return None;
+    }
+    let e = run(t, p, ident);
+    let k = find(t, p, e, "_pw_")?;
+    (k > p && k + 4 < e).then_some((p, k))
+}
+
+/// `scheme://user:pw@host`: the pw, up to the authority's last @.
+fn userinfo(t: &[char], p: usize) -> Hit {
+    if !starts(t, p, "://") || p == 0 || !t[p - 1].is_ascii_alphabetic() {
+        return None;
+    }
+    let a = p + 3 + t[p + 3..].iter().take_while(|c| !space(**c) && !"/?#\"'".contains(**c)).count();
+    let at = (p + 3..a).rev().find(|&i| t[i] == '@')?;
+    let colon = (p + 3..a).find(|&i| t[i] == ':')?;
+    (colon + 1 < at).then_some((colon + 1, at))
+}
+
+fn shape(t: &[char], p: usize) -> Hit {
+    if p > 0 && b64url(t[p - 1]) && t[p] != ':' {
+        return None;
+    }
+    [pem, jwt, vendor, legacy_pw, userinfo].into_iter().find_map(|m| m(t, p))
+}
+
 /// After a header name: optional quote, gap, `:`, gap, optional quote.
 fn header_colon(t: &[char], j: usize) -> Option<usize> {
     let j = hspaces(t, j + quote(t.get(j)) as usize);
@@ -194,7 +285,7 @@ pub fn redact(text: &str, known: &[&str]) -> String {
     vals.sort_by(|a, b| b.chars().count().cmp(&a.chars().count()).then(a.cmp(b)));
     vals.dedup();
     let text = vals.into_iter().fold(text.to_string(), |t, v| t.replace(v, R));
-    [header, bearer, cli, kv].into_iter().fold(text.chars().collect(), sub).into_iter().collect()
+    [shape, header, bearer, cli, kv].into_iter().fold(text.chars().collect(), sub).into_iter().collect()
 }
 
 #[cfg(test)]
