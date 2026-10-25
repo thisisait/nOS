@@ -5,7 +5,8 @@ What we took from [OpenUI](https://github.com/thesysdev/openui)'s
 one-sentence **descriptions** a model reads, and **prop shapes**, as design
 input. Not taken: its runtime, its React code, OpenUI Lang, or its idea that a
 model writes a UI tree. Here a model picks one kind of a closed list and fills
-it with data ([ssot/doctrine/generative-ui.md](../../../ssot/doctrine/generative-ui.md)).
+it with data ([ssot/doctrine/generative-ui.md](../../../ssot/doctrine/generative-ui.md));
+the trust boundary it obeys is law at `nos-sot:doctrine/generative-ui.md#2`.
 
 The list is `Component` in `files/anatomy/thalamus/contract/src/renderers.rs`
 (spec: `files/anatomy/contracts/thalamus-shell.yml` §2). The model-facing
