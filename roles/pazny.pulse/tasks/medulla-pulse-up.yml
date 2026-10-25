@@ -1,0 +1,34 @@
+---
+# The split, second half: the Python daemon has reloaded with its skip list; the medulla fires its set
+# from now on. Before the first thalamus converge the binary may not exist yet: launchd/systemd retry
+# every 30 s and serve starts once pazny.medulla has built it.
+
+- name: "[pazny.pulse] Bootstrap the medulla-pulse launchd job"
+  ansible.builtin.shell: |
+    set -e
+    UID_NUM=$(id -u)
+    if launchctl print "gui/${UID_NUM}/{{ pulse_medulla_label }}" >/dev/null 2>&1; then
+      echo "already-loaded"
+    else
+      launchctl bootstrap "gui/${UID_NUM}" ~/Library/LaunchAgents/{{ pulse_medulla_label }}.plist
+      echo "bootstrapped"
+    fi
+  register: _pulse_medulla_up
+  changed_when: "'bootstrapped' in _pulse_medulla_up.stdout"
+  when:
+    - pulse_medulla_jobs | length > 0
+    - (nos_service_manager | default('launchd')) == 'launchd'
+
+- name: "[pazny.pulse] (Linux) Enable and start the medulla-pulse unit"
+  ansible.builtin.include_role:
+    name: pazny.linux.systemd_user
+    tasks_from: ensure_unit
+  vars:
+    su_name: "{{ pulse_medulla_label }}"
+    su_description: "nOS medulla — fires the Pulse jobs in pulse_medulla_jobs"
+    su_exec_start: "{{ pulse_medulla_bin }} pulse serve"
+    su_working_dir: "{{ nos_main_checkout }}"
+    su_environment: "{{ pulse_medulla_env }}"
+  when:
+    - pulse_medulla_jobs | length > 0
+    - (nos_service_manager | default('launchd')) == 'systemd-user'

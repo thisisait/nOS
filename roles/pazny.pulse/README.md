@@ -29,6 +29,7 @@ install_pulse: true
 | Surface | Where | What |
 |---|---|---|
 | Daemon | launchd `eu.thisisait.nos.pulse` | `~/pulse/venv/bin/python -m pulse` |
+| Medulla half | launchd `eu.thisisait.nos.medulla-pulse` (only while `pulse_medulla_jobs` is non-empty) | `medulla pulse serve` fires the listed jobs; the daemon above skips them |
 | Logs | `~/pulse/log/pulse.log` | Rotating (10 MB × 5 backups) |
 | State | `~/pulse/state/` | sqlite scratch (retry counters, etc.) |
 | Wing API | `https://wing.<tenant_domain>` | Polled every 30s |

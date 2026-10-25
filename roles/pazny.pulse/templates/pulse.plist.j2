@@ -63,6 +63,9 @@
         <string>{{ pulse_log_dir }}/pulse.log</string>
         <key>PULSE_DRY_RUN</key>
         <string>{{ '1' if (pulse_dry_run | bool) else '0' }}</string>
+        <!-- The medulla fires these (medulla-pulse.plist.j2); this daemon skips them. -->
+        <key>PULSE_MEDULLA_JOBS</key>
+        <string>{{ pulse_medulla_jobs | default([]) | join(',') }}</string>
     </dict>
 
     <!--

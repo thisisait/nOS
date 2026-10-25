@@ -1,0 +1,88 @@
+---
+# The split, first half (row medulla-scheduler, e): pulse_medulla_jobs names the jobs `medulla pulse
+# serve` fires; the Python daemon skips exactly these. Runs BEFORE that daemon reloads: the set is
+# checked, and the medulla is stopped on any change, so a job never has two schedulers.
+# medulla-pulse-up.yml starts it after the reload. Gates: test_the_medullas_jobs_are_ones_it_can_fire,
+# medulla/tests/pulse_serve.rs.
+
+- name: "[pazny.pulse] The medulla's jobs are ones it can fire (subprocess, no secret: env)"
+  ansible.builtin.shell: |
+    set -o pipefail
+    python3 {{ (playbook_dir ~ '/files/anatomy/scripts/discover-pulse-catalog.py') | quote }} \
+      | python3 {{ (playbook_dir ~ '/files/anatomy/scripts/pulse-medulla-split.py') | quote }}
+  args:
+    executable: /bin/bash
+  environment:
+    NOS_PLAYBOOK_DIR: "{{ nos_main_checkout }}"
+    PULSE_MEDULLA_JOBS: "{{ pulse_medulla_jobs | join(',') }}"
+  register: _pulse_medulla_split
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: pulse_medulla_jobs | length > 0
+
+- name: "[pazny.pulse] Refuse a split that would strand a job"
+  ansible.builtin.assert:
+    that:
+      - _pulse_medulla_split.rc == 0
+      - install_thalamus | default(false) | bool
+    fail_msg: >-
+      pulse_medulla_jobs: {{ _pulse_medulla_split.stdout | default('') }}
+      {{ '' if install_thalamus | default(false) | bool else 'install_thalamus is false: no medulla binary is built (pazny.medulla).' }}
+  when: pulse_medulla_jobs | length > 0
+
+# ---- a set: render the unit; a changed one stops the medulla until the daemon has reloaded ----
+- name: "[pazny.pulse] Render the medulla-pulse launchd plist"
+  ansible.builtin.template:
+    src: medulla-pulse.plist.j2
+    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ pulse_medulla_label }}.plist"
+    mode: '0600'  # carries the medulla's Wing bearer
+  no_log: true
+  register: _pulse_medulla_plist
+  when:
+    - pulse_medulla_jobs | length > 0
+    - (nos_service_manager | default('launchd')) == 'launchd'
+
+- name: "[pazny.pulse] (Linux) Render the medulla-pulse unit, not started yet"
+  ansible.builtin.include_role:
+    name: pazny.linux.systemd_user
+    tasks_from: ensure_unit
+  vars:
+    su_name: "{{ pulse_medulla_label }}"
+    su_description: "nOS medulla — fires the Pulse jobs in pulse_medulla_jobs"
+    su_exec_start: "{{ pulse_medulla_bin }} pulse serve"
+    su_working_dir: "{{ nos_main_checkout }}"
+    su_environment: "{{ pulse_medulla_env }}"
+    su_enable: false
+  when:
+    - pulse_medulla_jobs | length > 0
+    - (nos_service_manager | default('launchd')) == 'systemd-user'
+
+- name: "[pazny.pulse] Stop the medulla while its set changes (launchd)"
+  ansible.builtin.command: "launchctl bootout gui/{{ ansible_facts['user_uid'] | default(lookup('pipe', 'id -u')) }}/{{ pulse_medulla_label }}"
+  register: _pulse_medulla_bootout
+  changed_when: _pulse_medulla_bootout.rc == 0
+  failed_when: false
+  when:
+    - (nos_service_manager | default('launchd')) == 'launchd'
+    - pulse_medulla_jobs | length == 0 or _pulse_medulla_plist is changed
+
+- name: "[pazny.pulse] Stop the medulla while its set changes (systemd --user)"  # noqa: command-instead-of-module
+  # command, not the systemd module: a unit that never existed errors there.
+  ansible.builtin.command: "{{ nos_user_systemctl | default('systemctl --user') }} {{ 'disable --now' if pulse_medulla_jobs | length == 0 else 'stop' }} {{ pulse_medulla_label }}.service"
+  register: _pulse_medulla_stop
+  changed_when: false
+  failed_when: false
+  when:
+    - (nos_service_manager | default('launchd')) == 'systemd-user'
+    - pulse_medulla_jobs | length == 0 or (_su_render | default({})) is changed
+
+# ---- no set: nothing of the medulla's half stays (a path that is not there is a no-op) ----
+- name: "[pazny.pulse] Remove the medulla-pulse unit (pulse_medulla_jobs is empty)"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ pulse_medulla_label }}.plist"
+    - "{{ ansible_facts['env']['HOME'] }}/.config/systemd/user/{{ pulse_medulla_label }}.service"
+  when: pulse_medulla_jobs | length == 0
