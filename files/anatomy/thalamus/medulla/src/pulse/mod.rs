@@ -8,6 +8,8 @@ pub mod cron;
 pub mod env;
 #[allow(dead_code)] // the fire path (next commit) calls it
 pub mod exec;
+#[allow(dead_code)] // the fire path (next commit) is its first caller
+pub mod redact;
 
 use std::process::ExitCode;
 
