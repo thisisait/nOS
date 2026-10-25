@@ -645,3 +645,18 @@ def test_the_report_says_what_the_cache_answered(adv):
     rep, _ = _frankenphp(adv, "1.13.1")
     rep["cache_note"] = "; 1 answered 304 from cache"
     assert "1 network call(s); 1 answered 304 from cache" in adv.render(rep)
+
+
+def test_github_pages_follow_the_cursor_not_the_page_number():
+    """The repo advisories endpoint pages by `after` (Link rel=next) and ignores
+    `page`: measured 2026-10-25, gitea's page 1 and page 2 were the same 100 rows."""
+    adv = _load()
+    first = adv.GITHUB.format(repo="go-gitea/gitea", page=1)
+    nxt = "https://api.github.com/repositories/1/security-advisories?per_page=100&after=CUR"
+    pages = {first: [{"ghsa_id": f"A{i}"} for i in range(100)], nxt: [{"ghsa_id": "B0"}]}
+
+    def get(url):
+        adv.NEXT[url] = nxt if url == first else None
+        return pages.get(url, pages[first])  # an ignored `page` answers page 1 again
+    rows = adv._github_advisories("go-gitea/gitea", get)
+    assert len(rows) == 101 and rows[-1]["ghsa_id"] == "B0", len(rows)
