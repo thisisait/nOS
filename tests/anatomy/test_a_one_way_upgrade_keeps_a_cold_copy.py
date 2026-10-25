@@ -71,4 +71,4 @@ def test_the_archive_holds_every_file_or_the_converge_stops(tmp_path):
 def test_no_copy_on_first_install_or_when_the_tag_is_the_pin():
     _, block_when = _tasks()[1], yaml.safe_load(GUARD.read_text())[1]["when"]
     assert "_owg_running.stdout | trim | length > 0" in block_when
-    assert any("!= owg_pin" in w for w in block_when)
+    assert any("!= owg_pin" in w and "splitlines()[0]" in w for w in block_when)  # several containers: the first decides

@@ -17,7 +17,7 @@
 - name: "[one-way {{ owg_name }}] Which tag runs now"
   ansible.builtin.shell: >
     {{ docker_bin }} ps -a --filter "label=com.docker.compose.service={{ owg_service }}"
-    --format '{{ '{{' }}.Image{{ '}}' }}' | head -1
+    --format '{{ '{{' }}.Image{{ '}}' }}'
   register: _owg_running
   changed_when: false
   check_mode: false
@@ -25,7 +25,7 @@
 - name: "[one-way {{ owg_name }}] Cold copy when the running tag is not the pin"
   when:
     - _owg_running.stdout | trim | length > 0
-    - (_owg_running.stdout | trim).split(':') | last != owg_pin
+    - (_owg_running.stdout | trim).splitlines()[0].split(':') | last != owg_pin
   block:
     - name: "[one-way {{ owg_name }}] Stop the container so the copy is consistent"
       ansible.builtin.shell: |
@@ -39,7 +39,7 @@
         set -euo pipefail
         dest="{{ one_way_upgrade_backup_dir }}"
         mkdir -p "$dest" && chmod 700 "$dest"
-        out="$dest/{{ owg_name }}-$(echo '{{ _owg_running.stdout | trim }}' | sed 's/.*://')-$(date -u +%Y%m%dT%H%M%SZ).tar.gz"
+        out="$dest/{{ owg_name }}-{{ (_owg_running.stdout | trim).splitlines()[0].split(':') | last }}-$(date -u +%Y%m%dT%H%M%SZ).tar.gz"
         parent="$(dirname '{{ owg_data_dir }}')"; base="$(basename '{{ owg_data_dir }}')"
         export COPYFILE_DISABLE=1   # macOS tar would add ._ AppleDouble members and pad the count
         tar -czf "$out" -C "$parent" "$base"

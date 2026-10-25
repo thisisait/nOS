@@ -13,7 +13,7 @@
 # 12.0 rewrites the database with no rollback but a restore: copy it cold first,
 # before the plugin swap below touches the config dir.
 - name: "[pazny.jellyfin] One-way upgrade guard"
-  ansible.builtin.import_tasks: "{{ playbook_dir }}/tasks/one-way-upgrade-guard.yml"
+  ansible.builtin.import_tasks: ../../../tasks/one-way-upgrade-guard.yml  # relative: ansible-lint cannot evaluate playbook_dir
   vars:
     owg_name: jellyfin
     owg_service: jellyfin
