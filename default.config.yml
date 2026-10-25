@@ -1546,7 +1546,7 @@ prometheus_version: "v3.13.2"   # synced to role default (cleared version-pin sh
 loki_version: "3.7.6"           # synced to role default (cleared version-pin shadow) [swept 3.7.2 2026-08-06]
 
 # Gitea Docker
-gitea_version: "28.1.0"                 # REM-294: applied live 2026-10-20 via recipe gitea-1.27-to-28 (upgrades/gitea.yml). Prior REM-244: 1.27.3.
+gitea_version: "28.2.0"                 # 2026-10-25: GHSA-vcp6-2qc6-gvq3 + GHSA-mf69-7pqq-86vx (high) + 7 lower fixed in 28.2.0; prior REM-294 28.1.0 (recipe gitea-1.27-to-28)
 
 # ── Grafana ───────────────────────────────────────────────────────────────────
 grafana_admin_user: "admin"
@@ -2428,7 +2428,7 @@ authentik_oidc_freescout_client_secret: "{{ nos_derived_secrets.oidc_freescout }
 
 outline_domain: "wiki{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 outline_port: 3005
-outline_version: "1.9.2"      # synced to role default; boots + runs DB migrations (1.6->1.8) [swept 1.8.1 2026-08-06]
+outline_version: "1.12.0"     # 2026-10-25: 44 advisories <1.12 incl. GHSA-f28f-75h4-499q + GHSA-48rq-wx9j-g949 (critical); notes 1.10-1.12 list no breaking change
 outline_db_name: "outline"
 outline_db_user: "outline"
 outline_db_password: "{{ nos_derived_secrets.outline }}"
