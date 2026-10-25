@@ -1823,6 +1823,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: The token lacks pulse.run (or pulse.write); an agent's wing.write is not enough
         '404':
           description: Not found
       security:
@@ -1880,6 +1882,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: The token lacks pulse.run (or pulse.write); an agent's wing.write is not enough
         '404':
           description: Not found
       security:

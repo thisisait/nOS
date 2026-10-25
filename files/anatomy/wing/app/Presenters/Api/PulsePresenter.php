@@ -200,6 +200,7 @@ final class PulsePresenter extends BaseApiPresenter
 	public function actionRunFinish(string $id): void
 	{
 		$this->requireMethod('POST');
+		$this->requireRunScope();
 		$body = $this->getJsonBody();
 		if (!isset($body['exit_code'])) {
 			$this->sendError('exit_code is required', 400);
@@ -408,8 +409,22 @@ final class PulsePresenter extends BaseApiPresenter
 		]);
 	}
 
+	/**
+	 * A run record is the scheduler's word that a job ran and how it ended, and its finish moves
+	 * next_fire_at. Measured 2026-10-25: any wing.write token (every agent's) could write both.
+	 * pulse.run is the scheduler's (the medulla's token, later); pulse.write implies it.
+	 */
+	private function requireRunScope(): void
+	{
+		$scopes = $this->validatedToken['scopes'] ?? null;
+		if (!TokenRepository::grants($scopes, 'pulse.run') && !TokenRepository::grants($scopes, 'pulse.write')) {
+			$this->sendError('Recording a Pulse run needs the pulse.run scope', IResponse::S403_Forbidden);
+		}
+	}
+
 	private function createRun(): void
 	{
+		$this->requireRunScope();
 		$body = $this->getJsonBody();
 		foreach (['run_id', 'job_id'] as $required) {
 			if (empty($body[$required])) {
