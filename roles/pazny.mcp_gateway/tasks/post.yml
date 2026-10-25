@@ -167,6 +167,7 @@
     and ((_grafana_token.json | default({})).key | default('') | length > 0)
 
 - name: "[mcp_gateway Post] Use the newly minted Grafana SA token in the override"
+  no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
   ansible.builtin.set_fact:
     mcp_grafana_sa_token: "{{ (_grafana_token.json | default({})).key }}"
   when: >-

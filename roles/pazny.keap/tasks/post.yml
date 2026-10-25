@@ -282,6 +282,7 @@
 # Run it LAST, after every table seed above, so the queue reflects the fully
 # converged estate. Never fatal: it refreshes the queue, it does not gate on it.
 - name: "[pazny.keap] Sweep the KEAP lint queue (recompute persisted findings)"
+  no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ keap_port | default(8091) }}/agent/v1/lint/run"
     method: POST

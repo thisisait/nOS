@@ -140,6 +140,7 @@
 # ══════════════════════════════════════════════════════════════════════════
 
 - name: "[Verify] Check onboarding probes"
+  no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ _port }}{{ item.path | default('/') }}"
     method: GET

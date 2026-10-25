@@ -37,6 +37,7 @@
     and ((_mcp_grafana_tok_stat.stat | default({})).exists | default(false))
 
 - name: "[pazny.mcp_gateway] Prefer the persisted Grafana SA token in the render"
+  no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
   ansible.builtin.set_fact:
     mcp_grafana_sa_token: "{{ _mcp_grafana_tok_file.content | b64decode | trim }}"
   when: >-

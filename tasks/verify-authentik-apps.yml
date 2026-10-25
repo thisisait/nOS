@@ -12,6 +12,7 @@
 # this reader is where the truth lands.
 
 - name: "[Verify] Read the Applications Authentik actually holds"
+  no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
   ansible.builtin.uri:
     # Loopback, not the domain: a CI runner has no DNS for the tenant TLD
     # (the smoke's loopback retry is what makes its authentik row green), and
@@ -79,6 +80,7 @@
 # until the Authentik brand serializer's read shape is confirmed live.
 
 - name: "[Verify] Read the RBAC expression policies Authentik holds"
+  no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ authentik_port | default(9003) }}/api/v3/policies/expression/?page_size=300"
     headers:
@@ -119,6 +121,7 @@
   tags: ['always', 'verify']
 
 - name: "[Verify] Read the agent OAuth2 providers Authentik holds"
+  no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ authentik_port | default(9003) }}/api/v3/providers/oauth2/?page_size=300"
     headers:
@@ -157,6 +160,7 @@
   tags: ['always', 'verify']
 
 - name: "[Verify] Read the enrollment flow Authentik holds"
+  no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ authentik_port | default(9003) }}/api/v3/flows/instances/?page_size=300"
     headers:
@@ -189,6 +193,7 @@
   tags: ['always', 'verify']
 
 - name: "[Verify] Read the default brand Authentik holds"
+  no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ authentik_port | default(9003) }}/api/v3/core/brands/?domain=authentik-default"
     headers:
@@ -230,6 +235,7 @@
 # error clears within the hour once the file is valid.
 
 - name: "[Verify] Read the blueprint instances Authentik holds"
+  no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ authentik_port | default(9003) }}/api/v3/managed/blueprints/?page_size=300"
     headers:

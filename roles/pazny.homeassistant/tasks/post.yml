@@ -74,6 +74,7 @@
   no_log: true
 
 - name: "[pazny.homeassistant Post] Set core config (timezone, location)"
+  no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ homeassistant_port }}/api/onboarding/core_config"
     method: POST
@@ -88,6 +89,7 @@
   failed_when: false
 
 - name: "[pazny.homeassistant Post] Skip analytics"
+  no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ homeassistant_port }}/api/onboarding/analytics"
     method: POST
@@ -102,6 +104,7 @@
   failed_when: false
 
 - name: "[pazny.homeassistant Post] Complete onboarding (skip integrations)"
+  no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ homeassistant_port }}/api/onboarding/integration"
     method: POST

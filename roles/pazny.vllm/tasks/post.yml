@@ -12,6 +12,7 @@
   register: _vllm_rendered
 
 - name: "[pazny.vllm Post] The server lists the served model (under the key)"
+  no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ vllm_port }}/v1/models"
     headers:
@@ -24,7 +25,6 @@
     _vllm_models.status | default(0) == 200
     and vllm_served_model_name in (_vllm_models.json.data | default([]) | map(attribute='id') | list)
   when: _vllm_rendered.stat.exists
-  no_log: false
 
 - name: "[pazny.vllm Post] Open WebUI admin token"
   ansible.builtin.uri:

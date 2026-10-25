@@ -21,6 +21,7 @@
 # enabled_flag true); a keyless row has none. The plist renders each value as NOS_SECRET_<VAR>
 # (src/main.rs): an unarmed row's key never reaches the thalamus.
 - name: "[pazny.thalamus] The key vars of iris's armed rows"
+  no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
   ansible.builtin.set_fact:
     thalamus_model_secrets: >-
       {%- set reg = (lookup('file', nos_main_checkout ~ '/state/habitat/llm-backends.yml') | from_yaml).backends -%}

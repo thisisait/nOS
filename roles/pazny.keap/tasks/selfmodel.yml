@@ -359,6 +359,7 @@
 # i.e. the generator and the taxonomy disagree. 409 = a sync already in flight
 # (the fs-watch debounce beat us); retry rather than fail.
 - name: "[pazny.keap] WET GATE — fs-sync the self-model tree"
+  no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ keap_port | default(8091) }}/agent/v1/fs/sync?wait=1"
     method: POST

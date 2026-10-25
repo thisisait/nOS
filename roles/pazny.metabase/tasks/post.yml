@@ -40,6 +40,7 @@
 # two-arg form is what treats null as empty; the branch semantics are unchanged
 # (empty token == "setup already done").
 - name: "[pazny.metabase Post] Get setup token"
+  no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
   ansible.builtin.set_fact:
     _mb_setup_token: "{{ _mb_props.json['setup-token'] | default('', true) }}"
   when:

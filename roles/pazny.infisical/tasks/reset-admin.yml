@@ -167,6 +167,7 @@
   tags: ['infisical-reset-admin']
 
 - name: "[Reset] Clear stale admin_token + machine-identity creds in ~/.nos/secrets.yml"
+  no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
   ansible.builtin.set_fact:
     infisical_admin_token: ""
     infisical_machine_id_client_id: ""

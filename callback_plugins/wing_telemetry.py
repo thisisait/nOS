@@ -79,7 +79,10 @@ except ImportError:  # pragma: no cover - allows import under pytest w/o ansible
 # the callback and without bringing up an Ansible execution context).         #
 # --------------------------------------------------------------------------- #
 
-_SENSITIVE_KEY_RE = re.compile(r"password|token|secret|key|credential",
+# authorization|passphrase|cookie: measured 2026-10-25, events held a Wing bearer (headers.Authorization,
+# 98 copies), backup_encryption_passphrase (42 rows) and authentik_session cookies (3), all under keys
+# the first five words miss (row pulse-redact-gaps).
+_SENSITIVE_KEY_RE = re.compile(r"password|passphrase|token|secret|key|credential|authorization|cookie",
                                re.IGNORECASE)
 # SEC H-ANS1 defense-in-depth (2026-05-24): `no_log: true` on secret-bearing
 # tasks is the primary control, but key-name redaction misses secrets that live
@@ -93,6 +96,9 @@ _SECRET_FLAG_RE = re.compile(
     re.IGNORECASE)
 _SECRET_AUTH_RE = re.compile(
     r"(Authorization:\s*(?:Basic|Bearer|token)\s+)(\S+)", re.IGNORECASE)
+# A header value with no `Authorization:` before it (a dict's value), and a JWT anywhere (a cookie, a URL).
+_SECRET_SCHEME_RE = re.compile(r"(\b(?:Basic|Bearer|Token)\s+)([A-Za-z0-9+/=_.~-]{8,})", re.IGNORECASE)
+_SECRET_JWT_RE = re.compile(r"\beyJ[A-Za-z0-9_-]{6,}\.eyJ[A-Za-z0-9_-]{6,}\.[A-Za-z0-9_-]*")
 
 
 def _redact_value(s):
@@ -100,6 +106,8 @@ def _redact_value(s):
     s = _SECRET_PW_RE.sub("***", s)
     s = _SECRET_FLAG_RE.sub(lambda m: m.group(1) + "***", s)
     s = _SECRET_AUTH_RE.sub(lambda m: m.group(1) + "***", s)
+    s = _SECRET_SCHEME_RE.sub(lambda m: m.group(1) + "***", s)
+    s = _SECRET_JWT_RE.sub("***", s)
     return s
 _MIGRATION_TAG_RE = re.compile(r"^\s*\[\s*Migrate\s*\]", re.IGNORECASE)
 _UPGRADE_TAG_RE = re.compile(r"^\s*\[\s*Upgrade\s*\]", re.IGNORECASE)
@@ -197,6 +205,12 @@ def bound_result(obj, cap=None):
     if "invocation" in obj:
         dropped += len(json.dumps(obj.pop("invocation"), default=repr))
         omitted.append("invocation")
+    # A loop's per-item results carry their own `invocation`: the bearer leak of 2026-10-25 rode in there.
+    items = [r for r in obj.get("results") or [] if isinstance(r, dict) and "invocation" in r]
+    for r in items:
+        dropped += len(json.dumps(r.pop("invocation"), default=repr))
+    if items:
+        omitted.append("results[].invocation")
 
     # Sized once, biggest first, rather than re-serialising the whole result on
     # every iteration — a 4 MB blob with 30 keys would otherwise be 30 passes.

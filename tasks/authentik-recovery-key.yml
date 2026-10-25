@@ -46,6 +46,7 @@
 # ----------------------------------------------------------------------------
 
 - name: "[Recovery] Generate-if-absent offline break-glass secret"
+  no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
   # Lazy-regen pattern (mirrors authentik_secret_key / wing_api_token in
   # main.yml): regenerate ONLY when the value is unset, a prefix-derived
   # placeholder, or too short. A value loaded from ~/.nos/secrets.yml on a

@@ -18,6 +18,7 @@
 # ==============================================================================
 
 - name: "[Restore][dir] Resolve key + start time ({{ item.source }})"
+  no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
   ansible.builtin.set_fact:
     dir_key: "{{ item.source | regex_replace('^dir-', '') }}"
     dir_t0: "{{ lookup('pipe', 'date +%s') }}"

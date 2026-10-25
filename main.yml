@@ -1417,6 +1417,7 @@
       tags: ['blank', 'reset']
 
     - name: "[Prefix] Set password prefix from prompt"
+      no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
       ansible.builtin.set_fact:
         global_password_prefix: "{{ _prefix_prompt.user_input if (_prefix_prompt.user_input | default('') | length > 0) else global_password_prefix }}"
       when: nos_removing and nos_confirmed and not nos_assume_yes
@@ -1447,6 +1448,7 @@
       tags: ['always']
 
     - name: "[State] Expose previous_password_prefix fact (fallback = current)"
+      no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
       ansible.builtin.set_fact:
         previous_password_prefix: >-
           {{ (_prev_prefix_raw.content | b64decode | trim)
@@ -1544,6 +1546,7 @@
     # exactly as every credential did pre-P1; named as a limitation in
     # tests/anatomy/test_no_master_in_rendered_artifacts.py.)
     - name: "[Secrets] Drop the registered map duplicate"
+      no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
       ansible.builtin.set_fact:
         _nos_secret_map: "consumed — see nos_derived_secrets/nos_secret_scheme facts"
       tags: ['always']
@@ -1962,6 +1965,7 @@
       tags: ['always']
 
     - name: "[Chain] Retire the outgoing key onto the ring"
+      no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
       ansible.builtin.set_fact:
         # Newest retired first, and the outgoing value is prepended rather than
         # appended so the ring reads chronologically backwards — the order the
@@ -1988,6 +1992,7 @@
       tags: ['always']
 
     - name: "Lazy-regenerate placeholder APP_KEYs / tokens (first non-blank enable)"
+      no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
       # UX: user can flip install_firefly: true (or bookstack / onlyoffice /
       # influxdb) in config.yml and run 'ansible-playbook main.yml -K' WITHOUT -e blank=true.
       # Without this task the role assert (e.g. roles/pazny.firefly/tasks/main.yml)
@@ -2140,6 +2145,7 @@
       tags: ['always']
 
     - name: "Lazy-regenerate Wing events HMAC (mirrors bone_secret unless overridden)"
+      no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
       # Two-step because the value of bone_secret above has to be
       # resolved BEFORE this set_fact reads it. wing_events_hmac_secret
       # was historically `{{ bone_secret }}` in default.config.yml so
@@ -2189,6 +2195,7 @@
       tags: ['always']
 
     - name: "Regenerate DESTRUCTIVE stateless secrets (prefix change, blank, or destroy_state)"
+      no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
       ansible.builtin.set_fact:
         infisical_encryption_key: "{{ lookup('pipe', 'openssl rand -hex 16') }}"
         infisical_auth_secret: "{{ lookup('pipe', 'openssl rand -base64 32') }}"

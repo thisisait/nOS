@@ -33,6 +33,7 @@
   when: (woodpecker_api_token | default('')) | length > 0
   block:
     - name: "[pazny.woodpecker Post] Read registered agents"
+      no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
       ansible.builtin.uri:
         url: "http://127.0.0.1:{{ woodpecker_port | default(8060) }}/api/agents?perPage=100"
         headers:
@@ -51,6 +52,7 @@
       when: _wp_agent_rows.status | default(0) != 200
 
     - name: "[pazny.woodpecker Post] Delete agent rows stale for over {{ woodpecker_agent_stale_after_s }}s"
+      no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
       ansible.builtin.uri:
         url: "http://127.0.0.1:{{ woodpecker_port | default(8060) }}/api/agents/{{ item.id }}"
         method: DELETE

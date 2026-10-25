@@ -642,6 +642,7 @@
     label: "{{ item.source }}"
 
 - name: "[pazny.wing] Drop Pulse jobs of retired agents"
+  no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
   # Runs BEFORE the upsert, so an id that is still declared wins.
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ wing_port | default(9000) }}/api/v1/pulse_jobs/{{ item }}"
