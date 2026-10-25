@@ -1,0 +1,161 @@
+{
+ "home": "/Users/op",
+ "repo": "/Users/op/projects/nOS",
+ "why": "Cases as [command, args, why]. test_pulse_command_allowlist runs them against pulse/runners/subprocess.py; medulla/src/pulse/allow.rs runs them against the medulla.",
+ "refused": [
+  [
+   "/Users/op/Downloads/x.py",
+   [],
+   "a planted script"
+  ],
+  [
+   "/Users/op/projects/nOS/tools/../../../Downloads/x.py",
+   [],
+   "traversal out of a tree"
+  ],
+  [
+   "/Users/op/projects/other/tools/x.py",
+   [],
+   "a different checkout"
+  ],
+  [
+   "/opt/homebrew/bin/python3",
+   [
+    "/Users/op/Downloads/x.py"
+   ],
+   "interpreter, planted script"
+  ],
+  [
+   "/opt/homebrew/bin/python3",
+   [
+    "-m",
+    "pip",
+    "install",
+    "evil"
+   ],
+   "interpreter, no script"
+  ],
+  [
+   "/opt/homebrew/bin/php",
+   [
+    "/Users/op/wing/../Downloads/x.php"
+   ],
+   "traversal in the script"
+  ],
+  [
+   "/Users/op/.local/bin/frankenphp",
+   [
+    "php-cli",
+    "/tmp/x.php"
+   ],
+   "frankenphp, script outside the trees"
+  ],
+  [
+   "/usr/local/bin/docker",
+   [
+    "run",
+    "-v",
+    "/Users/op/.nos:/x:ro",
+    "alpine",
+    "cat",
+    "/x/secrets.yml"
+   ],
+   "review 2026-10-04: whole-dir prefixes let any wrapper through"
+  ],
+  [
+   "/opt/homebrew/bin/gtimeout",
+   [
+    "600",
+    "/Users/op/Downloads/x.py"
+   ],
+   "a wrapper"
+  ],
+  [
+   "/opt/homebrew/bin/uv",
+   [
+    "run",
+    "/Users/op/Downloads/x.py"
+   ],
+   "a wrapper"
+  ],
+  [
+   "/opt/homebrew/bin/bun",
+   [
+    "/Users/op/Downloads/x.js"
+   ],
+   "a wrapper"
+  ],
+  [
+   "/opt/homebrew/bin/pip3",
+   [
+    "install",
+    "evil"
+   ],
+   "a wrapper"
+  ],
+  [
+   "/opt/homebrew/bin/gitleaks",
+   [
+    "detect",
+    "--no-git"
+   ],
+   "named by no job"
+  ],
+  [
+   "/Users/op/.local/bin/uv",
+   [
+    "run",
+    "x.py"
+   ],
+   "~/.local/bin is not a tree"
+  ],
+  [
+   "/Users/op/.local/bin/frankenphp-x",
+   [
+    "php-cli",
+    "/Users/op/wing/app/bin/x.php"
+   ],
+   "not the named binary"
+  ],
+  [
+   "/Users/op/projects/nOS/tools/gtimeout",
+   [
+    "600",
+    "/Users/op/Downloads/x.py"
+   ],
+   "a wrapper even in a tree"
+  ]
+ ],
+ "allowed": [
+  [
+   "/Users/op/projects/nOS/tools/red-status.py",
+   [],
+   "a declared shape"
+  ],
+  [
+   "/Users/op/projects/nOS/files/anatomy/plugins/gitleaks/skills/scan.sh",
+   [],
+   "a declared shape"
+  ],
+  [
+   "/opt/homebrew/bin/php",
+   [
+    "/Users/op/wing/app/bin/breach-scan.php"
+   ],
+   "a declared shape"
+  ],
+  [
+   "/Users/op/.nos/backup-verify.sh",
+   [],
+   "a declared shape"
+  ],
+  [
+   "/Users/op/.local/bin/frankenphp",
+   [
+    "php-cli",
+    "/Users/op/wing/app/bin/x.php"
+   ],
+   "a declared shape"
+  ]
+ ]
+}

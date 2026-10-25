@@ -20,6 +20,7 @@ plugin-loader run).
 
 from __future__ import annotations
 
+import json
 import pathlib
 import re
 
@@ -295,46 +296,23 @@ def test_the_daemons_own_home_is_allowed_on_both_sides(monkeypatch):
 			run.validate_command("/etc/evil", [])
 
 
-REPO_ROOT = "/Users/op/projects/nOS"
+ALLOW_CASES = json.loads((REPO / "tests/fixtures/pulse_allow.json").read_text(encoding="utf-8"))
+REPO_ROOT = ALLOW_CASES["repo"]  # the same cases run in the medulla (medulla/src/pulse/allow.rs)
 
 
-@pytest.mark.parametrize("command,args", [
-	("/Users/op/Downloads/x.py", []),                                    # a planted script
-	("/Users/op/projects/nOS/tools/../../../Downloads/x.py", []),         # traversal out of a tree
-	("/Users/op/projects/other/tools/x.py", []),                         # a different checkout
-	("/opt/homebrew/bin/python3", ["/Users/op/Downloads/x.py"]),         # interpreter, planted script
-	("/opt/homebrew/bin/python3", ["-m", "pip", "install", "evil"]),     # interpreter, no script
-	("/opt/homebrew/bin/php", ["/Users/op/wing/../Downloads/x.php"]),     # traversal in the script
-	("/Users/op/.local/bin/frankenphp", ["php-cli", "/tmp/x.php"]),
-	# Review 2026-10-04: whole-dir prefixes let any wrapper through.
-	("/usr/local/bin/docker", ["run", "-v", "/Users/op/.nos:/x:ro", "alpine", "cat", "/x/secrets.yml"]),
-	("/opt/homebrew/bin/gtimeout", ["600", "/Users/op/Downloads/x.py"]),
-	("/opt/homebrew/bin/uv", ["run", "/Users/op/Downloads/x.py"]),
-	("/opt/homebrew/bin/bun", ["/Users/op/Downloads/x.js"]),
-	("/opt/homebrew/bin/pip3", ["install", "evil"]),
-	("/opt/homebrew/bin/gitleaks", ["detect", "--no-git"]),               # named by no job
-	("/Users/op/.local/bin/uv", ["run", "x.py"]),                         # ~/.local/bin is not a tree
-	("/Users/op/.local/bin/frankenphp-x", ["php-cli", "/Users/op/wing/app/bin/x.php"]),
-	(f"{REPO_ROOT}/tools/gtimeout", ["600", "/Users/op/Downloads/x.py"]),  # a wrapper even in a tree
-])
-def test_a_command_outside_the_trees_is_refused(command, args, monkeypatch):
+@pytest.mark.parametrize("command,args,why", ALLOW_CASES["refused"])
+def test_a_command_outside_the_trees_is_refused(command, args, why, monkeypatch):
 	run = _runner()
-	monkeypatch.setenv("HOME", "/Users/op")
+	monkeypatch.setenv("HOME", ALLOW_CASES["home"])
 	monkeypatch.setenv("NOS_REPO_ROOT", REPO_ROOT)
 	with pytest.raises(run.CommandRejected):
 		run.validate_command(command, args)
 
 
-@pytest.mark.parametrize("command,args", [
-	(f"{REPO_ROOT}/tools/red-status.py", []),
-	(f"{REPO_ROOT}/files/anatomy/plugins/gitleaks/skills/scan.sh", []),
-	("/opt/homebrew/bin/php", ["/Users/op/wing/app/bin/breach-scan.php"]),
-	("/Users/op/.nos/backup-verify.sh", []),
-	("/Users/op/.local/bin/frankenphp", ["php-cli", "/Users/op/wing/app/bin/x.php"]),
-])
-def test_a_declared_command_runs(command, args, monkeypatch):
+@pytest.mark.parametrize("command,args,why", ALLOW_CASES["allowed"])
+def test_a_declared_command_runs(command, args, why, monkeypatch):
 	run = _runner()
-	monkeypatch.setenv("HOME", "/Users/op")
+	monkeypatch.setenv("HOME", ALLOW_CASES["home"])
 	monkeypatch.setenv("NOS_REPO_ROOT", REPO_ROOT)
 	run.validate_command(command, args)
 
