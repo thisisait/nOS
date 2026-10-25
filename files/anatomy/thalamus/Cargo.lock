@@ -614,6 +614,7 @@ dependencies = [
 name = "medulla"
 version = "0.1.0"
 dependencies = [
+ "libc",
  "nos-contract",
  "rusqlite",
  "serde_json",
