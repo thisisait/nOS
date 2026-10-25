@@ -1203,6 +1203,7 @@ pub struct ChoiceOption {
 // docs/systems/thalamus/genui-vocabulary.md. Only the vocabulary: no runtime, no code.
 
 /// A note the person should not miss (a risk, a caveat), in the face's tone words; text only.
+/// Both shells head it "Iris says", so it never reads as the thalamus's own warning; no prop says so.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Callout {
@@ -1211,7 +1212,8 @@ pub struct Callout {
     pub text: String,
 }
 
-/// A plan as numbered steps; `status` is the model's claim, said as a word, never a verdict.
+/// A plan as numbered steps the model fills: pending or active only. Done and failed are verdicts,
+/// the thalamus's to say, and no serve-built steps card exists yet (ruling 2026-10-25).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Steps {
@@ -1234,8 +1236,6 @@ pub struct PlanStep {
 pub enum StepStatus {
     Pending,
     Active,
-    Done,
-    Failed,
 }
 
 /// The rows a claim came from: each one a row query_rows showed this session (serve refuses

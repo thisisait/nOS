@@ -2,7 +2,7 @@
 //! what the person typed or pressed, and renders only the closed component vocabulary.
 //! Whatever it cannot decode is shown as a refusal (decode_to_shell), never dropped.
 
-use nos_contract::renderers::{Choice, Component, Dendrogram, Delta, KnowledgeTree, RunStatus, LensOp, RowOp, SchemaColumn, Step, StepStatus, Tone, TreeNode, WhenOp};
+use nos_contract::renderers::{Choice, Component, Dendrogram, Delta, KnowledgeTree, RunStatus, LensOp, RowOp, SchemaColumn, Step, Tone, TreeNode, WhenOp};
 use nos_contract::wire::{decode_to_shell, encode, ControlView, Decision, ModelOption, Scope, ToShell, ToThalamus, WidgetSpec};
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::layout::{Constraint, Layout, Rect};
@@ -390,18 +390,18 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
         // The tone is a word in brackets; warn and bad are drawn as warnings.
         Component::Callout(c) => {
             let tone = cell(&serde_json::to_value(c.tone).unwrap_or_default());
-            let line = format!("[{tone}] {}", c.title);
+            let line = format!("Iris says [{tone}] {}", c.title);
             out.push(if matches!(c.tone, Tone::Warn | Tone::Bad) { warn(line) } else { head(line) });
             out.extend(c.text.lines().map(|l| Line::from(format!("  {l}"))));
         }
-        // Each step's status as Iris says it, a word, numbered in order.
+        // Each step's status as Iris says it (pending or active), a word, numbered in order.
         Component::Steps(p) => {
             out.extend(p.title.clone().map(head));
             for (i, x) in p.items.iter().enumerate() {
                 let status = cell(&serde_json::to_value(x.status).unwrap_or_default());
                 let detail = x.detail.as_deref().map(|d| format!(" — {d}")).unwrap_or_default();
                 let line = format!("  {}. [{status}] {}{detail}", i + 1, x.title);
-                out.push(if x.status == StepStatus::Failed { warn(line) } else { Line::from(line) });
+                out.push(Line::from(line));
             }
         }
         Component::Sources(x) => {

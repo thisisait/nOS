@@ -135,7 +135,7 @@ export type Component =
 				title?: string;
 				items: {
 					title: string;
-					status: 'pending' | 'active' | 'done' | 'failed';
+					status: 'pending' | 'active';
 					detail?: string;
 				}[];
 			};

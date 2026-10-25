@@ -57,13 +57,8 @@
 	const switchName = $props.id();
 	// A column whose text runs long reads as prose under its row, not as a column that starves the rest.
 	const LONG = (s: string) => s.length > 80 || s.includes('\n');
-	// A step's status as a word on a tone; the word is the fact, the colour only on top.
-	const STEP_TONE: Record<string, Tone> = {
-		done: 'ok',
-		active: 'info',
-		pending: 'neutral',
-		failed: 'bad'
-	};
+	// A model's step is pending or active (done and failed are the thalamus's); the word is the fact.
+	const STEP_TONE: Record<string, Tone> = { active: 'info', pending: 'neutral' };
 </script>
 
 <!-- The mark is text (+ − ~) and its word for a screen reader; the colour is only on top. -->
@@ -392,7 +387,14 @@
 	{:else if component.kind === 'callout'}
 		{@const c = component.props}
 		{@const v = toneVars(c.tone)}
-		<div class="callout" role="note" style="--ink: {v.ink}; --soft: {v.soft}">
+		<!-- "Iris says" is the shell's, never a prop: a model's note must not read as the thalamus's warning. -->
+		<div
+			class="callout"
+			role="note"
+			aria-label="Iris says: {c.title}"
+			style="--ink: {v.ink}; --soft: {v.soft}"
+		>
+			<p class="muted says">Iris says</p>
 			<h3><Badge tone={c.tone}>{c.tone}</Badge>{c.title}</h3>
 			<p>{c.text}</p>
 		</div>
@@ -443,6 +445,9 @@
 	.callout p {
 		margin: 0;
 		white-space: pre-wrap;
+	}
+	.callout .says {
+		font-size: 11px;
 	}
 	.steps li {
 		margin: 3px 0;

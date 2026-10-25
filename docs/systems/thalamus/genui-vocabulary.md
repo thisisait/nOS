@@ -17,8 +17,8 @@ subset, and one sentence per kind saying when to use it, is `SHOW_KINDS` /
 
 | OpenUI | Ours | Note |
 |---|---|---|
-| Callout, TextCallout | `callout` (v12) | tone ok/info/warn/bad (the face's tone words, not theirs) |
-| Steps, StepsItem | `steps` (v12) | adds `status`; theirs is a static how-to |
+| Callout, TextCallout | `callout` (v12) | tone ok/info/warn/bad; both shells head it "Iris says" |
+| Steps, StepsItem | `steps` (v12) | adds `status` pending/active; done and failed are the thalamus's, refused from the model |
 | FollowUpBlock, FollowUpItem | `follow_up` (v12) | a click fills the composer; theirs sends at once |
 | (none) | `sources` (v12) | provenance: rows the person was shown, checked by serve |
 | Text, BoldText, TextContent, Label, InlineHeader, MarkDownRenderer, CodeBlock | `markdown` | plain text, drawn as text nodes; links as text |

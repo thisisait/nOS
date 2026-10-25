@@ -428,7 +428,7 @@
       title: Not backed up
       text: These rows are in no backup taken today.
   expect:
-    - "[bad] Not backed up"
+    - "Iris says [bad] Not backed up"
     - These rows are in no backup taken today.
 - id: steps-plan
   kind: steps
@@ -438,14 +438,14 @@
       title: Close the month
       items:
         - title: Import the statement
-          status: done
-        - title: Match invoices
           status: active
-          detail: 12 of 40
+        - title: Match invoices
+          status: pending
+          detail: after the import
   expect:
     - Close the month
-    - "1. [done] Import the statement"
-    - "2. [active] Match invoices — 12 of 40"
+    - "1. [active] Import the statement"
+    - "2. [pending] Match invoices — after the import"
 # A source as serve sends it: name is the table title serve resolved from the rows it showed.
 - id: sources-rows
   kind: sources
