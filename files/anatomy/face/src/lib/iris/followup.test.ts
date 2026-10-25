@@ -56,14 +56,24 @@ describe('the v12 kinds', () => {
 	it('a step and a callout say their state as a word', () => {
 		const steps = draw({
 			kind: 'steps',
-			props: { items: [{ title: 'Fetch', status: 'failed', detail: 'timeout' }] }
+			props: { items: [{ title: 'Fetch', status: 'active', detail: 'timeout' }] }
 		}).textContent!;
-		expect(steps).toMatch(/failed\s*Fetch — timeout/);
+		expect(steps).toMatch(/active\s*Fetch — timeout/);
 		unmount(app!);
 		const note = draw({
 			kind: 'callout',
 			props: { tone: 'bad', title: 'Risk', text: 'No backup.' }
 		}).querySelector('[role="note"]')!.textContent!;
 		expect(note).toMatch(/bad\s*Risk\s*No backup\./);
+	});
+
+	// The marker is the shell's, not a prop: a model callout never reads as the thalamus's own warning.
+	it('a callout is headed "Iris says" by the shell', () => {
+		const note = draw({
+			kind: 'callout',
+			props: { tone: 'bad', title: 'Risk', text: 'No backup.' }
+		}).querySelector('[role="note"]')!;
+		expect(note.textContent).toMatch(/^\s*Iris says/);
+		expect(note.getAttribute('aria-label')).toBe('Iris says: Risk');
 	});
 });
