@@ -11,6 +11,7 @@
 #     volume-<name>.tar.gz       Docker named volume tarball
 #     dir-<name>.tar.gz          host-bind dir (gitea/gitlab repos)
 #     wing-db.sql.gz             Wing SQLite store (sqlite3 .dump)
+#     thalamus-ledger.sql.gz     Iris ledger.db (sqlite3 .dump)
 #     keap-db.gz                 KEAP libSQL store (sqlite3 .backup, binary)
 #     nos-state.tar.gz           ~/.nos/{secrets,state}.yml (GATED: -e restore_state=true)
 #     authentik-blueprints.json  Authentik export (durable state restores via the postgres dump)
@@ -92,6 +93,7 @@
       outline: "{{ outline_data_dir | default(ansible_facts['env']['HOME'] + '/outline') }}"
       paperclip: "{{ paperclip_data_dir | default(ansible_facts['env']['HOME'] + '/paperclip') }}"
       paperclip-workspaces: "{{ paperclip_workspaces_dir | default(ansible_facts['env']['HOME'] + '/paperclip-workspaces') }}"
+      thalamus-people: "{{ thalamus_data_dir | default(nos_data_root ~ '/platform/services/thalamus/data') }}/people"
       uptime-kuma: "{{ uptime_kuma_data_dir | default(ansible_facts['env']['HOME'] + '/uptime-kuma') }}"
       homeassistant: "{{ homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant') }}"
       openwebui: "{{ openwebui_data_dir | default(ansible_facts['env']['HOME'] + '/openwebui') }}"
@@ -227,6 +229,7 @@
       ║   * Drop-and-replace MariaDB / PostgreSQL databases from dumps
       ║   * Stop containers using targeted Docker volumes / host-bind dirs and rewrite them
       ║   * Rebuild wing.db (stops Wing; live db snapshotted to .pre-restore-<date>)
+      ║   * Rebuild Iris ledger.db (stops the thalamus; same snapshot rule)
       ║   * ~/.nos state: ONLY if -e restore_state=true (else skipped)
       ║   * Authentik: restored via the postgres dump (blueprint JSON staged, not re-POSTed)
       ║
@@ -642,6 +645,94 @@
         {{ ('launchctl bootstrap gui/' ~ wing_uid ~ ' ' ~ ansible_facts['env']['HOME'] ~ '/Library/LaunchAgents/' ~ wing_label ~ '.plist')
            if (nos_service_manager | default('launchd')) == 'launchd'
            else ((nos_user_systemctl | default('systemctl --user')) ~ ' start ' ~ wing_label) }}
+      changed_when: true
+      failed_when: false
+
+# 5e-1. Iris ledger (thalamus-ledger.sql.gz) — the wing-db shape -------------
+# The thalamus (thalamus_launchd_label / thalamus_unit_name, one string) is
+# ledger.db's one writer. WAL mode: -wal/-shm move WITH the db, or a stale WAL
+# would be replayed onto the rebuilt file. people/ restores as dir-thalamus-people.
+- name: "[Restore][thalamus-ledger] Replay sqlite3 .dump into ledger.db"
+  when:
+    - restore_plan | selectattr('source', 'equalto', 'thalamus-ledger') | list | length > 0
+    - not ansible_check_mode
+  vars:
+    ledger_target: "{{ thalamus_data_dir | default(nos_data_root ~ '/platform/services/thalamus/data') }}/ledger.db"
+    ledger_label: "{{ thalamus_launchd_label | default('eu.thisisait.nos.thalamus') }}"
+    ledger_uid: "{{ ansible_facts['user_uid'] | default(lookup('pipe', 'id -u')) }}"
+  block:
+    - name: "[Restore][thalamus-ledger] Pre-flight: require sqlite3 (BEFORE mutating ledger.db)"  # noqa: command-instead-of-shell
+      ansible.builtin.shell: command -v sqlite3
+      changed_when: false
+
+    - name: "[Restore][thalamus-ledger] Resolve dump file + start time"
+      ansible.builtin.set_fact:
+        ledger_t0: "{{ lookup('pipe', 'date +%s') }}"
+        ledger_db_file: >-
+          {{ restore_plan | selectattr('source', 'equalto', 'thalamus-ledger')
+             | map(attribute='file') | list | last }}
+
+    - name: "[Restore][thalamus-ledger] Stop the thalamus (best-effort — frees the sqlite lock)"
+      ansible.builtin.command: >-
+        {{ ('launchctl bootout gui/' ~ ledger_uid ~ '/' ~ ledger_label)
+           if (nos_service_manager | default('launchd')) == 'launchd'
+           else ((nos_user_systemctl | default('systemctl --user')) ~ ' stop ' ~ ledger_label) }}
+      changed_when: true
+      failed_when: false
+
+    - name: "[Restore][thalamus-ledger] Snapshot ledger.db + its WAL (non-clobbering)"
+      # `mv -n` so a RE-RUN cannot overwrite the genuine first-run snapshot.
+      ansible.builtin.shell: |
+        for s in "" -wal -shm; do
+          [ -e "{{ ledger_target }}$s" ] || continue
+          mv -n "{{ ledger_target }}$s" "{{ ledger_target }}.pre-restore-{{ restore_date }}$s"
+          rm -f "{{ ledger_target }}$s"
+        done
+      changed_when: true
+      failed_when: false
+
+    - name: "[Restore][thalamus-ledger] Rebuild ledger.db from the dump"
+      ansible.builtin.shell: |
+        set -o pipefail
+        gunzip -c "{{ restore_workdir }}/{{ ledger_db_file }}" | sqlite3 "{{ ledger_target }}"
+      args:
+        executable: /bin/bash
+      register: ledger_replay
+      changed_when: ledger_replay.rc == 0
+
+    - name: "[Restore][thalamus-ledger] Append to summary"
+      ansible.builtin.set_fact:
+        restore_summary: "{{ restore_summary + [{
+          'source': 'thalamus-ledger', 'status': 'ok',
+          'duration_s': ((lookup('pipe', 'date +%s') | int) - (ledger_t0 | int)),
+          'size_bytes': (restore_stats.results
+                          | selectattr('item.source','equalto','thalamus-ledger')
+                          | map(attribute='stat.size') | list | first | default(0))
+        }] }}"
+  rescue:
+    - name: "[Restore][thalamus-ledger] FAILED — roll the pre-restore snapshot back"
+      # A half-replayed file leaves its own -journal: drop it, or the snapshot inherits a hot journal.
+      ansible.builtin.shell: |
+        rm -f "{{ ledger_target }}-journal"
+        for s in "" -wal -shm; do
+          [ -e "{{ ledger_target }}.pre-restore-{{ restore_date }}$s" ] || continue
+          mv -f "{{ ledger_target }}.pre-restore-{{ restore_date }}$s" "{{ ledger_target }}$s"
+        done
+      changed_when: true
+      failed_when: false
+
+    - name: "[Restore][thalamus-ledger] Re-raise the failure"
+      ansible.builtin.fail:
+        msg: >-
+          thalamus-ledger restore failed (sqlite3 missing, or a corrupt/partial dump).
+          The live ledger.db was rolled back from the .pre-restore snapshot and the
+          thalamus is being restarted. Install sqlite3 / pick a different restore_date, then retry.
+  always:
+    - name: "[Restore][thalamus-ledger] Ensure the thalamus is restarted"
+      ansible.builtin.command: >-
+        {{ ('launchctl bootstrap gui/' ~ ledger_uid ~ ' ' ~ ansible_facts['env']['HOME'] ~ '/Library/LaunchAgents/' ~ ledger_label ~ '.plist')
+           if (nos_service_manager | default('launchd')) == 'launchd'
+           else ((nos_user_systemctl | default('systemctl --user')) ~ ' start ' ~ ledger_label) }}
       changed_when: true
       failed_when: false
 

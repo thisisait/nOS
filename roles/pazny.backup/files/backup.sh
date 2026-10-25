@@ -49,6 +49,10 @@ DIR_ENABLED=({% for d in backup_dirs_to_dump %}"{{ 'true' if (d.flag is not defi
 # host file, NOT a container. Dumped with `sqlite3 .dump` for portability.
 WING_DB_PATH="{{ backup_wing_db_path }}"
 DO_WING="{{ 'true' if backup_wing_db else 'false' }}"
+# Iris's ledger (thalamus: turns, approved cell edits) — the same kind of host
+# SQLite file, in WAL mode; dumped by the same run_sqlite_dump.
+THALAMUS_LEDGER_PATH="{{ backup_thalamus_ledger_path | default('') }}"
+DO_THALAMUS_LEDGER="{{ 'true' if backup_thalamus_ledger | default(false) else 'false' }}"
 
 # KEAP libSQL store (taxonomy, curated descriptions/briefs, data-table
 # registry + rows, and the libSQL vector embeddings corpus) — a host file
@@ -557,39 +561,50 @@ run_authentik() {
     fi
 }
 
-run_wing_db() {
-    [[ "${DO_WING}" != "true" ]] && return 0
+# run_sqlite_dump <source> <path> <enabled> — sqlite3 .dump of a host SQLite file.
+# The shell's .dump runs inside one SAVEPOINT (a read transaction), so a WAL
+# database is captured at one snapshot while its organ keeps writing.
+run_sqlite_dump() {
+    local name="$1" path="$2" enabled="$3"
+    [[ "${enabled}" != "true" ]] && return 0
     if ! command -v sqlite3 >/dev/null 2>&1; then
-        log "wing-db: sqlite3 not on PATH — skipping (install sqlite3 to back up wing.db)"
-        status_append "wing-db" 0 0 0
+        log "${name}: sqlite3 not on PATH — skipping (install sqlite3 to back up $(basename "${path}"))"
+        status_append "${name}" 0 0 0
         return 0
     fi
-    if [[ ! -f "${WING_DB_PATH}" ]]; then
-        # ABSENT IS A FAILURE, NOT A SKIP. The branch four lines above (sqlite3
-        # missing) already records one; this one did not, two lines apart, and
-        # that asymmetry is the whole defect: notify_result derives severity
-        # from the recorded set, so a source that never calls status_append is
-        # neither failed nor absent-of-all and lands in the `info` branch —
-        # "Backup OK - N sources". A DISABLED source (DO_WING != true) still
-        # returns silently above, which is correct: nobody asked for it.
-        log "wing-db: ${WING_DB_PATH} not found — recording as FAILED"
-        status_append "wing-db" 0 0 0
+    if [[ ! -f "${path}" ]]; then
+        # ABSENT IS A FAILURE, NOT A SKIP: notify_result derives severity from
+        # the recorded set, so a source that never calls status_append lands in
+        # `info` — "Backup OK - N sources". A DISABLED source returns silently
+        # above, which is correct: nobody asked for it.
+        log "${name}: ${path} not found — recording as FAILED"
+        status_append "${name}" 0 0 0
         return 0
     fi
 
     local date_str key start dur rc size
     date_str="$(date -u +%Y-%m-%d)"
-    key="${date_str}/wing-db.sql.gz${ENC_SUFFIX}"
+    # One literal key line per source: test_backup_restore_contract.py reads them.
+    case "${name}" in
+        wing-db)
+            key="${date_str}/wing-db.sql.gz${ENC_SUFFIX}" ;;
+        thalamus-ledger)
+            key="${date_str}/thalamus-ledger.sql.gz${ENC_SUFFIX}" ;;
+        *)
+            log "${name}: no object key declared — recording as FAILED"
+            status_append "${name}" 0 0 0
+            return 0 ;;
+    esac
 
-    if [[ "${OVERWRITE_SAME_DAY}" != "true" ]] && already_exists_today "${date_str}/wing-db.sql.gz"; then
-        log "wing-db: today's dump already exists, skipping"
-        status_append "wing-db" 0 0 1
+    if [[ "${OVERWRITE_SAME_DAY}" != "true" ]] && already_exists_today "${date_str}/${name}.sql.gz"; then
+        log "${name}: today's dump already exists, skipping"
+        status_append "${name}" 0 0 1
         return 0
     fi
 
-    log "wing-db: sqlite3 .dump of ${WING_DB_PATH}"
+    log "${name}: sqlite3 .dump of ${path}"
     start=$(now_ms)
-    sqlite3 "${WING_DB_PATH}" .dump \
+    sqlite3 "${path}" .dump \
       | gzip -c \
       | encrypt_stream "${key}" \
       | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
@@ -598,11 +613,11 @@ run_wing_db() {
 
     if [[ "${rc}" -eq 0 ]]; then
         size=$(s3_size "${key}")
-        log "wing-db: OK (${size} bytes in ${dur}ms)"
-        status_append "wing-db" "${size}" "${dur}" 1
+        log "${name}: OK (${size} bytes in ${dur}ms)"
+        status_append "${name}" "${size}" "${dur}" 1
     else
-        log "wing-db: FAILED (rc=${rc})"
-        status_append "wing-db" 0 "${dur}" 0
+        log "${name}: FAILED (rc=${rc})"
+        status_append "${name}" 0 "${dur}" 0
     fi
 }
 
@@ -1115,7 +1130,8 @@ main() {
     run_espocrm
     run_volumes
     run_dirs
-    run_wing_db
+    run_sqlite_dump wing-db "${WING_DB_PATH}" "${DO_WING}"
+    run_sqlite_dump thalamus-ledger "${THALAMUS_LEDGER_PATH}" "${DO_THALAMUS_LEDGER}"
     run_keap_db
     run_nos_state
     run_tofu_state

@@ -3276,6 +3276,8 @@ backup_dirs_to_dump:
   - { name: "outline", flag: install_outline, empty_ok: true, path: "{{ outline_data_dir | default(ansible_facts['env']['HOME'] + '/outline') }}" }
   - { name: "paperclip", flag: install_paperclip, empty_ok: true, path: "{{ paperclip_data_dir | default(ansible_facts['env']['HOME'] + '/paperclip') }}" }
   - { name: "paperclip-workspaces", flag: install_paperclip, empty_ok: true, path: "{{ paperclip_workspaces_dir }}" }
+  # Iris: each person's workspace, conversations, sessions and watches (thalamus store.rs).
+  - { name: "thalamus-people", flag: install_thalamus, empty_ok: true, path: "{{ thalamus_data_dir }}/people" }
   - { name: "uptime-kuma", flag: install_uptime_kuma, path: "{{ uptime_kuma_data_dir | default(ansible_facts['env']['HOME'] + '/uptime-kuma') }}" }
   - { name: "homeassistant", flag: install_homeassistant, path: "{{ homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant') }}" }
   - { name: "openwebui", flag: install_openwebui, path: "{{ openwebui_data_dir | default(ansible_facts['env']['HOME'] + '/openwebui') }}" }
@@ -3323,7 +3325,7 @@ backup_coverage:
   spacetimedb_data_dir:        { class: unbacked, why: "nos-forum hot state; no dump path yet (nos-forum open question Q11)" }
   spacetimedb_keys_dir:        { class: unbacked, why: "JWT signing keys; rotation orphans every identity" }
   nos_forum_data_dir:          { class: unbacked, why: "module-owner CLI token; losing it = cannot republish the module (Q11)" }
-  thalamus_data_dir:           { class: unbacked, why: "ledger.db — Iris turns + approved cell edits; no sqlite dump of it yet" }
+  thalamus_data_dir:           { class: dump, why: "thalamus-ledger.sql.gz — sqlite3 .dump of ledger.db (Iris turns, approved cell edits); people/ is dir-thalamus-people" }
   infisical_data_dir:          { class: db, why: "secrets live in postgres.sql.gz" }
   metabase_data_dir:           { class: db, why: "app db in postgres.sql.gz; dir holds plugins" }
   superset_data_dir:           { class: db, why: "app db in postgres.sql.gz" }
@@ -3372,6 +3374,8 @@ backup_wing_db: "{{ install_wing | default(true) }}"   # sqlite3 .dump of the Wi
 backup_keap_db: "{{ install_keap | default(false) }}"  # sqlite3 .backup of the KEAP store (taxonomy, tables, vectors)
 backup_nos_state: true                                  # ~/.nos/{secrets,state}.yml (restore gated by restore_state)
 backup_wing_db_path: "{{ wing_data_dir | default(ansible_facts['env']['HOME'] + '/wing/app/data') }}/wing.db"
+backup_thalamus_ledger: "{{ install_thalamus | default(false) }}"   # sqlite3 .dump of Iris's ledger.db
+backup_thalamus_ledger_path: "{{ thalamus_data_dir }}/ledger.db"
 # KEAP is snapshotted INSIDE this container (node:sqlite backup()), never by copying the live file.
 backup_keap_container: "iiab-keap-1"
 backup_keap_db_container_path: "/data/keap.db"

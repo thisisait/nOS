@@ -255,6 +255,9 @@
       # One read transaction = a consistent dump; -readonly fails on a missing file instead of creating it.
       stage_dump wing-db sqlite3 -readonly "{{ backup_wing_db_path }}" .dump
       {% endif %}
+      {% if backup_thalamus_ledger | bool %}
+      stage_dump thalamus-ledger sqlite3 -readonly "{{ backup_thalamus_ledger_path }}" .dump
+      {% endif %}
       {% if backup_keap_db | bool %}
       # KEAP: node:sqlite backup() INSIDE the container (page copy keeps the vector
       # index; the host may not read the store), verified by counting the three
