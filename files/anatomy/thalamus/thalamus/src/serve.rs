@@ -839,6 +839,9 @@ suggested[] (option labels: exactly 1, or 1 or more when multi), multi}; never a
     ("kpi", "{title, unit?} with show's source {query {table, q?, where?}, op count|sum|avg, y?}; never a value: the thalamus computes it"),
 ];
 
+/// When to reach for each kind: one sentence the model reads beside its shape (Ollama keeps descriptions only).
+pub const SHOW_ABOUT: &[(&str, &str)] = &[];
+
 fn expected_shape(kind: &str) -> String {
     SHOW_SHAPE.iter().find(|(k, _)| *k == kind).map(|(_, s)| (*s).to_string()).unwrap_or_else(|| {
         SHOW_SHAPE.iter().map(|(k, s)| format!("{k} {s}")).collect::<Vec<_>>().join("; ")
