@@ -51,6 +51,7 @@ NOS_BACKUP_KEYS=(
 LOG_FILE="{{ backup_verify_log | default(ansible_facts['env']['HOME'] + '/.nos/backup-verify.log') }}"
 RESULT_FILE="{{ backup_verify_result | default(ansible_facts['env']['HOME'] + '/.nos/backup-verify.json') }}"
 
+DO_THALAMUS_LEDGER="{{ 'true' if backup_thalamus_ledger | default(false) else 'false' }}"
 DO_NOTIFY="{{ 'true' if backup_notify_enabled | default(true) else 'false' }}"
 NOTIFY_HMAC_SECRET="{{ bone_secret | default('') }}"
 BONE_NOTIFY_URL="http://127.0.0.1:{{ bone_port | default(8099) }}/api/v1/notifications"
@@ -198,6 +199,27 @@ verify_wing_db() {
     log "wing-db: OK (events=${n})"
 }
 
+# ── thalamus-ledger: Iris's ledger.db, the same .dump shape as wing-db ───────
+# An empty events table is a fresh Iris, not a broken dump: the replay is the test.
+verify_thalamus_ledger() {
+    [[ "${DO_THALAMUS_LEDGER}" != "true" ]] && return 0
+    log "thalamus-ledger: fetching ${DATE_STR}/thalamus-ledger.sql.gz"
+    if ! fetch "thalamus-ledger.sql.gz"; then
+        record "thalamus-ledger" 0 "no object at ${DATE_STR}"
+        log "thalamus-ledger: MISSING"
+        return 1
+    fi
+    local n
+    if ! gunzip -c "${WORKDIR}/thalamus-ledger.sql.gz" | sqlite3 "${WORKDIR}/ledger-replay.db" 2>>"${LOG_FILE}" \
+       || ! n="$(sqlite3 "${WORKDIR}/ledger-replay.db" "select count(*) from events;" 2>>"${LOG_FILE}")" || [[ -z "${n}" ]]; then
+        record "thalamus-ledger" 0 "SQL replay failed — the dump is not restorable"
+        log "thalamus-ledger: REPLAY FAILED"
+        return 1
+    fi
+    record "thalamus-ledger" 1 "replayed, events = ${n}"
+    log "thalamus-ledger: OK (events=${n})"
+}
+
 write_result() {
     python3 - <<PY
 import json, os, time
@@ -295,6 +317,7 @@ main() {
     local rc=0
     verify_keap_db || rc=1
     verify_wing_db || rc=1
+    verify_thalamus_ledger || rc=1
 
     write_result
     notify
