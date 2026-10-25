@@ -121,7 +121,7 @@ class PulseDaemon:
             log.info("at concurrency cap (%d); skipping tick",
                      self.config.max_concurrent_runs)
             return 0
-        due = self.wing.list_due_jobs()
+        due = [j for j in self.wing.list_due_jobs() if str(j.get("id")) not in self.config.medulla_jobs]
         if not due:
             return 0
         log.info("tick: %d due, %d slots free", len(due), free_slots)
