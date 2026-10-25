@@ -64,3 +64,18 @@ fn every_tool_property_survives_what_ollama_keeps() {
         assert!(told.contains(&shape.replace('"', "\\\"")), "{kind}'s shape is not told: {told}");
     }
 }
+
+/// A kind's shape says how to fill it, never when to use it: every show kind carries one sentence
+/// (SHOW_ABOUT, in SHOW_KINDS order) and that sentence reaches the model through what Ollama keeps.
+#[test]
+fn every_show_kind_says_when_to_use_it() {
+    let about: Vec<&str> = thalamus::serve::SHOW_ABOUT.iter().map(|(k, _)| *k).collect();
+    assert_eq!(about, thalamus::serve::SHOW_KINDS, "SHOW_ABOUT keys");
+    let show = thalamus::serve::tools().as_array().unwrap().iter().find(|t| t["function"]["name"] == "show").unwrap().clone();
+    let told = ollama_kept(&show["function"]["parameters"])["properties"]["component"].to_string();
+    for (kind, s) in thalamus::serve::SHOW_ABOUT {
+        let one = s.ends_with('.') && !s[..s.len() - 1].contains(". ") && (20..=200).contains(&s.chars().count());
+        assert!(one, "{kind}: not one sentence of 20-200 chars ending in a period: {s:?}");
+        assert!(told.contains(&s.replace('"', "\\\"")), "{kind}'s sentence is not told: {s}");
+    }
+}
