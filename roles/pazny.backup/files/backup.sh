@@ -602,9 +602,30 @@ run_sqlite_dump() {
         return 0
     fi
 
-    log "${name}: sqlite3 .dump of ${path}"
+    # Under launchd the host may not open a file on the external volume (TCC): measured 2026-10-26,
+    # thalamus-ledger "authorization denied" at 02:03 while the same dump ran from a terminal. Then the
+    # db and its WAL come out through the container (as run_dirs reads these dirs) into a 0700 tmp dir,
+    # and only a copy that passes integrity_check is dumped: the WAL replays to its last commit.
+    local src="${path}" copy=""
+    if ! sqlite3 -readonly "${path}" "SELECT 1" >/dev/null 2>&1; then
+        copy="$(mktemp -d "${TMPDIR:-/tmp}/nos-sqlite.XXXXXX")"
+        local base; base="$(basename "${path}")"
+        docker run --rm -v "$(dirname "${path}"):/data:ro" "${ALPINE_IMAGE}" \
+            sh -c "cd /data && tar -cf - \$(ls -A | grep -E '^${base}(-wal|-shm)?\$')" 2>/dev/null \
+          | tar -xf - -C "${copy}"
+        src="${copy}/${base}"
+        if [[ "$(sqlite3 "${src}" 'PRAGMA integrity_check' 2>&1)" != "ok" ]]; then
+            log "${name}: the host cannot open ${path} and the container copy fails integrity_check — recording as FAILED"
+            rm -rf "${copy}"
+            status_append "${name}" 0 0 0
+            return 0
+        fi
+        log "${name}: host denied ${path}; dumping a container copy that passed integrity_check"
+    fi
+
+    log "${name}: sqlite3 .dump of ${src}"
     start=$(now_ms)
-    sqlite3 "${path}" .dump \
+    sqlite3 "${src}" .dump \
       | gzip -c \
       | encrypt_stream "${key}" \
       | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
@@ -619,6 +640,8 @@ run_sqlite_dump() {
         log "${name}: FAILED (rc=${rc})"
         status_append "${name}" 0 "${dur}" 0
     fi
+    [[ -n "${copy}" ]] && rm -rf "${copy}"
+    return 0
 }
 
 # The online-backup program, run INSIDE the KEAP container.
