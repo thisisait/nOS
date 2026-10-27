@@ -57,6 +57,9 @@
     src: nos-db-tls.config.php.j2
     dest: "{{ nextcloud_dir }}/config/nos-db-tls.config.php"
     mode: '0644'
+  # config/ is uid 33's on Linux (task above): the runner cannot write into it.
+  # All-on lane 2026-10-27: "Destination …/nextcloud/config not writable".
+  become: "{{ ansible_os_family != 'Darwin' }}"
 
 - name: "[pazny.nextcloud] Render compose override fragment"
   ansible.builtin.template:
