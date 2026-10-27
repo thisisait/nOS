@@ -67,13 +67,13 @@ def test_it_does_not_compare_two_spellings_of_one_path():
 
 def test_a_worktree_is_not_an_error_condition():
     """A worktree is a place to redirect FROM, not a fault. It must not spend
-    the job's error-notify path — the contract reserves 1 for drift and 2 for a
+    the job's error-notify path — the contract reserves 10 for drift and 2 for a
     plan error, and being run from the wrong checkout is neither."""
     src = SCRIPT.read_text(encoding="utf-8")
     m = re.search(r"worktrees/\*\)(.*?)\besac", src, re.S)
     assert m, "the worktree branch is no longer a case arm; re-read this gate"
     branch = m.group(1)
-    assert "exit 1" not in branch and "exit 2" not in branch, (
+    assert not re.search(r"exit (1|2|\"\$EXIT_FINDINGS\")", branch), (
         "the worktree branch exits on an error code. Being registered from a "
         "worktree is a resolvable fact about where the job was started, not "
         "drift and not a plan error")
@@ -82,13 +82,13 @@ def test_a_worktree_is_not_an_error_condition():
 
 
 def test_the_findings_code_is_declared_so_drift_is_not_read_as_failure():
-    """rc=1 is DRIFT FOUND — the script's own header says so. Undeclared, the
+    """rc=10 is DRIFT FOUND — the script's own header says so. Undeclared, the
     notifier filed `Pulse job … failing (rc=1)` at HIGH for a detector doing
     exactly its job (hidden fee 34, the next consumer it warned about)."""
     manifest = (REPO / "files/anatomy/plugins/authentik-tofu-drift-base"
                 / "plugin.yml").read_text(encoding="utf-8")
-    assert re.search(r"^\s*findings_exit_codes:\s*\[\s*1\s*\]", manifest, re.M), (
-        "the drift job does not declare findings_exit_codes: [1]. gitleaks, "
+    assert re.search(r"^\s*findings_exit_codes:\s*\[\s*10\s*\]", manifest, re.M), (
+        "the drift job does not declare findings_exit_codes: [10]. gitleaks, "
         "discovery and loop all declare theirs; without it every detected "
         "drift is reported as a failing job")
 

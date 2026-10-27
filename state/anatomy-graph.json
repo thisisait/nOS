@@ -2689,13 +2689,13 @@
       "category": "security",
       "paused": false,
       "findings_exit_codes": [
-        1
+        10
       ],
       "command_name": "run-tofu-drift.sh",
       "claims": [],
       "runs_agent": null,
       "anchor": "02.02.08",
-      "description": "Pulse scheduled job (security): runs run-tofu-drift.sh on cron `30 5 * * *` — exits [1] mean findings, not failure"
+      "description": "Pulse scheduled job (security): runs run-tofu-drift.sh on cron `30 5 * * *` — exits [10] mean findings, not failure"
     },
     "pulse:backup:backup-restore-drill": {
       "kind": "pulse",
@@ -2830,13 +2830,13 @@
       "category": "security",
       "paused": false,
       "findings_exit_codes": [
-        1
+        10
       ],
       "command_name": "discovery-scan.py",
       "claims": [],
       "runs_agent": null,
       "anchor": "02.02.08",
-      "description": "Pulse scheduled job (security): runs discovery-scan.py on cron `40 6 * * *` — exits [1] mean findings, not failure"
+      "description": "Pulse scheduled job (security): runs discovery-scan.py on cron `40 6 * * *` — exits [10] mean findings, not failure"
     },
     "pulse:gdpr-breach:breach-deadline-scan": {
       "kind": "pulse",
@@ -2907,13 +2907,13 @@
       "category": "platform",
       "paused": false,
       "findings_exit_codes": [
-        1
+        10
       ],
       "command_name": "sync-trunk-to-gitea.sh",
       "claims": [],
       "runs_agent": null,
       "anchor": "02.02.06",
-      "description": "Pulse scheduled job (platform): runs sync-trunk-to-gitea.sh on cron `*/20 * * * *` — exits [1] mean findings, not failure"
+      "description": "Pulse scheduled job (platform): runs sync-trunk-to-gitea.sh on cron `*/20 * * * *` — exits [10] mean findings, not failure"
     },
     "pulse:gitlab:trunk-sync": {
       "kind": "pulse",
@@ -2924,13 +2924,13 @@
       "category": "platform",
       "paused": false,
       "findings_exit_codes": [
-        1
+        10
       ],
       "command_name": "sync-trunk-to-gitlab.sh",
       "claims": [],
       "runs_agent": null,
       "anchor": "02.02.06",
-      "description": "Pulse scheduled job (platform): runs sync-trunk-to-gitlab.sh on cron `*/20 * * * *` — exits [1] mean findings, not failure"
+      "description": "Pulse scheduled job (platform): runs sync-trunk-to-gitlab.sh on cron `*/20 * * * *` — exits [10] mean findings, not failure"
     },
     "pulse:gitleaks:nightly-scan": {
       "kind": "pulse",
@@ -2941,13 +2941,13 @@
       "category": "security",
       "paused": false,
       "findings_exit_codes": [
-        1
+        10
       ],
       "command_name": "run-gitleaks.sh",
       "claims": [],
       "runs_agent": null,
       "anchor": "02.02.08",
-      "description": "Pulse scheduled job (security): runs run-gitleaks.sh on cron `0 3 * * *` — exits [1] mean findings, not failure"
+      "description": "Pulse scheduled job (security): runs run-gitleaks.sh on cron `0 3 * * *` — exits [10] mean findings, not failure"
     },
     "pulse:invoice-vision:absorb-approved": {
       "kind": "pulse",
@@ -2973,13 +2973,13 @@
       "category": "knowledge",
       "paused": false,
       "findings_exit_codes": [
-        1
+        10
       ],
       "command_name": "invoice-vision-intake.py",
       "claims": [],
       "runs_agent": null,
       "anchor": "09",
-      "description": "Pulse scheduled job (knowledge): runs invoice-vision-intake.py on cron `20 5 * * *` — exits [1] mean findings, not failure"
+      "description": "Pulse scheduled job (knowledge): runs invoice-vision-intake.py on cron `20 5 * * *` — exits [10] mean findings, not failure"
     },
     "pulse:keap:keap-consolidate": {
       "kind": "pulse",
@@ -3148,14 +3148,14 @@
       "category": "agents",
       "paused": false,
       "findings_exit_codes": [
-        1,
-        3
+        10,
+        11
       ],
       "command_name": "loop-propose.py",
       "claims": [],
       "runs_agent": null,
       "anchor": "02.02.09",
-      "description": "Pulse scheduled job (agents): runs loop-propose.py on cron `30 1 * * *` — exits [1, 3] mean findings, not failure"
+      "description": "Pulse scheduled job (agents): runs loop-propose.py on cron `30 1 * * *` — exits [10, 11] mean findings, not failure"
     },
     "pulse:loop:repo-check": {
       "kind": "pulse",
@@ -3215,13 +3215,13 @@
       "category": "knowledge",
       "paused": false,
       "findings_exit_codes": [
-        1
+        10
       ],
       "command_name": "n8n-pack.py",
       "claims": [],
       "runs_agent": null,
       "anchor": "09",
-      "description": "Pulse scheduled job (knowledge): runs n8n-pack.py on cron `15 * * * *` — exits [1] mean findings, not failure"
+      "description": "Pulse scheduled job (knowledge): runs n8n-pack.py on cron `15 * * * *` — exits [10] mean findings, not failure"
     },
     "pulse:npm-supply-chain:daily-ioc-scan": {
       "kind": "pulse",
@@ -7844,7 +7844,7 @@
       "from": "effector:loop-propose",
       "to": "doctrine:ssot/doctrine/loop-contract.md#5.2",
       "kind": "governed_by",
-      "via": "cited at tools/loop-propose.py:85",
+      "via": "cited at tools/loop-propose.py:89",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"

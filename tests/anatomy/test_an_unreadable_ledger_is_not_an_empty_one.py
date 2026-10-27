@@ -127,7 +127,7 @@ def test_the_runner_keeps_the_two_outcomes_apart() -> None:
         "invoke() does not handle an unreadable ledger, so it falls through to "
         "the 'no proposal appeared' branch — the exact false negative measured")
     assert "return 2" in body, (
-        "the unreadable path does not exit 2; exit 1 means the model bought "
+        "the unreadable path does not exit 2; exit 10 means the model bought "
         "nothing, which is a different fact about a different actor")
 
 

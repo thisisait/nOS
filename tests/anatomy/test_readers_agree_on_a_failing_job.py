@@ -70,9 +70,9 @@ def test_a_fired_at_tie_reports_one_job_not_two():
 def test_a_declared_findings_code_is_still_not_a_failure():
     """The dedupe must not resurrect a job the findings declaration excuses."""
     conn = _ledger(
-        [("a", "gitleaks:nightly-scan", "2026-09-01T02:00:00+00:00", 1),
-         ("b", "gitleaks:nightly-scan", "2026-09-01T02:00:00+00:00", 1)],
-        jobs=[("gitleaks:nightly-scan", "[1]")],
+        [("a", "gitleaks:nightly-scan", "2026-09-01T02:00:00+00:00", 10),
+         ("b", "gitleaks:nightly-scan", "2026-09-01T02:00:00+00:00", 10)],
+        jobs=[("gitleaks:nightly-scan", "[10]")],
     )
     assert RS.failing_jobs(conn) == []
 
@@ -93,6 +93,6 @@ def test_loop_review_declares_no_findings_exit_code():
         "1 only for a half-done promotion and 2 only for a refusal it will not "
         "guess at; declaring either mutes a real failure."
     )
-    assert jobs["propose"]["findings_exit_codes"] == [1, 3], (
-        "the [1,3] belongs to propose alone — it is per JOB, not per plugin"
+    assert jobs["propose"]["findings_exit_codes"] == [10, 11], (
+        "the [10,11] belongs to propose alone — it is per JOB, not per plugin"
     )

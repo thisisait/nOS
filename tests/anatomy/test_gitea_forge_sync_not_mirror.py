@@ -46,10 +46,10 @@ def test_trunk_sync_pulse_job_is_declared(forge):
     match = [j for j in jobs
              if j.get("name") == "trunk-sync" and f"sync-trunk-to-{forge}.sh" in str(j.get("command", ""))]
     assert match, f"{forge}-base must schedule the trunk-sync backbone job"
-    # forge-ahead (exit 1) is a promote signal, not a failure — declared so the
+    # forge-ahead (exit 10) is a promote signal, not a failure — declared so the
     # nightly reader does not paint a legitimate un-promoted merge red.
-    assert 1 in (match[0].get("findings_exit_codes") or []), \
-        f"exit 1 ({forge} trunk ahead) must be a finding, not a job failure"
+    assert 10 in (match[0].get("findings_exit_codes") or []), \
+        f"exit 10 ({forge} trunk ahead) must be a finding, not a job failure"
 
 
 def test_nos_push_syncs_gitlab_forge_symmetrically():

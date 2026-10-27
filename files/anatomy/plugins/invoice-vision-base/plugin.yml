@@ -80,8 +80,9 @@ pulse:
       max_runtime_s: 900       # VLM OCR over a batch of images is slow — budget wide
       max_concurrent: 1
       category: knowledge
-      # exit 1 = invoices await operator verify — the job's purpose, not a crash.
-      findings_exit_codes: [1]
+      # exit 10 = invoices await operator verify — the job's purpose, not a crash
+      # (a traceback exits 1, which is why it is not 1).
+      findings_exit_codes: [10]
       # Read by tools/job_readiness.py: images with neither agent servable are HELD (exit 78).
       needs: ["agent:invoice-vision-ocr", "agent:invoice-extract"]
       writes:

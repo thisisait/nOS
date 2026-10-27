@@ -25,9 +25,10 @@ whose slug already exists is not re-posted. Read-only w.r.t. the invoice/party
 tables — it only ever writes pending-invoice-verify.
 
 Exit: 0 swept, nothing held, or the data root exists but has no incoming/
-dirs yet · 1 swept, N invoices need operator verify (a finding,
+dirs yet · 10 swept, N invoices need operator verify (a finding,
 declared in the plugin's findings_exit_codes) · 2 could not run (data
-root missing, or every extraction failed — e.g. qwen2.5vl:7b not pulled).
+root missing, or every extraction failed — e.g. qwen2.5vl:7b not pulled)
+· 1 crashed (an uncaught exception), never a finding.
 """
 from __future__ import annotations
 
@@ -41,6 +42,8 @@ import sys
 import urllib.error
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
+#: Not 1 — an uncaught exception exits 1 and would read as "invoices held".
+EXIT_FINDINGS = 10
 sys.path.insert(0, str(REPO / "tools"))
 sys.path.insert(0, str(REPO / "files" / "anatomy" / "module_utils"))
 import digest_absorb  # noqa: E402  (reuse the ONE KEAP write path)
@@ -258,7 +261,7 @@ def main(argv: list[str] | None = None) -> int:
             return 2
 
     print(f"\nswept {len(imgs)} image(s), extracted {extracted}, held {held}, newly queued {queued}")
-    return 1 if held else 0            # held == a finding (invoices await operator verify)
+    return EXIT_FINDINGS if held else 0  # held == a finding (invoices await operator verify)
 
 
 if __name__ == "__main__":

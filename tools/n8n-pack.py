@@ -510,6 +510,11 @@ def pack_has_external_clock(pack: dict[str, Any]) -> bool:
     return False
 
 
+#: watch's findings code. Not 1: a traceback, and the UNKNOWN returns below,
+#: exit 1 and must stay red rather than read as "found something".
+EXIT_FINDINGS = 10
+
+
 def cmd_watch(args: argparse.Namespace) -> int:
     secrets_path = Path(args.secrets)
     api_key = os.environ.get("N8N_API_KEY") or read_secret(secrets_path, "n8n_api_key")
@@ -604,7 +609,7 @@ def cmd_watch(args: argparse.Namespace) -> int:
     if findings:
         for line in findings:
             print(line, file=sys.stderr)
-        return 1
+        return EXIT_FINDINGS
     return 0
 
 

@@ -92,10 +92,10 @@ pulse:
       max_runtime_s: 300
       max_concurrent: 1
       category: security
-      # Same shape as gitleaks: exit 1 means contradictions were found. Its
-      # first run ever (2026-08-06) found four and filed four roadmap rows —
-      # a complete success that the scheduler reported as a failure.
-      findings_exit_codes: [1]
+      # exit 10 means contradictions were found (first run 2026-08-06 filed
+      # four rows, read as a failure). It was 1 until 2026-10-27, when 5/5
+      # crashing runs (a traceback exits 1) read as findings for four days.
+      findings_exit_codes: [10]
       # What this job WRITES (anatomy graph, actor-side declaration). The edge
       # holds only while `--file` is in args above — report-only mode files
       # nothing, and the pin test checks exactly that.

@@ -803,7 +803,7 @@ did exactly that, silently. The settlement is SURFACE AND REFUSE, never
 automate: the ledger's refusal distinguishes `uncommitted-evidence` (with the
 commit named as the remedy) from `unknown-weakness`; `tools/loop-status.py
 --gap` counts the withheld rows and names the deadlock when it holds; the entry
-runner (`tools/loop-propose.py`) refuses with exit 3 rather than spending a
+runner (`tools/loop-propose.py`) refuses with exit 11 rather than spending a
 model run on a proposal the engine must reject. Auto-committing the scan's
 output was considered and rejected — those files are the operator's, and a loop
 that commits its own evidence is a proposer minting lift keys with extra steps.

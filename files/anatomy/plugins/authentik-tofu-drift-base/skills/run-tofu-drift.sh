@@ -24,11 +24,15 @@
 # Exit codes (mirrors run-gitleaks.sh):
 #   0 — no drift, or skipped cleanly (tofu binary / nos.auto.tfvars.json
 #       absent — i.e. the tofu cutover hasn't run on this install)
-#   1 — drift detected + notified (operator attention needed)
+#   10 — drift detected + notified (operator attention needed; EXIT_FINDINGS)
 #   2 — plan error or timeout (notified at high severity; check stderr)
+#   1 — a command failed under `set -e`: a crash, never a finding
 # =============================================================================
 
 set -euo pipefail
+
+# Not 1: `set -e` exits 1 on any failing command, and a crash read as drift.
+EXIT_FINDINGS=10
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
@@ -213,7 +217,7 @@ if [[ "$PLAN_RC" -eq 2 ]]; then
         --arg top "$TOP_CHANGES_MD" \
         '{summary: $summary, tofu_dir: $tofu_dir, top_changes_md: $top}')
     notify "medium" "drift_detected" "$CTX"
-    exit 1
+    exit "$EXIT_FINDINGS"
 fi
 
 # rc=1 (provider/API/config error) or >=128 (watchdog SIGKILL after timeout).

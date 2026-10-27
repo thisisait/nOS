@@ -213,13 +213,13 @@ def test_a_proposal_without_its_session_is_not_reported_as_success(estate, monke
     proposal naming no session must not exit 0 — that is precisely the state
     the old path was permanently in."""
     monkeypatch.setenv("NOS_STUB_ORPHAN", "1")
-    assert run(estate) == 1
+    assert run(estate) == estate[0].EXIT_BOUGHT_NOTHING == 10
     assert rows(estate[1], "SELECT session_uuid FROM loop_proposals")[0]["session_uuid"] is None
 
 
 def test_a_run_that_proposed_nothing_is_not_success(estate, monkeypatch):
     monkeypatch.setenv("NOS_STUB_SILENT", "1")
-    assert run(estate) == 1
+    assert run(estate) == estate[0].EXIT_BOUGHT_NOTHING == 10
     # Through the module's OWN reader: a wing.db with no ledger table yet must
     # read as "no proposals", not raise — absence is a fact, not an error.
     assert estate[0]._proposals_citing(WEAKNESS["id"]) == []

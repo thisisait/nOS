@@ -38,8 +38,10 @@ Usage:  discovery-scan.py [--file] [--json]
 Exit codes
 ----------
   0  scanned; no contradiction found
-  1  at least one contradiction found
+  10 at least one contradiction found (EXIT_FINDINGS)
+  3  a contradiction found and KEAP refused the row (EXIT_NOT_FILED)
   2  could not read one of the two sides — NOTHING WAS COMPARED
+  1  crashed (an uncaught exception) — never a finding
 """
 
 from __future__ import annotations
@@ -70,6 +72,9 @@ HOST_WRITTEN = list(GIT_REL)
 
 # Same default as roadmap-seed.py; both obey NOS_ROADMAP_TABLE_ID so they address
 # ONE table at runtime, not just by shared default (the graph write-edge gate).
+# Not 1: an uncaught exception exits 1, and 5/5 crashing runs (2026-10-23..27)
+# read as findings. 10 is the estate's findings code.
+EXIT_FINDINGS = 10
 EXIT_NOT_FILED = 3  # a contradiction found and KEAP refused the row
 TABLE = os.environ.get("NOS_ROADMAP_TABLE_ID", "2d498264-bc9a-4324-9935-489e5e4d92f3")
 KEAP = "http://127.0.0.1:8091"
@@ -1324,12 +1329,12 @@ def main() -> int:
         filed, refused = file_rows(res.findings)
         print(f"filed {filed} new roadmap row(s)")
         if refused:
-            # Not a finding: the observation was lost. 1 is the findings code,
+            # Not a finding: the observation was lost. EXIT_FINDINGS is excused,
             # so a refused write must exit with something the job does not excuse.
             print(f"REFUSED {len(refused)} row(s):", *refused, sep="\n  ", file=sys.stderr)
             return EXIT_NOT_FILED
 
-    return 1 if res.findings else 0
+    return EXIT_FINDINGS if res.findings else 0
 
 
 if __name__ == "__main__":

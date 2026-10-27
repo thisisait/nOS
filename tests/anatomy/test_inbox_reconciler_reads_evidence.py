@@ -180,24 +180,24 @@ def test_a_still_red_run_leaves_the_row_unread(tmp_path):
 
 
 def test_declared_findings_exit_codes_count_as_green(tmp_path):
-    # gitleaks exits 1 to say "ran correctly, found something" — declared in
+    # gitleaks exits 10 to say "ran correctly, found something" — declared in
     # pulse_jobs.findings_exit_codes, so the reconciler must read it, not
     # assume rc!=0 means broken.
     db = tmp_path / "wing.db"
     conn = _make_db(db)
     conn.execute(
-        "INSERT INTO pulse_jobs (id, findings_exit_codes) VALUES ('gitleaks:nightly-scan','[1]')"
+        "INSERT INTO pulse_jobs (id, findings_exit_codes) VALUES ('gitleaks:nightly-scan','[10]')"
     )
     conn.execute(
-        "INSERT INTO pulse_runs VALUES ('run-f','gitleaks:nightly-scan',?,?,1)",
+        "INSERT INTO pulse_runs VALUES ('run-f','gitleaks:nightly-scan',?,?,10)",
         (_iso(-60), _iso(-30)),
     )
-    _notif(conn, "n-findings", "Pulse job gitleaks:nightly-scan failing (rc=1)")
+    _notif(conn, "n-findings", "Pulse job gitleaks:nightly-scan failing (rc=10)")
 
     _run(db, tmp_path, "--apply")
     read_at, meta = _row(db, "n-findings")
     assert read_at is not None
-    assert meta["reconciled"]["exit_code"] == 1
+    assert meta["reconciled"]["exit_code"] == 10
 
 
 def test_recovered_row_closes_on_its_own_green_run(tmp_path):

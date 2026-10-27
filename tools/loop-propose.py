@@ -52,7 +52,7 @@ retry-ceiling lift key the proposer could write for itself). The nightly scan
 writes `docs/llm/security/*` and nobody commits it, so the proposable set
 periodically collapses to `fee:` rows — which close only by writing `docs/**`,
 a path every gate set's budget forbids. When that happens this runner REFUSES
-(exit 3) and names the commit that unblocks, rather than spending a model run
+(exit 11) and names the commit that unblocks, rather than spending a model run
 on a proposal the engine must reject.
 
 DRY RUN BY DEFAULT (operator doctrine):
@@ -62,8 +62,9 @@ DRY RUN BY DEFAULT (operator doctrine):
     tools/loop-propose.py --weakness rem:REM-155 --invoke   # exactly this one
 
 Exit codes (fixed enum, DECISION 6a's shape): 0 a proposal now cites the
-weakness (or dry run printed); 1 the model ran and no proposal appeared;
-2 environment/config; 3 refused — nothing proposable, reason printed.
+weakness (or dry run printed); 10 the model ran and no proposal appeared;
+11 refused — nothing proposable, reason printed; 2 environment/config;
+1 crashed (an uncaught exception). 10/11 are the declared findings codes.
 """
 
 from __future__ import annotations
@@ -78,6 +79,9 @@ import sys
 import uuid as _uuid
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
+# Findings codes, never 1 (a traceback) or 3 (the loops-paused hold, PAUSED_EXIT).
+EXIT_BOUGHT_NOTHING = 10  # the model ran; no proposal citing the weakness appeared
+EXIT_REFUSED = 11         # nothing proposable (e.g. the committed-evidence deadlock)
 sys.path.insert(0, str(REPO / "tools"))
 import _ledger_open  # noqa: E402 — after REPO is known
 
@@ -373,7 +377,7 @@ def invoke(weakness: dict, log) -> int:
         after = _proposals_citing(weakness["id"])
     except Unreadable as exc:
         # The run may well have proposed. Saying so is the honest report, and
-        # exit 2 (environment) rather than 1 (the model bought nothing) keeps
+        # exit 2 (environment) rather than 10 (the model bought nothing) keeps
         # the two apart for whatever reads this next.
         log(f"the model ran, and the ledger cannot be read to say what it "
             f"produced: {exc}. This is NOT 'no proposal' — check with "
@@ -385,7 +389,7 @@ def invoke(weakness: dict, log) -> int:
         log(f"no proposal citing {weakness['id']} appeared in the ledger "
             f"(runner exit {done.returncode}) — the run bought nothing; "
             f"read tools/loop-status.py --gap before retrying")
-        return 1
+        return EXIT_BOUGHT_NOTHING
     orphans = [p["uuid"] for p in new if p["session_uuid"] != session_uuid]
     if orphans:
         # A proposal that arrived without its session is not a success: the
@@ -393,7 +397,7 @@ def invoke(weakness: dict, log) -> int:
         # defect this path was rewritten to close.
         log(f"{len(orphans)} new proposal(s) name no session (or the wrong "
             f"one): {', '.join(orphans)} — expected {session_uuid}")
-        return 1
+        return EXIT_BOUGHT_NOTHING
     log(f"the ledger now holds {len(new)} new proposal(s) citing "
         f"{weakness['id']}, all naming session {session_uuid} — next: "
         f"tools/loop-pr.py (the driver judges and lands)")
@@ -420,7 +424,7 @@ def main() -> int:
         return invoke(weakness, log)
     except Refused as exc:
         print(f"[loop-propose] refused: {exc}", file=sys.stderr)
-        return 3
+        return EXIT_REFUSED
     except OSError as exc:
         print(f"[loop-propose] {type(exc).__name__}: {exc}", file=sys.stderr)
         return 2

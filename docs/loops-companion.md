@@ -116,7 +116,7 @@ sequenceDiagram
   participant RV as loop‑review 06.50
 
   PU->>PR: 01:30 — entry half (unpaused 2026-08-20)
-  Note over PR: picks worst weakness, spawns ONE model run<br/>BEFORE the scan dirties the queue (43a6dd08)<br/>exit 3 = refusal, recorded as findings, not a crash
+  Note over PR: picks worst weakness, spawns ONE model run<br/>BEFORE the scan dirties the queue (43a6dd08)<br/>exit 11 = refusal, recorded as findings, not a crash
   PU->>SC: 02:00 vulnerability-scan (LLM) → writes docs/llm/security/* UNCOMMITTED
   Note over SC: 03:00 gitleaks · 03:30 scan-state-record<br/>(snapshots queue onto refs/heads/scan-data — local only)
   PU->>KC: 04:15 consolidate → 04:30 fs-sync → 04:45 embed → 05:00 features → 05:15 lint → 05:30 corpus-diff
@@ -296,7 +296,7 @@ flowchart LR
    the machinery that would catch it.
 5. **The withheld-evidence unblock is a human edge with no owner.** The
    02:00 scan dirties `docs/llm/security/*`; the ledger (correctly) withholds
-   `rem:` rows until someone commits; `loop-propose` refuses with exit 3 and
+   `rem:` rows until someone commits; `loop-propose` refuses with exit 11 and
    names the fix. Surfaced everywhere, owned nowhere — the deadlock recurs on
    the scan's own cadence. (The 03:30 `scan-data` snapshot commits to an
    orphan branch the ledger does not read — nearby, but not this edge.)

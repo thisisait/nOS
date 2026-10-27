@@ -12,11 +12,16 @@
 #
 # Exit codes:
 #   0 — scan complete, no findings above threshold (or all already known)
-#   1 — scan complete, new findings ingested (operator attention needed)
+#   10 — scan complete, new findings ingested (operator attention needed)
 #   2 — scan or Wing API error (check stderr)
+#   1 — a command failed under `set -e`: a crash, never a finding
 # =============================================================================
 
 set -euo pipefail
+
+# Not 1: `set -e` exits 1 on any failing command. gitleaks' own exit is pinned
+# to 0 below (--exit-code=0), so this script alone decides what is a finding.
+EXIT_FINDINGS=10
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
@@ -258,7 +263,7 @@ fi
 
 if [[ "$INSERTED" -gt 0 ]]; then
     echo "WARN: $INSERTED new secret finding(s) — operator review needed"
-    exit 1
+    exit "$EXIT_FINDINGS"
 fi
 
 # All filtered findings were already known to Wing (skipped = dedup'd).

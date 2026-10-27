@@ -18,6 +18,10 @@
 # `set -eu` only — NO pipefail (grep|sed|head config chains return 1 on no-match).
 set -eu
 
+# Exit: 0 synced or no-op · 10 GitLab's trunk is AHEAD (a finding: promote it)
+# · 2 misconfigured / unprovisioned · 1 a command failed under set -e (a crash).
+EXIT_FINDINGS=10
+
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
@@ -88,7 +92,7 @@ for b in "${BRANCHES[@]}"; do
   # and is left for the operator to promote + reconcile.
   if ! git push "$GITLAB_URL" "refs/remotes/origin/${b}:refs/heads/${b}" 2>/dev/null; then
     echo "[sync]   $b NOT fast-forward — GitLab is ahead (un-promoted agent merge?); promote it first, then re-sync"
-    rc=1
+    rc=$EXIT_FINDINGS
   fi
 done
 exit "$rc"

@@ -171,7 +171,9 @@ pulse:
       max_runtime_s: 60
       max_concurrent: 1
       category: knowledge
-      findings_exit_codes: [1]
+      # 10 = a pack is stale, failing, inactive under a clock, or absent. An
+      # UNKNOWN (no key, n8n unreachable) or a traceback exits 1 and stays red.
+      findings_exit_codes: [10]
       env:
         N8N_API_KEY: "secret:n8n_api_key"
 

@@ -208,10 +208,10 @@ pulse:
       max_runtime_s: 120
       max_concurrent: 1
       category: platform
-      # exit 1 = Gitea's trunk is AHEAD (an un-promoted agent merge) — a real
+      # exit 10 = Gitea's trunk is AHEAD (an un-promoted agent merge) — a real
       # signal to promote (promote-public.sh), NOT a job failure, so it is a
-      # finding. exit 2 (misconfig / unprovisioned forge) stays a red failure.
-      findings_exit_codes: [1]
+      # finding. exit 2 (misconfig) and a set -e crash (1) stay red failures.
+      findings_exit_codes: [10]
 
 # ── Notification routing (A9 severity → channel) ─────────────────────────────
 # Uniform wiring contract (2026-05-23): harvested by wing-base into
