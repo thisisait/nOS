@@ -52,6 +52,7 @@ import re
 import shlex
 import subprocess
 import sys
+import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -69,6 +70,7 @@ HOST_WRITTEN = list(GIT_REL)
 
 # Same default as roadmap-seed.py; both obey NOS_ROADMAP_TABLE_ID so they address
 # ONE table at runtime, not just by shared default (the graph write-edge gate).
+EXIT_NOT_FILED = 3  # a contradiction found and KEAP refused the row
 TABLE = os.environ.get("NOS_ROADMAP_TABLE_ID", "2d498264-bc9a-4324-9935-489e5e4d92f3")
 KEAP = "http://127.0.0.1:8091"
 BASE = f"{KEAP}/api/tables/{TABLE}"
@@ -816,7 +818,11 @@ def file_rows(findings: list[Finding]) -> int:
     existing = {r["values"].get("slug")
                 for r in paged(_get_json, BASE + "/rows")["data"]["rows"]}
     token = _agent_token()
-    filed = 0
+    # The live kind decides refs' wire shape, as in roadmap-seed.py: a table a
+    # blank re-created from the definition holds refs as json, and a string
+    # there was KEAP's 400 on every run from 2026-10-23 to 10-27.
+    refs_json = _refs_kind() == "json"
+    filed, refused = 0, []
     for f in findings:
         if f.slug in existing:
             continue
@@ -826,7 +832,9 @@ def file_rows(findings: list[Finding]) -> int:
         values = {
             "slug": f.slug, "title": f.title, "parent": "",
             "status": "queued", "track": f.track, "release": "",
-            "refs": f.refs, "body": f.body, "source": "agent-observation",
+            "refs": ([x.strip() for x in f.refs.split("\u00b7") if x.strip()]
+                     if refs_json else f.refs),
+            "body": f.body, "source": "agent-observation",
         }
         if token:
             r = urllib.request.Request(
@@ -838,13 +846,21 @@ def file_rows(findings: list[Finding]) -> int:
             r = urllib.request.Request(BASE + "/rows",
                                        data=json.dumps({"values": values}).encode(),
                                        headers=HEADERS, method="POST")
-        with urllib.request.urlopen(r, timeout=30):
-            filed += 1
+        try:
+            with urllib.request.urlopen(r, timeout=30):
+                filed += 1
+        except urllib.error.HTTPError as exc:
+            refused.append(f"{f.slug}: HTTP {exc.code} {exc.read()[:300].decode(errors='replace')}")
     if filed and not token:
         print("  note: filed through the human API (no KEAP_AGENT_TOKEN_RW), so "
               "these rows are keyed by UUID and cannot be updated until "
               "`tools/keap-reid-rows.py --apply` runs.", file=sys.stderr)
-    return filed
+    return filed, refused
+
+
+def _refs_kind() -> str | None:
+    cols = _get_json(BASE)["data"].get("schema", {}).get("columns") or []
+    return next((c.get("kind") for c in cols if c.get("key") == "refs"), None)
 
 
 # ---------------------------------------------------------------------------
@@ -1305,7 +1321,13 @@ def main() -> int:
                   "written into the row.")
 
     if args.file and res.findings:
-        print(f"filed {file_rows(res.findings)} new roadmap row(s)")
+        filed, refused = file_rows(res.findings)
+        print(f"filed {filed} new roadmap row(s)")
+        if refused:
+            # Not a finding: the observation was lost. 1 is the findings code,
+            # so a refused write must exit with something the job does not excuse.
+            print(f"REFUSED {len(refused)} row(s):", *refused, sep="\n  ", file=sys.stderr)
+            return EXIT_NOT_FILED
 
     return 1 if res.findings else 0
 
