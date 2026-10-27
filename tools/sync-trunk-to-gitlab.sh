@@ -90,7 +90,12 @@ for b in "${BRANCHES[@]}"; do
   # Push the freshly-fetched GitHub ref into the GitLab branch. No --force:
   # a non-FF (GitLab trunk ahead via an un-promoted agent merge) fails loudly
   # and is left for the operator to promote + reconcile.
-  if ! git push "$GITLAB_URL" "refs/remotes/origin/${b}:refs/heads/${b}" 2>/dev/null; then
+  if ! out="$(git push "$GITLAB_URL" "refs/remotes/origin/${b}:refs/heads/${b}" 2>&1)"; then
+    # Only a rejected fast-forward is the finding; auth/network is a crash.
+    case "$out" in
+      *"[rejected]"*|*non-fast-forward*|*"fetch first"*) : ;;
+      *) echo "[sync]   $b push FAILED: ${out//$TOKEN/***}" >&2; exit 1 ;;
+    esac
     echo "[sync]   $b NOT fast-forward — GitLab is ahead (un-promoted agent merge?); promote it first, then re-sync"
     rc=$EXIT_FINDINGS
   fi
