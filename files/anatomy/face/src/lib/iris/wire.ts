@@ -302,6 +302,8 @@ export type EstateState = {
 	halt: SetPoint;
 	loops_paused: SetPoint;
 	organs: { name: string; label: string; running: boolean | null }[];
+	/** Only on the answer to halt / lift_halt (v14): whether Wing recorded the act. */
+	act?: { recorded: boolean; why?: string };
 };
 
 /** One model the person may pick for the session (wire.rs ModelOption); `warning` below the recommended size. */
@@ -353,6 +355,8 @@ export type ToThalamus =
 	| { t: 'stop'; session: string }
 	| { t: 'workspace_load' }
 	| { t: 'state' }
+	| { t: 'halt'; reason?: string }
+	| { t: 'lift_halt' }
 	| { t: 'workspace_save'; doc: { [k: string]: unknown } }
 	| { t: 'catalogue' }
 	| { t: 'limbs'; limbs: Limb[] }

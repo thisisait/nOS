@@ -10,7 +10,7 @@ use crate::septum::Septum;
 use nos_contract::renderers::{is_date, ActionApproval, ApprovalsList, Axis, CellChange, Chart, ChartKind, Choice, Component, Dashboard, DashboardWidget, Dendrogram, DENDROGRAM_MAX, Kpi, RunKind, RunNode, RunStatus,
                                Dropped, FieldKind, Form, FormField, InboxItem, InboxList, KnowledgeNode, KnowledgeTree, need_node_id, Lens, LensOp, Lines, List, ListItem, Omitted, Parent, RedStatus,
                                Row, RowDiffApproval, SchemaColumn, ColumnAddApproval, ColumnKind, ExistingColumn, Series, Table, TableResults, TableSchemaApproval, Timeline, TimelineItem, Visibility};
-use nos_contract::wire::{check_params, check_spec, decode_to_thalamus, encode, CatalogueColumn, CatalogueTable, ChartSpec, ControlView, Decision, FormSpec,
+use nos_contract::wire::{check_params, check_spec, decode_to_thalamus, encode, CatalogueColumn, CatalogueTable, ChartSpec, EstateState, ControlView, Decision, FormSpec,
                          KnowledgeSpec, KpiSpec, Limb, Op, ParamKind, Phase, Scope, ModelOption, ToShell, ToThalamus, Trigger, WidgetChart, WidgetSpec, MAX_REPLAY};
 use nos_contract::uid;
 use crate::store;
@@ -1267,6 +1267,8 @@ impl Server {
                 Ok(ToThalamus::Limbs { limbs }) => face.limbs = limbs,
                 // Any listed person reads it (row medulla-settings); no session opens, nothing is written.
                 Ok(ToThalamus::State) => send(&mut out, &ToShell::State(crate::state::read())),
+                Ok(ToThalamus::Halt { reason }) => self.set_halt(&who, &mut out, &peer, true, reason.as_deref()),
+                Ok(ToThalamus::LiftHalt) => self.set_halt(&who, &mut out, &peer, false, None),
                 Ok(ToThalamus::Acted { act, .. }) => refuse(&mut out, &format!("no act {act} waits for an answer")),
                 Ok(ToThalamus::WorkspaceSave { doc }) => {
                     if let Err(why) = store::write(&store::path(&self.data, &who.uid(), "workspace"), &doc) {
@@ -1701,6 +1703,31 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         self.say(format!("refused a {tool} from {peer}: {why}"));
         send(out, &ToShell::Refused { reason: why, widget: widget.map(str::to_string) });
         false
+    }
+
+    /// halt / lift_halt (row medulla-settings): a tier-1 person at a listed decider sets the halt file, then
+    /// Wing is sent the act; the answer is the new state. An empty decider list admits nobody here, unlike
+    /// may_decide: a halt has no record-only mode. Refused leaves the file as it was.
+    fn set_halt(&self, who: &Person, out: &mut dyn Write, peer: &Value, on: bool, reason: Option<&str>) {
+        let verb = if on { "halt" } else { "lift_halt" };
+        let refusal = if !self.is_tier1(who) {
+            Some(format!("{} is not tier 1, so the halt is not theirs to set", who.username))
+        } else if self.deciders.is_empty() {
+            Some("no decider is listed (thalamus_decider_exes), so nobody sets the halt over the socket".into())
+        } else {
+            decider_refusal(&self.deciders, peer["exe"].as_str())
+        };
+        let set = match refusal {
+            Some(why) => Err(why),
+            None => crate::state::set_halt(on, &who.username, reason).map_err(|e| format!("the halt file is not writable: {e}")),
+        };
+        if let Err(why) = set {
+            self.say(format!("refused a {verb} from {} {peer}: {why}", who.username));
+            return send(out, &ToShell::Refused { reason: why, widget: None });
+        }
+        let act = crate::state::record(on, &self.wing.url);
+        self.say(format!("{verb} by {} {peer}: {}", who.username, act.why.as_deref().unwrap_or("recorded")));
+        send(out, &ToShell::State(EstateState { act: Some(act), ..crate::state::read() }));
     }
 
     /// One ledger event; the row id, or the reason it was refused (also logged).
@@ -5861,7 +5888,7 @@ fn now_utc() -> String {
 }
 
 /// Epoch seconds (KEAP's created_at) as UTC ISO 8601; days to civil date per H. Hinnant.
-fn iso(t: i64) -> String {
+pub(crate) fn iso(t: i64) -> String {
     let (days, secs) = (t.div_euclid(86_400), t.rem_euclid(86_400));
     let z = days + 719_468;
     let (era, doe) = (z.div_euclid(146_097), z.rem_euclid(146_097));

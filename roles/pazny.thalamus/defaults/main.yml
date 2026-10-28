@@ -24,7 +24,8 @@ thalamus_pupil_exe: "{{ thalamus_pupil_app }}/Contents/MacOS/nos-pupil"
 thalamus_pupil_state: "{{ thalamus_home }}/bin/nos-pupil"
 # The executables serve lets submit a form, decide an approval or answer a choice (NOS_DECIDER_EXES);
 # empty = off, the peer is only recorded. Recommended, set in config.yml by the operator:
-# [ "{{ thalamus_pupil_exe }}", "{{ thalamus_bin }}" ] (the terminal shell decides with y/n).
+# [ "{{ thalamus_pupil_exe }}", "{{ thalamus_bin }}" ] (the terminal shell decides with y/n). The halt
+# over the socket (`medulla halt`, src/serve.rs set_halt) admits a listed exe only, nobody when empty: add "{{ medulla_bin }}".
 thalamus_decider_exes: []
 thalamus_pupil_identifier: "eu.thisisait.nos.pupil"
 thalamus_pupil_target_dir: "{{ thalamus_home }}/pupil-target"

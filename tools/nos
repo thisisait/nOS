@@ -319,8 +319,10 @@ fi
 
 # ── `nos halt [--status]` / `nos resume` — emergency halt ─────────────────────
 # The halt IS one file, ~/.nos/halt (NOS_HALT_FILE): every scheduler holds every
-# due job while it exists (row medulla-admin-halt, 2026-10-25). This shell writes
-# it first, so the halt needs neither Wing, nor Traefik, nor a token. Then it asks
+# due job while it exists (row medulla-admin-halt, 2026-10-25). The medulla sets
+# it first (`medulla halt|resume`: tier 1 at a listed decider, and it sends Wing
+# the act). When the medulla does not set it, this shell is the break-glass: it
+# writes the file itself, needing neither Wing, Traefik nor a token, then asks
 # Wing over loopback :9000 (wing-halt bearer, ~/.nos/secrets.yml) to RECORD the
 # act; a record that could not be made is said, and the halt stands regardless.
 if [ "${1:-}" = "halt" ] || [ "${1:-}" = "resume" ]; then
@@ -328,6 +330,17 @@ if [ "${1:-}" = "halt" ] || [ "${1:-}" = "resume" ]; then
   [ "$verb" = "halt" ] && [ "${1:-}" = "--status" ] && { verb="state"; shift; }
   [ $# -eq 0 ] || { echo "nos $verb: takes no arguments (nos halt [--status] | nos resume)" >&2; exit 64; }
   _halt="${NOS_HALT_FILE:-$HOME/.nos/halt}"
+  _med="${NOS_MEDULLA:-$HOME/thalamus/bin/medulla}"
+  if [ "$verb" != "state" ] && [ -x "$_med" ]; then
+    rc=0; "$_med" "$verb" || rc=$?
+    case "$rc" in
+      0) echo "nos $verb: set by the medulla; Wing recorded the act"; exit 0 ;;
+      3) echo "nos $verb: set by the medulla; the act is NOT recorded" >&2; exit 0 ;;
+      *) echo "nos $verb: the medulla did not set it (exit $rc) — the shell writes the file itself" >&2 ;;
+    esac
+  elif [ "$verb" != "state" ]; then
+    echo "nos $verb: no medulla at $_med — the shell writes the file itself" >&2
+  fi
   case "$verb" in
     halt)
       mkdir -p "$(dirname "$_halt")" || exit 1

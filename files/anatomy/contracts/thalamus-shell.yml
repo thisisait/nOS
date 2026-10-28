@@ -2,7 +2,7 @@
 # Protocol: ssot/doctrine/cross-repo-contracts.md §1 (spec + fixture + gates
 # over the same bytes). Both sides link one Rust crate (nos-contract), so the
 # gate is the crate decoding the fixture; one copy only, both sides cite this.
-contract_version: 13   # 13: state (both ways); 12: callout, steps, sources, follow_up; 11: dendrogram; 10: knowledge_tree, widget spec knowledge; 9: resume workspace, clear, branch, stop, model_state; 8: catalogue (both ways), limbs, act, acted, action_approval; 7: resume, workspace_load, workspace_save, workspace, said, replay; 6: dashboard, kpi, working_for, model_options, model_pick; 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice, delta, sequence; 5: row_diff_approval op/title/read_from
+contract_version: 14   # 14: halt, lift_halt, state act; 13: state (both ways); 12: callout, steps, sources, follow_up; 11: dendrogram; 10: knowledge_tree, widget spec knowledge; 9: resume workspace, clear, branch, stop, model_state; 8: catalogue (both ways), limbs, act, acted, action_approval; 7: resume, workspace_load, workspace_save, workspace, said, replay; 6: dashboard, kpi, working_for, model_options, model_pick; 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice, delta, sequence; 5: row_diff_approval op/title/read_from
 fixture: files/anatomy/contracts/thalamus-shell.fixture.json
 
 producer:
@@ -24,7 +24,7 @@ gates:
 wire:
   framing: "newline-delimited JSON, one message per line, UTF-8"
   tag: "every message is an object whose `t` names its variant (snake_case)"
-  to_thalamus: [turn, approval_decision, control, widget, form_submit, choice_reply, working_for, model_options, model_pick, resume, workspace_load, workspace_save, catalogue, limbs, acted, clear, branch, stop, state]
+  to_thalamus: [turn, approval_decision, control, widget, form_submit, choice_reply, working_for, model_options, model_pick, resume, workspace_load, workspace_save, catalogue, limbs, acted, clear, branch, stop, state, halt, lift_halt]
   to_shell: [session, text, render, approval_request, refused, activity, widget, form_result, table_changed, working_for, model_options, said, replay, workspace, catalogue, act, model_state, state]
   widget: >-
     A widget is a spec the person placed; the pupil re-runs it over `widget {widget, spec, trigger}`
@@ -166,6 +166,14 @@ wire:
     [{name, label, running}] for the host LaunchAgents or systemd user units. on and running are null when the
     source could not be read: UNKNOWN, never off. The same struct is `medulla state --json` and GET
     /api/v1/admin/state (thalamus/src/state.rs; gate files/anatomy/thalamus/medulla/tests/state.rs).
+  halt: >-
+    v14: `halt {reason?}` and `lift_halt` set the emergency halt (`resume` already names a session's resume).
+    Only a tier-1 person (NOS_TIER1_GROUPS) at a listed decider executable (NOS_DECIDER_EXES; empty admits
+    nobody here, and Linux none) sets it: serve writes the halt file whole ({"by","at","reason"?}, the shape
+    tools/nos writes) or removes it, then sends Wing the act (POST /api/v1/admin/{halt,resume}, the wing-halt
+    bearer from ~/.nos/secrets.yml) and answers `state` with `act {recorded, why?}`. The set-point holds
+    whether or not Wing recorded it. Anyone else gets `refused` naming why, the file untouched. reason is one
+    line of at most 300 chars. `medulla halt|resume` speaks it; gate files/anatomy/thalamus/medulla/tests/halt.rs.
   phase: [thinking, tool, writing, idle]   # activity.phase; tool is {tool: {name}}
   decision: [approve, reject]
   control_view: [inbox, approvals, red_status]

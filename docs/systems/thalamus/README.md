@@ -157,6 +157,12 @@ gets a `refused` for its decision and no `idle`. A mis-set list admits nobody, s
 relative or `:` entry, or a path that names no file once the pupil is built) and serve warns
 at start (`serve::deciders`).
 
+The emergency halt (`halt`, `lift_halt`, wire v14; `medulla halt|resume`) is stricter: it
+needs a tier-1 person AND a listed decider, and an empty list admits nobody, since a halt
+has no record-only mode. The answer is `state` with `act {recorded, why?}`: serve writes the
+file, then sends Wing POST `/api/v1/admin/{halt,resume}` with the `wing-halt` bearer read from
+`~/.nos/secrets.yml`. Gate: `medulla/tests/halt.rs`.
+
 What path identity cannot stop: anything that runs code inside a listed binary. Both are
 signed with the local identity but without the hardened runtime (`codesign --options
 runtime`), so `DYLD_INSERT_LIBRARIES` or a debugger attach by the same user still decides

@@ -48,6 +48,14 @@ pub enum ToThalamus {
     Limbs { limbs: Vec<Limb> },
     /// The estate's set-points and host organs (v13), read-only for any listed person; serve answers `state`.
     State,
+    /// A tier-1 decider halts the estate (v14): serve writes the halt file, sends Wing the act and answers
+    /// `state` with `act`, or `refused` naming why with the file untouched.
+    Halt {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        reason: Option<String>,
+    },
+    /// The same decider lifts the halt (v14): serve removes the file; `resume` is a session's word already.
+    LiftHalt,
     /// The face's answer to an `act`: ok and what it returned, or why not.
     Acted {
         act: String,
@@ -210,6 +218,18 @@ pub struct EstateState {
     pub halt: SetPoint,
     pub loops_paused: SetPoint,
     pub organs: Vec<Organ>,
+    /// Only on the answer to halt / lift_halt (v14): whether Wing recorded the act; absent on a read.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub act: Option<ActRecord>,
+}
+
+/// The set-point took effect either way; `recorded` says whether Wing holds the act, `why` when not.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ActRecord {
+    pub recorded: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub why: Option<String>,
 }
 
 /// A set-point that is a file: on while it exists; since and reason as the file says them.
@@ -657,6 +677,9 @@ pub fn decode_to_thalamus(line: &str) -> Result<ToThalamus, String> {
             if picked.iter().any(|l| l.chars().count() > 60) {
                 return Err("a picked label is over 60 chars".into());
             }
+        }
+        ToThalamus::Halt { reason: Some(r) } if r.chars().count() > 300 || r.contains('\n') => {
+            return Err("a halt reason is one line of at most 300 chars".into());
         }
         ToThalamus::WorkingFor { scope } => need_scope(scope)?,
         ToThalamus::ModelPick { backend, model } => need_model(backend, model)?,

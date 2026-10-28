@@ -112,6 +112,25 @@ def test_wing_down_still_halts_and_says_the_record_is_missing(tmp_path, wing):
     assert (tmp_path / ".nos/halt").is_file(), "Wing down must not mean no halt"
 
 
+@pytest.mark.parametrize("rc, shell_writes, said", [(0, False, "Wing recorded the act"), (3, False, "NOT recorded"),
+                                                   (1, True, "the shell writes the file itself"),
+                                                   (69, True, "the shell writes the file itself")])
+def test_the_medulla_sets_it_first_and_the_shell_is_the_break_glass(tmp_path, wing, rc, shell_writes, said):
+    # medulla/tests/halt.rs proves `medulla halt` itself; here only which path tools/nos takes on each exit.
+    med = tmp_path / "medulla"
+    med.write_text(f'#!/bin/sh\necho "$@" > "{tmp_path}/asked"\nexit {rc}\n')
+    med.chmod(0o755)
+    (tmp_path / ".nos").mkdir()
+    (tmp_path / ".nos/secrets.yml").write_text(f'wing_halt_token: "{"f" * 64}"\n')
+    env = {"HOME": str(tmp_path), "PATH": "/usr/bin:/bin", "NOS_MEDULLA": str(med),
+           "NOS_WING_URL": f"http://127.0.0.1:{wing.server_port}"}
+    r = subprocess.run(["bash", str(NOS), "halt"], env=env, capture_output=True, text=True, timeout=30)
+    assert r.returncode == 0 and said in r.stdout + r.stderr, r.stdout + r.stderr
+    assert (tmp_path / "asked").read_text().split() == ["halt"]
+    assert (tmp_path / ".nos/halt").is_file() == shell_writes, "only the break-glass path writes the file from the shell"
+    assert bool(_Wing.seen) == shell_writes, f"the shell recorded an act the medulla already sent: {_Wing.seen}"
+
+
 # ── who holds wing.halt ─────────────────────────────────────────────────────
 
 def test_only_the_wing_halt_row_is_minted_with_the_halt_scope():

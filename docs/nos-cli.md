@@ -157,7 +157,17 @@ nos halt --status      # is the file there; Wing's GET /api/v1/admin/state if it
 nos resume             # remove the file (and any pre-2026-10-25 halt rows), record it
 ```
 
-**It needs neither Wing, face, Traefik nor Authentik.** The shell writes the file
+**The medulla sets it first** (row medulla-settings, increment 2): `nos` runs
+`~/thalamus/bin/medulla halt|resume` (`NOS_MEDULLA`), which asks the thalamus over
+its socket. Serve sets the file only for a tier-1 person at a listed decider
+executable (`thalamus_decider_exes`; empty admits nobody for the halt), then sends
+Wing the act with the same `wing-halt` bearer, read from `~/.nos/secrets.yml` by
+the medulla (same user; no plist holds it). `nos` prints which path took effect:
+"set by the medulla; Wing recorded the act", "set by the medulla; the act is NOT
+recorded", or — the medulla absent, refusing or silent — "the shell writes the file
+itself" and the break-glass below runs. `medulla halt --reason "…"` files a reason.
+
+**The break-glass needs neither Wing, face, Traefik nor Authentik.** The shell writes the file
 itself. Recording the act goes to Wing on loopback (`http://127.0.0.1:9000`,
 override `NOS_WING_URL` / `WING_PORT`); when Wing is down or the token missing,
 the halt still stands and the CLI says the act is NOT recorded.

@@ -1,7 +1,8 @@
-//! The estate's runtime set-points and host organs, read-only (row medulla-settings, increment 1).
+//! The estate's runtime set-points and host organs (row medulla-settings).
 //! One reader behind three doors: `medulla state`, the socket's `state`, GET /api/v1/admin/state.
-//! It writes nothing; a source it cannot read is null (UNKNOWN), never off.
-use nos_contract::wire::{EstateState, Organ, SetPoint};
+//! read() writes nothing; a source it cannot read is null (UNKNOWN), never off. set_halt (increment 2) writes
+//! the halt for serve alone, after its tier-1 and decider check.
+use nos_contract::wire::{ActRecord, EstateState, Organ, SetPoint};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -30,7 +31,57 @@ pub fn loops_paused_file() -> PathBuf {
 }
 
 pub fn read() -> EstateState {
-    EstateState { halt: set_point(&halt_file()), loops_paused: set_point(&loops_paused_file()), organs: organs() }
+    EstateState { halt: set_point(&halt_file()), loops_paused: set_point(&loops_paused_file()), organs: organs(), act: None }
+}
+
+/// The halt written (increment 2; serve's halt/lift_halt, after its tier-1 and decider check): the shape
+/// tools/nos writes, {"by","at"} plus "reason", whole (tmp + rename). A halt already filed is kept as filed,
+/// as the shell keeps it; lifting a halt that is not there is done.
+pub fn set_halt(on: bool, by: &str, reason: Option<&str>) -> Result<(), String> {
+    let path = halt_file();
+    let e = |e: std::io::Error| format!("{}: {e}", path.display());
+    if !on {
+        return match std::fs::remove_file(&path) {
+            Err(x) if x.kind() != std::io::ErrorKind::NotFound => Err(e(x)),
+            _ => Ok(()),
+        };
+    }
+    if path.is_file() {
+        return Ok(());
+    }
+    std::fs::create_dir_all(path.parent().ok_or("the halt file has no directory")?).map_err(e)?;
+    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs() as i64);
+    let mut v = serde_json::json!({"by": by, "at": crate::serve::iso(now)});
+    if let Some(r) = reason.map(str::trim).filter(|r| !r.is_empty()) {
+        v["reason"] = r.into();
+    }
+    let tmp = path.with_extension(format!("tmp-{}-{:?}", std::process::id(), std::thread::current().id()).replace(['(', ')'], ""));
+    std::fs::write(&tmp, format!("{v}\n")).map_err(e)?;
+    std::fs::rename(&tmp, &path).map_err(|x| {
+        let _ = std::fs::remove_file(&tmp);
+        e(x)
+    })
+}
+
+/// The act sent over the nerve to the organ that writes the record (ruling 2026-10-25: the medulla sets,
+/// Wing records): POST /api/v1/admin/{halt,resume} with the wing-halt bearer, read per act from
+/// ~/.nos/secrets.yml as `nos halt` reads it, so no plist holds it. Not recorded is said, never fatal.
+pub fn record(on: bool, wing_url: &str) -> ActRecord {
+    let not = |why: String| ActRecord { recorded: false, why: Some(why) };
+    let secrets = PathBuf::from(std::env::var_os("HOME").unwrap_or_default()).join(".nos/secrets.yml");
+    let token = std::fs::read_to_string(&secrets).ok().and_then(|t| t.lines().find_map(|l| {
+        Some(l.strip_prefix("wing_halt_token:")?.trim().trim_matches(['"', '\'']).to_string())
+    }));
+    let Some(token) = token.filter(|t| t.len() >= 32 && !t.starts_with("placeholder")) else {
+        return not(format!("no wing_halt_token in {} (a converge with --tags wing mints it)", secrets.display()));
+    };
+    let base = if wing_url.is_empty() { "http://127.0.0.1:9000" } else { wing_url.trim_end_matches('/') };
+    let url = format!("{base}/api/v1/admin/{}", if on { "halt" } else { "resume" });
+    match crate::serve::agent(10).post(&url).header("authorization", &format!("Bearer {token}")).send_empty() {
+        Err(e) => not(format!("Wing did not answer at {url}: {e}")),
+        Ok(r) if r.status().is_success() => ActRecord { recorded: true, why: None },
+        Ok(r) => not(format!("Wing refused it (HTTP {})", r.status().as_u16())),
+    }
 }
 
 /// What `medulla state` prints: one line a set-point, one an organ; UNKNOWN said, never hidden.
@@ -45,6 +96,10 @@ pub fn lines(s: &EstateState) -> Vec<String> {
     out.extend(s.organs.iter().map(|o| {
         let r = match o.running { Some(true) => "running", Some(false) => "stopped", None => "UNKNOWN" };
         format!("organ {}: {r} ({})", o.name, o.label)
+    }));
+    out.extend(s.act.as_ref().map(|a| match &a.why {
+        _ if a.recorded => "act: recorded by Wing".to_string(),
+        why => format!("act: NOT recorded — {}", why.as_deref().unwrap_or("Wing did not say why")),
     }));
     out
 }
