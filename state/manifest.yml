@@ -1107,6 +1107,8 @@ services:
     install_flag: install_thalamus
     version_source: launchd
     launchd_label: "eu.thisisait.nos.thalamus"
+    # nOS.app's login job (pazny.medulla app.yml): opens the menu-bar app once, at login.
+    launchd_helpers: ["eu.thisisait.nos.app"]
 
   - id: opencode
     software_owner: symbiont

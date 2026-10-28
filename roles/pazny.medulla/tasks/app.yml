@@ -67,3 +67,25 @@
   register: _nos_app_signed
   changed_when: "'signed' in _nos_app_signed.stdout"
   when: _thalamus_signing.stdout_lines | default([]) | length > 0  # --check mints nothing
+
+# Start at login. The job only opens the app, so a reload re-runs `open`, never a second nOS.
+- name: "[pazny.medulla] Render the nOS.app login job"
+  ansible.builtin.template:
+    src: nos-app.plist.j2
+    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ thalamus_nos_app_launchd_label }}.plist"
+    mode: '0644'
+  register: _nos_app_plist
+
+# launchd keeps a loaded job's definition: a changed plist is booted out and bootstrapped again.
+- name: "[pazny.medulla] Bootstrap the nOS.app login job (idempotent)"
+  ansible.builtin.shell: |
+    set -e
+    LABEL={{ thalamus_nos_app_launchd_label | quote }}; D="gui/$(id -u)"
+    if launchctl print "$D/$LABEL" >/dev/null 2>&1; then
+      [ {{ 'yes' if _nos_app_plist is changed else 'no' }} = yes ] || { echo already-loaded; exit 0; }
+      launchctl bootout "$D/$LABEL" 2>/dev/null || true
+    fi
+    launchctl bootstrap "$D" ~/Library/LaunchAgents/"$LABEL".plist
+    echo bootstrapped
+  register: _nos_app_bootstrap
+  changed_when: "'bootstrapped' in _nos_app_bootstrap.stdout"

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- nOS.app at login. open hands the bundle to LaunchServices and exits: one process named nOS, not a
+     launchd child, and an app already running is only activated. KeepAlive false: Quit stays quit. -->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>{{ thalamus_nos_app_launchd_label }}</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/open</string>
+        <string>-a</string>
+        <string>{{ thalamus_nos_app }}</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <false/>
+    <key>LimitLoadToSessionType</key>
+    <string>Aqua</string>
+</dict>
+</plist>

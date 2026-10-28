@@ -101,6 +101,25 @@
   ignore_errors: true  # noqa: ignore-errors - a warning by ruling, counted as ignored in the recap
   tags: ['verify']
 
+# Here, not in pazny.medulla's app.yml: an include_role is not reached by --tags verify.
+# The installed bundle verifies, names nOS.app's identifier and the keychain identity's leaf.
+- name: "[pazny.thalamus] Verify — the installed nOS.app is signed by the local identity"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    codesign --verify --strict {{ thalamus_nos_app | quote }}
+    dr=$(codesign -d -r- {{ thalamus_nos_app | quote }} 2>&1)
+    H=$(security find-certificate -c {{ thalamus_signing_cn | quote }} -Z {{ thalamus_signing_keychain | quote }} \
+      | awk '/SHA-1 hash/ {print tolower($3); exit}')
+    [ -n "$H" ] || { echo "no signing identity in the keychain" >&2; exit 1; }
+    grep -qF 'identifier "eu.thisisait.nos.app"' <<<"$dr" || { echo "not nOS.app's identifier: $dr" >&2; exit 1; }
+    grep -qF "certificate leaf = H\"$H\"" <<<"$dr" || { echo "not signed by the keychain identity $H: $dr" >&2; exit 1; }
+    echo "$H"
+  args:
+    executable: /bin/bash
+  register: _nos_app_verify
+  changed_when: false
+  tags: ['verify']
+
 # The nerve, proven live (row medulla-scheduler, c2): fire ONE read-only job through the medulla with
 # --report and read its row back. Opt-in (-e medulla_pulse_probe=true): it really runs the job.
 # Gate for the shape: medulla/tests/pulse_report.rs; this is the effect. macOS only for now.

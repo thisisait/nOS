@@ -25,6 +25,8 @@ thalamus_pupil_state: "{{ thalamus_home }}/bin/nos-pupil"
 # nOS.app (files/anatomy/thalamus/app), built and signed by pazny.medulla tasks/app.yml.
 thalamus_nos_app: "{{ ansible_facts['env']['HOME'] }}/Applications/nOS.app"
 thalamus_nos_app_exe: "{{ thalamus_nos_app }}/Contents/MacOS/nOS"
+# Its login job (pazny.medulla templates/nos-app.plist.j2): opens the app once, never keeps it alive.
+thalamus_nos_app_launchd_label: "eu.thisisait.nos.app"
 # The executables serve lets submit a form, decide an approval, answer a choice or set the halt
 # (NOS_DECIDER_EXES, src/serve.rs decider_refusal); empty = decisions record the peer only, halt nobody.
 # macOS (ruling 2026-10-28): the pupil, the terminal shell, the medulla (`nos halt`) and nOS.app.

@@ -185,6 +185,7 @@
       - "eu.thisisait.nos.device-gateway.plist"
       - "eu.thisisait.nos.receptor.plist"
       - "eu.thisisait.nos.thalamus.plist"
+      - "eu.thisisait.nos.app.plist"
       - "eu.thisisait.nos.ears-listen.plist"
       - "eu.thisisait.nos.heartbeat.plist"
       - "eu.thisisait.nos.resume.plist"

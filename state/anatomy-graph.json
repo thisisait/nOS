@@ -4865,7 +4865,8 @@
       "category": "ai",
       "install_flag": "install_thalamus",
       "launchd_labels": [
-        "eu.thisisait.nos.thalamus"
+        "eu.thisisait.nos.thalamus",
+        "eu.thisisait.nos.app"
       ],
       "dependency_survey": "declared",
       "anchor": "02.02.09",
