@@ -32,3 +32,43 @@
   when:
     - pulse_medulla_jobs | length > 0
     - (nos_service_manager | default('launchd')) == 'systemd-user'
+
+# Observe the effect, as the Python daemon's staleness probe does (main.yml): nos-pulse is a copy of
+# the medulla, and a rebuild restarted only the thalamus. Live 2026-10-28: the binary was 10:06, the
+# running nos-pulse from 10-27 17:51. A process older than its binary is restarted; unknown is left be.
+- name: "[pazny.pulse] Restart a medulla-pulse older than its binary"
+  ansible.builtin.shell: |
+    set -uo pipefail
+    BIN={{ pulse_medulla_bin | quote }}; LABEL={{ medulla_pulse_launchd_label | quote }}
+    if [ "$(uname)" = Darwin ]; then
+      PID=$(launchctl print "gui/$(id -u)/$LABEL" 2>/dev/null | awk '/pid = /{print $3}')
+      BUILT=$(stat -f %m "$BIN" 2>/dev/null || echo 0)
+    else
+      PID=$(systemctl --user show -p MainPID --value "$LABEL.service" 2>/dev/null); [ "${PID:-0}" = 0 ] && PID=""
+      BUILT=$(stat -c %Y "$BIN" 2>/dev/null || echo 0)
+    fi
+    ELAPSED=$(ps -o etime= -p "${PID:-0}" 2>/dev/null | tr -d ' ')
+    [ -n "$ELAPSED" ] && [ "$BUILT" -gt 0 ] || { echo FRESH; exit 0; }
+    # etime is [[dd-]hh:]mm:ss on both platforms (macOS ps has no etimes).
+    echo "$ELAPSED" | awk -F'[-:]' -v built="$BUILT" -v now="$(date +%s)" '{
+      split("1 60 3600 86400", m, " "); s = 0
+      for (i = NF; i >= 1; i--) s += $i * m[NF - i + 1]
+      print ((now - s) < built) ? "STALE" : "FRESH" }'
+  register: _medulla_pulse_staleness
+  changed_when: "'STALE' in _medulla_pulse_staleness.stdout"
+  when: pulse_medulla_jobs | length > 0
+
+- name: "[pazny.pulse] (macOS) Restart the stale medulla-pulse"
+  ansible.builtin.shell: launchctl kickstart -k "gui/$(id -u)/{{ medulla_pulse_launchd_label }}"
+  when:
+    - _medulla_pulse_staleness is changed
+    - (nos_service_manager | default('launchd')) == 'launchd'
+
+- name: "[pazny.pulse] (Linux) Restart the stale medulla-pulse"
+  ansible.builtin.systemd:
+    name: "{{ medulla_pulse_launchd_label }}.service"
+    scope: user
+    state: restarted
+  when:
+    - _medulla_pulse_staleness is changed
+    - (nos_service_manager | default('launchd')) == 'systemd-user'
