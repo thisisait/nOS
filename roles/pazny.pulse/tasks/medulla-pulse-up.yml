@@ -44,7 +44,8 @@
       PID=$(launchctl print "gui/$(id -u)/$LABEL" 2>/dev/null | awk '/pid = /{print $3}')
       BUILT=$(stat -f %m "$BIN" 2>/dev/null || echo 0)
     else
-      PID=$(systemctl --user show -p MainPID --value "$LABEL.service" 2>/dev/null); [ "${PID:-0}" = 0 ] && PID=""
+      # nos-proc (no-init hosts) has no `show`: the PID stays unknown and nothing is restarted.
+      PID=$({{ nos_user_systemctl | default('systemctl --user') }} show -p MainPID --value "$LABEL.service" 2>/dev/null); [ "${PID:-0}" = 0 ] && PID=""
       BUILT=$(stat -c %Y "$BIN" 2>/dev/null || echo 0)
     fi
     ELAPSED=$(ps -o etime= -p "${PID:-0}" 2>/dev/null | tr -d ' ')
@@ -65,10 +66,7 @@
     - (nos_service_manager | default('launchd')) == 'launchd'
 
 - name: "[pazny.pulse] (Linux) Restart the stale medulla-pulse"
-  ansible.builtin.systemd:
-    name: "{{ medulla_pulse_launchd_label }}.service"
-    scope: user
-    state: restarted
+  ansible.builtin.command: "{{ nos_user_systemctl | default('systemctl --user') }} restart {{ medulla_pulse_launchd_label }}.service"
   when:
     - _medulla_pulse_staleness is changed
     - (nos_service_manager | default('launchd')) == 'systemd-user'
