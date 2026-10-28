@@ -1,19 +1,20 @@
 // nOS.app: the estate's state in the menu bar, read over the thalamus socket, and Iris in a window.
-// It writes nothing: halt and pause round-trip through the medulla (increment 2), never a file here.
+// It writes nothing itself: a halt is asked of the medulla over the socket, which checks the person and
+// this signed exe (NOS_DECIDER_EXES), writes the set-point and tells Wing. Never a file here.
 import AppKit
 import Darwin
 import NOSState
 import SwiftUI
 import WebKit
 
-/// One `{"t":"state"}` round trip on the thalamus socket; nil when it does not answer in 2 s.
-func readState() -> EstateState? {
+/// One request line on the thalamus socket, its one answer line; nil when it does not answer in `secs`.
+func ask(_ request: String, secs: Int = 2) -> Data? {
     let env = ProcessInfo.processInfo.environment["THALAMUS_SOCKET"] ?? ""
     let path = env.isEmpty ? NSHomeDirectory() + "/.nos/thalamus.sock" : env
     let fd = socket(AF_UNIX, SOCK_STREAM, 0)
     guard fd >= 0 else { return nil }
     defer { close(fd) }
-    var tv = timeval(tv_sec: 2, tv_usec: 0)
+    var tv = timeval(tv_sec: secs, tv_usec: 0)
     setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
     setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
     var addr = sockaddr_un()
@@ -25,7 +26,7 @@ func readState() -> EstateState? {
         $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { connect(fd, $0, socklen_t(MemoryLayout<sockaddr_un>.size)) }
     }
     guard rc == 0 else { return nil }
-    let req = Array("{\"t\":\"state\"}\n".utf8)
+    let req = Array((request + "\n").utf8)
     guard write(fd, req, req.count) == req.count else { return nil }
     var line = [UInt8](), chunk = [UInt8](repeating: 0, count: 65536)
     while !line.contains(10) {
@@ -33,17 +34,45 @@ func readState() -> EstateState? {
         guard n > 0, line.count + n <= 1 << 20 else { return nil }  // one line is at most 1 MiB
         line += chunk[0..<n]
     }
-    return try? EstateState.decode(Data(line.prefix { $0 != 10 }))
+    return Data(line.prefix { $0 != 10 })
+}
+
+func readState() -> EstateState? { ask(#"{"t":"state"}"#).flatMap { try? EstateState.decode($0) } }
+
+/// Halt or lift it through the medulla; what it said, in words. 15 s: it waits on Wing's record (10 s).
+func setHalt(_ on: Bool) -> String {
+    guard let d = ask(on ? #"{"t":"halt","reason":"nOS.app"}"# : #"{"t":"lift_halt"}"#, secs: 15),
+          let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any] else { return "the medulla did not answer: nothing changed" }
+    if j["t"] as? String == "refused" { return "refused: \(j["reason"] as? String ?? "no reason given")" }
+    let act = j["act"] as? [String: Any]
+    let what = on ? "Halted" : "Resumed"
+    return act?["recorded"] as? Bool == true ? "\(what); Wing recorded it" : "\(what); NOT recorded: \(act?["why"] as? String ?? "?")"
 }
 
 @MainActor final class Estate: ObservableObject {
     @Published var state: EstateState?  // nil: the medulla did not answer, never green
+    @Published var said: String?        // the last halt/resume answer
     private var timer: Timer?
 
     init() {
         poll()
         timer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.poll() }
+        }
+    }
+
+    /// Asked twice on purpose: a halt holds every Pulse job, a native dialog is the confirmation.
+    func toggleHalt() {
+        let on = state?.halt.on != true
+        let alert = NSAlert()
+        alert.messageText = on ? "Halt every Pulse job?" : "Lift the halt?"
+        alert.informativeText = on ? "Nothing scheduled runs until you resume." : "Scheduled jobs start firing again."
+        alert.addButton(withTitle: on ? "Halt" : "Resume"); alert.addButton(withTitle: "Cancel")
+        NSApp.activate(ignoringOtherApps: true)
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        Task.detached {
+            let words = setHalt(on)
+            await MainActor.run { self.said = words; self.poll() }
         }
     }
 
@@ -72,8 +101,9 @@ struct MenuView: View {
             Text("medulla unreachable")
         }
         Divider()
-        Button(estate.state?.halt.on == true ? "Resume" : "Halt") {}.disabled(true)
-        Text("Halt/Resume: coming in increment 2")
+        Button(estate.state?.halt.on == true ? "Resume…" : "Halt…") { estate.toggleHalt() }
+            .disabled(estate.state?.halt.on == nil)  // unknown: neither verb is honest
+        if let w = estate.said { Text(w) }
         Divider()
         Button("Iris") { openWindow(id: "iris"); NSApp.activate(ignoringOtherApps: true) }
         Button("Quit nOS") { NSApp.terminate(nil) }.keyboardShortcut("q")
