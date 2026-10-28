@@ -97,3 +97,28 @@ Self-model prune (2026-07-20) correctly refuses and says so; that warning
 **is** the guard working. The assertions are `removed == 0` and
 `danglingAnchors == 0` — they stay true whether or not the correct path is
 chatty.
+
+## 7. Where a gate lives — at the joints
+
+The suite is one tree, and a hard gate **shall** sit where two parts meet:
+manifest ↔ Wing, script ↔ table schema, role ↔ OS user, generated file ↔
+its source. That is where a change on one side breaks the other silently.
+A gate that covers a whole class (every job, every writer, every role) is
+worth more than one per instance.
+
+- A fix that crosses a joint ships with the gate that would have caught it,
+  shown red against the broken state.
+- A fix on one site — one task, one script, one line — is checked red and
+  green **locally** (a throwaway check in the job's tmp dir) and the commit
+  says what was run. It **shall** not become a suite file: if it recurs, the
+  joint it keeps breaking is the gate to write.
+- A new gate **shall** find its branch in the tree (the organ and joint it
+  guards). One that has none is guarding a site, not a joint.
+- Deep checks — penetration tests, per-lexicon journeys, slow end-to-end —
+  run outside the commit path (nightly and on the release PR), so the
+  per-commit suite stays fast.
+
+Measured 2026-10-27: `tests/anatomy` held 1 069 files (149k lines), 368 of
+them added in 30 days, and four pytest shards ran 7–9 min on every commit.
+Of that day's four new gates, one guarded a single task and one a single
+writer of a shared table.

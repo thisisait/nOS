@@ -151,8 +151,9 @@ The GDPR Article 30 block is mandatory. [docs/manifest-app-onboarding.md](docs/m
 
 ## Gates and evidence
 
-A fix ships with the gate that would have caught it, and the gate is shown red against
-the broken state. Division of labour: **pytest owns the shape, `--tags verify` owns the
+A fix that crosses a joint ships with the gate that would have caught it, shown red against
+the broken state; a one-site fix is checked red/green locally and the commit says what ran
+([gates.md §7](ssot/doctrine/gates.md)). Division of labour: **pytest owns the shape, `--tags verify` owns the
 effect, `nos-smoke --strict` owns end-to-end truth.** Success is written by a reader,
 never by the code that attempted the work. Doctrine: [ssot/doctrine/gates.md](ssot/doctrine/gates.md),
 [docs/workflow-standard.md](docs/workflow-standard.md).

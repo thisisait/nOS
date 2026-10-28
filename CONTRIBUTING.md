@@ -47,9 +47,11 @@ code, not pytest's.
 
 ## The one rule reviewers enforce
 
-**A fix ships with the gate that would have caught it, and the gate is shown
-red against the broken code first.** Write the test, run it, see it fail, then
-fix. Put both runs in the PR. A test edited in the same PR as the code it
+**A fix that crosses a joint ships with the gate that would have caught it,
+and the gate is shown red against the broken code first.** Write the test, run
+it, see it fail, then fix. Put both runs in the PR. A fix on one site is checked
+red and green locally and the PR says what ran; it does not add a suite file
+([ssot/doctrine/gates.md](ssot/doctrine/gates.md) §7). A test edited in the same PR as the code it
 guards, so that it passes, is not a gate ([ssot/doctrine/gates.md](ssot/doctrine/gates.md)).
 
 ## Commits

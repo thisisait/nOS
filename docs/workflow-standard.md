@@ -165,7 +165,7 @@ confident anything sounds. The ladder in this estate:
 |---|---|---|
 | **worktree** | a scratch experiment | nothing; delete it |
 | **branch** | code on `fix/*` | pytest green |
-| **`dev`** | pushed | pytest + a **retro-red** gate + lint |
+| **`dev`** | pushed | pytest + lint + a **retro-red** gate at a joint, or a local red/green named in the commit |
 | **estate** | a converge touches ~50 containers | the above + `--tags verify` |
 | **data** | a removal, a rotation, a migration | the above + dry-run first + operator confirm |
 | **irreversible** | key rotation without the old key, force-push, deleting a backup | do not automate |
@@ -183,7 +183,8 @@ estate it writes to. Nothing propagates on its own. Agents that mutate files in
 parallel need `isolation: 'worktree'` — and if you needed that, ask first
 whether the fan-out was a chain in disguise.
 
-**The ratchet: every claimed improvement carries a retro-red gate.** A gate that
+**The ratchet: every claimed improvement is shown red first** — by a suite gate
+when it crosses a joint, by a local check otherwise ([gates.md §7](../ssot/doctrine/gates.md)). A gate that
 passes on the fixed tree proves nothing until it has been shown to *fail on the
 tree before the fix*. Run it in a scratch worktree at the prior commit. If it
 only fails because a file is missing, that is a weak red — mutate the fixed

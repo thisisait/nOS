@@ -19,7 +19,7 @@ in that one place.
 Quoted from [CLAUDE.md](CLAUDE.md) at render time.
 
 1. Success is written by a reader, not by the code that did the work — and not by your own report. Say what you verified and what you did not.
-2. A fix ships with the gate that would have caught it, and the gate is shown red against the broken state.
+2. A fix that crosses a joint ships with the gate that would have caught it, shown red against the broken state; a one-site fix is checked red/green locally and the commit says what ran ([gates.md §7](ssot/doctrine/gates.md)).
 3. This checkout is the **source**. A deployed nOS runs from elsewhere on the host (`~/stacks`, `~/wing`, `~/keap/src`, `~/face/src`, launchd/systemd organs); only a converge moves source into runtime. So a git ref answers "what is in the repo", never "what is running"
 
 ## The types
