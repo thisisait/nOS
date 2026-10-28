@@ -32,7 +32,7 @@ fn map(home: &Path, groups: &[&str]) {
         serde_json::json!({"logins": {me: {"username": "alice", "groups": groups}}}).to_string()).unwrap();
 }
 
-/// A Wing that answers every request with `code` and keeps (method path, bearer).
+/// A Wing that answers every request with `code` and keeps (method path, bearer, body).
 fn wing(code: Arc<Mutex<u16>>, seen: Arc<Mutex<Vec<String>>>) -> u16 {
     let l = TcpListener::bind("127.0.0.1:0").unwrap();
     let port = l.local_addr().unwrap().port();
@@ -45,10 +45,11 @@ fn wing(code: Arc<Mutex<u16>>, seen: Arc<Mutex<Vec<String>>>) -> u16 {
             head.push(line.trim_end().to_string());
         }
         let len = head.iter().find_map(|h| h.to_lowercase().strip_prefix("content-length:").map(|v| v.trim().parse::<usize>().unwrap_or(0))).unwrap_or(0);
-        let _ = r.read_exact(&mut vec![0; len]);
+        let mut sent = vec![0; len];
+        let _ = r.read_exact(&mut sent);
         let auth = head.iter().find_map(|h| h.strip_prefix("authorization: ").or(h.strip_prefix("Authorization: "))).unwrap_or("-");
         let line = head.first().cloned().unwrap_or_default();
-        seen.lock().unwrap().push(format!("{} {auth}", line.rsplit_once(' ').map_or(&*line, |(a, _)| a)));
+        seen.lock().unwrap().push(format!("{} {auth} {}", line.rsplit_once(' ').map_or(&*line, |(a, _)| a), String::from_utf8_lossy(&sent).split_whitespace().collect::<String>()));
         let body = "{\"halt_active\": true}";
         let _ = (&s).write_all(format!("HTTP/1.1 {} X\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}",
             *code.lock().unwrap(), body.len()).as_bytes());
@@ -118,7 +119,7 @@ fn a_decider_halts_and_resumes_and_no_one_else_does() {
     assert!(f["at"].as_str().is_some_and(|a| a.len() == 20 && a.ends_with('Z')), "{f}");
     assert_eq!((state()["halt"]["on"].clone(), state()["halt"]["reason"].clone()), (Value::Bool(true), "drill".into()));
     assert!(held()["stderr_tail"].as_str().unwrap().starts_with("PAUSED: emergency halt"));
-    assert_eq!(seen.lock().unwrap().last().cloned(), Some(format!("POST /api/v1/admin/halt Bearer {}", "h".repeat(64))));
+    assert_eq!(seen.lock().unwrap().last().cloned(), Some(format!("POST /api/v1/admin/halt Bearer {} {{\"by\":\"alice\"}}", "h".repeat(64))));
     let before = std::fs::read(home.join("halt")).unwrap();
 
     // Not a listed decider (this test binary), then not tier 1: refused, the file as it was.
@@ -139,6 +140,6 @@ fn a_decider_halts_and_resumes_and_no_one_else_does() {
     assert!(!home.join("halt").exists());
     assert_eq!(state()["halt"]["on"], false);
     assert_eq!(held()["exit_code"], 0, "a lifted halt still holds the job");
-    assert_eq!(seen.lock().unwrap().last().cloned(), Some(format!("POST /api/v1/admin/resume Bearer {}", "h".repeat(64))));
+    assert_eq!(seen.lock().unwrap().last().cloned(), Some(format!("POST /api/v1/admin/resume Bearer {} {{\"by\":\"alice\"}}", "h".repeat(64))));
     let _ = std::fs::remove_dir_all(&home);
 }
