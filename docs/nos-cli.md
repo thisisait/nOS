@@ -178,15 +178,20 @@ random on the first converge (`--tags wing` mints the row), never derived from
 the password prefix, and rendered into no container or agent env. Agents run as
 their own macOS user and cannot read `~/.nos`. `wing.halt` reaches halt and
 resume and no other operator verb. Wing records the act as `admin_emergency_halt`
-/ `admin_emergency_resume` with `actor_id = wing-halt`, so `/admin` lists it
-beside the page's own acts.
+/ `admin_emergency_resume` with `actor_id = wing-halt` (the bearer) and
+`operator_username` = the person (`{"by"}`: the medulla's kernel identity, or the
+shell's `$USER`), so `/admin` lists it beside the page's own acts.
 
 Not chosen: the forward-auth identity on loopback. Wing believes
 `X-Authentik-*` from anyone holding the edge token, and the face container
 holds that token, so it is not a proof that the operator is the caller.
 
-- Exit 0 = Wing answered 2xx; 1 = Wing refused (HTTP code on stderr);
-  69 = no token, or Wing did not answer: **UNKNOWN**, never "halted".
+- The exit code says whether the SET-POINT moved, not whether Wing recorded it:
+  0 = the halt is set (or lifted); the output says "Wing recorded the act" or
+  "the act is NOT recorded" (no token, Wing down or refusing the medulla's record).
+  1 = the shell's break-glass write failed, or Wing refused the shell's record
+  (HTTP code on stderr; the file is already written). `medulla halt|resume` itself:
+  0 set and recorded, 3 set NOT recorded, 1 refused (file untouched), 69 no thalamus.
 - Gate: `tests/anatomy/test_halt_has_a_break_glass.py`.
 
 ## Rotating a leaked secret
