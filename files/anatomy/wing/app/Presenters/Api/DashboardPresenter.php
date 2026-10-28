@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Presenters\Api;
 
-use App\Model\ComponentRepository;
 use App\Model\RemediationRepository;
 use App\Model\PentestRepository;
 use App\Model\AdvisoryRepository;
@@ -14,7 +13,7 @@ use App\Model\UpgradeRepository;
 use App\Model\CoexistenceRepository;
 
 /**
- * GET /api/v1/dashboard/summary  — aggregated counters across components, scan, pentest, advisories
+ * GET /api/v1/dashboard/summary  — aggregated counters across scan, pentest, advisories
  * GET /api/v1/dashboard/timeline — recent activity stream (events + state transitions, paginated)
  *
  * Public summary, bearer-gated timeline. Drives Wing's homepage tiles.
@@ -24,7 +23,6 @@ final class DashboardPresenter extends BaseApiPresenter
 	protected array $publicActions = ['summary'];
 
 	public function __construct(
-		private ComponentRepository $componentRepo,
 		private RemediationRepository $remediationRepo,
 		private PentestRepository $pentestRepo,
 		private AdvisoryRepository $advisoryRepo,
@@ -40,7 +38,6 @@ final class DashboardPresenter extends BaseApiPresenter
 		$this->requireMethod('GET');
 
 		$state = $this->scanRepo->getState();
-		$components = $this->componentRepo->list([]);
 		$remPending = $this->remediationRepo->list(['status' => 'pending', 'limit' => 1000]);
 		$remResolved = $this->remediationRepo->list(['status' => 'resolved', 'limit' => 1000]);
 		$targets = $this->pentestRepo->listTargets();
@@ -86,7 +83,6 @@ final class DashboardPresenter extends BaseApiPresenter
 		$this->sendSuccess([
 			'scan_cycle' => $state['config']['scan_cycle'] ?? $state['latest_cycle'] ?? 0,
 			'last_scan' => $state['config']['last_advisory_check'] ?? null,
-			'components_total' => count($components),
 			'remediation' => [
 				'pending' => $remPending['total'],
 				'resolved' => $remResolved['total'],

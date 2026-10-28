@@ -43,7 +43,6 @@ services:
 	security.userStorage: App\Security\ForwardAuthUserStorage
 
 	# Repositories
-	- App\Model\ComponentRepository
 	- App\Model\ScanStateRepository
 	- App\Model\RemediationRepository
 	- App\Model\TokenRepository

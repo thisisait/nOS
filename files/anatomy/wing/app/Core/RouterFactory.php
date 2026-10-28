@@ -19,7 +19,6 @@ final class RouterFactory
 		$api = $router->withModule('Api');
 		$api->addRoute('api/v1/dashboard/summary', 'Dashboard:summary');
 		$api->addRoute('api/v1/dashboard/timeline', 'Dashboard:timeline');
-		$api->addRoute('api/v1/components[/<id>]', 'Components:default');
 		$api->addRoute('api/v1/scan/state', 'Scan:state');
 		$api->addRoute('api/v1/scan/cycles', 'Scan:cycles');
 		$api->addRoute('api/v1/scan/cycle', 'Scan:cycle');

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Presenters;
 
-use App\Model\ComponentRepository;
+use App\Model\SystemRepository;
 use App\Model\RemediationRepository;
 use App\Model\PentestRepository;
 use App\Model\AdvisoryRepository;
@@ -15,7 +15,7 @@ final class DashboardPresenter extends BasePresenter
 	protected string $activeTab = 'overview';
 
 	public function __construct(
-		private ComponentRepository $componentRepo,
+		private SystemRepository $systems,
 		private RemediationRepository $remediationRepo,
 		private PentestRepository $pentestRepo,
 		private AdvisoryRepository $advisoryRepo,
@@ -26,7 +26,6 @@ final class DashboardPresenter extends BasePresenter
 	public function renderDefault(): void
 	{
 		$state = $this->scanRepo->getState();
-		$components = $this->componentRepo->list([]);
 		$remPending = $this->remediationRepo->list(['status' => 'pending', 'limit' => 1000]);
 		$remResolved = $this->remediationRepo->list(['status' => 'resolved', 'limit' => 1000]);
 		$targets = $this->pentestRepo->listTargets();
@@ -57,7 +56,7 @@ final class DashboardPresenter extends BasePresenter
 		unset($adv);
 
 		$this->template->state = $state;
-		$this->template->components = $components;
+		$this->template->systemCount = $this->systems->list()['total'];
 		$this->template->pendingCount = $remPending['total'];
 		$this->template->resolvedCount = $remResolved['total'];
 		$this->template->targets = $targets;

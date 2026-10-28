@@ -553,92 +553,6 @@ paths:
           required: true
           schema:
             type: string
-  /api/v1/components:
-    get:
-      summary: 'list (filters: category, stack, priority)'
-      operationId: Components_default_get
-      tags:
-        - Components
-      responses:
-        '200':
-          description: OK
-        '400':
-          description: Bad request
-        '401':
-          description: Authentication required
-        '403':
-          description: 'The token''s scopes do not permit this call'
-        '404':
-          description: Not found
-      security:
-        - BearerAuth: []
-    post:
-      summary: create (id + name required)
-      operationId: Components_default_post
-      tags:
-        - Components
-      responses:
-        '200':
-          description: OK
-        '400':
-          description: Bad request
-        '401':
-          description: Authentication required
-        '403':
-          description: 'The token''s scopes do not permit this call'
-        '404':
-          description: Not found
-      security:
-        - BearerAuth: []
-  '/api/v1/components/{id}':
-    get:
-      summary: single component detail
-      operationId: Components_default_get
-      tags:
-        - Components
-      responses:
-        '200':
-          description: OK
-        '400':
-          description: Bad request
-        '401':
-          description: Authentication required
-        '403':
-          description: 'The token''s scopes do not permit this call'
-        '404':
-          description: Not found
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-    put:
-      summary: update fields on an existing component
-      operationId: Components_default_put
-      tags:
-        - Components
-      responses:
-        '200':
-          description: OK
-        '400':
-          description: Bad request
-        '401':
-          description: Authentication required
-        '403':
-          description: 'The token''s scopes do not permit this call'
-        '404':
-          description: Not found
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
   /api/v1/cortex/execute:
     get:
       summary: 'CortexExecutor::actionexecute'
@@ -679,7 +593,7 @@ paths:
         - BearerAuth: []
   /api/v1/dashboard/summary:
     get:
-      summary: aggregated counters across components, scan, pentest, advisories
+      summary: aggregated counters across scan, pentest, advisories
       operationId: Dashboard_summary_get
       tags:
         - Dashboard
