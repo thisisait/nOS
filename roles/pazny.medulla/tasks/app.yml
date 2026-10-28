@@ -79,13 +79,15 @@
 # launchd keeps a loaded job's definition: a changed plist is booted out and bootstrapped again.
 - name: "[pazny.medulla] Bootstrap the nOS.app login job (idempotent)"
   ansible.builtin.shell: |
-    set -e
     LABEL={{ thalamus_nos_app_launchd_label | quote }}; D="gui/$(id -u)"
+    PLIST=~/Library/LaunchAgents/"$LABEL".plist
     if launchctl print "$D/$LABEL" >/dev/null 2>&1; then
       [ {{ 'yes' if _nos_app_plist is changed else 'no' }} = yes ] || { echo already-loaded; exit 0; }
+      # bootout is asynchronous: bootstrapping into the teardown returns 5 (test_a_bootout_is_not_immediately_bootstrapped).
       launchctl bootout "$D/$LABEL" 2>/dev/null || true
+      sleep 1
     fi
-    launchctl bootstrap "$D" ~/Library/LaunchAgents/"$LABEL".plist
+    launchctl bootstrap "$D" "$PLIST" || { echo "BOOTSTRAP-FAILED rc=$?"; exit 1; }
     echo bootstrapped
   register: _nos_app_bootstrap
   changed_when: "'bootstrapped' in _nos_app_bootstrap.stdout"
