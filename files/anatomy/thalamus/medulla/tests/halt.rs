@@ -2,6 +2,7 @@
 //! and lifts the halt over the thalamus socket (`medulla halt`/`resume`), the readers — state.rs and the
 //! pulse hold — see it, Wing is sent the act, and a peer that is not tier 1 or not a listed decider is
 //! refused with the file untouched. Every path is a tempdir; Wing is a stub on a loopback port.
+#![cfg_attr(target_os = "linux", allow(dead_code, unused_imports))]
 use serde_json::Value;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpListener;
@@ -75,6 +76,16 @@ fn raw(home: &Path, line: &str) -> Value {
     serde_json::from_str(&back).unwrap()
 }
 
+/// Linux CI (dev 2127c10b): SO_PEERCRED names the connector, not the sender, so serve trusts no
+/// decider there and a halt over the socket is refused by design; the shell's break-glass halts.
+#[cfg(target_os = "linux")]
+#[test]
+fn on_linux_no_decider_is_trusted_to_halt() {
+    let why = thalamus::serve::decider_refusal(&[std::path::PathBuf::from("/bin/sh")], Some("/bin/sh"));
+    assert!(why.as_deref().is_some_and(|w| w.contains("connecting process")), "{why:?}");
+}
+
+#[cfg(target_os = "macos")]
 #[test]
 fn a_decider_halts_and_resumes_and_no_one_else_does() {
     let home = std::path::PathBuf::from(format!("/tmp/md-halt-{}", std::process::id()));
