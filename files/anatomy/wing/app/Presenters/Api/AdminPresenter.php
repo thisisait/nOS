@@ -34,7 +34,17 @@ final class AdminPresenter extends BaseApiPresenter
 		$this->requireMethod('POST');
 		$actor = $this->requireActorId();
 		$affected = $this->pulse->emergencyHaltAll($actor);
-		$this->record('admin_emergency_halt', $actor, ['jobs_affected' => $affected]);
+		$this->record('admin_emergency_halt', $actor, ['jobs_affected' => $affected], $this->claimedBy());
+	}
+
+	/**
+	 * The person the caller acted for ({"by"} from the medulla's kernel identity or the shell's $USER).
+	 * A name the bearer vouches for, not an auth: actor_id stays the bearer. Bad shape = not named.
+	 */
+	private function claimedBy(): ?string
+	{
+		$by = $this->getJsonBody()['by'] ?? null;
+		return is_string($by) && preg_match('/^[A-Za-z0-9._-]{1,64}$/', $by) ? $by : null;
 	}
 
 	public function actionResume(): void
@@ -42,7 +52,7 @@ final class AdminPresenter extends BaseApiPresenter
 		$this->requireMethod('POST');
 		$actor = $this->requireActorId();
 		$affected = $this->pulse->emergencyResumeAll();
-		$this->record('admin_emergency_resume', $actor, ['jobs_unhalted' => $affected]);
+		$this->record('admin_emergency_resume', $actor, ['jobs_unhalted' => $affected], $this->claimedBy());
 	}
 
 	public function actionState(): void
@@ -55,8 +65,9 @@ final class AdminPresenter extends BaseApiPresenter
 	}
 
 	/** Same event types as the Latte page, so /admin lists both channels' acts. */
-	private function record(string $type, string $actor, array $result): never
+	private function record(string $type, string $actor, array $result, ?string $by = null): never
 	{
+		$result += $by !== null ? ['operator_username' => $by, 'vouched_by' => $actor] : [];
 		$actionId = bin2hex(random_bytes(8));
 		$this->events->insert([
 			'run_id'          => $type . '-' . $actionId,

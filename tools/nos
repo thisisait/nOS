@@ -365,7 +365,9 @@ if [ "${1:-}" = "halt" ] || [ "${1:-}" = "resume" ]; then
   command -v curl >/dev/null 2>&1 || { echo "nos $verb: curl not found — the act is NOT recorded" >&2; exit 0; }
   method=POST; [ "$verb" = "state" ] && method=GET
   url="${NOS_WING_URL:-http://127.0.0.1:${WING_PORT:-9000}}/api/v1/admin/$verb"
-  if ! out="$(curl -sS -m 10 -X "$method" -H "Authorization: Bearer $tok" -w '\n%{http_code}' "$url" 2>&1)"; then
+  # Who did it, as Wing's operator_username (else it records the bearer, wing-halt). A name only.
+  body=(); case "${USER:-}" in ""|*[!A-Za-z0-9._-]*) ;; *) [ "$method" = POST ] && body=(-H 'Content-Type: application/json' -d "{\"by\":\"$USER\"}") ;; esac
+  if ! out="$(curl -sS -m 10 -X "$method" -H "Authorization: Bearer $tok" ${body[@]+"${body[@]}"} -w '\n%{http_code}' "$url" 2>&1)"; then
     [ "$verb" = "state" ] || echo "nos $verb: Wing did not answer at $url — the act is NOT recorded" >&2
     exit 0
   fi

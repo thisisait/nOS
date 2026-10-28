@@ -1725,7 +1725,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             self.say(format!("refused a {verb} from {} {peer}: {why}", who.username));
             return send(out, &ToShell::Refused { reason: why, widget: None });
         }
-        let act = crate::state::record(on, &self.wing.url);
+        let act = crate::state::record(on, &who.username, &self.wing.url);
         self.say(format!("{verb} by {} {peer}: {}", who.username, act.why.as_deref().unwrap_or("recorded")));
         send(out, &ToShell::State(EstateState { act: Some(act), ..crate::state::read() }));
     }

@@ -66,7 +66,8 @@ pub fn set_halt(on: bool, by: &str, reason: Option<&str>) -> Result<(), String> 
 /// The act sent over the nerve to the organ that writes the record (ruling 2026-10-25: the medulla sets,
 /// Wing records): POST /api/v1/admin/{halt,resume} with the wing-halt bearer, read per act from
 /// ~/.nos/secrets.yml as `nos halt` reads it, so no plist holds it. Not recorded is said, never fatal.
-pub fn record(on: bool, wing_url: &str) -> ActRecord {
+/// `by` is the person the kernel named on the socket; Wing records it as operator_username.
+pub fn record(on: bool, by: &str, wing_url: &str) -> ActRecord {
     let not = |why: String| ActRecord { recorded: false, why: Some(why) };
     let secrets = PathBuf::from(std::env::var_os("HOME").unwrap_or_default()).join(".nos/secrets.yml");
     let token = std::fs::read_to_string(&secrets).ok().and_then(|t| t.lines().find_map(|l| {
@@ -77,7 +78,7 @@ pub fn record(on: bool, wing_url: &str) -> ActRecord {
     };
     let base = if wing_url.is_empty() { "http://127.0.0.1:9000" } else { wing_url.trim_end_matches('/') };
     let url = format!("{base}/api/v1/admin/{}", if on { "halt" } else { "resume" });
-    match crate::serve::agent(10).post(&url).header("authorization", &format!("Bearer {token}")).send_empty() {
+    match crate::serve::agent(10).post(&url).header("authorization", &format!("Bearer {token}")).send_json(serde_json::json!({"by": by})) {
         Err(e) => not(format!("Wing did not answer at {url}: {e}")),
         Ok(r) if r.status().is_success() => ActRecord { recorded: true, why: None },
         Ok(r) => not(format!("Wing refused it (HTTP {})", r.status().as_u16())),
