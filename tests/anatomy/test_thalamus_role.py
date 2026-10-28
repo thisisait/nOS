@@ -385,21 +385,38 @@ def test_verify_warns_on_an_unbound_model_and_fails_on_anything_else():
     assert subprocess.run([sys.executable, "-c", snippet], input=_verify_rows(socket="RED"), text=True).returncode == 1
 
 
-def test_the_decider_list_is_off_by_default_and_rendered_only_when_set():
-    """Row thalamus-pupil-peer-exe: an empty list records the peer only, so no converge locks the
-    operator out; the plist carries NOS_DECIDER_EXES only when the operator sets the list."""
+def test_the_decider_list_names_the_medulla_and_nos_app_on_macos():
+    """Operator ruling 2026-10-28: `nos halt` goes through the medulla and nOS.app decides, so both are
+    listed by default; the pupil and the terminal stay listed (they decided while the list was off).
+    Linux stays empty: SO_PEERCRED fails a set list closed (src/serve.rs decider_refusal). The app is
+    signed with the medulla's identity, so the decider it lists is the one the role installed."""
+    from jinja2.nativetypes import NativeEnvironment
+    env = NativeEnvironment(undefined=jinja2.StrictUndefined)
     defaults = yaml.safe_load((ROLE / "defaults" / "main.yml").read_text())
-    assert defaults["thalamus_decider_exes"] == []
-    # The committed layers only: the operator opting in through config.yml is the documented path.
-    sys.path.insert(0, str(REPO / "tools"))
-    import nos_identity
-    for p in nos_identity.default_layers():
-        assert "thalamus_decider_exes" not in p.read_text(), f"{p.name} sets the decider list"
-    assert "NOS_DECIDER_EXES" not in _plist(thalamus_decider_exes=[])["EnvironmentVariables"]
-    exes = ["/h/thalamus/bin/nos-pupil", "/h/thalamus/bin/thalamus"]
+    ctx: dict = {"ansible_facts": {"env": {"HOME": "/h"}}}
+    for k in ("thalamus_home", "thalamus_bin", "thalamus_pupil_app", "thalamus_pupil_exe", "thalamus_nos_app", "thalamus_nos_app_exe"):
+        ctx[k] = env.from_string(defaults[k]).render(**ctx)
+    mdef = yaml.safe_load((MEDULLA / "defaults" / "main.yml").read_text())
+    ctx["medulla_bin_dir"] = env.from_string(mdef["medulla_bin_dir"]).render(**ctx)
+    medulla_bin = env.from_string(mdef["medulla_bin"]).render(**ctx)
+    assert ctx["thalamus_nos_app_exe"] == "/h/Applications/nOS.app/Contents/MacOS/nOS"
+    raw = defaults["thalamus_decider_exes"]
+    assert env.from_string(raw).render(**ctx, nos_service_manager="systemd") == []
+    exes = env.from_string(raw).render(**ctx, nos_service_manager="launchd")
+    assert exes == [ctx["thalamus_pupil_exe"], ctx["thalamus_bin"], medulla_bin, ctx["thalamus_nos_app_exe"]]
     assert _plist(thalamus_decider_exes=exes)["EnvironmentVariables"]["NOS_DECIDER_EXES"] == ":".join(exes)
+    assert "NOS_DECIDER_EXES" not in _plist(thalamus_decider_exes=[])["EnvironmentVariables"]
     main = (REPO / "files/anatomy/thalamus/thalamus/src/cli.rs").read_text()
     assert '"NOS_DECIDER_EXES"' in main, "serve does not read the list the plist renders"
+    # The app is built, installed at thalamus_nos_app and signed after the identity exists, with it.
+    flow = [t.get("name", "") for t in yaml.safe_load((MEDULLA / "tasks" / "macos.yml").read_text())]
+    imp = [i for i, t in enumerate(yaml.safe_load((MEDULLA / "tasks" / "macos.yml").read_text()))
+           if t.get("ansible.builtin.import_tasks") == "app.yml"]
+    ident = next(i for i, n in enumerate(flow) if "code-signing identity" in n)
+    assert imp and imp[0] > ident, "app.yml is not imported after the signing identity"
+    sign = next(t for t in yaml.safe_load((MEDULLA / "tasks" / "app.yml").read_text()) if "codesign -f" in str(t))
+    sh = sign["ansible.builtin.shell"]
+    assert "_thalamus_signing.stdout_lines[-1]" in sh and "eu.thisisait.nos.app" in sh and "thalamus_nos_app" in sh
 
 
 def test_a_decider_list_that_admits_nobody_is_refused_at_render():
