@@ -10,4 +10,5 @@ pub mod relay;
 pub mod septum;
 pub mod serve;
 pub mod shell;
+pub mod state;
 pub mod store;

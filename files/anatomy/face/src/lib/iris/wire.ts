@@ -293,7 +293,16 @@ export type ToShell =
 	| { t: 'workspace'; doc: { [k: string]: Value } | null }
 	| { t: 'catalogue'; session: string; tables: Catalogue['tables'] }
 	| ({ t: 'act'; session: string } & Act)
-	| { t: 'model_state'; session: string; loaded: boolean };
+	| { t: 'model_state'; session: string; loaded: boolean }
+	| ({ t: 'state' } & EstateState);
+
+/** The estate's set-points and host organs (wire.rs EstateState, v13); null is UNKNOWN, never off. */
+export type SetPoint = { on: boolean | null; since?: string; reason?: string; file: string };
+export type EstateState = {
+	halt: SetPoint;
+	loops_paused: SetPoint;
+	organs: { name: string; label: string; running: boolean | null }[];
+};
 
 /** One model the person may pick for the session (wire.rs ModelOption); `warning` below the recommended size. */
 export type ModelOption = {
@@ -343,6 +352,7 @@ export type ToThalamus =
 	| { t: 'branch'; workspace: string }
 	| { t: 'stop'; session: string }
 	| { t: 'workspace_load' }
+	| { t: 'state' }
 	| { t: 'workspace_save'; doc: { [k: string]: unknown } }
 	| { t: 'catalogue' }
 	| { t: 'limbs'; limbs: Limb[] }

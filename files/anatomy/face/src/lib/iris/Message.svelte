@@ -151,6 +151,18 @@
 				.map(([k, v]) => `${k} ${v}`)
 				.join(', ')}
 		</p>
+	{:else if msg.t === 'state'}
+		<!-- nOS.app reads it over the socket; said here for any other host of a message. -->
+		<ul class="muted">
+			{#each [['halt', msg.halt], ['loops paused', msg.loops_paused]] as const as [name, p]}<li>
+					{name}: {p.on === null ? 'UNKNOWN' : p.on ? 'on' : 'off'}{#if p.since}
+						since {p.since}{/if}{#if p.reason}
+						— {p.reason}{/if} ({p.file})
+				</li>{/each}
+			{#each msg.organs as o}<li>
+					{o.name}: {o.running === null ? 'UNKNOWN' : o.running ? 'running' : 'stopped'} ({o.label})
+				</li>{/each}
+		</ul>
 	{:else if msg.t === 'workspace'}
 		<p class="muted">
 			{msg.doc ? 'the workspace the thalamus holds' : 'the thalamus holds no workspace yet'}

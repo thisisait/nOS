@@ -46,6 +46,8 @@ pub enum ToThalamus {
     Catalogue,
     /// What the face lets Iris do on its screen (face/src/lib/limbs/types.ts Limb); replaces any earlier list.
     Limbs { limbs: Vec<Limb> },
+    /// The estate's set-points and host organs (v13), read-only for any listed person; serve answers `state`.
+    State,
     /// The face's answer to an `act`: ok and what it returned, or why not.
     Acted {
         act: String,
@@ -196,6 +198,39 @@ pub enum ToShell {
     Act { session: String, act: String, app: String, action: String, params: serde_json::Map<String, serde_json::Value> },
     /// Whether the session's local model is in memory (Ollama /api/ps, v9); said when it changes, never for a remote one.
     ModelState { session: String, loaded: bool },
+    /// The answer to `state` (v13): the same struct as `medulla state --json` and GET /api/v1/admin/state.
+    State(EstateState),
+}
+
+/// The runtime set-points and the host organs (row medulla-settings): one shape for every door.
+/// `on` and `running` are null when the source could not be read: UNKNOWN, never off.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct EstateState {
+    pub halt: SetPoint,
+    pub loops_paused: SetPoint,
+    pub organs: Vec<Organ>,
+}
+
+/// A set-point that is a file: on while it exists; since and reason as the file says them.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SetPoint {
+    pub on: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub since: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+    pub file: String,
+}
+
+/// A host LaunchAgent or systemd user unit: running, stopped, or null when the host does not say.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Organ {
+    pub name: String,
+    pub label: String,
+    pub running: Option<bool>,
 }
 
 /// A workspace document's cap, serialized: it rides one line of at most 1 MiB.
@@ -566,6 +601,7 @@ fn check_shell(m: &ToShell) -> Result<(), String> {
             })
         }
         ToShell::Workspace { doc } => doc.as_ref().map_or(Ok(()), need_doc),
+        ToShell::State(_) => Ok(()),
         ToShell::Catalogue { session, tables } => {
             need_uuid("session", session)?;
             need_catalogue(tables)

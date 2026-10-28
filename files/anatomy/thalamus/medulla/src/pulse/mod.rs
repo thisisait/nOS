@@ -45,11 +45,9 @@ pub fn plan(db: &str, now: i64) -> Result<(), String> {
 
 /// daemon.py::paused_hold: every job while ~/.nos/halt exists, loop:* while ~/.nos/loops-paused does.
 fn hold(job: &str) -> Option<&'static str> {
-    let home = std::path::PathBuf::from(std::env::var_os("HOME").unwrap_or_default());
-    let loops = std::env::var_os("NOS_LOOPS_PAUSED_FILE").map(std::path::PathBuf::from).unwrap_or(home.join(".nos/loops-paused"));
-    if crate::metrics::halt_file().is_file() {
+    if thalamus::state::halt_file().is_file() {
         Some("emergency halt")
-    } else if job.starts_with("loop:") && loops.is_file() {
+    } else if job.starts_with("loop:") && thalamus::state::loops_paused_file().is_file() {
         Some("loops paused")
     } else {
         None

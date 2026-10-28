@@ -1,6 +1,7 @@
 //! Wing's Pulse reads behind the Caddy seam (row medulla-scheduler, increment d; ruling 2026-10-25):
 //! GET /api/v1/pulse_jobs, /pulse_runs, /pulse_runs/summary, /pulse_runs/<id>, with the token lookup,
-//! refusals, SQL and JSON of Api\PulsePresenter + PulseRepository. Every write stays PHP's: wing.db
+//! refusals, SQL and JSON of Api\PulsePresenter + PulseRepository; and GET /api/v1/admin/state
+//! (Api\AdminPresenter's keys plus the state struct, row medulla-settings). Every write stays PHP's: wing.db
 //! opens read-only, so a read here does not stamp api_tokens.last_used_at as PHP's validate() does.
 use rusqlite::types::ValueRef;
 use rusqlite::{Connection, OpenFlags, OptionalExtension, Row};
@@ -26,6 +27,7 @@ fn route(path: &str) -> Option<(&'static str, Option<String>)> {
         "pulse_jobs" => Some(("jobs", None)),
         "pulse_runs" => Some(("runs", None)),
         "pulse_runs/summary" => Some(("runSummary", None)),
+        "admin/state" => Some(("state", None)),
         p => {
             let id = p.strip_prefix("pulse_runs/").filter(|s| !s.is_empty() && !s.contains('/'))?;
             Some(("runs", Some(decode(id, false))))
@@ -46,9 +48,26 @@ fn serve(db: &Path, action: &str, id: Option<String>, query: &str, header: &dyn 
             Some(run) => (200, run),
             None => err(404, "Run not found"),
         },
+        ("state", _) => (200, admin_state(&db)?),
         ("runs", None) => (200, json!({"generated_at": crate::pulse::iso(now), "runs": runs(&db, query)?})),
         _ => (200, json!({"generated_at": crate::pulse::iso(now), "window_hours": 24, "summaries": summaries(&db, now)?})),
     })
+}
+
+/// AdminPresenter::actionState's two keys (isEmergencyHaltActive, jobStateCounts), and beside them
+/// the state struct every door of row medulla-settings says (thalamus::state).
+fn admin_state(db: &Connection) -> rusqlite::Result<Value> {
+    let s = thalamus::state::read();
+    let filed = thalamus::state::halt_file().is_file();
+    let n = |w: &str| db.query_row(&format!("SELECT COUNT(*) FROM pulse_jobs WHERE removed_at IS NULL{w}"), [], |r| r.get::<_, i64>(0));
+    let (unpaused, halted) = (n(" AND paused = 0")?, n(" AND paused = 1 AND paused_reason LIKE 'emergency-halt:%'")?);
+    let mut v = serde_json::to_value(&s).expect("the state always serializes");
+    v["halt_active"] = (filed || halted > 0).into();
+    v["job_counts"] = json!({
+        "unpaused": if filed { 0 } else { unpaused }, "emergency_halted": if filed { unpaused } else { 0 } + halted,
+        "manually_paused": n(" AND paused = 1 AND paused_reason NOT LIKE 'emergency-halt:%'")?, "total": n("")?,
+    });
+    Ok(v)
 }
 
 fn err(code: u16, msg: &str) -> (u16, Value) {

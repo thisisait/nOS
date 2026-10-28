@@ -1265,6 +1265,8 @@ impl Server {
                 }
                 // The face's own declaration, never opening a session; the next model request offers them.
                 Ok(ToThalamus::Limbs { limbs }) => face.limbs = limbs,
+                // Any listed person reads it (row medulla-settings); no session opens, nothing is written.
+                Ok(ToThalamus::State) => send(&mut out, &ToShell::State(crate::state::read())),
                 Ok(ToThalamus::Acted { act, .. }) => refuse(&mut out, &format!("no act {act} waits for an answer")),
                 Ok(ToThalamus::WorkspaceSave { doc }) => {
                     if let Err(why) = store::write(&store::path(&self.data, &who.uid(), "workspace"), &doc) {

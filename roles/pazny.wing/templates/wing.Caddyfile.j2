@@ -76,7 +76,9 @@
     # A read set (medulla_read_routes, ruling 2026-10-25): only a GET its matcher names goes to the
     # medulla; every write and every other method on the same prefix still reaches PHP below.
     # A windowed run list (?since/?until) stays PHP's: strtotime()'s grammar is PHP's own.
-{% set _medulla_reads = {'pulse': ['path_regexp ^/api/v1/(pulse_jobs|pulse_runs|pulse_runs/summary|pulse_runs/[^/]+)$', 'not query since=*', 'not query until=*']} %}
+    # admin: GET /api/v1/admin/state only (row medulla-settings); halt and resume are writes, PHP's.
+{% set _medulla_reads = {'pulse': ['path_regexp ^/api/v1/(pulse_jobs|pulse_runs|pulse_runs/summary|pulse_runs/[^/]+)$', 'not query since=*', 'not query until=*'],
+                         'admin': ['path /api/v1/admin/state']} %}
 {% for name in medulla_read_routes | default([]) %}
     @medulla_read_{{ name }} {
         method GET

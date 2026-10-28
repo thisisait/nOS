@@ -100,13 +100,6 @@ fn g<'a>(r: &'a rusqlite::Row, i: usize) -> ValueRef<'a> {
     r.get_ref(i).unwrap_or(ValueRef::Null)
 }
 
-/// The emergency halt's one file; every scheduler and reader names it the same way.
-pub fn halt_file() -> PathBuf {
-    std::env::var_os("NOS_HALT_FILE").map(PathBuf::from).unwrap_or_else(|| {
-        PathBuf::from(std::env::var_os("HOME").unwrap_or_default()).join(".nos/halt")
-    })
-}
-
 fn esc(v: &str) -> String {
     v.replace('\\', "\\\\").replace('"', "\\\"").replace('\n', "\\n")
 }
@@ -170,7 +163,7 @@ pub fn render(db: &Path) -> rusqlite::Result<String> {
     ]);
     // The emergency halt is one file (NOS_HALT_FILE, else ~/.nos/halt; row medulla-admin-halt):
     // while it exists every job not paused by hand is emergency_halted.
-    let halted = halt_file().is_file();
+    let halted = thalamus::state::halt_file().is_file();
     l.extend(rows(&db,
         "SELECT id, CASE WHEN paused = 1 AND paused_reason LIKE 'emergency-halt:%' THEN 'emergency_halted'
                          WHEN paused = 1 THEN 'manually_paused' ELSE 'unpaused' END AS state

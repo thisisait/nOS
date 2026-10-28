@@ -2,11 +2,6 @@ update nOS Roadmap (roadmap) / backup-restic-fork — nothing is written unless 
 u approve
   status: "open" -> "done"
   note: (empty) -> "landed"
-you could ask:
-  > Chart this by month
-  > Which invoices are still unmatched?
-widget w5:
-count: 4
   from count over 4 rows of Expenses
 widget w6:
   > 02 Formal Sciences — Mathematics, logic and computing.
@@ -36,5 +31,10 @@ you: set its status to done
 iris: Two rows match.
 refused: an approval is waiting: decide it first
 refused: an act desktop.open_app, but this shell has no limbs
+halt: ON since 2026-10-28T09:00:00Z (/Users/alice/.nos/halt)
+loops paused: off (no file at /Users/alice/.nos/loops-paused)
+organ thalamus: running (eu.thisisait.nos.thalamus)
+organ pulse: stopped (eu.thisisait.nos.pulse)
+organ cortex: UNKNOWN (eu.thisisait.nos.cortex)
 approve this edit (1 of 9)? y / n
 Enter send · F2 /inbox · F3 /approvals · F4 /red · Ctrl-C quit

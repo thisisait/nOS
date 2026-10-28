@@ -1,0 +1,145 @@
+//! The estate's runtime set-points and host organs, read-only (row medulla-settings, increment 1).
+//! One reader behind three doors: `medulla state`, the socket's `state`, GET /api/v1/admin/state.
+//! It writes nothing; a source it cannot read is null (UNKNOWN), never off.
+use nos_contract::wire::{EstateState, Organ, SetPoint};
+use std::path::{Path, PathBuf};
+use std::process::Command;
+
+/// The labels the roles install (roles/pazny.<organ>/defaults/main.yml *_launchd_label).
+const ORGANS: [(&str, &str); 6] = [
+    ("thalamus", "eu.thisisait.nos.thalamus"),
+    ("wing", "eu.thisisait.nos.wing"),
+    ("pulse", "eu.thisisait.nos.pulse"),
+    ("medulla-pulse", "eu.thisisait.nos.medulla-pulse"),
+    ("bone", "eu.thisisait.nos.bone"),
+    ("cortex", "eu.thisisait.nos.cortex"),
+];
+
+fn file(var: &str, rel: &str) -> PathBuf {
+    std::env::var_os(var).filter(|v| !v.is_empty()).map(PathBuf::from).unwrap_or_else(|| PathBuf::from(std::env::var_os("HOME").unwrap_or_default()).join(rel))
+}
+
+/// The emergency halt's one file (row medulla-admin-halt): NOS_HALT_FILE, else ~/.nos/halt.
+pub fn halt_file() -> PathBuf {
+    file("NOS_HALT_FILE", ".nos/halt")
+}
+
+/// The loops maintenance pause (`nos loops pause`): NOS_LOOPS_PAUSED_FILE, else ~/.nos/loops-paused.
+pub fn loops_paused_file() -> PathBuf {
+    file("NOS_LOOPS_PAUSED_FILE", ".nos/loops-paused")
+}
+
+pub fn read() -> EstateState {
+    EstateState { halt: set_point(&halt_file()), loops_paused: set_point(&loops_paused_file()), organs: organs() }
+}
+
+/// What `medulla state` prints: one line a set-point, one an organ; UNKNOWN said, never hidden.
+pub fn lines(s: &EstateState) -> Vec<String> {
+    let point = |name: &str, p: &SetPoint| match p.on {
+        Some(true) => format!("{name}: ON since {}{} ({})", p.since.as_deref().unwrap_or("?"),
+                              p.reason.as_deref().map(|r| format!(" — {r}")).unwrap_or_default(), p.file),
+        Some(false) => format!("{name}: off (no file at {})", p.file),
+        None => format!("{name}: UNKNOWN ({} unreadable)", p.file),
+    };
+    let mut out = vec![point("halt", &s.halt), point("loops paused", &s.loops_paused)];
+    out.extend(s.organs.iter().map(|o| {
+        let r = match o.running { Some(true) => "running", Some(false) => "stopped", None => "UNKNOWN" };
+        format!("organ {}: {r} ({})", o.name, o.label)
+    }));
+    out
+}
+
+/// On while the file exists, as every scheduler holds; since/reason from the halt's JSON
+/// ({"by","at"}) or the pause's `since:` / `reason:` lines.
+fn set_point(path: &Path) -> SetPoint {
+    let mut p = SetPoint { on: None, since: None, reason: None, file: path.display().to_string() };
+    match std::fs::metadata(path) {
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => p.on = Some(false),
+        Err(_) => {}
+        Ok(m) => p.on = Some(m.is_file()),
+    }
+    if p.on != Some(true) {
+        return p;
+    }
+    let Ok(text) = std::fs::read_to_string(path) else { return p };
+    let words = |v: Option<&str>| v.map(str::trim).filter(|s| !s.is_empty()).map(str::to_owned);
+    if let Ok(serde_json::Value::Object(o)) = serde_json::from_str(&text) {
+        p.since = words(o.get("at").or(o.get("since")).and_then(|v| v.as_str()));
+        p.reason = words(o.get("reason").and_then(|v| v.as_str()));
+    } else {
+        for line in text.lines() {
+            p.since = p.since.take().or_else(|| words(line.strip_prefix("since:")));
+            p.reason = p.reason.take().or_else(|| words(line.strip_prefix("reason:")));
+        }
+    }
+    p
+}
+
+fn organs() -> Vec<Organ> {
+    let running = if cfg!(target_os = "macos") { launchd() } else { systemd() };
+    ORGANS.iter().zip(running).map(|((name, label), running)| Organ { name: (*name).into(), label: (*label).into(), running }).collect()
+}
+
+fn run(cmd: &str, args: &[&str]) -> Option<String> {
+    let out = Command::new(cmd).args(args).output().ok().filter(|o| o.status.success())?;
+    String::from_utf8(out.stdout).ok()
+}
+
+/// `launchctl list` once: a PID is running, "-" is loaded and stopped; not listed is unknown
+/// (another domain, e.g. a system daemon, is not this list's to say).
+fn launchd() -> Vec<Option<bool>> {
+    let list = run("launchctl", &["list"]);
+    ORGANS.iter().map(|(_, label)| {
+        let row = list.as_deref()?.lines().map(|l| l.split('\t').collect::<Vec<_>>()).find(|c| c.len() == 3 && c[2] == *label)?;
+        Some(row[0] != "-")
+    }).collect()
+}
+
+/// `systemctl --user show` once: active is running, a loaded unit otherwise is stopped, not-found is unknown.
+fn systemd() -> Vec<Option<bool>> {
+    let units: Vec<String> = ORGANS.iter().map(|(_, l)| format!("{l}.service")).collect();
+    let mut args = vec!["--user", "show", "--property=LoadState,ActiveState"];
+    args.extend(units.iter().map(String::as_str));
+    let Some(out) = run("systemctl", &args) else { return vec![None; ORGANS.len()] };
+    let blocks: Vec<&str> = out.split("\n\n").collect();
+    (0..ORGANS.len()).map(|i| {
+        let b = blocks.get(i)?;
+        let prop = |k: &str| b.lines().find_map(|l| l.strip_prefix(k)?.strip_prefix('='));
+        (prop("LoadState")? == "loaded").then(|| prop("ActiveState") == Some("active"))
+    }).collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_organ_label_is_one_a_role_installs() {
+        let roles = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../roles");
+        let defaults: String = std::fs::read_dir(&roles).unwrap().flatten()
+            .filter_map(|r| std::fs::read_to_string(r.path().join("defaults/main.yml")).ok()).collect();
+        for (name, label) in ORGANS {
+            assert!(defaults.contains(&format!("_launchd_label: \"{label}\"")), "{name}: no role defaults {label}");
+        }
+    }
+
+    #[test]
+    fn a_set_point_says_what_its_file_says() {
+        let dir = std::env::temp_dir().join(format!("thalamus-state-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        assert_eq!(set_point(&dir.join("absent")).on, Some(false));
+        assert_eq!(set_point(&dir).on, Some(false), "a directory holds nothing, as the schedulers' is_file says");
+        std::fs::write(dir.join("halt"), "{\"by\": \"a\", \"at\": \"T1\"}").unwrap();
+        let h = set_point(&dir.join("halt"));
+        assert_eq!((h.on, h.since.as_deref(), h.reason), (Some(true), Some("T1"), None));
+        std::fs::write(dir.join("lp"), "since: T2\nreason: up grade\n").unwrap();
+        let l = set_point(&dir.join("lp"));
+        assert_eq!((l.since.as_deref(), l.reason.as_deref()), (Some("T2"), Some("up grade")));
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::create_dir_all(dir.join("locked")).unwrap();
+        std::fs::set_permissions(dir.join("locked"), std::fs::Permissions::from_mode(0o000)).unwrap();
+        assert_eq!(set_point(&dir.join("locked/halt")).on, None, "an unreadable source is UNKNOWN, never off");
+        std::fs::set_permissions(dir.join("locked"), std::fs::Permissions::from_mode(0o700)).unwrap();
+        let _ =std::fs::remove_dir_all(&dir);
+    }
+}

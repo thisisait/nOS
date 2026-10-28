@@ -19,6 +19,7 @@ fn main() -> ExitCode {
         (_, Some("thalamus")) => thalamus(&args[1..]),
         (_, Some("wing")) => wing(&args[1..]),
         (_, Some("pulse")) => pulse::cli(&args[1..]),
+        (_, Some("state")) => state(&args[1..]),
         (_, Some("--version")) => {
             println!("medulla {}", env!("CARGO_PKG_VERSION"));
             ExitCode::SUCCESS
@@ -28,7 +29,7 @@ fn main() -> ExitCode {
 }
 
 fn usage() -> ExitCode {
-    eprintln!("usage: medulla thalamus [serve --data-dir <dir>] | medulla wing serve --db <wing.db> --port <n> | medulla pulse plan --db <wing.db> | medulla --version");
+    eprintln!("usage: medulla thalamus [serve --data-dir <dir>] | medulla wing serve --db <wing.db> --port <n> | medulla pulse plan --db <wing.db> | medulla state [--json] | medulla --version");
     ExitCode::from(2)
 }
 
@@ -46,6 +47,17 @@ fn thalamus(args: &[String]) -> ExitCode {
         }
     }
     thalamus::cli::run(args)
+}
+
+/// The set-points and host organs, read-only: the socket's `state` and GET /api/v1/admin/state say the same.
+fn state(args: &[String]) -> ExitCode {
+    let s = thalamus::state::read();
+    match args {
+        [] => thalamus::state::lines(&s).iter().for_each(|l| println!("{l}")),
+        [j] if j == "--json" => println!("{}", serde_json::to_string(&s).expect("the state always serializes")),
+        _ => return usage(),
+    }
+    ExitCode::SUCCESS
 }
 
 fn wing(args: &[String]) -> ExitCode {

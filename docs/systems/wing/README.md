@@ -42,7 +42,8 @@ Two layers:
 - **Reads ahead of writes:** `medulla_read_routes: [pulse]` (default `[]`) hands the medulla only
   `GET /api/v1/pulse_jobs`, `/pulse_runs`, `/pulse_runs/summary` and `/pulse_runs/<id>`, with PHP's
   token check and JSON; every write, HEAD, `/pulse_jobs/due`, `/pulse_jobs/<id>` and a `?since`/`?until`
-  window stay PHP's. Gate: `tests/anatomy/test_medulla_serves_pulse_reads.py`.
+  window stay PHP's. `[admin]` hands it `GET /api/v1/admin/state` (PHP's `halt_active` + `job_counts`, plus
+  the struct `medulla state --json` prints); halt and resume stay PHP's. Gate: `tests/anatomy/test_medulla_serves_pulse_reads.py`.
 
 ## Dependencies
 
