@@ -1,4 +1,4 @@
-"""nOS.app reads the medulla's state as the contract says (joint app <-> medulla, gates.md §7).
+"""nOS.app reads the medulla's state as the contract says (joint app <-> medulla, ssot/doctrine/gates.md §7).
 
 WHY. The app's Swift decoder and the thalamus's EstateState are two representations of one
 wire message. This decodes the fixture's to_shell `state` samples with the app's own decoder,
