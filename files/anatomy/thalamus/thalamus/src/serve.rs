@@ -1169,7 +1169,8 @@ impl Server {
             match decoded {
                 Err(why) => refuse(&mut out, &why),
                 Ok(ToThalamus::Turn { session, text }) => {
-                    if session != open.as_ref().map(|o| o.session.clone()) {
+                    // No session named: a shell that has not heard the one its resume just opened; it is the open one.
+                    if session.is_some() && session != open.as_ref().map(|o| o.session.clone()) {
                         refuse(&mut out, "session is not this connection's open session");
                         continue;
                     }

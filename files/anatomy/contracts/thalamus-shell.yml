@@ -109,6 +109,7 @@ wire:
     render, approval_request, refused; at most 200 lines), and `open` the approvals and choices still
     waiting, each decided or answered once, as before. `said {session, text}` is the person's own turn.
     With none to resume it opens a fresh one, with no replay; any other first message opens a fresh one too.
+    A `turn` without `session` is the open session's (the shell has not heard it yet); one naming another is refused.
     Another person resumes and reads none of it.
   tabs: >-
     v9: each workspace tab of the shell is its own conversation (operator 2026-10-18). `resume {workspace}`

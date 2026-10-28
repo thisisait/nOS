@@ -6328,6 +6328,36 @@ fn a_second_tab_takes_the_persons_session_over() {
     drop((s1, s2));
 }
 
+/// Row iris-face-stale-session-refused (Playwright 2026-10-22): a new tab sends resume and then the
+/// person's turn before it has heard the session resume opened; the turn names none and is answered.
+#[test]
+fn a_new_tabs_turn_before_it_heard_the_resumed_session_is_answered() {
+    let rig = rig("relayrace", mapped(), ROWS, vec![answer("hi"), answer("answered")]);
+    let addr = relay(&rig);
+    let (s1, mut r1) = tab(addr, &hello("alice-smith", "Alice Smith", "t1"));
+    say_tcp(&s1, &ToThalamus::Resume { workspace: Some("w1".into()) });
+    say_tcp(&s1, &ToThalamus::Turn { session: None, text: "hi".into() });
+    let Some(ToShell::Session { session: first, .. }) = next(&mut r1) else { panic!("no session") };
+    let (s2, mut r2) = tab(addr, &hello("alice-smith", "Alice Smith", "t2"));
+    say_tcp(&s2, &ToThalamus::Resume { workspace: Some("w1".into()) });
+    say_tcp(&s2, &ToThalamus::Turn { session: None, text: "again".into() });
+    let mut got = vec![];
+    while let Some(m) = next(&mut r2) {
+        let done = matches!(m, ToShell::Text { .. } | ToShell::Refused { .. });
+        got.push(m);
+        if done {
+            break;
+        }
+    }
+    assert!(got.iter().any(|m| matches!(m, ToShell::Session { session, .. } if *session == first)), "not resumed: {got:?}");
+    assert!(matches!(got.last(), Some(ToShell::Text { text, .. }) if text == "answered"), "the turn was not answered: {got:?}");
+    drop((s1, s2));
+}
+
+fn say_tcp(s: &std::net::TcpStream, m: &ToThalamus) {
+    (&*s).write_all(encode(m).as_bytes()).unwrap();
+}
+
 /// T10: an empty secret binds nothing, so a host without the face has no port.
 #[test]
 fn an_empty_relay_secret_binds_no_door() {
