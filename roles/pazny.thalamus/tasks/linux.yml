@@ -129,6 +129,17 @@
     - not (nos_system_user | length)
     - (_medulla_build is changed) or (_thalamus_env is changed)
 
+# nos-pulse is a copy of the same binary (handlers/main.yml has the macOS twin); only an active unit.
+- name: "[pazny.thalamus] Restart medulla-pulse on a new binary"
+  ansible.builtin.shell: |
+    U="{{ medulla_pulse_launchd_label | default('eu.thisisait.nos.medulla-pulse') }}.service"
+    if {{ nos_user_systemctl | default('systemctl --user') }} is-active "$U" >/dev/null 2>&1; then
+      {{ nos_user_systemctl | default('systemctl --user') }} restart "$U"; fi
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
+  changed_when: true
+  when: _medulla_build is changed
+
 # A connect, not a file test: a crashed daemon leaves its socket file behind.
 - name: "[pazny.thalamus] Verify — the shared socket accepts"
   ansible.builtin.command:

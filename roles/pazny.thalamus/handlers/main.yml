@@ -6,3 +6,11 @@
     sleep 1
     launchctl bootstrap "gui/${UID_NUM}" "$HOME/Library/LaunchAgents/${LABEL}.plist"
   changed_when: true
+
+# nos-pulse is a copy of the medulla too: a rebuild under --tags thalamus left it on the old code
+# (live 2026-10-28: binary 17:12, process 10:24). Only a loaded job is restarted.
+- name: Restart medulla-pulse
+  ansible.builtin.shell: |
+    LABEL="{{ medulla_pulse_launchd_label | default('eu.thisisait.nos.medulla-pulse') }}"
+    if launchctl print "gui/$(id -u)/${LABEL}" >/dev/null 2>&1; then launchctl kickstart -k "gui/$(id -u)/${LABEL}"; fi
+  changed_when: true
