@@ -245,7 +245,7 @@ def test_the_medulla_listens_on_loopback_only_and_answers_nothing_else(tmp_path)
                               capture_output=True, text=True, check=False).stdout if shutil.which("lsof") else ""
         if lsof:
             assert f"127.0.0.1:{port}" in lsof and f"*:{port}" not in lsof, lsof
-        assert _get(port, "/api/v1/admin/state")[0] == 404
+        assert _get(port, "/api/v1/admin/halt")[0] == 404
         assert _get(port, "/api/v1/metrics")[0] == 200, "no bearer: the scrape is anonymous, as in PHP"
         with socket.create_connection(("127.0.0.1", port), timeout=5) as s:
             s.sendall(b"GET /" + b"a" * 9 * 1024 + b" HTTP/1.1\r\nHost: x\r\n\r\n")

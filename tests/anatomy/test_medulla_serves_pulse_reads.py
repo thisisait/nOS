@@ -2,7 +2,8 @@
 
 WHY (row medulla-scheduler, increment d; operator ruling 2026-10-25). The medulla executes, it never
 writes the record, so only the GETs of /api/v1/pulse_jobs and /pulse_runs move (medulla_read_routes:
-[pulse]); a POST, a finish, run-now, HEAD and /pulse_jobs/due stay PHP's. Parity is measured, not
+[pulse]); a POST, a finish, run-now, HEAD and /pulse_jobs/due stay PHP's. [admin] moves GET
+/api/v1/admin/state alone (row medulla-settings): PHP's keys, plus the state struct beside them. Parity is measured, not
 claimed: the real PulsePresenter (routed by RouterFactory) and the medulla answer the SAME scratch
 wing.db for every route x every bearer, and no env VALUE leaves either (withoutSecrets).
 """
@@ -48,6 +49,8 @@ def test_the_caddyfile_moves_reads_only_when_listed():
     with pytest.raises(m.jinja2.UndefinedError):
         _render(["nonesuch"])
     assert _render(["pulse"], ["metrics"]).count("reverse_proxy 127.0.0.1:8095") == 2, "metrics' handle changed"
+    admin = re.search(r"@medulla_read_admin \{(.*?)\n    \}", _render(["admin"]), re.S).group(1)
+    assert admin.split() == ["method", "GET", "path", "/api/v1/admin/state"], admin
 
 
 class _Echo(http.server.BaseHTTPRequestHandler):
@@ -60,10 +63,12 @@ class _Echo(http.server.BaseHTTPRequestHandler):
         pass
 
 
-#: (method, path) -> who answers once medulla_read_routes is [pulse].
-ROUTING = [("GET", "/api/v1/pulse_jobs", "medulla"), ("GET", "/api/v1/pulse_runs", "medulla"),
-           ("GET", "/api/v1/pulse_runs?limit=3&job_id=a", "medulla"), ("GET", "/api/v1/pulse_runs/summary", "medulla"),
-           ("GET", "/api/v1/pulse_runs/r1", "medulla"),
+#: (method, path) -> the read set that hands it to the medulla, else php.
+ROUTING = [("GET", "/api/v1/pulse_jobs", "pulse"), ("GET", "/api/v1/pulse_runs", "pulse"),
+           ("GET", "/api/v1/pulse_runs?limit=3&job_id=a", "pulse"), ("GET", "/api/v1/pulse_runs/summary", "pulse"),
+           ("GET", "/api/v1/pulse_runs/r1", "pulse"), ("GET", "/api/v1/admin/state", "admin"),
+           ("POST", "/api/v1/admin/halt", "php"), ("POST", "/api/v1/admin/resume", "php"), ("GET", "/api/v1/admin/halt", "php"),
+           ("POST", "/api/v1/admin/state", "php"), ("GET", "/api/v1/admin/statex", "php"),
            ("POST", "/api/v1/pulse_runs", "php"), ("POST", "/api/v1/pulse_jobs", "php"),
            ("POST", "/api/v1/pulse_runs/r1/finish", "php"), ("GET", "/api/v1/pulse_runs/r1/finish", "php"),
            ("POST", "/api/v1/pulse_jobs/a:b/run-now", "php"), ("DELETE", "/api/v1/pulse_jobs/a:b", "php"),
@@ -74,7 +79,7 @@ ROUTING = [("GET", "/api/v1/pulse_jobs", "medulla"), ("GET", "/api/v1/pulse_runs
 
 
 @pytest.mark.skipif(not m._frankenphp(), reason="no frankenphp binary runs the Caddyfile")
-@pytest.mark.parametrize("reads", [[], ["pulse"]])
+@pytest.mark.parametrize("reads", [[], ["pulse"], ["pulse", "admin"]])
 def test_caddy_sends_only_the_reads_to_the_medulla(tmp_path, reads):
     (tmp_path / "www").mkdir()
     (tmp_path / "www/index.php").write_text("<?php echo 'php';")
@@ -97,7 +102,7 @@ def test_caddy_sends_only_the_reads_to_the_medulla(tmp_path, reads):
                     body = r.read().decode()
             except urllib.error.HTTPError as e:
                 body = e.read().decode()
-            want = who if reads else "php"
+            want = "medulla" if who in reads else "php"
             got = "" if method == "HEAD" else body
             assert got == ("" if method == "HEAD" else want), f"{method} {path} reached {got!r}, not {want}"
         if reads:  # HEAD is PHP's: the stub has no do_HEAD, so a HEAD sent to it would 501
@@ -136,8 +141,10 @@ foreach (json_decode($argv[3], true) as $c) {
   $params = $router->match($req);
   $name = $params['presenter'];
   unset($params['presenter']);
-  $p = new App\Presenters\Api\PulsePresenter(new App\Model\PulseRepository($db),
-    new App\Model\NotificationRepository($db), new App\Model\EventRepository($db));
+  $p = $name === 'Api:Admin'
+    ? new App\Presenters\Api\AdminPresenter(new App\Model\PulseRepository($db), new App\Model\EventRepository($db))
+    : new App\Presenters\Api\PulsePresenter(new App\Model\PulseRepository($db),
+      new App\Model\NotificationRepository($db), new App\Model\EventRepository($db));
   $p->tokenRepo = new App\Model\TokenRepository($db);
   $p->autoCanonicalize = false;
   $res = new Nette\Http\Response;
@@ -174,7 +181,7 @@ ROUTES = ["/api/v1/pulse_jobs", "/api/v1/pulse_runs", "/api/v1/pulse_runs?limit=
           "/api/v1/pulse_runs?job_id=", "/api/v1/pulse_runs?failed=1", "/api/v1/pulse_runs?failed=true",
           "/api/v1/pulse_runs?failed=yes", "/api/v1/pulse_runs?job_id=p:a&failed=1&limit=1",
           "/api/v1/pulse_runs?since=&until=", "/api/v1/pulse_runs/summary", "/api/v1/pulse_runs/r3",
-          "/api/v1/pulse_runs/r%206", "/api/v1/pulse_runs/nope"]
+          "/api/v1/pulse_runs/r%206", "/api/v1/pulse_runs/nope", "/api/v1/admin/state"]
 
 
 def _iso(delta_h: float) -> str:
@@ -190,7 +197,8 @@ def _seed(db: pathlib.Path) -> None:
             ("p:b", "p", "b", "{}", None, None, 1, "operator", None),
             ("q:c", "q", "c", "[]", '["7", 0]', None, 0, None, None),
             ("q:z", "q", "z", "not json", None, None, 0, None, None),
-            ("q:gone", "q", "gone", json.dumps({"K": SECRET}), None, None, 0, None, "2026-10-01")]
+            ("q:gone", "q", "gone", json.dumps({"K": SECRET}), None, None, 0, None, "2026-10-01"),
+            ("q:h", "q", "h", "{}", None, None, 1, "emergency-halt:alice", None)]
     for jid, plug, name, env, fec, cat, paused, reason, removed in jobs:
         sql.append("INSERT INTO pulse_jobs (id, plugin_name, job_name, command, args_json, env_json, schedule, "
                    "findings_exit_codes, category, paused, paused_reason, next_fire_at, removed_at) VALUES "
@@ -227,7 +235,10 @@ def _comparable(body: str) -> object:
 @pytest.mark.skipif(not shutil.which("php"), reason="php runs Wing")
 @pytest.mark.skipif(not m.AUTOLOAD.exists(), reason="wing vendor/autoload.php missing (composer install)")
 @pytest.mark.skipif(not shutil.which("sqlite3"), reason="sqlite3 seeds the scratch wing.db")
-def test_php_and_the_medulla_answer_every_read_the_same(tmp_path):
+def test_php_and_the_medulla_answer_every_read_the_same(tmp_path, monkeypatch):
+    # The halt filed, beside a job halted in the db: jobStateCounts' both terms (PHP and medulla inherit it).
+    (tmp_path / "halt").write_text('{"by": "alice", "at": "2026-10-28T09:00:00Z"}')
+    monkeypatch.setenv("NOS_HALT_FILE", str(tmp_path / "halt"))
     subprocess.run(["php", str(m.WING / "bin/init-db.php"), f"--data-dir={tmp_path}"], capture_output=True, check=True, timeout=60)
     db = tmp_path / "wing.db"
     _seed(db)
@@ -252,10 +263,16 @@ def test_php_and_the_medulla_answer_every_read_the_same(tmp_path):
         assert SECRET not in body and SECRET not in want["body"], f"an env VALUE left on {where}"
         assert code == want["code"], f"{where}: medulla {code} {body[:300]} / php {want['code']} {want['body'][:300]}"
         assert ctype == "application/json; charset=utf-8", f"{where}: {ctype}"
-        assert _comparable(body) == _comparable(want["body"]), f"{where}:\nmedulla {body[:1500]}\nphp     {want['body'][:1500]}"
+        mine, theirs = _comparable(body), _comparable(want["body"])
+        if path == "/api/v1/admin/state" and code == 200:  # PHP's keys, then the struct every door says
+            assert {"halt", "loops_paused", "organs"} | set(theirs) == set(mine) and mine["halt"]["on"], mine
+            mine = {k: mine[k] for k in theirs}
+        assert mine == theirs, f"{where}:\nmedulla {body[:1500]}\nphp     {want['body'][:1500]}"
         codes[(c["auth"], code)] = codes.get((c["auth"], code), 0) + 1
     # The seed reaches every outcome; a fixture gone blind would pass the comparison vacuously.
     assert {code for _, code in codes} == {200, 401, 403, 404}, codes
     jobs = json.loads(got[ROUTES.index("/api/v1/pulse_jobs") * len(AUTH) + list(AUTH).index("wing.read")][2])["jobs"]
     assert jobs["p:a"]["env_keys"] == ["WING_API_TOKEN", "PLAIN"] and "env_json" not in jobs["p:a"], jobs["p:a"]
     assert "q:gone" not in jobs, "a removed job is listed"
+    state = json.loads(got[ROUTES.index("/api/v1/admin/state") * len(AUTH) + list(AUTH).index("wing.read")][2])
+    assert state["halt_active"] and state["job_counts"]["emergency_halted"] == 4, state  # 3 unpaused + q:h
