@@ -87,6 +87,9 @@
   when: _thalamus_signing.stdout_lines | default([]) | length > 0  # --check mints nothing
   notify: Restart thalamus
 
+# nOS.app: signed with the identity above, so it is listed in thalamus_decider_exes.
+- ansible.builtin.import_tasks: app.yml
+
 # Copies, not links: a symlink shows the target's name and proc_pidpath reads a hardlink's first
 # name (measured 2026-10-25), so the TCC entry and NOS_DECIDER_EXES would see bin/medulla. A copy
 # keeps the embedded signature. thalamus is the CLI; nos-thalamus is what the plist runs.

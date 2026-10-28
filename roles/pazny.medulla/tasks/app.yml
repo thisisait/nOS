@@ -1,0 +1,69 @@
+---
+# nOS.app (files/anatomy/thalamus/app): the menu-bar face of the medulla, built from this checkout,
+# installed at thalamus_nos_app and signed like the medulla. Listed in thalamus_decider_exes.
+# Not a daemon: a rebuild needs no thalamus restart. The face URL is in the hash: it is baked in.
+
+- name: "[pazny.medulla] Hash the nOS.app source"
+  ansible.builtin.shell: |
+    set -o pipefail
+    cd {{ (playbook_dir ~ '/files/anatomy/thalamus/app') | quote }}
+    { find Package.swift build-app.sh Sources -type f | LC_ALL=C sort | xargs cat; echo {{ ('https://' ~ face_domain ~ '/') | quote }}; } \
+      | shasum -a 256 | cut -d' ' -f1
+  args:
+    executable: /bin/bash
+  register: _nos_app_src_sha
+  changed_when: false
+  check_mode: false
+
+# Beside the binaries, not in the bundle: a file added inside a signed bundle breaks its seal.
+- name: "[pazny.medulla] Read the hash nOS.app was built from"
+  ansible.builtin.shell: test -x {{ thalamus_nos_app_exe | quote }} && cat {{ (medulla_bin_dir ~ '/nOS.app.source-sha256') | quote }}
+  register: _nos_app_built_sha
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+# Built ad-hoc in a staging dir off the checkout, then copied (ditto, not a link: proc_pidpath must
+# name the installed exe); the next task signs the installed copy with the keychain identity.
+- name: "[pazny.medulla] Build and install nOS.app"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    export SWIFT_SCRATCH={{ (thalamus_home ~ '/app-target') | quote }}
+    export FACE_URL={{ ('https://' ~ face_domain ~ '/') | quote }}
+    stage={{ (thalamus_home ~ '/app-stage') | quote }}
+    mkdir -p "$stage"
+    {{ (playbook_dir ~ '/files/anatomy/thalamus/app/build-app.sh') | quote }} "$stage"
+    rm -rf {{ thalamus_nos_app | quote }}
+    mkdir -p "$(dirname {{ thalamus_nos_app | quote }})"
+    ditto "$stage/nOS.app" {{ thalamus_nos_app | quote }}
+  args:
+    executable: /bin/bash
+  register: _nos_app_build
+  when: _nos_app_src_sha.stdout != (_nos_app_built_sha.stdout | default(''))
+  changed_when: true
+
+- name: "[pazny.medulla] Record the hash nOS.app was built from"
+  ansible.builtin.copy:
+    content: "{{ _nos_app_src_sha.stdout }}"
+    dest: "{{ medulla_bin_dir }}/nOS.app.source-sha256"
+    mode: '0644'
+  when: _nos_app_build is not skipped
+
+# The medulla's identity, the app's own identifier: one certificate, its own designated requirement.
+- name: "[pazny.medulla] Sign nOS.app with it (same identity every build)"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    H={{ _thalamus_signing.stdout_lines[-1] | quote }}
+    want="certificate leaf = H\"$(printf %s "$H" | tr 'A-F' 'a-f')\""
+    if codesign --verify --strict {{ thalamus_nos_app | quote }} 2>/dev/null \
+      && codesign -d -r- {{ thalamus_nos_app | quote }} 2>&1 | grep -qF "$want"; then echo same; exit 0; fi
+    out=$(codesign -f -s "$H" -i eu.thisisait.nos.app {{ thalamus_nos_app | quote }} 2>&1) || { echo "$out" >&2; grep -q errSecInternalComponent <<<"$out" && { echo "codesign could not reach the signing key (errSecInternalComponent). Over SSH the keychain cannot ask
+      'allow codesign?'. Once, in this session (it asks the login password), then re-run:
+        security set-key-partition-list -S apple-tool:,apple:,codesign: -s {{ thalamus_signing_keychain | quote }}" >&2; exit 1; }; exit 1; }
+    /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f {{ thalamus_nos_app | quote }} || true
+    echo signed
+  args:
+    executable: /bin/bash
+  register: _nos_app_signed
+  changed_when: "'signed' in _nos_app_signed.stdout"
+  when: _thalamus_signing.stdout_lines | default([]) | length > 0  # --check mints nothing

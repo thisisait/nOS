@@ -6,9 +6,10 @@ OUT=${1:?usage: build-app.sh <out-dir> [identity-hash]}
 IDENTITY=${2:--}
 FACE_URL=${FACE_URL:-https://os.dev.local/}  # face_domain's default; the role passes the resolved one
 HERE=$(cd "$(dirname "$0")" && pwd)
+SCRATCH=${SWIFT_SCRATCH:-$HERE/.build}  # the role keeps it off the checkout
 
-swift build -c release --package-path "$HERE" --product nOS
-BIN=$(swift build -c release --package-path "$HERE" --show-bin-path)/nOS
+swift build -c release --package-path "$HERE" --scratch-path "$SCRATCH" --product nOS
+BIN=$(swift build -c release --package-path "$HERE" --scratch-path "$SCRATCH" --show-bin-path)/nOS
 
 APP="$OUT/nOS.app"
 rm -rf "$APP"
