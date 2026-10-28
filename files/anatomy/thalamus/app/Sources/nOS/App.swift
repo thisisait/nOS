@@ -88,12 +88,25 @@ func faceURL() -> URL? {
 
 struct WebView: NSViewRepresentable {
     let url: URL
+    func makeCoordinator() -> Failure { Failure() }
     func makeNSView(context: Context) -> WKWebView {
         let v = WKWebView()
+        v.navigationDelegate = context.coordinator
         v.load(URLRequest(url: url))
         return v
     }
     func updateNSView(_ v: WKWebView, context: Context) {}
+
+    /// A load that fails is said in the window, never a blank page (2026-10-28: a wrong host showed white).
+    final class Failure: NSObject, WKNavigationDelegate {
+        func webView(_ v: WKWebView, didFailProvisionalNavigation _: WKNavigation!, withError e: Error) { say(v, e) }
+        func webView(_ v: WKWebView, didFail _: WKNavigation!, withError e: Error) { say(v, e) }
+        private func say(_ v: WKWebView, _ e: Error) {
+            let url = (e as NSError).userInfo[NSURLErrorFailingURLStringErrorKey] as? String ?? ""
+            let esc = { (s: String) in s.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;") }
+            v.loadHTMLString("<body style='font:14px -apple-system;padding:2em'><h3>Iris could not load</h3><p>\(esc(url))</p><p>\(esc(e.localizedDescription))</p><p>Set it: <code>defaults write eu.thisisait.nos.app NOSFaceURL https://…/</code></p></body>", baseURL: nil)
+        }
+    }
 }
 
 @main struct NOSApp: App {
