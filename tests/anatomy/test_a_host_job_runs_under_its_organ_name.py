@@ -45,6 +45,7 @@ FOREIGN = {
     "eu.thisisait.nos.dnsmasq-tailnet": "symbiont: Homebrew's dnsmasq",
     "nos-jupyterhub": "symbiont: JupyterHub's own entry point",
     "nos-jupyterhub-proxy": "symbiont: docker runs the proxy container",
+    "eu.thisisait.nos.app": "a launcher: /usr/bin/open hands nOS.app to LaunchServices and exits; the process is nOS",
 }
 
 #: label -> the basenames it runs today (macOS and Linux). Each is an organ still on an interpreter
