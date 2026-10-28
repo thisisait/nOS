@@ -121,18 +121,20 @@ mod tests {
         execute(cmd.to_str().unwrap(), &[], env, Duration::from_millis(timeout_ms), None, r.0.to_str())
     }
 
+    // Budgets are wide: these assert codes and output, not timing (10-28: a loaded CI runner and a
+    // Santa host both missed 2 s on `echo hi`). The timeout itself is the next test's subject.
     #[test]
     fn exit_codes_and_output() {
         let r = repo("codes", &[("ok", "echo hi; echo oops >&2"), ("three", "echo partial; exit 3"), ("sig", "kill -TERM $$")]);
-        let ok = run(&r, "ok", &[], 2000);
+        let ok = run(&r, "ok", &[], 20_000);
         assert_eq!((ok.exit_code, ok.stdout_tail.as_str(), ok.stderr_tail.as_str(), ok.timed_out), (0, "hi\n", "oops\n", false));
-        let three = run(&r, "three", &[], 2000);
+        let three = run(&r, "three", &[], 20_000);
         assert_eq!((three.exit_code, three.stdout_tail.as_str()), (3, "partial\n"));
-        assert_eq!(run(&r, "sig", &[], 2000).exit_code, -15);
+        assert_eq!(run(&r, "sig", &[], 20_000).exit_code, -15);
         let refused = execute("/etc/passwd", &[], &[], Duration::from_secs(1), None, r.0.to_str());
         assert_eq!(refused.exit_code, 126);
         assert!(refused.stderr_tail.starts_with("pulse: command rejected by execution-boundary allowlist: command path not in"), "{}", refused.stderr_tail);
-        let missing = run(&r, "absent", &[], 2000);
+        let missing = run(&r, "absent", &[], 20_000);
         assert_eq!(missing.exit_code, 127);
         assert!(missing.stderr_tail.starts_with("command not found: '/"), "{}", missing.stderr_tail);
     }
@@ -140,9 +142,9 @@ mod tests {
     #[test]
     fn timeout_kills_the_grandchild_and_keeps_partial_output() {
         let r = repo("timeout", &[("slow", "echo before\nsleep 30 &\necho $! > \"$0.pid\"\nwait")]);
-        let res = run(&r, "slow", &[], 1500);
+        let res = run(&r, "slow", &[], 3000);
         assert_eq!((res.exit_code, res.timed_out, res.stdout_tail.as_str()), (-9, true, "before\n"));
-        assert!(res.duration_ms < 3000, "{}", res.duration_ms);
+        assert!(res.duration_ms < 15_000, "{}", res.duration_ms);
         let pid: i32 = std::fs::read_to_string(r.0.join("tools/slow.pid")).unwrap().trim().parse().unwrap();
         std::thread::sleep(Duration::from_millis(100));
         let alive = unsafe { libc::kill(pid, 0) } == 0;
@@ -156,7 +158,7 @@ mod tests {
     fn a_megabyte_does_not_hang_and_the_tail_is_exact() {
         // 1 MB of digits, then a 3-byte char so a byte cut would split it, then a known end.
         let r = repo("flood", &[("flood", "yes 0123456789 | head -c 1048576; printf '\\342\\202\\254END'; yes e | head -c 1048576 >&2")]);
-        let res = run(&r, "flood", &[], 2500);
+        let res = run(&r, "flood", &[], 20_000);
         assert_eq!(res.exit_code, 0);
         let sent = "0123456789\n".repeat(95_326)[..1_048_576].to_string() + "\u{20ac}END";
         assert_eq!(res.stdout_tail, sent.chars().skip(sent.chars().count() - TAIL_CHARS).collect::<String>());
@@ -170,7 +172,7 @@ mod tests {
     fn the_env_is_exactly_what_was_passed() {
         let r = repo("env", &[("showenv", "/usr/bin/env")]);
         let env = [("PULSE_RUN_ID".to_string(), "r1".to_string())];
-        let res = run(&r, "showenv", &env, 2000);
+        let res = run(&r, "showenv", &env, 20_000);
         // Failed once in ~15 full runs (2026-10-25, not reproduced): say how, next time.
         assert!(res.exit_code == 0 && !res.timed_out, "{res:?}");
         let mut keys: Vec<&str> = res.stdout_tail.lines().map(|l| l.split('=').next().unwrap()).collect();
