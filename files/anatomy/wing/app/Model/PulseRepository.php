@@ -646,10 +646,20 @@ final class PulseRepository
 		return $this->countUnpaused();
 	}
 
+	private function lastAdminActIsHalt(): bool
+	{
+		$last = $this->db->table('events')
+			->where('type', ['admin_emergency_halt', 'admin_emergency_resume'])
+			->order('id DESC')->limit(1)->fetch();
+		return $last !== null && $last->type === 'admin_emergency_halt';
+	}
+
 	/** Lift the halt: remove the file and the pre-move halt rows. Manual pauses stay. */
 	public function emergencyResumeAll(): int
 	{
-		$held = is_file(self::haltFile()) ? $this->countUnpaused() : 0;
+		// The medulla lifts the file BEFORE it sends the act (10-28: jobs_unhalted 0 after 41 held), so
+		// an open halt act counts as held too.
+		$held = is_file(self::haltFile()) || $this->lastAdminActIsHalt() ? $this->countUnpaused() : 0;
 		if (is_file(self::haltFile()) && !unlink(self::haltFile())) {
 			throw new \RuntimeException('could not remove the halt file ' . self::haltFile());
 		}
