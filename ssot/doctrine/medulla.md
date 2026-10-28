@@ -50,6 +50,22 @@ Default kept from the plan: Bone moves last.
 One `wing.db`, one writer per table, one schema file. While a table moves, PHP
 or Rust writes it, never both.
 
+**Who writes the record** (operator ruling 2026-10-28, row wing-to-medulla-waves). The
+medulla executes; it does not write the record. The record (events and their hash chain,
+notifications, Pulse runs, agent questions, tokens) has one writer: a small separate Rust
+process, its own crate in the workspace and its own uid on Linux, the only holder of the
+chain key. The medulla and every other organ append through it over the nerve, so the
+executor cannot forge its own audit. Bone's direct `wing.db` writes fold into it. Until it
+exists, PHP keeps the role.
+
+**Dated exception, until that writer exists:** the thalamus `ledger.db` (Iris's sessions and
+events) is written by the medulla's thalamus thread.
+
+**Known breaches of one writer per table (2026-10-28), each closed by the writer's arrival:**
+`events` (PHP `EventRepository` and Bone `clients/wing.py`, both sign the chain), `notifications`
+(Bone inserts, PHP updates), the halt file (the medulla, `PulseRepository` and `tools/nos`'s
+break-glass; PHP stops writing it after one release).
+
 ## 5. The strangler seam
 
 A move takes a whole `/api/v1/<prefix>`, never one route of it. Each moved

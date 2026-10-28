@@ -6,6 +6,7 @@ gates:
   - tests/anatomy/test_e2e_results_persist.py
   - tests/anatomy/test_keap_pin_not_cancelled.py
   - tests/anatomy/test_loop_budget_forbids_its_own_gates.py
+  - tests/anatomy/test_nos_app_reads_state.py
   - tests/anatomy/test_traefik_https_upstream_binds_tls.py
 ---
 # Gates — a check that cannot fail is not a check
