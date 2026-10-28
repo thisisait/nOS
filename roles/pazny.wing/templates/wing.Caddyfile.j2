@@ -58,6 +58,27 @@
         close
     }
 
+    # Who calls /api/v1, measured for ONE release (row wing-to-medulla-waves, wave 0): method,
+    # path, status, duration. Headers and the query string never reach the file — they carry
+    # the bearer, cookies and ?token=. Remove once the wave-1 move list is drawn from it.
+    # Gate: test_the_wing_api_log_holds_no_secret.py
+    @not_api not path /api/v1/*
+    log_skip @not_api
+    log wing_api {
+        output file {{ wing_log_dir }}/api-access.log {
+            roll_size 10MiB
+            roll_keep 5
+        }
+        format filter {
+            wrap json
+            fields {
+                request>headers delete
+                resp_headers delete
+                request>uri regexp \?.*$ ""
+            }
+        }
+    }
+
     root * {{ wing_app_dir }}/www
     encode zstd gzip
 
