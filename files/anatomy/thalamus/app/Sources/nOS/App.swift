@@ -1,4 +1,4 @@
-// nOS.app: the estate's state in the menu bar, read over the thalamus socket, and Iris in a window.
+// nOS.app: the estate's state in the menu bar, read over the thalamus socket, and the face desktop in a window.
 // It writes nothing itself: a halt is asked of the medulla over the socket, which checks the person and
 // this signed exe (NOS_DECIDER_EXES), writes the set-point and tells Wing. Never a file here.
 import AppKit
@@ -105,7 +105,7 @@ struct MenuView: View {
             .disabled(estate.state?.halt.on == nil)  // unknown: neither verb is honest
         if let w = estate.said { Text(w) }
         Divider()
-        Button("Iris") { openWindow(id: "iris"); NSApp.activate(ignoringOtherApps: true) }
+        Button("Face") { openWindow(id: "face"); NSApp.activate(ignoringOtherApps: true) }
         Button("Quit nOS") { NSApp.terminate(nil) }.keyboardShortcut("q")
     }
 }
@@ -134,7 +134,7 @@ struct WebView: NSViewRepresentable {
         private func say(_ v: WKWebView, _ e: Error) {
             let url = (e as NSError).userInfo[NSURLErrorFailingURLStringErrorKey] as? String ?? ""
             let esc = { (s: String) in s.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;") }
-            v.loadHTMLString("<body style='font:14px -apple-system;padding:2em'><h3>Iris could not load</h3><p>\(esc(url))</p><p>\(esc(e.localizedDescription))</p><p>Set it: <code>defaults write eu.thisisait.nos.app NOSFaceURL https://…/</code></p></body>", baseURL: nil)
+            v.loadHTMLString("<body style='font:14px -apple-system;padding:2em'><h3>The face could not load</h3><p>\(esc(url))</p><p>\(esc(e.localizedDescription))</p><p>Set it: <code>defaults write eu.thisisait.nos.app NOSFaceURL https://…/</code></p></body>", baseURL: nil)
         }
     }
 }
@@ -149,7 +149,7 @@ struct WebView: NSViewRepresentable {
             let on = estate.state?.halt.on  // unreachable or unreadable: a question mark, never the calm icon
             Image(systemName: on == nil ? "questionmark.circle" : on == true ? "stop.circle.fill" : "circle.hexagongrid")
         }
-        Window("Iris", id: "iris") {
+        Window("Face", id: "face") {
             if let url = faceURL() { WebView(url: url).frame(minWidth: 900, minHeight: 600) } else { Text("NOSFaceURL is not set") }
         }
     }
