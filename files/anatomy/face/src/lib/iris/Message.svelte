@@ -163,7 +163,9 @@
 					{o.name}: {o.running === null ? 'UNKNOWN' : o.running ? 'running' : 'stopped'} ({o.label})
 				</li>{/each}
 			{#if msg.act}<li>
-					act: {msg.act.recorded ? 'recorded by Wing' : `NOT recorded — ${msg.act.why ?? 'Wing did not say why'}`}
+					act: {msg.act.recorded
+						? 'recorded by Wing'
+						: `NOT recorded — ${msg.act.why ?? 'Wing did not say why'}`}
 				</li>{/if}
 		</ul>
 	{:else if msg.t === 'workspace'}
