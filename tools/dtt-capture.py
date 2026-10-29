@@ -134,6 +134,15 @@ def main() -> int:
     if body is None:
         body = sys.stdin.read() if not sys.stdin.isatty() else ""
 
+    # --update rewrites the git-owned half; a field not given keeps the file's value instead of
+    # blanking it (2026-10-28: two --update runs left status "" and the seeder refused the rows).
+    prior = os.path.join(lib.seed_dir(), f"{args.slug}.md")
+    if args.update and os.path.exists(prior):
+        old = lib.parse_file(prior)
+        for k in ("status", "when", "release"):
+            if not getattr(args, k):
+                setattr(args, k, old.get(k) or "")
+
     fm = {
         "slug": args.slug, "title": args.title, "parent": args.parent,
         "track": args.track, "task_type": args.task_type, "status": args.status,

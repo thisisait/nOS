@@ -13,10 +13,11 @@ NOS_SEED_DIR; commit those in your private repo. Thereafter the files are the
 source of the git-owned half (title/parent/track/refs/body); the table owns
 status/target/occurred_at/verified* (moved by roadmap-update.py / -verify.py).
 
-Usage:  python3 tools/roadmap-seed.py [--dry-run] [--sync]
+Usage:  python3 tools/roadmap-seed.py [--dry-run] [--sync] [--only SLUG[,SLUG...]]
   (no flag)  insert rows whose slug is not in the table yet; skip existing.
   --sync     also reconcile the git-owned half of rows that already exist.
   --dry-run  print what would change; write nothing.
+  --only     touch only these slugs (the rest of the files is still checked as a set).
 
 The two columns target/occurred_at: exactly one is set per row, decided by
 status — a null date is indistinguishable from one nobody wrote. The live table
@@ -32,7 +33,7 @@ import urllib.error
 import urllib.request
 
 from keap_api import human_base, human_headers, paged, write_row  # noqa: E402 — sibling helper in tools/
-from roadmap_seed_lib import GIT_OWNED, is_estate_checkout, load_rows, seed_dir, write_index  # noqa: E402
+from roadmap_seed_lib import GIT_OWNED, invalid, is_estate_checkout, load_rows, seed_dir, write_index  # noqa: E402
 
 _REPO = __import__("os").path.abspath(__import__("os").path.join(
     __import__("os").path.dirname(__file__), ".."))
@@ -66,6 +67,14 @@ print(f"loaded {len(R)} rows from {seed_dir()} · orphan check: OK · duplicate 
 
 DRY_RUN = "--dry-run" in sys.argv
 SYNC = "--sync" in sys.argv
+# --only: file chosen rows without the rest (2026-10-28: one new row could not reach the table
+# without 789 stale inserts riding along).
+_only_arg = next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--only=")), None)
+if _only_arg is None and "--only" in sys.argv[:-1]:
+    _only_arg = sys.argv[sys.argv.index("--only") + 1]
+ONLY = {x.strip() for x in _only_arg.split(",") if x.strip()} if _only_arg else None
+if ONLY is not None and ONLY - slugs:
+    sys.exit(f"REFUSING: --only names slugs no seed file has: {sorted(ONLY - slugs)}")
 
 # Keep the PUBLIC structural index current from the private files (the offline
 # gates read it). Derived from the files, not the table, so it is written on a
@@ -149,6 +158,21 @@ if SYNC:
         if delta:
             drifted.append((r, delta, cur["id"]))
 
+if ONLY is not None:
+    fresh = [r for r in fresh if r["slug"] in ONLY]
+    drifted = [d for d in drifted if d[0]["slug"] in ONLY]
+
+
+# Every row is checked against the live schema BEFORE the first write (dry run too). 2026-10-28:
+# the run wrote 4 rows, then died on a row with status "" — half a batch, and the reason buried.
+_planned = [r for r in fresh] + [{"slug": r["slug"], "title": r["title"],
+                                  "status": live_rows[r["slug"]]["values"].get("status"), **d}
+                                 for r, d, _ in drifted]
+_rejects = [(v["slug"], why) for v in _planned if (why := invalid(v, _live_schema))]
+if _rejects:
+    sys.exit(f"REFUSING: {len(_rejects)} row(s) the live table would reject; nothing written:\n"
+             + "\n".join(f"  ✗ {slug:<26} {'; '.join(why)}" for slug, why in _rejects))
+
 print(f"already present: {skipped} · to insert: {len(fresh)}"
       + (f" · git-owned drift on {len(drifted)}" if SYNC else ""))
 
@@ -190,10 +214,7 @@ def agent_write(values):
         values = {**values, "refs": _refs_wire(values["refs"])}
     # One helper decides the door: the identity outpost (as the caller, human
     # door, owner/tier/grants apply) or the agent door with the RW bearer.
-    try:
-        return write_row(TABLE, values)
-    except RuntimeError as e:
-        sys.exit(f"REFUSING: writing {values.get('slug')} failed — {e}")
+    return write_row(TABLE, values)  # raises RuntimeError with KEAP's message; the loops collect it
 
 
 # Insert what we can. A row the live table rejects (e.g. an unknown `track`
@@ -204,8 +225,9 @@ failures = []
 for r in fresh:
     try:
         agent_write(r)
-    except urllib.error.HTTPError as e:
-        failures.append((r["slug"], e.read().decode("utf-8", "replace").strip()))
+    except (urllib.error.HTTPError, RuntimeError) as e:
+        failures.append((r["slug"], e.read().decode("utf-8", "replace").strip()
+                         if isinstance(e, urllib.error.HTTPError) else str(e)))
 
 if drifted:
     unkeyed = [r["slug"] for r, _, rid in drifted if rid != r["slug"]]
@@ -218,8 +240,9 @@ if drifted:
             agent_write({"slug": r["slug"], "title": r["title"],
                          "status": live_rows[r["slug"]]["values"].get("status"), **delta})
             print(f"  synced {r['slug']:<24} {', '.join(sorted(delta))}")
-        except urllib.error.HTTPError as e:
-            failures.append((r["slug"], e.read().decode("utf-8", "replace").strip()))
+        except (urllib.error.HTTPError, RuntimeError) as e:
+            failures.append((r["slug"], e.read().decode("utf-8", "replace").strip()
+                             if isinstance(e, urllib.error.HTTPError) else str(e)))
 
 after = paged(lambda u: req("GET", u), BASE + "/rows")["data"]["rows"]
 tops = [x for x in after if not x["values"].get("parent")]
