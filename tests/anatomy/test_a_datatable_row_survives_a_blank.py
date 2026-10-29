@@ -31,7 +31,9 @@ UUID_T = "0b5e7e1a-2c3d-4e5f-8a9b-0c1d2e3f4a5b"
 
 
 def _image():
-    ver = re.search(r'^keap_version:\s*"([^"]+)"', (REPO / "default.config.yml").read_text(), re.M).group(1)
+    sys.path.insert(0, str(REPO / "tools"))
+    import nos_identity as ni  # the layer set is the helper's to spell (test_config_d_is_one_layer_set)
+    ver = ni.resolve_flag("keap_version", ni.default_layers())[-1][1]
     if not shutil.which("docker"):
         return None
     out = subprocess.run(["docker", "images", "--format", "{{.Repository}}:{{.Tag}}", "nos/keap"],
