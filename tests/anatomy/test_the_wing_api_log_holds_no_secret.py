@@ -24,7 +24,7 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 CADDY = REPO / "roles" / "pazny.wing" / "templates" / "wing.Caddyfile.j2"
-SECRET = "s3cr3t-must-not-land"
+SECRET = "FAKE_s3cr3t-must-not-land"
 
 
 def _render(tmp: Path) -> str:
