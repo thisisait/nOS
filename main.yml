@@ -1728,6 +1728,14 @@
     # off-site restic snapshot BEFORE blank-reset deletes copy #1 (confirmed-only:
     # run-mode's dry-run end_play already fired). No restic_repo = no survivor =
     # STOP (override -e prewipe_snapshot_required=false). Never gate on restic_repo.
+    # Every DataTable (rows + history) out to a bundle under backup_staging_dir/
+    # keap-tables BEFORE the pre-wipe snapshot, so it also rides off-site. The
+    # table-owned half (status, verified) exists nowhere else; blanks of 10-09
+    # and 10-17 lost it. pazny.keap post.yml imports it after the reinstall.
+    - import_tasks: tasks/keap-tables-export.yml
+      when: nos_removing | default(false) | bool
+      tags: ['blank', 'reset']
+
     - import_tasks: tasks/pre-wipe-backup.yml
       when: nos_removing | default(false) | bool
       tags: ['blank', 'reset']

@@ -273,6 +273,44 @@
     - install_keap | default(false) | bool
     - install_device_gateway | default(false) | bool
 
+# ── DataTables back after a blank ───────────────────────────────────────────
+# AFTER every seeder above: a table the fresh KEAP has gets its bundle rows
+# upserted (only differing cells), one it lacks is recreated. --since refuses a
+# bundle from an earlier blank. Set only by tasks/keap-tables-export.yml, so a
+# plain converge never imports. remove=all deleted the bundle with ~/backups.
+- name: "[pazny.keap] Import the DataTables bundle this blank exported"
+  ansible.builtin.command:
+    argv: ["python3", "{{ playbook_dir }}/tools/keap-tables.py", "import", "--confirm",
+           "--since", "{{ nos_keap_tables_since }}"]
+  environment:
+    KEAP_API_URL: "http://127.0.0.1:{{ keap_port | default(8091) }}"
+    KEAP_TABLES_BUNDLE_DIR: "{{ backup_staging_dir }}/keap-tables"
+    KEAP_PROXY_SHARED_SECRET: "{{ keap_proxy_shared_secret }}"
+    KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw }}"
+  register: _keap_tables_import
+  changed_when: _keap_tables_import.stdout is search('WROTE [1-9]')
+  failed_when: false
+  no_log: true  # the environment carries the proxy secret and the RW bearer
+  when:
+    - install_keap | default(false) | bool
+    - nos_keap_tables_since is defined
+    - not (nos_remove_source | default(false) | bool)
+
+- name: "[pazny.keap] DataTables import outcome"
+  ansible.builtin.debug:
+    msg: "{{ _keap_tables_import.stdout_lines | default([]) }}"
+  when: _keap_tables_import is not skipped and _keap_tables_import.stdout_lines is defined
+
+- name: "[pazny.keap] A DataTables import that failed fails the converge"
+  ansible.builtin.assert:
+    that: _keap_tables_import.rc == 0
+    fail_msg: >-
+      The DataTables import failed (above). The bundle is untouched under
+      {{ backup_staging_dir }}/keap-tables — fix the cause and run
+      `nos dtt import --confirm --since {{ nos_keap_tables_since }}`.
+    quiet: true
+  when: _keap_tables_import is not skipped and _keap_tables_import.rc is defined
+
 # ── Sweep the persisted lint queue — the LAST post step ──────────────────────
 # GET /agent/v1/lint serves a PERSISTED findings queue (K2) that NEVER recomputes
 # on read; only POST /agent/v1/lint/run reruns the checks and stamps resolved_at

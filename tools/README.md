@@ -228,6 +228,7 @@ posts, restarts or renders something.
 - `keap-fable-to-bundles.py` — Transform the fable ontology-review output into per-domain import bundles.
 - `dtt-capture.py` — File an idea/plan/spec into dtt as a per-row seed file in the private repo (the /dtt-capture skill's machinery).
 - `dtt-table.py` — Per-user DataTable verbs from the shell (list/create/share/visibility) through the KEAP identity outpost; the `nos dtt` table surface on the DGX recipe.
+- `keap-tables.py` — Every KEAP DataTable (rows + history) to a bundle before a blank and back after it (`nos dtt export|import`, dry run unless --confirm); the blank runs both.
 - `keap-recall-queries.py` — Emit the KEAP recall-query set from the estate's SKILLS.md trigger lines.
 - `keap-recall.py` — Read-only KEAP recall (RO bearer): ranked passages with node ids; wraps keap-semantic-search.py + keap-recall-queries.py; empty recall is a miss.
 - `keap-reid-rows.py` — Make every row of a KEAP DataTable addressable by its own business key.

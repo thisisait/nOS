@@ -1,0 +1,44 @@
+---
+# KEAP DataTables out before the wipe (tools/keap-tables.py). Confirmed-only by
+# construction: imported after run-mode's dry-run end_play, which already
+# listed the tables. `nos_keap_tables_since` is the stamp the post-reinstall
+# import checks: a bundle exported before it belongs to an earlier blank.
+# A failed export stops the blank — those rows exist nowhere else. Override,
+# knowingly: -e keap_tables_export_required=false.
+- name: "[Pre-wipe] Stamp the blank the DataTables bundle belongs to"
+  ansible.builtin.set_fact:
+    nos_keap_tables_since: "{{ now(utc=true, fmt='%Y-%m-%dT%H:%M:%SZ') }}"
+  when: install_keap | default(false) | bool
+  tags: ['blank', 'reset']
+
+- name: "[Pre-wipe] Export every KEAP DataTable (rows + history) to a bundle"
+  ansible.builtin.command:
+    argv: ["python3", "{{ playbook_dir }}/tools/keap-tables.py", "export", "--confirm",
+           "--since", "{{ nos_keap_tables_since }}"]
+  environment:
+    KEAP_API_URL: "http://127.0.0.1:{{ keap_port | default(8091) }}"
+    KEAP_TABLES_BUNDLE_DIR: "{{ backup_staging_dir }}/keap-tables"
+  register: _keap_tables_export
+  changed_when: "'WROTE' in _keap_tables_export.stdout"
+  failed_when: false
+  when: install_keap | default(false) | bool
+  tags: ['blank', 'reset']
+
+- name: "[Pre-wipe] DataTables export outcome"
+  ansible.builtin.debug:
+    msg: "{{ _keap_tables_export.stdout_lines | default([]) }}"
+  when: install_keap | default(false) | bool
+  tags: ['blank', 'reset']
+
+- name: "[Pre-wipe] A blank whose DataTables did not export stops here"
+  ansible.builtin.assert:
+    that: (_keap_tables_export.rc | default(1)) == 0
+    fail_msg: >-
+      The KEAP DataTables export failed (see above), so this remove={{ remove }}
+      would delete every row's status and verdict for good. Bring KEAP up and run
+      again — or, knowing the cost, pass -e keap_tables_export_required=false.
+    quiet: true
+  when:
+    - install_keap | default(false) | bool
+    - keap_tables_export_required | default(true) | bool
+  tags: ['blank', 'reset']

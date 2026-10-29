@@ -103,6 +103,8 @@ nos dtt status [--all|--track T]     # read the board
 nos dtt update --slug <s> --status … # move a row's CLAIM
 nos dtt verify --slug <s>            # write a row's VERDICT (an exit code, not an arg)
 nos dtt extract [--write]            # one-time: live table -> per-row seed files
+nos dtt export [--confirm]           # every DataTable (rows + history) -> a bundle; dry run lists
+nos dtt import [--confirm] [--since ISO] [--bundle DIR]  # a bundle back; only differing cells
 ```
 
 - **Set `NOS_SEED_DIR`** to your private seed repo (export it in your shell
@@ -320,6 +322,15 @@ smoke_strict}` written by `callback_plugins/blank_record.py` once the play ends,
 `smoke_strict` is `{ok, total, failed: [ids]}` from the `nos-smoke --strict` every blank runs as evidence.
 `tools/estate-status.py` shows the newest one and its age (no record = UNKNOWN; no strict smoke
 or a red strict probe = red).
+
+Every removal carries the KEAP DataTables over (`tools/keap-tables.py`): the dry run lists each
+table and its row count; a confirmed run exports rows and row history to
+`~/backups/staging/keap-tables/<UTC stamp>/` before the pre-wipe snapshot (so the bundle also goes
+off-site), and refuses to wipe if the export fails (`-e keap_tables_export_required=false` overrides).
+After the reinstall `pazny.keap` imports it: recreates a missing table, adds bundle-only columns,
+upserts only the differing cells, and refuses a bundle exported before this blank began.
+`remove=all` deletes `~/backups`, so there the bundle survives only off-site and nothing is imported.
+By hand: `nos dtt export|import` (dry run unless `--confirm`).
 
 ### New vocabulary — raw `ansible-playbook` (protected equally)
 

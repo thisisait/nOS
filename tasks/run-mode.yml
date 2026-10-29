@@ -285,6 +285,28 @@
   when: nos_removing
   tags: ['always']
 
+# The DataTables the removal carries over (tasks/keap-tables-export.yml writes
+# them on a confirmed run). Read-only: lists tables and row counts.
+- name: "[Run-mode] KEAP DataTables to carry over the removal (read-only)"
+  ansible.builtin.command:
+    argv: ["python3", "{{ playbook_dir }}/tools/keap-tables.py", "export", "--dry-run"]
+  environment:
+    KEAP_API_URL: "http://127.0.0.1:{{ keap_port | default(8091) }}"
+    KEAP_TABLES_BUNDLE_DIR: "{{ backup_staging_dir | default(ansible_facts['env']['HOME'] + '/backups/staging') }}/keap-tables"
+  register: _keap_tables_plan
+  changed_when: false
+  failed_when: false
+  when: nos_removing and (install_keap | default(false) | bool)
+  tags: ['always']
+
+- name: "[Run-mode] KEAP DataTables plan"
+  ansible.builtin.debug:
+    msg: "{{ _keap_tables_plan.stdout_lines + ([] if not nos_remove_source else
+             ['remove=all deletes ~/backups: the bundle survives only in the off-site snapshot, no import'])
+             + ([] if not nos_leaving else ['leave=true: exported, never imported']) }}"
+  when: nos_removing and (install_keap | default(false) | bool)
+  tags: ['always']
+
 # This condition has TWO ways to break and only one shape survives both.
 #   `| bool`  — a `meta:` task's when: compiles in a FILTER-LESS context.
 #   bare      — `-e confirm=true` arrives as the STRING "true".
