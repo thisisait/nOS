@@ -193,6 +193,18 @@ def render_row_file(fm: dict, body: str) -> str:
     return "\n".join(lines)
 
 
+def invalid(values: dict, columns: list[dict]) -> list[str]:
+    """Why the live table would refuse this row: a required column empty, a select off its options."""
+    bad = []
+    for c in columns:
+        k, v = c.get("key"), values.get(c.get("key"))
+        if c.get("required") and v in (None, ""):
+            bad.append(f"{k} is required")
+        elif c.get("kind") == "select" and v not in (None, "") and c.get("options") and v not in c["options"]:
+            bad.append(f"{k}={v!r} is not one of {c['options']}")
+    return bad
+
+
 def load_rows(directory: str | None = None) -> list[dict]:
     """Every `<slug>.md` under the seed dir (skips `_`-prefixed like _template)."""
     d = directory or seed_dir()
