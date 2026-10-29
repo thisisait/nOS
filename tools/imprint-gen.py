@@ -247,9 +247,8 @@ def doors() -> list[str]:
     proj = _module("files/anatomy/apex/projection.py", "projection")
     art, ruling = proj.load_artifact(), proj.load_ruling()
     public = json.loads(proj.public_json(art, ruling))
-    withheld = sum(1 for v in ruling["nodes"].values() if not isinstance(v, dict))
-    out += ["", f"The public organ systems (the apex ruling publishes {public['counts']['organ_systems']}; "
-            f"{withheld} of {len(ruling['nodes'])} ruled nodes are withheld):", ""]
+    out += ["", f"The public organ systems (the apex ruling publishes {public['counts']['organ_systems']} "
+            f"from {len(ruling['nodes'])} nodes; every node it does not list is withheld):", ""]
     out += [f"- {o['title']} — {o['tells']} ({len(o['atoms'])} parts)" for o in public["organ_systems"]]
     return out
 

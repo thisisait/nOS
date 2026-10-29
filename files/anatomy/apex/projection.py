@@ -140,13 +140,8 @@ def gate_nodes(artifact: dict, ruling: dict) -> None:
     ruled = ruling["nodes"]
     ruled_ids = set(ruled.keys())
 
-    unruled = artifact_ids - ruled_ids
-    if unruled:
-        raise GateError(
-            f"UNRULED node(s) {sorted(unruled)[:5]}{'...' if len(unruled) > 5 else ''} "
-            f"({len(unruled)} total) — the artifact gained nodes nobody has "
-            "ruled on. The published set is frozen (ruling D4)."
-        )
+    # A node nobody ruled is withheld (D4 as amended 2026-10-29): only a `publish:` entry reaches the
+    # page, so a new tool needs no signature; three signing rounds in two days were for withheld nodes.
     vanished = ruled_ids - artifact_ids
     if vanished:
         raise GateError(

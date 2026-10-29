@@ -118,7 +118,7 @@ KEAP_API_URL=http://127.0.0.1:8091 KEAP_AGENT_TOKEN_RO=<keap_agent_token_ro> pyt
 - Local models (Ollama, OpenAI-compatible): `http://127.0.0.1:11434/v1`, no token. Models the register names: `hermes3:8b`, `qwen3:14b`.
 - Web: Traefik owns ports 80/443. A service with a `domain_var` in state/manifest.yml (56 of 79) answers at that variable, by default `<name>.{{ tenant_domain }}` with `tenant_domain: dev.local`. This host's value: `tools/estate-status.py --config tenant_domain`. The routed ids are those rows' `id`s.
 
-The public organ systems (the apex ruling publishes 13; 502 of 565 ruled nodes are withheld):
+The public organ systems (the apex ruling publishes 13 from 63 nodes; every node it does not list is withheld):
 
 - The Gatehouse — Access is decided in one place. (4 parts)
 - The Spine — The estate governs and audits itself. (5 parts)
