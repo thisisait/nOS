@@ -1143,6 +1143,9 @@ def collect() -> dict:
     dp = _sibling("docker-pressure")
     report["docker_pressure"] = dp["items"]
     report["sources_missing"] += dp["missing"]
+    cl = _sibling("container")  # a crash loop reads healthy between deaths (Loki, 2026-10-29)
+    report["crash_loops"] = cl["items"]
+    report["sources_missing"] += cl["missing"]
     report["doctrine_reviews"] = doctrine_reviews()
 
     report["pulse"] = pulse_daemon()
@@ -1172,6 +1175,7 @@ def reds(report: dict) -> list[str]:
     out: list[str] = []
     # First: a starved VM is the cause of every timeout below it.
     out.extend(report.get("docker_pressure") or [])
+    out.extend(report.get("crash_loops") or [])
     chain = report.get("audit_chain")
     chain_broken = bool(chain and chain.get("ok") is False)
     if chain_broken:
