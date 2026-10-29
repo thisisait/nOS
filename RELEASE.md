@@ -6,16 +6,77 @@ Versioning is by git tag `v<semver>` cut from `master`. The latest tag is `v0.17
 
 ---
 
-## v0.18-beta — in progress
+## v0.18-beta — DRAFT (not cut)
 
-Exit criteria, copied from roadmap row `rel-018` (EXIT, readers):
+> **The medulla wakes: one Rust core fires the schedule, holds the halt, and gets a native face.**
+> DRAFT 2026-10-29 from `/release-prep v0.18-beta` (preflight). 732 commits since `v0.17-beta`
+> (761 files, +53.1k/−7.4k), measured with `git log v0.17-beta..origin/dev` at `72ca254a`.
+> Offline at `c92a05b7` (`tests/fast.sh`): pytest 8841 passed, 8 failed — all eight pupil/face
+> vitest lanes with no `node_modules` in the worktree, not run; cargo workspace 482 passed;
+> syntax-check green. CI on dev green at `c92a05b7`.
+> **No blank since `v0.17-beta`** (newest 2026-10-17, `tools/estate-status.py` BLANK axis): the
+> operator paused blanks until Paperclip restores per database (row `paperclip-restore-per-db`).
+> A cut without one is the operator's exception, not a pass.
 
-- [ ] estate-status release gate green on a blank converge of the operator host + a second host
-- [ ] CI green on every lane at the release PR with no bypass
-- [ ] one live Iris journey: approve a sub-agent, its report returns, the tree shows parent and child
-- [ ] one loop proposed by Iris, filed by the operator, run by Pulse, analysed by Iris from its runs
-- [ ] estate-status --identity prints every host organ's runtime and uid
-- [ ] rbac-status prints the matrix
+Exit criteria, from roadmap row `rel-018` (EXIT, readers), as read on 2026-10-29:
+
+- [ ] estate-status release gate green on a blank converge of the operator host + a second host — no blank since 10-17; spark1 not converged since 10-22; the second Mac not installed
+- [ ] CI green on every lane at the release PR with no bypass — dev green; the PR lanes (Integration ubuntu, all-on, Bonus) not run yet
+- [ ] one live Iris journey: approve a sub-agent, its report returns, the tree shows parent and child — not run
+- [ ] one loop proposed by Iris, filed by the operator, run by Pulse, analysed by Iris from its runs — not run
+- [x] estate-status --identity prints every host organ's runtime and uid — `tools/estate-status.py --identity` on the operator host (nos-pulse, a LaunchAgent helper, is not listed: row to file)
+- [x] rbac-status prints the matrix — `tools/rbac-status.py`
+
+### The medulla: the scheduler, the state, the halt
+- **It fires Pulse jobs.** `pulse_medulla_jobs` (4 jobs live) runs as `nos-pulse serve`; results go
+  to Wing over the nerve with the medulla's own token (`pulse.run`). Every night since 10-27 green
+  (pulse_runs, actor `medulla`).
+- **One state reader, three doors:** `medulla state`, the socket's `{"t":"state"}` (wire v13) and
+  `GET /api/v1/admin/state` answer one struct — halt, loops pause, host organs; UNKNOWN never off.
+  Gate `medulla/tests/state.rs`.
+- **The halt moved in.** `medulla halt|resume` over the socket (wire v14): a tier-1 person at a
+  listed signed executable (`NOS_DECIDER_EXES`), the act recorded in Wing with the person
+  (`operator_username`) and the bearer (`vouched_by`). `nos halt` tries the medulla first; the
+  shell stays the break-glass. Live 2026-10-28: halt 16:56:28, resume 16:56:42, no job fired
+  between. Linux trusts no decider by design (SO_PEERCRED names the connector).
+- **Wing's reads, not its writes.** `medulla_read_routes: [pulse, admin]` and `medulla_routes:
+  [metrics]` are live behind Wing's Caddy split; parity gates against the real PHP presenter.
+- A rebuild restarts `nos-pulse` too (it ran the previous binary twice).
+
+### nOS.app: the medulla's native face (macOS)
+- A SwiftUI menu-bar app built with SwiftPM (no Xcode), installed by `pazny.medulla` to
+  `~/Applications/nOS.app`, signed with the local identity (TCC grants survive a rebuild), started at
+  login by a LaunchAgent. Menu: halt, loops pause, each organ; Halt…/Resume… with a native confirm;
+  the face in a WKWebView over SSO. Contract gate: the app's decoder reads the fixture's state.
+- Not yet: Developer ID and notarisation (another machine), native approvals (row
+  `wing-to-medulla-waves`, wave 1).
+
+### Loki stopped losing the logs
+- From 03:40 on 10-29 Loki was OOM-killed and restarted every ~15 s (2878 restarts): two 536 MB WAL
+  segments replayed into a 1 GiB container. `replay_memory_ceiling: 64MB` and ingestion 4/8 MB/s;
+  verified on a copy of the live WAL in the same image and limit (384MB OOM at 20 s, 64MB ready at
+  40 s). The healthcheck said healthy throughout; `tools/container-status.py` now puts a crash loop
+  on red-status.
+
+### Gates that hid a failure
+- A findings exit code may no longer be 1 or 2 (8 jobs moved to 10): `discovery:contradiction-scan`
+  had crashed 5/5 for four days as "found something".
+- Trunk sync excuses only a rejected fast-forward; a failed login is red.
+- The roadmap seed checks every row before its first write and files chosen rows (`--only`).
+- Doctrine: a suite gate lives at a joint (ssot/doctrine/gates.md §7); the record has one writer,
+  a separate Rust process (ssot/doctrine/medulla.md §4), ruled 2026-10-28.
+
+### Security
+- Advisory patrol: every pin and organ lockfile matched nightly against public advisories
+  (`tools/advisory-status.py`, row `advisory-patrol`). Open at the draft: 40 unjudged HIGH/CRITICAL
+  service pins (judge in `state/genome/advisory-judgements.yml` or bump); wing's `symfony/yaml` bumped
+  to 7.4.22; thalamus's `unsafe-libyaml` (RUSTSEC-2024-0449, no fix) unjudged.
+- The telemetry ledger stopped carrying secrets (31 tasks `no_log`, the callback's key rules); the
+  Wing bearer was rotated (`-e secrets_rotate=wing_api_token`).
+
+### Not described here
+DGX/vLLM, Ollama, evals and Paperclip work (`git log v0.17-beta..dev` scopes `vllm`, `dgx`,
+`ollama`, `evals`, `paperclip`) — to be written from those commits before the cut.
 
 ---
 
