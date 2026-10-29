@@ -162,6 +162,11 @@
 			{#each msg.organs as o}<li>
 					{o.name}: {o.running === null ? 'UNKNOWN' : o.running ? 'running' : 'stopped'} ({o.label})
 				</li>{/each}
+			{#if msg.settings === null}<li>
+					settings: UNKNOWN
+				</li>{:else}{#each Object.entries(msg.settings) as [k, v]}<li>
+						setting {k}: {v === null ? 'UNKNOWN' : JSON.stringify(v)}
+					</li>{/each}{/if}
 			{#if msg.act}<li>
 					act: {msg.act.recorded
 						? 'recorded by Wing'

@@ -118,6 +118,7 @@ final class RouterFactory
 		// Emergency halt over the API: the break-glass beside the /admin page.
 		$api->addRoute('api/v1/admin/halt', 'Admin:halt');
 		$api->addRoute('api/v1/admin/resume', 'Admin:resume');
+		$api->addRoute('api/v1/admin/setting', 'Admin:setting');
 		$api->addRoute('api/v1/admin/state', 'Admin:state');
 
 		// Cortex-lang executor — P1, read verbs, synchronous (2026-08-09).

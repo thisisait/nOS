@@ -271,6 +271,7 @@
       - { var: nos_atlas_src_dir, level: never, why: "the nos-atlas dev checkout under ~/projects; the role only copies its dist/ out" }
       - { var: openclaw_log_dir, level: never, why: "under ~/agents (see openclaw_agents_dir)" }
       - { var: iiab_terminal_config_dir, level: all, why: "under homebrew_prefix/etc but written by nOS, not a formula — a leave takes it with the home user (2026-09-29 exit audit)" }
+      - { var: medulla_data_dir, level: all, why: "the medulla's settings (a job paused by hand): set-points a person chose, kept across a blank like ~/.nos/halt; uninstall takes them with nos_data_root" }
 
 - name: "[Removal-set] Resolve source paths (level: all)"
   ansible.builtin.set_fact:

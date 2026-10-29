@@ -1,7 +1,7 @@
 //! The estate's runtime set-points and host organs (row medulla-settings).
 //! One reader behind three doors: `medulla state`, the socket's `state`, GET /api/v1/admin/state.
 //! read() writes nothing; a source it cannot read is null (UNKNOWN), never off. set_halt (increment 2) writes
-//! the halt for serve alone, after its tier-1 and decider check.
+//! the halt for serve alone, after its tier-1 and decider check; settings.rs (increment 3) the settings.
 use nos_contract::wire::{ActRecord, EstateState, Organ, SetPoint};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -31,7 +31,9 @@ pub fn loops_paused_file() -> PathBuf {
 }
 
 pub fn read() -> EstateState {
-    EstateState { halt: set_point(&halt_file()), loops_paused: set_point(&loops_paused_file()), organs: organs(), act: None }
+    let repo = std::env::var_os("NOS_REPO_ROOT").filter(|v| !v.is_empty()).map(PathBuf::from);
+    EstateState { halt: set_point(&halt_file()), loops_paused: set_point(&loops_paused_file()), organs: organs(),
+                  settings: crate::settings::read(repo.as_deref()), act: None }
 }
 
 /// The halt written (increment 2; serve's halt/lift_halt, after its tier-1 and decider check): the shape
@@ -68,6 +70,16 @@ pub fn set_halt(on: bool, by: &str, reason: Option<&str>) -> Result<(), String> 
 /// ~/.nos/secrets.yml as `nos halt` reads it, so no plist holds it. Not recorded is said, never fatal.
 /// `by` is the person the kernel named on the socket; Wing records it as operator_username.
 pub fn record(on: bool, by: &str, wing_url: &str) -> ActRecord {
+    act(if on { "halt" } else { "resume" }, serde_json::json!({"by": by}), wing_url)
+}
+
+/// A setting's change, sent as the halt is: POST /api/v1/admin/setting {by, key, change}, which Wing
+/// only records (the store is the set-point).
+pub fn record_setting(key: &str, change: &serde_json::Value, by: &str, wing_url: &str) -> ActRecord {
+    act("setting", serde_json::json!({"by": by, "key": key, "change": change}), wing_url)
+}
+
+fn act(verb: &str, body: serde_json::Value, wing_url: &str) -> ActRecord {
     let not = |why: String| ActRecord { recorded: false, why: Some(why) };
     let secrets = PathBuf::from(std::env::var_os("HOME").unwrap_or_default()).join(".nos/secrets.yml");
     let token = std::fs::read_to_string(&secrets).ok().and_then(|t| t.lines().find_map(|l| {
@@ -77,8 +89,8 @@ pub fn record(on: bool, by: &str, wing_url: &str) -> ActRecord {
         return not(format!("no wing_halt_token in {} (a converge with --tags wing mints it)", secrets.display()));
     };
     let base = if wing_url.is_empty() { "http://127.0.0.1:9000" } else { wing_url.trim_end_matches('/') };
-    let url = format!("{base}/api/v1/admin/{}", if on { "halt" } else { "resume" });
-    match crate::serve::agent(10).post(&url).header("authorization", &format!("Bearer {token}")).send_json(serde_json::json!({"by": by})) {
+    let url = format!("{base}/api/v1/admin/{verb}");
+    match crate::serve::agent(10).post(&url).header("authorization", &format!("Bearer {token}")).send_json(body) {
         Err(e) => not(format!("Wing did not answer at {url}: {e}")),
         Ok(r) if r.status().is_success() => ActRecord { recorded: true, why: None },
         Ok(r) => not(format!("Wing refused it (HTTP {})", r.status().as_u16())),
@@ -94,6 +106,13 @@ pub fn lines(s: &EstateState) -> Vec<String> {
         None => format!("{name}: UNKNOWN ({} unreadable)", p.file),
     };
     let mut out = vec![point("halt", &s.halt), point("loops paused", &s.loops_paused)];
+    match &s.settings {
+        None => out.push(format!("settings: UNKNOWN ({} unreadable)", crate::settings::GENOME)),
+        Some(all) => out.extend(all.iter().map(|(k, v)| match v {
+            serde_json::Value::Null => format!("setting {k}: UNKNOWN (its file unreadable, or MEDULLA_DATA_DIR unset)"),
+            v => format!("setting {k}: {v}"),
+        })),
+    }
     out.extend(s.organs.iter().map(|o| {
         let r = match o.running { Some(true) => "running", Some(false) => "stopped", None => "UNKNOWN" };
         format!("organ {}: {r} ({})", o.name, o.label)

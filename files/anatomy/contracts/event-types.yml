@@ -13,6 +13,7 @@ subsets:
 types:
   - admin_emergency_halt
   - admin_emergency_resume
+  - admin_setting_set
   - agent_approval_decision
   - agent_approval_request
   - agent_binding_disarmed

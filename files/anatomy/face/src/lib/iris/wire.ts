@@ -302,7 +302,9 @@ export type EstateState = {
 	halt: SetPoint;
 	loops_paused: SetPoint;
 	organs: { name: string; label: string; running: boolean | null }[];
-	/** Only on the answer to halt / lift_halt (v14): whether Wing recorded the act. */
+	/** Each setting state/genome/settings.yml names (v15); a value null is UNKNOWN, the map null when the genome is. */
+	settings: { [key: string]: Value } | null;
+	/** Only on the answer to halt / lift_halt (v14) or setting (v15): whether Wing recorded the act. */
 	act?: { recorded: boolean; why?: string };
 };
 
@@ -357,6 +359,7 @@ export type ToThalamus =
 	| { t: 'state' }
 	| { t: 'halt'; reason?: string }
 	| { t: 'lift_halt' }
+	| { t: 'setting'; key: string; value: Value }
 	| { t: 'workspace_save'; doc: { [k: string]: unknown } }
 	| { t: 'catalogue' }
 	| { t: 'limbs'; limbs: Limb[] }

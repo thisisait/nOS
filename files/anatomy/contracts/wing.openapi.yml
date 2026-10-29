@@ -59,6 +59,26 @@ paths:
       security:
         - BearerAuth:
             - wing.operator
+  /api/v1/admin/setting:
+    post:
+      summary: the record of a setting the medulla set (record-only)
+      operationId: Admin_setting_post
+      tags:
+        - Admin
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
+        '404':
+          description: Not found
+      security:
+        - BearerAuth:
+            - wing.operator
   /api/v1/admin/state:
     get:
       summary: is a halt active, and the job counts

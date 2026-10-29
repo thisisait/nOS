@@ -1,0 +1,28 @@
+# The settings genome — every runtime set-point a person may change (row medulla-settings,
+# operator rulings 2026-10-25). A setting is a set-point, not the record: the medulla writes it
+# (MEDULLA_DATA_DIR/estate/<name>.json, or people/<uid>/<name>.json, thalamus/src/settings.rs)
+# and sends every change to Wing as an event; a change Wing does not record still holds.
+# The medulla refuses a key this file does not name. Adding one is a proposal, like a gate.
+#
+# Per-setting fields:
+#   scope    estate (one value for the estate) | person (one per uid)
+#   type     map: an object of entries, changed one entry at a time ({key: entry} sets it,
+#            {key: null} removes it); serve stamps each entry's `by` (the kernel's person) and
+#            `at`, the caller sends only `reason`
+#   default  the value while no file holds one
+#   set_by   who may change it over the socket: a tier and, at decider, a listed decider
+#            executable (NOS_DECIDER_EXES) as the kernel names the peer
+#   readers  who acts on it; each reads the same file
+version: 1
+settings:
+  pulse.paused:
+    scope: estate
+    type: map
+    entry: {by: person, at: time, reason: "text?"}   # job_id -> who paused it, when, why
+    default: {}
+    set_by: {tier: 1, at: decider}
+    readers:
+      - medulla pulse scheduler (medulla/src/pulse/mod.rs hold)
+      - Wing's due feed (PulseRepository::listDue), which Pulse's daemon and the medulla poll
+    says: A job paused by hand. It is not due and does not fire until unpaused; the halt and
+      the loops pause hold beside it.

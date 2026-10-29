@@ -1,5 +1,5 @@
 {
-  "contract_version": 14,
+  "contract_version": 15,
   "to_thalamus": [
     {"case": "first turn opens a session", "msg": {"t": "turn", "session": null, "text": "find rows about backups in the roadmap"}},
     {"case": "turn in a session", "msg": {"t": "turn", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "text": "set its status to done"}},
@@ -31,6 +31,8 @@
     {"case": "a decider halts the estate", "msg": {"t": "halt", "reason": "upgrade drill"}},
     {"case": "a decider halts without a reason", "msg": {"t": "halt"}},
     {"case": "a decider lifts the halt", "msg": {"t": "lift_halt"}},
+    {"case": "a decider pauses a job", "msg": {"t": "setting", "key": "pulse.paused", "value": {"backup:nightly": {"reason": "vendor outage"}}}},
+    {"case": "a decider unpauses a job", "msg": {"t": "setting", "key": "pulse.paused", "value": {"backup:nightly": null}}},
     {"case": "the pupil saves the person's workspace", "msg": {"t": "workspace_save", "doc": {"version": 2, "active": "ws1", "chat": {"x": 24, "y": 24, "w": 420, "h": 560, "open": true}, "workspaces": [{"id": "ws1", "name": "Workspace", "widgets": []}]}}},
     {"case": "the shell asks for the person's catalogue", "msg": {"t": "catalogue"}},
     {"case": "the face declares its limbs", "msg": {"t": "limbs", "limbs": [{"app": "desktop", "action": "open_app", "params": {"slug": {"type": "string", "required": true}}, "writes": false, "says": "Open a face app, or bring its window to the front"}, {"app": "desktop", "action": "arrange", "params": {"mode": {"type": "enum", "values": ["half-v", "thirds", "2x2", "none"], "required": true}}, "writes": false, "says": "Tile the front windows (half-v, thirds, 2x2) or stop tiling (none)"}, {"app": "files", "action": "rename", "params": {"path": {"type": "string", "required": true}, "to": {"type": "string", "required": true}, "overwrite": {"type": "boolean"}}, "writes": true, "says": "Rename a file"}]}},
@@ -122,8 +124,8 @@
     {"case": "Iris acts in the face", "msg": {"t": "act", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "act": "5e4d3c2b-1a09-4f8e-9d7c-6b5a4f3e2d1c", "app": "desktop", "action": "open_app", "params": {"slug": "tables"}}},
     {"case": "an action awaits approval", "msg": {"t": "approval_request", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "approval": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d", "component": {"kind": "action_approval", "props": {"app": "files", "action": "rename", "params": {"path": "/notes/a.md", "to": "b.md"}, "says": "Rename a file"}}}},
     {"case": "the local model is in memory", "msg": {"t": "model_state", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "loaded": true}},
-    {"case": "the estate is halted, a loop pause is off, one organ unknown", "msg": {"t": "state", "halt": {"on": true, "since": "2026-10-28T09:00:00Z", "file": "/Users/alice/.nos/halt"}, "loops_paused": {"on": false, "file": "/Users/alice/.nos/loops-paused"}, "organs": [{"name": "thalamus", "label": "eu.thisisait.nos.thalamus", "running": true}, {"name": "pulse", "label": "eu.thisisait.nos.pulse", "running": false}, {"name": "cortex", "label": "eu.thisisait.nos.cortex", "running": null}]}},
-    {"case": "the answer to a halt Wing did not record", "msg": {"t": "state", "halt": {"on": true, "since": "2026-10-28T09:05:00Z", "reason": "upgrade drill", "file": "/Users/alice/.nos/halt"}, "loops_paused": {"on": false, "file": "/Users/alice/.nos/loops-paused"}, "organs": [], "act": {"recorded": false, "why": "Wing refused it (HTTP 403)"}}}
+    {"case": "the estate is halted, a loop pause is off, one organ unknown, one job paused", "msg": {"t": "state", "halt": {"on": true, "since": "2026-10-28T09:00:00Z", "file": "/Users/alice/.nos/halt"}, "loops_paused": {"on": false, "file": "/Users/alice/.nos/loops-paused"}, "organs": [{"name": "thalamus", "label": "eu.thisisait.nos.thalamus", "running": true}, {"name": "pulse", "label": "eu.thisisait.nos.pulse", "running": false}, {"name": "cortex", "label": "eu.thisisait.nos.cortex", "running": null}], "settings": {"pulse.paused": {"backup:nightly": {"by": "alice", "at": "2026-10-29T08:00:00Z", "reason": "vendor outage"}}}}},
+    {"case": "the answer to a halt Wing did not record, the settings genome unreadable", "msg": {"t": "state", "halt": {"on": true, "since": "2026-10-28T09:05:00Z", "reason": "upgrade drill", "file": "/Users/alice/.nos/halt"}, "loops_paused": {"on": false, "file": "/Users/alice/.nos/loops-paused"}, "organs": [], "settings": null, "act": {"recorded": false, "why": "Wing refused it (HTTP 403)"}}}
   ],
   "refused": [
     {"case": "unknown component kind is shown, not dropped", "line": "{\"t\":\"render\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"component\":{\"kind\":\"pie_chart\",\"props\":{}}}"},
@@ -277,6 +279,7 @@
     {"case": "the shell names the actor", "line": "{\"t\":\"turn\",\"session\":null,\"text\":\"hi\",\"actor\":\"user:akadmin\"}"},
     {"case": "a halt reason of two lines", "line": "{\"t\":\"halt\",\"reason\":\"drill\\nand more\"}"},
     {"case": "a halt names who halts", "line": "{\"t\":\"halt\",\"by\":\"bob\"}"},
+    {"case": "a setting key that is not dotted lowercase", "line": "{\"t\":\"setting\",\"key\":\"Pulse.Paused\",\"value\":{}}"},
     {"case": "decision outside the two words", "line": "{\"t\":\"approval_decision\",\"approval\":\"7d1c2b3a-4e5f-4a6b-9c8d-1e2f3a4b5c6d\",\"decision\":\"maybe\",\"note\":null}"},
     {"case": "turn session is not a uuid", "line": "{\"t\":\"turn\",\"session\":\"../x\",\"text\":\"hi\"}"},
     {"case": "a widget spec with two keys", "line": "{\"t\":\"widget\",\"widget\":\"w1\",\"spec\":{\"rows\":{\"table\":\"expenses\"},\"form\":{\"table\":\"expenses\"}},\"trigger\":\"click\"}"},

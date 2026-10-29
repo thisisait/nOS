@@ -176,8 +176,9 @@ the halt still stands and the CLI says the act is NOT recorded.
 `wing_halt_token` in `~/.nos/secrets.yml` (or `WING_HALT_TOKEN`). It is minted
 random on the first converge (`--tags wing` mints the row), never derived from
 the password prefix, and rendered into no container or agent env. Agents run as
-their own macOS user and cannot read `~/.nos`. `wing.halt` reaches halt and
-resume and no other operator verb. Wing records the act as `admin_emergency_halt`
+their own macOS user and cannot read `~/.nos`. `wing.halt` reaches halt,
+resume and the record-only POST `/api/v1/admin/setting` (a setting the medulla
+set, e.g. `medulla pause <job>`), and no other operator verb. Wing records the act as `admin_emergency_halt`
 / `admin_emergency_resume` with `actor_id = wing-halt` (the bearer) and
 `operator_username` = the person (`{"by"}`: the medulla's kernel identity, or the
 shell's `$USER`), so `/admin` lists it beside the page's own acts.

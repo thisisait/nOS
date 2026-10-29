@@ -56,6 +56,10 @@ pub enum ToThalamus {
     },
     /// The same decider lifts the halt (v14): serve removes the file; `resume` is a session's word already.
     LiftHalt,
+    /// A tier-1 decider changes one setting the genome names (v15, state/genome/settings.yml): serve
+    /// writes it, sends Wing the change and answers `state` with `act`, or `refused` with the store untouched.
+    /// For a map setting `value` is the change: {entry: {reason?}} sets one, {entry: null} removes it.
+    Setting { key: String, value: serde_json::Value },
     /// The face's answer to an `act`: ok and what it returned, or why not.
     Acted {
         act: String,
@@ -218,7 +222,10 @@ pub struct EstateState {
     pub halt: SetPoint,
     pub loops_paused: SetPoint,
     pub organs: Vec<Organ>,
-    /// Only on the answer to halt / lift_halt (v14): whether Wing recorded the act; absent on a read.
+    /// Every setting the genome names, by name (v15); a value null is UNKNOWN (its file unreadable),
+    /// the whole map null when the genome itself is unreadable.
+    pub settings: Option<BTreeMap<String, serde_json::Value>>,
+    /// Only on the answer to halt / lift_halt (v14) or setting (v15): whether Wing recorded the act; absent on a read.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub act: Option<ActRecord>,
 }
@@ -680,6 +687,10 @@ pub fn decode_to_thalamus(line: &str) -> Result<ToThalamus, String> {
         }
         ToThalamus::Halt { reason: Some(r) } if r.chars().count() > 300 || r.contains('\n') => {
             return Err("a halt reason is one line of at most 300 chars".into());
+        }
+        ToThalamus::Setting { key, .. } if !key.split('.').all(|w| !w.is_empty() && w.bytes().all(|b| b.is_ascii_lowercase() || b == b'_'))
+            || key.len() > 64 => {
+            return Err("a setting key is dotted lowercase words of at most 64 chars".into());
         }
         ToThalamus::WorkingFor { scope } => need_scope(scope)?,
         ToThalamus::ModelPick { backend, model } => need_model(backend, model)?,

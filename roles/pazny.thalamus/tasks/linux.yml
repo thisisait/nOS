@@ -16,6 +16,7 @@
     - { path: "{{ thalamus_home }}/bin", mode: '0755' }
     - { path: "{{ thalamus_log_dir }}", mode: '0700' }
     - { path: "{{ thalamus_data_dir }}", mode: '0700' }
+    - { path: "{{ medulla_data_dir }}", mode: '0700' }
     - { path: "{{ thalamus_build_cache }}/target", mode: '0755' }
     - { path: "{{ thalamus_build_cache }}/registry", mode: '0755' }
 

@@ -140,6 +140,8 @@ VALID_TYPES = {
     "agent_question_asked", "agent_question_answered",
     #   Big-red-button platform halt (A12 — /admin emergency control).
     "admin_emergency_halt", "admin_emergency_resume",
+    #   A setting the medulla set (state/genome/settings.yml), recorded by Wing only.
+    "admin_setting_set",
     #   E2E journey telemetry (A13 — non-interactive end-to-end testing).
     "e2e_journey_start", "e2e_journey_step", "e2e_journey_end",
     # ── Agentic upgrade→migration→coexistence epic — the 8 NEW types (B1) ───

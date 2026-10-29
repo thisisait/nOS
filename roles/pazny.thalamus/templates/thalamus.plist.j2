@@ -49,6 +49,9 @@
         <key>MEDULLA_HTTP_PORT</key>
         <string>{{ medulla_http_port }}</string>
 {% endif %}
+        <!-- The settings store serve writes (src/settings.rs, state/genome/settings.yml); Wing reads the same path. -->
+        <key>MEDULLA_DATA_DIR</key>
+        <string>{{ medulla_data_dir }}</string>
         <!-- The table serve answers for the model's "roadmap" (src/serve.rs table_id). -->
         <key>NOS_ROADMAP_TABLE_ID</key>
         <string>{{ thalamus_roadmap_table_id }}</string>

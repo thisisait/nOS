@@ -163,6 +163,13 @@ has no record-only mode. The answer is `state` with `act {recorded, why?}`: serv
 file, then sends Wing POST `/api/v1/admin/{halt,resume}` with the `wing-halt` bearer read from
 `~/.nos/secrets.yml`. Gate: `medulla/tests/halt.rs`.
 
+A setting (`setting {key, value}`, wire v15; `medulla pause <job> [--reason …]|unpause <job>`)
+is checked the same way. The key must be one `state/genome/settings.yml` names (today
+`pulse.paused`). Serve writes `MEDULLA_DATA_DIR/estate/<key>.json` (`medulla_data_dir`, kept
+by a data blank and backed up as `dir-medulla`) and sends Wing the change as a record-only
+POST `/api/v1/admin/setting` (event `admin_setting_set`). Both schedulers hold a paused job:
+`medulla pulse` and Wing's due feed read the same file. Gate: `medulla/tests/settings.rs`.
+
 What path identity cannot stop: anything that runs code inside a listed binary. Both are
 signed with the local identity but without the hardened runtime (`codesign --options
 runtime`), so `DYLD_INSERT_LIBRARIES` or a debugger attach by the same user still decides

@@ -10,6 +10,7 @@ use App\Model\PulseRepository;
 /**
  * POST /api/v1/admin/halt    — the emergency halt (every unpaused Pulse job)
  * POST /api/v1/admin/resume  — lift ONLY emergency halts; manual pauses stay
+ * POST /api/v1/admin/setting — the record of a setting the medulla set (record-only)
  * GET  /api/v1/admin/state   — is a halt active, and the job counts
  *
  * The same act as the /admin Latte page (AdminPresenter), reachable when the
@@ -18,9 +19,9 @@ use App\Model\PulseRepository;
  */
 final class AdminPresenter extends BaseApiPresenter
 {
-	protected array $operatorActions = ['halt', 'resume'];
+	protected array $operatorActions = ['halt', 'resume', 'setting'];
 
-	/** wing.halt carries these two verbs and no other operator decision. */
+	/** wing.halt carries the halt, the resume and the record of a setting the medulla set; no other operator decision. */
 	protected array $operatorScopes = ['wing.operator', 'wing.halt'];
 
 	public function __construct(
@@ -53,6 +54,24 @@ final class AdminPresenter extends BaseApiPresenter
 		$actor = $this->requireActorId();
 		$affected = $this->pulse->emergencyResumeAll();
 		$this->record('admin_emergency_resume', $actor, ['jobs_unhalted' => $affected], $this->claimedBy());
+	}
+
+	/**
+	 * POST /api/v1/admin/setting — record a setting the medulla changed (state/genome/settings.yml).
+	 * Record-only: the medulla's store is the set-point; this writes the event and nothing else.
+	 */
+	public function actionSetting(): void
+	{
+		$this->requireMethod('POST');
+		$actor = $this->requireActorId();
+		$body = $this->getJsonBody();
+		$key = $body['key'] ?? null;
+		$change = $body['change'] ?? null;
+		if (!is_string($key) || !preg_match('/^[a-z_]+(\.[a-z_]+)*$/', $key) || strlen($key) > 64
+			|| !is_array($change) || $change === [] || array_is_list($change)) {
+			$this->sendError('a setting is {key, change}: a dotted lowercase key and an object of entries');
+		}
+		$this->record('admin_setting_set', $actor, ['key' => $key, 'change' => $change], $this->claimedBy());
 	}
 
 	public function actionState(): void

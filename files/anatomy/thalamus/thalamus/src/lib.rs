@@ -9,6 +9,7 @@ pub mod ledger;
 pub mod relay;
 pub mod septum;
 pub mod serve;
+pub mod settings;
 pub mod shell;
 pub mod state;
 pub mod store;

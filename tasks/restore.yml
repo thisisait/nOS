@@ -100,6 +100,7 @@
       paperclip: "{{ paperclip_data_dir | default(ansible_facts['env']['HOME'] + '/paperclip') }}"
       paperclip-workspaces: "{{ paperclip_workspaces_dir | default(ansible_facts['env']['HOME'] + '/paperclip-workspaces') }}"
       thalamus-people: "{{ thalamus_data_dir | default(nos_data_root ~ '/platform/services/thalamus/data') }}/people"
+      medulla: "{{ medulla_data_dir | default(nos_data_root ~ '/platform/services/medulla/data') }}"
       uptime-kuma: "{{ uptime_kuma_data_dir | default(ansible_facts['env']['HOME'] + '/uptime-kuma') }}"
       homeassistant: "{{ homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant') }}"
       openwebui: "{{ openwebui_data_dir | default(ansible_facts['env']['HOME'] + '/openwebui') }}"

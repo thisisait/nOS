@@ -22,6 +22,8 @@ fn main() -> ExitCode {
         (_, Some("state")) => state(&args[1..]),
         (_, Some("halt")) => halt(&args[1..], true),
         (_, Some("resume")) => halt(&args[1..], false),
+        (_, Some("pause")) => pause(&args[1..], true),
+        (_, Some("unpause")) => pause(&args[1..], false),
         (_, Some("--version")) => {
             println!("medulla {}", env!("CARGO_PKG_VERSION"));
             ExitCode::SUCCESS
@@ -31,7 +33,7 @@ fn main() -> ExitCode {
 }
 
 fn usage() -> ExitCode {
-    eprintln!("usage: medulla thalamus [serve --data-dir <dir>] | medulla wing serve --db <wing.db> --port <n> | medulla pulse plan --db <wing.db> | medulla state [--json] | medulla halt [--reason <text>] | medulla resume | medulla --version");
+    eprintln!("usage: medulla thalamus [serve --data-dir <dir>] | medulla wing serve --db <wing.db> --port <n> | medulla pulse plan --db <wing.db> | medulla state [--json] | medulla halt [--reason <text>] | medulla resume | medulla pause <job> [--reason <text>] | medulla unpause <job> | medulla --version");
     ExitCode::from(2)
 }
 
@@ -66,15 +68,32 @@ fn state(args: &[String]) -> ExitCode {
 /// decider check is the one that applies; this CLI never writes the file. Exit 0 set and recorded, 3 set
 /// but NOT recorded, 1 refused (the file untouched), 69 the thalamus did not answer.
 fn halt(args: &[String], on: bool) -> ExitCode {
-    use nos_contract::wire::{decode_to_shell, encode, ToShell, ToThalamus};
-    use std::io::{BufRead, Write};
+    use nos_contract::wire::ToThalamus;
     let msg = match (on, args) {
         (true, []) => ToThalamus::Halt { reason: None },
         (true, [f, r]) if f == "--reason" => ToThalamus::Halt { reason: Some(r.clone()) },
         (false, []) => ToThalamus::LiftHalt,
         _ => return usage(),
     };
-    let verb = if on { "halt" } else { "resume" };
+    ask(if on { "halt" } else { "resume" }, &msg)
+}
+
+/// `medulla pause <job> [--reason …]` / `medulla unpause <job>`: the socket's setting pulse.paused, one
+/// entry; serve stamps who and when. Exits as halt's do.
+fn pause(args: &[String], on: bool) -> ExitCode {
+    let entry = match (on, args) {
+        (true, [_]) => serde_json::json!({}),
+        (true, [_, f, r]) if f == "--reason" => serde_json::json!({"reason": r}),
+        (false, [_]) => serde_json::Value::Null,
+        _ => return usage(),
+    };
+    let value = serde_json::json!({ args[0].as_str(): entry });
+    ask(if on { "pause" } else { "unpause" }, &nos_contract::wire::ToThalamus::Setting { key: "pulse.paused".into(), value })
+}
+
+fn ask(verb: &str, msg: &nos_contract::wire::ToThalamus) -> ExitCode {
+    use nos_contract::wire::{decode_to_shell, encode, ToShell};
+    use std::io::{BufRead, Write};
     let home = std::path::PathBuf::from(std::env::var_os("HOME").unwrap_or_default());
     let sock = thalamus::serve::socket_path(std::env::var("THALAMUS_SOCKET").ok().as_deref(), &home,
                                             std::path::Path::new(thalamus::serve::SHARED_SOCKET));
@@ -82,7 +101,7 @@ fn halt(args: &[String], on: bool) -> ExitCode {
         let mut s = std::os::unix::net::UnixStream::connect(&sock)?;
         // Wing's record has 10 s; past this the halt may or may not be set, and the caller reads state.
         s.set_read_timeout(Some(std::time::Duration::from_secs(20)))?;
-        s.write_all(encode(&msg).as_bytes())?;
+        s.write_all(encode(msg).as_bytes())?;
         let mut line = String::new();
         std::io::BufReader::new(s).read_line(&mut line)?;
         Ok(line)

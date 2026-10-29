@@ -1269,6 +1269,7 @@ impl Server {
                 Ok(ToThalamus::State) => send(&mut out, &ToShell::State(crate::state::read())),
                 Ok(ToThalamus::Halt { reason }) => self.set_halt(&who, &mut out, &peer, true, reason.as_deref()),
                 Ok(ToThalamus::LiftHalt) => self.set_halt(&who, &mut out, &peer, false, None),
+                Ok(ToThalamus::Setting { key, value }) => self.set_setting(&who, &mut out, &peer, &key, &value),
                 Ok(ToThalamus::Acted { act, .. }) => refuse(&mut out, &format!("no act {act} waits for an answer")),
                 Ok(ToThalamus::WorkspaceSave { doc }) => {
                     if let Err(why) = store::write(&store::path(&self.data, &who.uid(), "workspace"), &doc) {
@@ -1710,14 +1711,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
     /// may_decide: a halt has no record-only mode. Refused leaves the file as it was.
     fn set_halt(&self, who: &Person, out: &mut dyn Write, peer: &Value, on: bool, reason: Option<&str>) {
         let verb = if on { "halt" } else { "lift_halt" };
-        let refusal = if !self.is_tier1(who) {
-            Some(format!("{} is not tier 1, so the halt is not theirs to set", who.username))
-        } else if self.deciders.is_empty() {
-            Some("no decider is listed (thalamus_decider_exes), so nobody sets the halt over the socket".into())
-        } else {
-            decider_refusal(&self.deciders, peer["exe"].as_str())
-        };
-        let set = match refusal {
+        let set = match self.setter_refusal(who, peer, "the halt") {
             Some(why) => Err(why),
             None => crate::state::set_halt(on, &who.username, reason).map_err(|e| format!("the halt file is not writable: {e}")),
         };
@@ -1727,6 +1721,37 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         }
         let act = crate::state::record(on, &who.username, &self.wing.url);
         self.say(format!("{verb} by {} {peer}: {}", who.username, act.why.as_deref().unwrap_or("recorded")));
+        send(out, &ToShell::State(EstateState { act: Some(act), ..crate::state::read() }));
+    }
+
+    /// Who sets a set-point over the socket: a tier-1 person at a listed decider. An empty decider list
+    /// admits nobody (no record-only mode), and Linux none (decider_refusal).
+    fn setter_refusal(&self, who: &Person, peer: &Value, what: &str) -> Option<String> {
+        if !self.is_tier1(who) {
+            Some(format!("{} is not tier 1, so {what} is not theirs to set", who.username))
+        } else if self.deciders.is_empty() {
+            Some(format!("no decider is listed (thalamus_decider_exes), so nobody sets {what} over the socket"))
+        } else {
+            decider_refusal(&self.deciders, peer["exe"].as_str())
+        }
+    }
+
+    /// setting (row medulla-settings, increment 3): as the halt — the decider check, the store written
+    /// (settings.rs, the genome's key only), then Wing sent the change; the answer is the new state.
+    fn set_setting(&self, who: &Person, out: &mut dyn Write, peer: &Value, key: &str, change: &Value) {
+        let set = match self.setter_refusal(who, peer, key) {
+            Some(why) => Err(why),
+            None => crate::settings::set(&self.repo, key, change, &who.username),
+        };
+        let written = match set {
+            Ok(w) => w,
+            Err(why) => {
+                self.say(format!("refused a setting {key} from {} {peer}: {why}", who.username));
+                return send(out, &ToShell::Refused { reason: why, widget: None });
+            }
+        };
+        let act = crate::state::record_setting(key, &written, &who.username, &self.wing.url);
+        self.say(format!("setting {key} {written} by {} {peer}: {}", who.username, act.why.as_deref().unwrap_or("recorded")));
         send(out, &ToShell::State(EstateState { act: Some(act), ..crate::state::read() }));
     }
 

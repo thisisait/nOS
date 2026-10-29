@@ -34,7 +34,7 @@ final class PulseRepository
 
 	/**
 	 * Returns jobs that are due to fire. "Due" means:
-	 *   - paused = 0
+	 *   - paused = 0, and not held by the medulla's pulse.paused (storePaused)
 	 *   - removed_at IS NULL (soft-delete filter)
 	 *   - next_fire_at IS NULL  OR  next_fire_at <= datetime('now')
 	 *
@@ -46,16 +46,19 @@ final class PulseRepository
 	 */
 	public function listDue(int $limit = 50): array
 	{
+		$held = self::storePaused();
+		if ($held === null) {
+			return [];  // the store does not read: every job holds, as the medulla's hold()
+		}
+		$due = $this->db->table('pulse_jobs')
+			->where('paused', 0)
+			->where('removed_at', null)
+			->where('next_fire_at IS NULL OR next_fire_at <= ?', date('c'));
+		if ($held !== []) {
+			$due->where('id NOT', $held);
+		}
 		$rows = [];
-		foreach (
-			$this->db->table('pulse_jobs')
-				->where('paused', 0)
-				->where('removed_at', null)
-				->where('next_fire_at IS NULL OR next_fire_at <= ?', date('c'))
-				->order('next_fire_at')
-				->limit($limit)
-				->fetchAll() as $row
-		) {
+		foreach ($due->order('next_fire_at')->limit($limit)->fetchAll() as $row) {
 			$rows[] = [
 				'id'             => $row->id,
 				'plugin_name'    => $row->plugin_name,
@@ -627,6 +630,24 @@ final class PulseRepository
 	// before the move: they count as halted and resume lifts them; manual
 	// pauses are never touched. Gate: test_the_halt_is_one_file.py.
 	private const HALT_REASON_PREFIX = 'emergency-halt:';
+
+	/**
+	 * The jobs pulse.paused holds (state/genome/settings.yml): the medulla writes
+	 * MEDULLA_DATA_DIR/estate/pulse.paused.json, this reads it until the cutover (thalamus
+	 * settings.rs paused() reads the same file). [] = none or no store; null = it does not read.
+	 *
+	 * @return list<string>|null
+	 */
+	public static function storePaused(): ?array
+	{
+		$dir = (string) getenv('MEDULLA_DATA_DIR');
+		$file = rtrim($dir, '/') . '/estate/pulse.paused.json';
+		if ($dir === '' || !file_exists($file)) {
+			return [];
+		}
+		$map = json_decode((string) @file_get_contents($file));  // objects stay objects: `[]` is no map
+		return $map instanceof \stdClass ? array_map('strval', array_keys(get_object_vars($map))) : null;
+	}
 
 	public static function haltFile(): string
 	{

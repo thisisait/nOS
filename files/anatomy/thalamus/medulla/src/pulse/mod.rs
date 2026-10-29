@@ -43,14 +43,15 @@ pub fn plan(db: &str, now: i64) -> Result<(), String> {
     Ok(())
 }
 
-/// daemon.py::paused_hold: every job while ~/.nos/halt exists, loop:* while ~/.nos/loops-paused does.
-fn hold(job: &str) -> Option<&'static str> {
+/// daemon.py::paused_hold: every job while ~/.nos/halt exists, loop:* while ~/.nos/loops-paused does;
+/// and a job pulse.paused holds (the medulla's settings store, as PulseRepository::listDue reads it).
+fn hold(job: &str) -> Option<String> {
     if thalamus::state::halt_file().is_file() {
-        Some("emergency halt")
+        Some("emergency halt".into())
     } else if job.starts_with("loop:") && thalamus::state::loops_paused_file().is_file() {
-        Some("loops paused")
+        Some("loops paused".into())
     } else {
-        None
+        thalamus::settings::paused(job)
     }
 }
 
@@ -176,7 +177,7 @@ pub fn fire(j: &Job, nerve: Option<&nerve::Nerve>) -> Result<serde_json::Value, 
         n.start(job, &run_id, &now()).map_err(|e| format!("{job}: not fired, the start was not recorded ({e})"))?;
     }
     let held = hold(job);
-    let r = match held {
+    let r = match &held {
         Some(why) => exec::RunResult { exit_code: 3, duration_ms: 0, stdout_tail: String::new(), timed_out: false,
                                        stderr_tail: format!("PAUSED: {why} — {job} held") },
         None => {

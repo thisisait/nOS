@@ -89,6 +89,8 @@ mailpit_data_dir: "{{ nos_data_root }}/platform/services/mailpit/data"
 maps_data_dir: "{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/shared/maps/data"
 mariadb_data_dir: "{{ nos_data_root }}/platform/services/mariadb/data"
 mcpo_data_dir: "{{ nos_data_root }}/platform/services/mcpo/data"
+# The medulla's settings store (state/genome/settings.yml; thalamus settings.rs): estate/ and people/<uid>/.
+medulla_data_dir: "{{ nos_data_root }}/platform/services/medulla/data"
 metabase_data_dir: "{{ nos_data_root }}/platform/services/metabase/data"
 nextcloud_data_dir: "{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/shared/nextcloud/data"
 nodered_data_dir: "{{ nos_data_root }}/platform/services/nodered/data"
@@ -3286,6 +3288,8 @@ backup_dirs_to_dump:
   - { name: "paperclip-workspaces", flag: install_paperclip, empty_ok: true, path: "{{ paperclip_workspaces_dir }}" }
   # Iris: each person's workspace, conversations, sessions and watches (thalamus store.rs).
   - { name: "thalamus-people", flag: install_thalamus, empty_ok: true, path: "{{ thalamus_data_dir }}/people" }
+  # The medulla's settings (a job paused by hand): set-points a person chose, which no dump holds.
+  - { name: "medulla", flag: install_thalamus, empty_ok: true, path: "{{ medulla_data_dir }}" }
   - { name: "uptime-kuma", flag: install_uptime_kuma, path: "{{ uptime_kuma_data_dir | default(ansible_facts['env']['HOME'] + '/uptime-kuma') }}" }
   - { name: "homeassistant", flag: install_homeassistant, path: "{{ homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant') }}" }
   - { name: "openwebui", flag: install_openwebui, path: "{{ openwebui_data_dir | default(ansible_facts['env']['HOME'] + '/openwebui') }}" }

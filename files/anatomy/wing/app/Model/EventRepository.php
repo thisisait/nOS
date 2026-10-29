@@ -68,6 +68,8 @@ final class EventRepository
 		// row's result_json records {jobs_affected, operator_username, note?}, the
 		// resume row records {jobs_unhalted, operator_username, note?}.
 		'admin_emergency_halt', 'admin_emergency_resume',
+		//   admin_setting_set — the medulla set a setting (state/genome/settings.yml); result_json {key, change, operator_username}.
+		'admin_setting_set',
 		// E2E journey telemetry (A13 — non-interactive end-to-end testing, 2026-05-07).
 		//   e2e_journey_start  — fixture setup, one per journey run
 		//   e2e_journey_step   — each named step within the journey (HTTP call,

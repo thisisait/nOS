@@ -52,6 +52,7 @@
       - state/cortex-lang.gbnf
       - state/app-scaffolds.yml
       - state/keap-tables/
+      - state/genome/settings.yml
   block:
     - name: "[pazny.medulla] Its directories"
       ansible.builtin.file:

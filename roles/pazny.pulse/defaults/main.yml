@@ -54,6 +54,7 @@ pulse_medulla_env:
   PATH: "{{ pulse_python | dirname }}:{{ homebrew_prefix | default('/opt/homebrew') }}/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
   NOS_REPO_ROOT: "{{ nos_main_checkout }}"
   MEDULLA_PULSE: "1"
+  MEDULLA_DATA_DIR: "{{ medulla_data_dir }}"   # fire() holds a job pulse.paused names
   MEDULLA_WING_TOKEN: "{{ medulla_wing_api_token }}"
   NOS_WING_URL: "{{ pulse_wing_api_base }}"
   PULSE_MEDULLA_JOBS: "{{ pulse_medulla_jobs | join(',') }}"
