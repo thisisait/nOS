@@ -1,0 +1,118 @@
+---
+# One PostgreSQL database back from its own pg_dump (postgres-<db>.sql.gz), the
+# rest of the cluster untouched — so a blank that cleans Authentik keeps Paperclip.
+# Included per pg_item from tasks/restore.yml. Dry run unless restore_confirm=true.
+# The live db is RENAMED to <db>_pre_restore_<date>, never dropped; a failed
+# replay renames it back. The operator drops the snapshot when satisfied.
+
+- name: "[Restore][postgres-db] Resolve {{ pg_item.source }}"
+  ansible.builtin.set_fact:
+    pgdb: "{{ pg_item.source | regex_replace('^postgres-', '') }}"
+    pgdb_decl: "{{ backup_postgres_dbs | selectattr('db', 'equalto', pg_item.source | regex_replace('^postgres-', '')) | list | first | default({}) }}"
+    pgdb_file: "{{ restore_workdir }}/{{ pg_item.file }}"
+    pgdb_snap: "{{ pg_item.source | regex_replace('^postgres-', '') }}_pre_restore_{{ restore_date | replace('-', '') }}"
+    pgdb_pg: "{{ postgresql_container_name }}"
+    pgdb_act: "{{ (restore_confirm | default(false) | bool) and not ansible_check_mode }}"
+
+- name: "[Restore][postgres-db] Refuse a db backup_postgres_dbs does not declare"
+  ansible.builtin.fail:
+    msg: "{{ pgdb }} is not in backup_postgres_dbs — nothing says which containers to stop or what to verify."
+  when: pgdb_decl | length == 0
+
+# Row counts the dump carries, read from its COPY blocks (one row per line in text COPY).
+- name: "[Restore][postgres-db] Count {{ pgdb }} rows in the dump"
+  ansible.builtin.shell: |
+    set -o pipefail
+    gunzip -c "{{ pgdb_file }}" | awk -v want="{{ pgdb_decl.verify | join(' ') }}" '
+      BEGIN { n = split(want, w, " "); for (i = 1; i <= n; i++) c[w[i]] = 0 }
+      /^COPY public\./ { t = $2; sub(/^public\./, "", t); on = (t in c); next }
+      on && $0 == "\\." { on = 0; next }
+      on { c[t]++ }
+      END { for (k in c) print k, c[k] }'
+  args:
+    executable: /bin/bash
+  register: pgdb_expected
+  changed_when: false
+  check_mode: false  # read-only; the plan needs it under --check
+
+- name: "[Restore][postgres-db] Plan"
+  ansible.builtin.debug:
+    msg: |
+      {{ 'RESTORING' if pgdb_act | bool else 'DRY RUN (without --check and with -e restore_confirm=true it acts)' }}: database {{ pgdb }}
+        from:     {{ pgdb_file }}
+        stop:     {{ pgdb_decl.containers | join(', ') }}
+        live db:  renamed to {{ pgdb_snap }} (kept; drop it when satisfied)
+        dump has: {{ pgdb_expected.stdout_lines | join(', ') }}
+        untouched: every other database in {{ pgdb_pg }}
+
+- name: "[Restore][postgres-db] Replace {{ pgdb }}"
+  when: pgdb_act | bool
+  block:
+    - name: "[Restore][postgres-db] Stop {{ pgdb_decl.containers | join(', ') }}"
+      ansible.builtin.command: "docker stop {{ pgdb_decl.containers | join(' ') }}"
+      changed_when: true
+      failed_when: false
+
+    - name: "[Restore][postgres-db] Snapshot the live {{ pgdb }} by rename (non-clobbering)"
+      # Owner read first so the new db keeps it; an existing snapshot (a re-run) is kept, the db dropped.
+      ansible.builtin.shell: |
+        set -euo pipefail
+        q() { docker exec -i {{ pgdb_pg }} psql -U postgres -v ON_ERROR_STOP=1 -Atqc "$1"; }
+        owner="$(q "select pg_get_userbyid(datdba) from pg_database where datname='{{ pgdb }}'")"
+        q "select pg_terminate_backend(pid) from pg_stat_activity where datname='{{ pgdb }}' and pid <> pg_backend_pid()" >/dev/null
+        if [ -n "$(q "select 1 from pg_database where datname='{{ pgdb_snap }}'")" ]; then
+          q 'DROP DATABASE IF EXISTS "{{ pgdb }}" WITH (FORCE)'
+        elif [ -n "$owner" ]; then
+          q 'ALTER DATABASE "{{ pgdb }}" RENAME TO "{{ pgdb_snap }}"'
+        fi
+        q "CREATE DATABASE \"{{ pgdb }}\" OWNER \"${owner:-{{ pgdb }}}\""
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: "[Restore][postgres-db] Replay the dump into {{ pgdb }}"
+      ansible.builtin.shell: |
+        set -o pipefail
+        gunzip -c "{{ pgdb_file }}" | docker exec -i {{ pgdb_pg }} psql -U postgres -d "{{ pgdb }}" -v ON_ERROR_STOP=1 -1 -q >/dev/null
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: "[Restore][postgres-db] Count {{ pgdb }} rows now"
+      ansible.builtin.shell: |
+        for t in {{ pgdb_decl.verify | join(' ') }}; do
+          echo "$t $(docker exec {{ pgdb_pg }} psql -U postgres -d "{{ pgdb }}" -Atqc "select count(*) from public.\"$t\"")"
+        done
+      register: pgdb_actual
+      changed_when: false
+
+    - name: "[Restore][postgres-db] Verify the restored counts equal the dump's"
+      ansible.builtin.assert:
+        that: (pgdb_actual.stdout_lines | sort) == (pgdb_expected.stdout_lines | sort)
+        fail_msg: "{{ pgdb }} restored {{ pgdb_actual.stdout_lines }}, dump has {{ pgdb_expected.stdout_lines }}"
+        success_msg: "{{ pgdb }} restored: {{ pgdb_actual.stdout_lines | join(', ') }}"
+
+    - name: "[Restore][postgres-db] Append to summary"
+      ansible.builtin.set_fact:
+        restore_summary: "{{ restore_summary + [{'source': pg_item.source, 'status': 'ok (' ~ (pgdb_actual.stdout_lines | join(', ')) ~ '; snapshot ' ~ pgdb_snap ~ ')',
+                             'duration_s': 0, 'size_bytes': 0}] }}"
+  rescue:
+    - name: "[Restore][postgres-db] FAILED — put the snapshot back"
+      ansible.builtin.shell: |
+        q() { docker exec -i {{ pgdb_pg }} psql -U postgres -Atqc "$1"; }
+        if [ -n "$(q "select 1 from pg_database where datname='{{ pgdb_snap }}'")" ]; then
+          q 'DROP DATABASE IF EXISTS "{{ pgdb }}" WITH (FORCE)' && q 'ALTER DATABASE "{{ pgdb_snap }}" RENAME TO "{{ pgdb }}"'
+        fi
+      args:
+        executable: /bin/bash
+      changed_when: true
+      failed_when: false
+
+    - name: "[Restore][postgres-db] Re-raise the failure"
+      ansible.builtin.fail:
+        msg: "{{ pgdb }} restore failed; the pre-restore database was put back. See the task above."
+  always:
+    - name: "[Restore][postgres-db] Start {{ pgdb_decl.containers | join(', ') }}"
+      ansible.builtin.command: "docker start {{ pgdb_decl.containers | join(' ') }}"
+      changed_when: true
+      failed_when: false

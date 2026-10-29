@@ -82,6 +82,7 @@ Expected entries (each `.enc` when encryption is on — the default):
 ```
 mariadb.sql.gz                 # mariadb-dump --all-databases
 postgres.sql.gz                # pg_dumpall
+postgres-paperclip.sql.gz      # pg_dump of one db (backup_postgres_dbs; see §4)
 volume-<name>.tar.gz           # Docker named volume(s), if any configured
 dir-gitea.tar.gz               # host-bind git repos
 dir-gitlab.tar.gz
@@ -139,6 +140,38 @@ host:
 ansible-playbook main.yml -K --tags restore \
     -e restore_date=2026-04-20 -e restore_state=true
 ```
+
+### One PostgreSQL database alone — after a blank, bring Paperclip back
+
+The backup writes `postgres-<db>.sql.gz` (a plain `pg_dump` of that one
+database) beside `postgres.sql.gz` for every entry in `backup_postgres_dbs`
+(default.config.yml; today: `paperclip`). `restore_postgres_dbs=<db>` replaces
+only that database: it stops the declared containers, renames the live db to
+`<db>_pre_restore_<YYYYMMDD>` (kept, never dropped), creates it again with the
+same owner, replays the dump, checks that the row counts of the declared tables
+equal the dump's, and starts the containers. Every other database is left alone.
+Without `-e restore_confirm=true`, or under `--check`, it only prints its plan.
+
+Paperclip's encrypted secrets (`company_secrets`) open only with the master key
+at `<paperclip_data_dir>/instances/default/secrets/master.key`. A blank wipes
+that dir and Paperclip makes a new key on first start, so restore the dir too:
+`dir-paperclip` carries the old key. It runs before the db.
+
+```bash
+# after `nos --remove=data --confirm` and the converge; ~/backups/staging survives the blank
+nos --tags restore --check -e restore_date=$(date +%F) -e restore_from=~/backups/staging \
+    -e restore_sources=dir-paperclip,dir-paperclip-workspaces -e restore_postgres_dbs=paperclip
+# the same, acting (asks ENTER for the dirs, restore_confirm for the db)
+nos --tags restore -e restore_date=$(date +%F) -e restore_from=~/backups/staging \
+    -e restore_sources=dir-paperclip,dir-paperclip-workspaces -e restore_postgres_dbs=paperclip \
+    -e restore_confirm=true
+# when Paperclip looks right, drop the snapshot of the empty post-blank db
+docker exec infra-postgresql-1 psql -U postgres -c 'DROP DATABASE "paperclip_pre_restore_YYYYMMDD"'
+```
+
+`restore_date` only names the snapshot for a local set. The staging dir holds the
+last run only: take the blank right after a backup, or restore from a dated
+RustFS/restic copy instead.
 
 ### Verify the restore actually replayed
 

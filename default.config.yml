@@ -3372,6 +3372,11 @@ backup_coverage:
 
 backup_databases_mariadb: "{{ install_mariadb | default(false) }}"        # the installed set (manifest forced_by applied at run time)
 backup_databases_postgresql: "{{ install_postgresql | default(false) }}"
+# Databases that also get their own pg_dump (postgres-<db>.sql.gz) beside the dumpall, so one can
+# come back alone: a blank that cleans Authentik can keep Paperclip (restore_postgres_dbs=<db>).
+# containers = stopped while it is replaced; verify = tables whose row count must match the dump.
+backup_postgres_dbs:
+  - { db: paperclip, flag: install_paperclip, containers: [devops-paperclip-1], verify: [companies, projects, issues] }
 # A9 result notification (W6.1): backup outcome → Wing inbox (fail=high,
 # success=info heartbeat) via Bone HMAC. Empty wing_events_hmac_secret
 # (fresh install pre-regen) silently disables.

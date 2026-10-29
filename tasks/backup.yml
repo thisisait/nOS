@@ -246,6 +246,9 @@
       }
       {% if backup_databases_postgresql | bool %}
       stage_dump postgres docker exec -i -e "PGPASSWORD=${NOS_PG_PASSWORD}" {{ postgresql_container_name }} pg_dumpall -U {{ postgresql_root_user }}
+      {% for d in backup_postgres_dbs if lookup('vars', d.flag, default=false) | bool %}
+      stage_dump postgres-{{ d.db }} docker exec -i -e "PGPASSWORD=${NOS_PG_PASSWORD}" {{ postgresql_container_name }} pg_dump -U {{ postgresql_root_user }} -d {{ d.db }}
+      {% endfor %}
       {% endif %}
       {% if backup_databases_mariadb | bool %}
       stage_dump mariadb docker exec -i {{ mariadb_container_name }} mariadb-dump --all-databases \

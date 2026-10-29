@@ -24,6 +24,8 @@ PG_CONTAINER="{{ backup_postgresql_container }}"
 PG_USER="{{ backup_postgresql_user }}"
 PG_PASSWORD="{{ backup_postgresql_password }}"
 DO_POSTGRES="{{ 'true' if backup_databases_postgresql | bool else 'false' }}"
+# One pg_dump per declared db beside the dumpall, so it restores alone (restore_postgres_dbs).
+PG_DBS=({% for d in backup_postgres_dbs | default([]) if lookup('vars', d.flag, default=false) | bool %}"{{ d.db }}" {% endfor %})
 
 ESPOCRM_DB_CONTAINER="{{ backup_espocrm_db_container | default('espocrm-db') }}"
 ESPOCRM_VOLUMES=({% for v in backup_espocrm_volumes | default([]) %}"{{ v }}" {% endfor %})
@@ -409,6 +411,34 @@ run_postgres() {
         log "postgresql: FAILED (rc=${rc})"
         status_append "postgres" 0 "${dur}" 0
     fi
+}
+
+run_postgres_dbs() {
+    [[ "${DO_POSTGRES}" != "true" ]] && return 0
+    local date_str key start dur rc size db
+    date_str="$(date -u +%Y-%m-%d)"
+    for db in ${PG_DBS[@]+"${PG_DBS[@]}"}; do
+        key="${date_str}/postgres-${db}.sql.gz${ENC_SUFFIX}"
+        if [[ "${OVERWRITE_SAME_DAY}" != "true" ]] && already_exists_today "${date_str}/postgres-${db}.sql.gz"; then
+            status_append "postgres-${db}" 0 0 1
+            continue
+        fi
+        start=$(now_ms)
+        docker exec -i -e "PGPASSWORD=${PG_PASSWORD}" "${PG_CONTAINER}" pg_dump -U "${PG_USER}" -d "${db}" \
+          | gzip -c \
+          | encrypt_stream "${key}" \
+          | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
+        rc=$?
+        dur=$(( $(now_ms) - start ))
+        if [[ "${rc}" -eq 0 ]]; then
+            size=$(s3_size "${key}")
+            log "postgres-${db}: OK (${size} bytes in ${dur}ms)"
+            status_append "postgres-${db}" "${size}" "${dur}" 1
+        else
+            log "postgres-${db}: FAILED (rc=${rc})"
+            status_append "postgres-${db}" 0 "${dur}" 0
+        fi
+    done
 }
 
 run_espocrm() {
@@ -1150,6 +1180,7 @@ main() {
 
     run_mariadb
     run_postgres
+    run_postgres_dbs
     run_espocrm
     run_volumes
     run_dirs

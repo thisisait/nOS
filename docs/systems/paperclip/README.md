@@ -42,3 +42,12 @@
 - **PostgreSQL** (`install_postgresql: true`) — required backend.
 - OpenClaw gateway, reached out to at `PAPERCLIP_OPENCLAW_URL` (`http://host.docker.internal:{{ openclaw_gateway_port }}`, default `18789`).
 - Authentik (route gate, optional).
+
+## Backup and a blank
+
+The `paperclip` database is dumped alone every night (`postgres-paperclip.sql.gz`,
+beside the dumpall). The data dir rides `dir-paperclip`, which carries the secrets
+master key (`instances/default/secrets/master.key`) that `company_secrets` rows need.
+A blank wipes both, and Paperclip makes a new key on first start. To bring the company
+back after a blank, see [docs/restore-runbook.md](../../restore-runbook.md) §4,
+"One PostgreSQL database alone".

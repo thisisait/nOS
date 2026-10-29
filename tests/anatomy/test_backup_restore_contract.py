@@ -65,6 +65,9 @@ def _backup_sources() -> set[str]:
         if body.startswith("dir-"):
             sources.add("dir-*")
             continue
+        if body.startswith("postgres-"):
+            sources.add("postgres-*")
+            continue
         stem = _EXT_RE.sub("", body)
         sources.add(stem)
     return sources
@@ -80,6 +83,8 @@ def _restore_handlers() -> set[str]:
         handlers.add("volume-*")
     if re.search(r"selectattr\(\s*'source'\s*,\s*'match'\s*,\s*'\^dir-'", text):
         handlers.add("dir-*")
+    if re.search(r"selectattr\(\s*'source'\s*,\s*'match'\s*,\s*'\^postgres-'", text):
+        handlers.add("postgres-*")
     return handlers
 
 

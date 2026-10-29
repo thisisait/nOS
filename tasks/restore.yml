@@ -22,6 +22,9 @@
 #       [-e restore_sources=mariadb,postgres,volume-mariadb_data] \
 #       [-e restore_from=~/backups/<dir>]   # a local set instead of S3: remove=data
 #                                           # wipes RustFS, ~/backups/staging survives
+#       [-e restore_postgres_dbs=paperclip [-e restore_confirm=true]]
+#           # ONE postgres db from its postgres-<db>.sql.gz, nothing else; dry run
+#           # unless restore_confirm=true. Declared in backup_postgres_dbs.
 #
 # If restore_sources is omitted, every source at that date is restored.
 # ==============================================================================
@@ -65,8 +68,11 @@
     restore_workdir: "{{ restore_from | expanduser if restore_from is defined
                          else ansible_facts['env']['HOME'] ~ '/restore-temp/' ~ restore_date }}"
     restore_started_at: "{{ ansible_date_time.iso8601 | default(lookup('pipe', 'date -Iseconds')) }}"
+    # A CLI string "a,b" or a list; each db asks for its postgres-<db> source.
     restore_requested_sources: >-
-      {{ (restore_sources | default('') | string).split(',')
+      {{ ((restore_sources | default('') | string).split(',')
+          + (['postgres-'] | product(([restore_postgres_dbs | default([])] | flatten | join(',')).split(',')
+             | map('trim') | reject('equalto', '')) | map('join') | list))
          | map('trim') | reject('equalto', '') | list }}
     # Derived, not repeated — backup_alpine_image is the one declaration.
     restore_alpine_image: "{{ backup_alpine_image }}"
@@ -186,9 +192,10 @@
         {%- set noext = plain | regex_replace('\.sql\.gz$|\.tar\.gz$|\.json\.gz$|\.json$|\.gz$', '') -%}
         {%- set nots = noext | regex_replace('\.[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:-]+Z?$', '') -%}
         {%- set stem = aliases.get(nots, nots) -%}
-        {%- if (restore_requested_sources | length) == 0
-               or stem in restore_requested_sources
-               or plain in restore_requested_sources -%}
+        {#- a per-db dump only when asked for: the full restore replays the dumpall -#}
+        {%- if (stem is match('^postgres-') and stem in restore_requested_sources)
+               or (stem is not match('^postgres-') and ((restore_requested_sources | length) == 0
+                   or stem in restore_requested_sources or plain in restore_requested_sources)) -%}
           {%- set _ = plan.append({'s3file': f, 'file': plain, 'source': stem,
                                     'encrypted': f.endswith('.enc')}) -%}
         {%- endif -%}
@@ -236,7 +243,9 @@
       ║ There is NO undo. Take a fresh backup first if unsure.
       ║ Press ENTER to continue, Ctrl-C to abort.
       ╚══════════════════════════════════════════════════════════════════════╝
-  when: not ansible_check_mode and not (restore_auto_confirm | default(false) | bool)
+  when:
+    - not ansible_check_mode and not (restore_auto_confirm | default(false) | bool)
+    - restore_plan | rejectattr('source', 'match', '^postgres-') | list | length > 0  # those ask restore_confirm
 
 - name: "[Restore] Ensure restore work-dir exists"
   ansible.builtin.file:
@@ -897,6 +906,18 @@
   loop_control:
     label: "{{ item.source }}"
   ansible.builtin.include_tasks: _restore_dir.yml
+
+# 5g2. One PostgreSQL database (postgres-<db>.sql.gz) — restore_postgres_dbs ----
+# After the dirs: dir-paperclip carries Paperclip's secrets master.key, which a
+# blank regenerates; the app should meet its old key before its old rows.
+# Runs under --check too: it prints its plan and acts only on restore_confirm.
+
+- name: "[Restore][postgres-db] Replace one database from its own dump"
+  ansible.builtin.include_tasks: _restore_postgres_db.yml
+  loop: "{{ restore_plan | selectattr('source', 'match', '^postgres-') | list }}"
+  loop_control:
+    loop_var: pg_item
+    label: "{{ pg_item.source }}"
 
 # ── 6. Replay post.yml hooks for restored services ────────────────────────────
 # Best-effort: each role's post.yml is idempotent; re-running re-verifies
