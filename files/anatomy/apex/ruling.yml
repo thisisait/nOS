@@ -848,6 +848,9 @@ nodes:
   # 2026-10-12 reader:docker-pressure-status: memory pressure inside the
   # Docker VM. WITHHELD; the published set is unchanged.
   "reader:docker-pressure-status": withheld
+  # 2026-10-29 reader:container-status: containers Docker keeps restarting (Loki crash
+  # loop read healthy). WITHHELD; the published set is unchanged.
+  "reader:container-status": withheld
   # 2026-10-09 reader:e2e-status (e2e-results-persist): the last estate e2e run
   # read back from its JSONL record. WITHHELD; the published set is unchanged.
   "reader:e2e-status": withheld
