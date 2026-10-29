@@ -70,7 +70,8 @@ fn the_whole_shell_after_the_fixture_matches_its_snapshot() {
     for (_, m) in fixture() {
         app.apply(m);
     }
-    let mut t = Terminal::new(TestBackend::new(80, 40)).unwrap();
+    // 44 rows: the log scrolls, so each line a later sample adds (v15 settings: 3) pushes the oldest off the top.
+    let mut t = Terminal::new(TestBackend::new(80, 44)).unwrap();
     t.draw(|f| shell::draw(f, &app)).unwrap();
     let got = text(&t);
     assert!(got.contains("login carol has no row in the identity map"), "a refusal is shown, never dropped");

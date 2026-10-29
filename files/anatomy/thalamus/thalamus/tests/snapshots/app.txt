@@ -2,6 +2,10 @@ update nOS Roadmap (roadmap) / backup-restic-fork — nothing is written unless 
 u approve
   status: "open" -> "done"
   note: (empty) -> "landed"
+count: 4
+  from count over 4 rows of Expenses
+widget w6:
+  > 02 Formal Sciences — Mathematics, logic and computing.
 table expenses changed (row e3)
 refused: login carol has no row in the identity map
 refused (widget w2): no column `kinds` in Expenses; columns: when, kind, amount
