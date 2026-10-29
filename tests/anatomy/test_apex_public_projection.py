@@ -149,7 +149,7 @@ def test_a_new_node_is_withheld_never_published(artifact, ruling):
 
 def test_vanished_ruled_node_halts_the_build(artifact, ruling):
     mutated = copy.deepcopy(artifact)
-    del mutated["nodes"]["table:apps"]
+    del mutated["nodes"]["service:authentik"]  # a published node: its absence would be an oracle
     with pytest.raises(P.GateError, match="no longer in the artifact"):
         P.gate(mutated, ruling)
 

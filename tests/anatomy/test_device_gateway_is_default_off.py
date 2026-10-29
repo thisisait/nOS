@@ -66,8 +66,9 @@ def test_manifest_id_is_routed_ungated_with_justification():
 
 
 def test_new_graph_nodes_are_withheld():
-    text = RULING.read_text(encoding="utf-8")
-    assert '"service:device_gateway": withheld' in text
+    import yaml  # withheld = no `publish:` entry (withheld nodes are not listed since 2026-10-29)
+    nodes = yaml.safe_load(RULING.read_text(encoding="utf-8"))["nodes"]
+    assert not isinstance(nodes.get("service:device_gateway"), dict)
     # I-12: the daemon folded into its row; the label rides the row's node, withheld with it.
     graph = json.loads((REPO / "state" / "anatomy-graph.json").read_text(encoding="utf-8"))["nodes"]
     assert graph["service:device_gateway"].get("launchd_labels") == ["eu.thisisait.nos.device-gateway"]

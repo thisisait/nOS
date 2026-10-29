@@ -281,8 +281,9 @@ def test_check_unsigned_fails_before_coverage(mirror):
         graph_path.write_text(original)
 
 
-def test_check_refuses_unruled_nodes_without_writing(mirror):
-    """The 2026-09-14 miss: SIGNED, but D4 coverage fail — Ansible assert passed."""
+def test_an_unruled_node_is_withheld_by_the_check(mirror):
+    """D4 amended 2026-10-29: an unruled node is withheld, not a halt. It must still never reach
+    the page: --check names no unruled node and writes nothing."""
     ruling_path = mirror / "ruling.yml"
     doc = yaml.safe_load(ruling_path.read_text())
     doc["status"] = "SIGNED"
@@ -298,9 +299,8 @@ def test_check_refuses_unruled_nodes_without_writing(mirror):
     graph_path.write_text(json.dumps(graph))
     try:
         r = _run_check(mirror)
-        assert r.returncode == 2, f"expected exit 2 (UNRULED), got {r.returncode}: {r.stderr}"
-        assert "UNRULED" in r.stderr
-        assert "table:unruled-fixture" in r.stderr
+        assert "UNRULED" not in r.stderr, r.stderr
+        assert "unruled-fixture" not in r.stdout + r.stderr
         assert not (mirror / "dist").exists()
     finally:
         graph_path.write_text(original)
@@ -391,7 +391,8 @@ def test_the_attack_surface_records_the_public_path():
 # ---------------------------------------------------------------------------
 
 def test_the_ruling_withholds_the_apex_itself(ruling):
-    assert ruling["nodes"].get("service:apex") == "withheld", (
+    # Withheld nodes are not listed since 2026-10-29 (D4 amended): withheld = no `publish:` entry.
+    assert not isinstance(ruling["nodes"].get("service:apex"), dict), (
         "service:apex must stay withheld — publishing it would name the "
         "serving infrastructure of the very page a stranger is reading"
     )
