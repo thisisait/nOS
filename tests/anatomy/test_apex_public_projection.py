@@ -136,12 +136,15 @@ def test_stale_field_ruling_halts_the_build(artifact, ruling):
         P.gate(mutated, ruling)
 
 
-def test_new_node_halts_the_build(artifact, ruling):
+def test_a_new_node_is_withheld_never_published(artifact, ruling):
+    """Operator ruling 2026-10-29 (D4 amended): a node nobody ruled is withheld — it publishes
+    nothing and needs no signature; only a node ruled `publish:` reaches the page."""
     mutated = copy.deepcopy(artifact)
     mutated["nodes"]["service:zz_new"] = {"kind": "service", "source": "x",
-                                          "anchor": "0", "description": "x"}
-    with pytest.raises(P.GateError, match="UNRULED node"):
-        P.gate(mutated, ruling)
+                                          "anchor": "0", "description": "zz_new secret-name"}
+    P.gate(mutated, ruling)  # no UNRULED halt
+    page = P.public_json(mutated, ruling)
+    assert "zz_new" not in page and P.public_json(artifact, ruling) == page
 
 
 def test_vanished_ruled_node_halts_the_build(artifact, ruling):
