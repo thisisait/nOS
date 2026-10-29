@@ -62,7 +62,7 @@ def test_the_linux_env_carries_the_same_door():
     ctx = {"ansible_managed": "managed", "ansible_facts": {"env": {"HOME": "/h"}}, "nos_tools_venv": "/v", "nos_main_checkout": "/repo",
            "keap_proxy_shared_secret": "s", "thalamus_shared_socket": "/run/nos/thalamus.sock", "thalamus_roadmap_table_id": "rt",
            "authentik_rbac_tiers": _default_config()["authentik_rbac_tiers"], "thalamus_binding_env": {},
-           "thalamus_wing_api_token": "wt-1", "wing_port": 9000, "iris_startable_agents": ["conductor"]}
+           "thalamus_wing_api_token": "wt-1", "wing_port": 9000, "iris_startable_agents": ["conductor"], "medulla_data_dir": "/h/medulla"}
     text = env.from_string((ROLE / "templates" / "thalamus.env.j2").read_text()).render(**ctx)
     assert "NOS_SECRET_WING_TOKEN=wt-1\n" in text and "NOS_WING_URL=http://127.0.0.1:9000\n" in text
     assert "NOS_IRIS_STARTABLE_AGENTS=conductor\n" in text

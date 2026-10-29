@@ -74,7 +74,8 @@ def _ctx(system_user: str) -> dict:
            "ansible_facts": {"env": {"HOME": HOME}}, "ansible_managed": "managed",
            "nos_main_checkout": CHECKOUT, "nos_tools_venv": HOME + "/.nos/tools-venv",
            "keap_proxy_shared_secret": "s3cret", "authentik_rbac_tiers": cfg["authentik_rbac_tiers"],
-           "thalamus_roadmap_table_id": "rt", "thalamus_relay_port": cfg["thalamus_relay_port"]}
+           "thalamus_roadmap_table_id": "rt", "thalamus_relay_port": cfg["thalamus_relay_port"],
+           "medulla_data_dir": HOME + "/nos/platform/services/medulla/data"}
     defaults = yaml.safe_load((REPO / "roles/pazny.thalamus/defaults/main.yml").read_text())
     for k in ("thalamus_launchd_label", "thalamus_unit_name", "thalamus_shared_socket_dir", "thalamus_decider_exes",
               "thalamus_env_home", "thalamus_repo_root", "thalamus_env_path", "thalamus_shared_socket"):

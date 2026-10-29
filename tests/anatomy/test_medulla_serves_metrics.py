@@ -261,7 +261,7 @@ def _thalamus_env(**over) -> tuple[str, dict]:
     env = jinja2.Environment(undefined=jinja2.StrictUndefined)
     env.filters["bool"] = bool
     ctx = {"thalamus_launchd_label": "l", "thalamus_serve_bin": "/h/bin/nos-thalamus", "thalamus_home": "/h",
-           "thalamus_log_dir": "/h/log", "thalamus_data_dir": "/h/data", "nos_main_checkout": "/repo",
+           "thalamus_log_dir": "/h/log", "thalamus_data_dir": "/h/data", "medulla_data_dir": "/h/medulla", "nos_main_checkout": "/repo",
            "nos_tools_venv": "/v", "ansible_facts": {"env": {"HOME": "/h"}}, "keap_proxy_shared_secret": "s",
            "thalamus_shared_socket": "/s", "ansible_managed": "m", "thalamus_roadmap_table_id": "rt",
            "authentik_rbac_tiers": _default_config()["authentik_rbac_tiers"], "thalamus_binding_env": {},

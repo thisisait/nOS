@@ -54,7 +54,8 @@ def _plist(**over) -> dict:
     env.filters["bool"] = bool
     ctx = {"thalamus_launchd_label": "eu.thisisait.nos.thalamus", "thalamus_bin": "/h/thalamus/bin/thalamus", "thalamus_serve_bin": "/h/thalamus/bin/nos-thalamus",
            "thalamus_home": "/h/thalamus", "thalamus_log_dir": "/h/thalamus/log",
-           "thalamus_data_dir": "/n/platform/services/thalamus/data", "nos_main_checkout": "/repo",
+           "thalamus_data_dir": "/n/platform/services/thalamus/data", "medulla_data_dir": "/n/platform/services/medulla/data",
+           "nos_main_checkout": "/repo",
            "nos_tools_venv": "/h/.nos/tools-venv", "homebrew_prefix": "/opt/homebrew",
            "ansible_facts": {"env": {"HOME": "/h"}}, "keap_proxy_shared_secret": "s3cret", "keap_port": 8091,
            "ollama_enabled": True, "install_ollama": True, "ollama_model": "qwen3:14b", "ollama_small_model": "hermes3:8b",

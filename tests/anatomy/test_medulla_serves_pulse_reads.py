@@ -265,7 +265,7 @@ def test_php_and_the_medulla_answer_every_read_the_same(tmp_path, monkeypatch):
         assert ctype == "application/json; charset=utf-8", f"{where}: {ctype}"
         mine, theirs = _comparable(body), _comparable(want["body"])
         if path == "/api/v1/admin/state" and code == 200:  # PHP's keys, then the struct every door says
-            assert {"halt", "loops_paused", "organs"} | set(theirs) == set(mine) and mine["halt"]["on"], mine
+            assert {"halt", "loops_paused", "organs", "settings"} | set(theirs) == set(mine) and mine["halt"]["on"], mine
             mine = {k: mine[k] for k in theirs}
         assert mine == theirs, f"{where}:\nmedulla {body[:1500]}\nphp     {want['body'][:1500]}"
         codes[(c["auth"], code)] = codes.get((c["auth"], code), 0) + 1
