@@ -21,6 +21,14 @@ common:
     kvstore:
       store: inmemory
 
+# Measured 2026-10-29: a 03:01 burst left two 536 MB WAL segments; every start replayed them into
+# the 1 GiB container, was OOM-killed (137) and restarted — about every 15 s from 03:40, logs lost.
+# Loki's replay ceiling defaults to 4 GB; past this one it flushes and goes on. A WAL copy
+# replayed in the same image and 1 GiB limit: 384MB was OOM-killed at 20 s, 64MB ready at 40 s (420 MiB).
+ingester:
+  wal:
+    replay_memory_ceiling: {{ loki_wal_replay_ceiling | default('64MB') }}
+
 query_range:
   results_cache:
     cache:
@@ -43,8 +51,9 @@ ruler:
 
 limits_config:
   retention_period: {{ loki_retention | default('744h') }}
-  ingestion_rate_mb: 16
-  ingestion_burst_size_mb: 32
+  # 16 MB/s let ~1 GB in within two minutes (10-29); a burst past this is refused (429), not stored.
+  ingestion_rate_mb: 4
+  ingestion_burst_size_mb: 8
   max_query_series: 10000
   max_query_lookback: 0    # 0 = unlimited
   volume_enabled: true
