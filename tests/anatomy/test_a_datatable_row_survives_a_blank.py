@@ -140,3 +140,34 @@ def test_a_row_and_its_status_come_back_after_a_blank(tmp_path):
         assert again.returncode == 0 and "WROTE 0 rows" in again.stdout, again.stdout + again.stderr
     finally:
         new.stop()
+
+
+def test_a_row_pointing_at_a_later_table_comes_back(tmp_path):
+    """Blank 2026-10-30: 40 assay-stock-moves rows were refused ("points at table … which does
+    not exist") because assay-items came later in the manifest and rows were retried per table."""
+    bundles = tmp_path / "keap-tables"
+    items, moves = "1a1a1a1a-0000-4000-8000-000000000001", "2b2b2b2b-0000-4000-8000-000000000002"
+    old = Keap()
+    try:
+        old.call("POST", "/api/tables", {"id": items, "title": "items", "visibility": "shared",
+                                         "schema": {"columns": GIT_HALF}}, user="pazny")
+        old.call("POST", f"/api/tables/{items}/rows", {"id": "i1", "values": {"slug": "i1", "title": "bolt"}})
+        ref = {"key": "item", "label": "Item", "kind": "rowRef", "refTable": items}
+        old.call("POST", "/api/tables", {"id": moves, "title": "moves", "visibility": "shared",
+                                         "schema": {"columns": GIT_HALF + [ref]}}, user="pazny")
+        old.call("POST", f"/api/tables/{moves}/rows", {"id": "m1", "values": {"slug": "m1", "title": "in", "item": "i1"}})
+        since = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - 5))
+        assert old.tool("export", "--confirm", "--since", since, bundles=bundles).returncode == 0
+    finally:
+        old.stop()
+    bundle = next(p for p in bundles.iterdir() if p.is_dir())
+    man = json.loads((bundle / "manifest.json").read_text())
+    man["tables"].sort(key=lambda t: t["id"] != moves)   # the referring table first, as on 10-30
+    (bundle / "manifest.json").write_text(json.dumps(man))
+    new = Keap()
+    try:
+        got = new.tool("import", "--confirm", "--since", since, bundles=bundles)
+        assert got.returncode == 0 and "0 failed" in got.stdout, got.stdout + got.stderr
+        assert _row(new, moves, "m1")["values"]["item"] == "i1"
+    finally:
+        new.stop()
