@@ -216,6 +216,7 @@ def import_(bundle, confirm, since):
     live_ids = {t["id"] for t in get("/api/tables")["data"]}
     print(f"bundle {bundle} ({manifest['exported_at']}, {len(manifest['tables'])} tables) -> {keap_api.human_base()}")
     failed = written = 0
+    pending = []  # (table id, row, delta), written once every table exists
     for entry in manifest["tables"]:
         with open(os.path.join(bundle, f"{entry['id']}.json")) as fh:
             data = json.load(fh)
@@ -239,22 +240,24 @@ def import_(bundle, confirm, since):
               f"{len(todo)} rows to write, {len(data['rows']) - len(todo)} unchanged")
         if not confirm:
             continue
-        # rowRef cells may point at a row a later one in the list creates: retry
-        # the refused ones until a pass makes no progress.
-        while todo:
-            left = []
-            for r, d in todo:
-                st, resp = call("POST", f"/api/tables/{q(tid)}/rows", {"id": r["id"], "values": d})
-                if st != 200:
-                    left.append((r, d, f"{st}: {resp.get('error', resp)}"))
-                else:
-                    written += 1
-            if len(left) == len(todo):
-                for r, _, err in left:
-                    print(f"    FAILED {tid}/{r['id']}: {err}")
-                failed += len(left)
-                break
-            todo = [(r, d) for r, d, _ in left]
+        pending += [(tid, r, d) for r, d in todo]
+    # Rows are written after EVERY table exists: a rowRef may point at a table later in the
+    # manifest (blank 2026-10-30: 40 assay-stock-moves rows refused, assay-items came after).
+    # Refused rows are retried until a pass makes no progress.
+    while pending:
+        left = []
+        for tid, r, d in pending:
+            st, resp = call("POST", f"/api/tables/{q(tid)}/rows", {"id": r["id"], "values": d})
+            if st != 200:
+                left.append((tid, r, d, f"{st}: {resp.get('error', resp)}"))
+            else:
+                written += 1
+        if len(left) == len(pending):
+            for tid, r, _, err in left:
+                print(f"    FAILED {tid}/{r['id']}: {err}")
+            failed += len(left)
+            break
+        pending = [(tid, r, d) for tid, r, d, _ in left]
     print("DRY RUN — nothing written; --confirm applies it" if not confirm
           else f"WROTE {written} rows, {failed} failed")
     return 2 if failed else 0
