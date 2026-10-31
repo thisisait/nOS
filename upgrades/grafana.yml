@@ -168,7 +168,7 @@ recipes:
 
   - id: "grafana-12-current"
     from_regex: "^12\\."
-    to: "12.4.10"          # == installed (REM-252; was 12.4.9)
+    to: "12.4.14"          # == installed (CVE-2026-100105/-88858/-88967; was 12.4.10)
     severity: security
     changelog_url: "https://grafana.com/docs/grafana/latest/release-notes/"
     notes: |

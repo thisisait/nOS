@@ -99,7 +99,7 @@ recipes:
 
   - id: "redis-8-current"
     from_regex: "^8\\."
-    to: "8.10.1"           # == installed (was 8.0, an EOL branch BELOW the pin)
+    to: "8.10.3"           # == installed (was 8.10.1; 8.0 before that, EOL)
     severity: security
     changelog_url: "https://github.com/redis/redis/releases"
     notes: |

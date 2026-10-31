@@ -1275,7 +1275,7 @@ mariadb_container_name: "infra-mariadb-1"
 # ==============================================================================
 
 redis_docker: false                    # true = Redis in Docker (for cross-stack access)
-redis_version: "8.10.1"                  # REM-216: coordinated ALL-BRANCH release 2026-08-17 — 8.10.1/8.8.2/8.6.6/8.4.6/8.2.9/7.4.11/7.2.16/6.2.24 published the same day; the estate sat one patch below it. Prior REM-103: re-pin off the EOL 8.0 branch, supersedes 7.4.6 CVE-2025-49844 (RediShell RCE)
+redis_version: "8.10.3"                  # 8.10.2 MULTI-after-ACL-revoke bypass, 8.10.3 cluster-bus PUBLISH heap overflow. Prior REM-216 8.10.1, REM-103 off EOL 8.0.
 redis_container_name: "infra-redis-1"   # live <stack>-<service>-1; used by upgrade recipe docker-exec
 
 # ==============================================================================
@@ -1333,7 +1333,7 @@ wordpress_db_user: "wordpress"
 wordpress_db_password: "{{ nos_derived_secrets.wordpress }}"
 wordpress_db_host: "127.0.0.1"          # ignored if install_mariadb=true (uses 'mariadb' from iiab_net)
 wordpress_table_prefix: "wp_"
-wordpress_version: "7.1.2"              # CVE-2026-87902 (9.2, unauth LFI->RCE).
+wordpress_version: "7.1.4"              # 7.1.3+7.1.4 security releases (unauth comment disclosure, upgrade-window RCE, stored XSS). Prior CVE-2026-87902 at 7.1.2.
 # The live container already RAN 7.1.2 (WP auto-updates in the volume) while the
 # image said 7.0.4 — a force-recreate would have restored vulnerable files under
 # a 7.1.2 database. No 7.0.x image exists past 7.0.4, so this branch hop IS the fix.
@@ -1548,7 +1548,7 @@ grafana_domain: "grafana{{ _host_alias_seg | default('') }}.{{ tenant_domain | d
 observability_hostname: "{{ ansible_facts['hostname'] }}"  # Hostname in Grafana labels
 
 # ── Docker image versions (observability + devops) ───────────────────────────
-grafana_version: "12.4.10"              # REM-252: 12.4.10 in-branch. Prior REM-226 CVE-2026-17183 at 12.4.9. [swept 12.4.9 2026-09-17]
+grafana_version: "12.4.14"              # CVE-2026-100105, -88858, -88967 (12.4.14). Prior REM-252 12.4.10. Prior REM-226 CVE-2026-17183 at 12.4.9. [swept 12.4.9 2026-09-17]
                                         # (v12.4.9 release body carries a literal `### Security`
                                         # section naming it; verified at the tag, not inferred from
                                         # the five-release 2026-08-18 wave). Same minor as the
