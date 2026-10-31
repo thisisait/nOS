@@ -86,13 +86,14 @@ def cmd_list(a) -> int:
 
 
 def cmd_create(a) -> int:
-    tpl = os.path.join(TABLES, f"{a.template}.table.yml")
+    # a path (a company keeps its table defs in its own repo) or a name under state/keap-tables
+    tpl = a.template if a.template.endswith(".table.yml") else os.path.join(TABLES, f"{a.template}.table.yml")
     if not os.path.exists(tpl):
-        _die(f"no template {a.template} (state/keap-tables/{a.template}.table.yml)")
+        _die(f"no template {a.template} (a .table.yml path, or state/keap-tables/{a.template}.table.yml)")
     d = yaml.safe_load(open(tpl, encoding="utf-8")) or {}
     body = {
         "title": a.title,
-        "description": a.description or f"{a.title} — a {a.template}-shaped table, created with nos dtt create-table",
+        "description": a.description or d.get("description") or f"{a.title} — a {a.template}-shaped table, created with nos dtt create-table",
         "driver": d.get("driver", "libsql"),
         "visibility": a.visibility,
         "schema": {"columns": d["schema"]["columns"]},
