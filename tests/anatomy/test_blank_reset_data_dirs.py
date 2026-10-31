@@ -140,6 +140,19 @@ def test_every_dir_var_is_removed_by_blank_or_declared_kept():
     assert not wrong_level, f"_removal_keep level disagrees with what remove=all removes: {wrong_level}"
 
 
+def test_downloaded_user_content_survives_a_blank():
+    """2026-10-30: a blank deleted the Kiwix ZIM library (Wikipedia, GBs; the
+    other host holds 596 GB) — downloaded content, not derived state. It is
+    kept at the data level like the book library; uninstall still takes it."""
+    env = _jinja()
+    ctx = _config_ctx(env)
+    dirs = _dir_vars(ctx)
+    data, _all, keep = _levels(env, ctx)
+    for var in ("kiwix_data_dir", "calibreweb_books_dir"):
+        assert not _covered(dirs[var], data), f"remove=data deletes {var} = {dirs[var]}"
+        assert keep.get(var, {}).get("level") == "all", f"{var} must be in _removal_keep at level all"
+
+
 def test_the_removal_set_names_no_dir_the_config_does_not_have():
     """A clause referencing a var the default layers no longer define wipes
     the fallback literal, i.e. usually nothing (calibreweb did exactly that)."""
