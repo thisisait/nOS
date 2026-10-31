@@ -22,8 +22,10 @@
   when: not ansible_check_mode
 
 - name: "[pazny.mariadb Post] Connection failed - diagnostics"
-  ansible.builtin.pause:
-    prompt: |-
+  # fail, not pause: every later task skips on a failed connection, so a converge nobody
+  # watched ended green with a dead MariaDB (2026-10-31).
+  ansible.builtin.fail:
+    msg: |-
       ══════════════════════════════════════════════════════════════════════
        MariaDB: root access denied ({{ mariadb_conn.msg | default('unknown error') }})
 
@@ -36,7 +38,7 @@
          rm -rf ~/mariadb/data/*
          docker compose -p infra up -d mariadb
          sleep 15
-         # pak stiskni ENTER
+         # pak spust konverge znovu
 
        Nebo rucni reset hesla:
          docker compose -p infra exec -T mariadb mariadbd-safe --skip-grant-tables &

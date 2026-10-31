@@ -15,7 +15,8 @@ import yaml
 REPO = Path(__file__).resolve().parents[2]
 
 # (file, task name) -> why it may wait. Each is a confirm gate with its own
-# opt-out (nos_assume_yes / auto_* / *_confirm), or a failure path (open).
+# opt-out (nos_assume_yes / auto_* / *_confirm). A failure path fails or warns, never waits
+# (2026-10-31: the last three, docker-prereqs x2 and mariadb, became debug / fail).
 ALLOWED = {
     ("main.yml", "[Prefix] Prompt for password prefix (interactive confirmed removal)"):
         "remove=… --confirm, skipped by nos_assume_yes",
@@ -31,12 +32,6 @@ ALLOWED = {
         "breaking upgrade, skipped by auto_upgrade",
     ("tasks/upgrade-engine.yml", "[Upgrade] Confirm session-risk upgrades (host_app / host_reboot)"):
         "host app / reboot upgrade, skipped by auto_migrate / upgrade_confirmed",
-    ("tasks/iiab/docker-prereqs.yml", "[Docker] Docker binary not found - waiting for manual fix"):
-        "failure path (no Docker); should fail instead — open",
-    ("tasks/iiab/docker-prereqs.yml", "[Docker] Docker daemon not responding - waiting for manual fix"):
-        "failure path (daemon down); should fail instead — open",
-    ("roles/pazny.mariadb/tasks/post.yml", "[pazny.mariadb Post] Connection failed - diagnostics"):
-        "failure path (root pw mismatch); should fail instead — open",
 }
 
 

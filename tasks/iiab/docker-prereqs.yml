@@ -61,9 +61,11 @@
   check_mode: false
   when: not (_docker_bin_stat.stat.exists | default(false))
 
-- name: "[Docker] Docker binary not found - waiting for manual fix"
-  ansible.builtin.pause:
-    prompt: |-
+- name: "[Docker] Docker binary not found"
+  # A warning, not a wait: no TTY (CI, an unattended converge) skipped the old pause anyway;
+  # the readiness gate below decides whether the stack layer runs.
+  ansible.builtin.debug:
+    msg: |-
 
       ══════════════════════════════════════════════════════════════════════
        Docker binary not found: {{ docker_bin }}
@@ -76,7 +78,7 @@
        Or fix the symlink (if Docker.app is on the SSD):
          ls -la /Applications/Docker.app
 
-       When docker is available, press ENTER
+       Then re-run the converge.
       ══════════════════════════════════════════════════════════════════════
   when:
     - not (_docker_bin_stat.stat.exists | default(false))
@@ -129,9 +131,9 @@
   failed_when: false
   check_mode: false
 
-- name: "[Docker] Docker daemon not responding - waiting for manual fix"
-  ansible.builtin.pause:
-    prompt: |-
+- name: "[Docker] Docker daemon not responding"
+  ansible.builtin.debug:
+    msg: |-
 
       ══════════════════════════════════════════════════════════════════════
        Docker daemon is not responding even after 90 s.
@@ -139,7 +141,7 @@
        Verify:
          {{ docker_bin }} info
 
-       Start Docker Desktop manually and press ENTER
+       Start Docker Desktop, then re-run the converge.
       ══════════════════════════════════════════════════════════════════════
   when:
     - docker_info.rc != 0
