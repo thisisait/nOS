@@ -13,4 +13,65 @@
 #            not-applicable  the affected code is not reachable in nOS (say how)
 #
 # The operator writes these; an agent proposes them in a PR, never commits one.
-judgements: []
+# Proposed 2026-10-31 from tools/advisory-status.py (HIGH/CRITICAL/KEV matches only — the rest never turn red).
+judgements:
+  - {id: GHSA-qcff-6669-j3gj, subject: "erpnext_version", verdict: not-applicable, until: 2027-01-31,
+     reason: "not deployed: install_erpnext is false in the estate (estate-status --config, 2026-10-31); re-judge when it is enabled (also parked as non-working)"}
+  - {id: GHSA-mp29-fjc5-h86p, subject: "erpnext_version", verdict: not-applicable, until: 2027-01-31,
+     reason: "not deployed: install_erpnext is false in the estate (estate-status --config, 2026-10-31); re-judge when it is enabled (also parked as non-working)"}
+  - {id: GHSA-c496-q7g2-62vv, subject: "erpnext_version", verdict: not-applicable, until: 2027-01-31,
+     reason: "not deployed: install_erpnext is false in the estate (estate-status --config, 2026-10-31); re-judge when it is enabled (also parked as non-working)"}
+  - {id: GHSA-q65v-fm9p-9vh3, subject: "erpnext_version", verdict: not-applicable, until: 2027-01-31,
+     reason: "not deployed: install_erpnext is false in the estate (estate-status --config, 2026-10-31); re-judge when it is enabled (also parked as non-working)"}
+  - {id: GHSA-cg5w-7g26-p3w9, subject: "erpnext_version", verdict: not-applicable, until: 2027-01-31,
+     reason: "not deployed: install_erpnext is false in the estate (estate-status --config, 2026-10-31); re-judge when it is enabled (also parked as non-working)"}
+  - {id: GHSA-82f7-87hm-852x, subject: "gitea_version", verdict: not-applicable, until: 2026-12-31,
+     reason: "fixed in 28.0.0 and the pin is 28.2.0; the reader mis-matches multi-bound ranges (roadmap: advisory-range-parse)"}
+  - {id: CVE-2026-110264, subject: "gitlab_version", verdict: not-applicable, until: 2027-01-31,
+     reason: "not deployed: install_gitlab is false in the estate (estate-status --config, 2026-10-31); re-judge when it is enabled"}
+  - {id: CVE-2026-112212, subject: "gitlab_version", verdict: not-applicable, until: 2027-01-31,
+     reason: "not deployed: install_gitlab is false in the estate (estate-status --config, 2026-10-31); re-judge when it is enabled"}
+  - {id: CVE-2026-15723, subject: "gitlab_version", verdict: not-applicable, until: 2027-01-31,
+     reason: "not deployed: install_gitlab is false in the estate (estate-status --config, 2026-10-31); re-judge when it is enabled"}
+  - {id: CVE-2026-14814, subject: "gitlab_version", verdict: not-applicable, until: 2027-01-31,
+     reason: "not deployed: install_gitlab is false in the estate (estate-status --config, 2026-10-31); re-judge when it is enabled"}
+  - {id: CVE-2026-16301, subject: "gitlab_version", verdict: not-applicable, until: 2027-01-31,
+     reason: "not deployed: install_gitlab is false in the estate (estate-status --config, 2026-10-31); re-judge when it is enabled"}
+  - {id: CVE-2026-81839, subject: "gitlab_version", verdict: not-applicable, until: 2027-01-31,
+     reason: "not deployed: install_gitlab is false in the estate (estate-status --config, 2026-10-31); re-judge when it is enabled"}
+  - {id: CVE-2026-84739, subject: "gitlab_version", verdict: not-applicable, until: 2027-01-31,
+     reason: "not deployed: install_gitlab is false in the estate (estate-status --config, 2026-10-31); re-judge when it is enabled"}
+  - {id: CVE-2026-92470, subject: "gitlab_version", verdict: not-applicable, until: 2027-01-31,
+     reason: "not deployed: install_gitlab is false in the estate (estate-status --config, 2026-10-31); re-judge when it is enabled"}
+  - {id: CVE-2025-14871, subject: "gitlab_version", verdict: not-applicable, until: 2027-01-31,
+     reason: "not deployed: install_gitlab is false in the estate (estate-status --config, 2026-10-31); re-judge when it is enabled"}
+  - {id: CVE-2026-1168, subject: "gitlab_version", verdict: not-applicable, until: 2027-01-31,
+     reason: "not deployed: install_gitlab is false in the estate (estate-status --config, 2026-10-31); re-judge when it is enabled"}
+  - {id: CVE-2026-78252, subject: "gitlab_version", verdict: not-applicable, until: 2027-01-31,
+     reason: "not deployed: install_gitlab is false in the estate (estate-status --config, 2026-10-31); re-judge when it is enabled"}
+  - {id: CVE-2026-13210, subject: "gitlab_version", verdict: not-applicable, until: 2027-01-31,
+     reason: "not deployed: install_gitlab is false in the estate (estate-status --config, 2026-10-31); re-judge when it is enabled"}
+  - {id: CVE-2026-88765, subject: "gitlab_version", verdict: not-applicable, until: 2027-01-31,
+     reason: "not deployed: install_gitlab is false in the estate (estate-status --config, 2026-10-31); re-judge when it is enabled"}
+  - {id: CVE-2026-18252, subject: "gitlab_version", verdict: not-applicable, until: 2027-01-31,
+     reason: "not deployed: install_gitlab is false in the estate (estate-status --config, 2026-10-31); re-judge when it is enabled"}
+  - {id: CVE-2026-10053, subject: "gitlab_version", verdict: not-applicable, until: 2027-01-31,
+     reason: "not deployed: install_gitlab is false in the estate (estate-status --config, 2026-10-31); re-judge when it is enabled"}
+  - {id: CVE-2026-15217, subject: "gitlab_version", verdict: not-applicable, until: 2027-01-31,
+     reason: "not deployed: install_gitlab is false in the estate (estate-status --config, 2026-10-31); re-judge when it is enabled"}
+  - {id: CVE-2026-15216, subject: "gitlab_version", verdict: not-applicable, until: 2027-01-31,
+     reason: "not deployed: install_gitlab is false in the estate (estate-status --config, 2026-10-31); re-judge when it is enabled"}
+  - {id: CVE-2026-6267, subject: "gitlab_version", verdict: not-applicable, until: 2027-01-31,
+     reason: "not deployed: install_gitlab is false in the estate (estate-status --config, 2026-10-31); re-judge when it is enabled"}
+  - {id: CVE-2026-12436, subject: "gitlab_version", verdict: not-applicable, until: 2027-01-31,
+     reason: "not deployed: install_gitlab is false in the estate (estate-status --config, 2026-10-31); re-judge when it is enabled"}
+  - {id: CVE-2026-15975, subject: "gitlab_version", verdict: not-applicable, until: 2027-01-31,
+     reason: "not deployed: install_gitlab is false in the estate (estate-status --config, 2026-10-31); re-judge when it is enabled"}
+  - {id: GHSA-6966-vjj6-99xv, subject: "jupyterlab_version", verdict: not-applicable, until: 2027-01-31,
+     reason: "not deployed: install_jupyterhub is false in the estate (estate-status --config, 2026-10-31); re-judge when it is enabled"}
+  - {id: GHSA-5xxm-54w8-h85j, subject: "martin_version", verdict: accepted, until: 2026-12-31,
+     reason: "the only fix is 2.0.0-beta.2; tiles are served behind Authentik forward-auth; move to 2.0 stable when released"}
+  - {id: GHSA-mrhx-c7xc-m3w5, subject: "cortex:zod", verdict: accepted, until: 2026-12-31,
+     reason: "the fix is zod 4 (a major); cortex validates its own schemas; migrate to zod 4 (roadmap)"}
+  - {id: GHSA-mrhx-c7xc-m3w5, subject: "face:zod", verdict: accepted, until: 2026-12-31,
+     reason: "the fix is zod 4 (a major); the face validates its own API payloads; migrate to zod 4 (roadmap)"}
