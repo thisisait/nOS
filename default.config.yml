@@ -568,8 +568,8 @@ hardening_ssh_tcp_forwarding: false
 # macOS workload telemetry (epic workload-allowlist). MONITOR mode only, never lockdown.
 # First run stops for two System Settings approvals (system extension + Full Disk Access).
 install_santa: false              # Santa exec telemetry; reader: tools/santa-status.py
-santa_version: "2026.8"           # github.com/northpolesec/santa release (Apache-2.0)
-santa_pkg_sha256: "0aaa970c7ddc63fe6a55c3144c825acb7f6bfa9cb15bcba1bffcaf2b5efc952a"
+santa_version: "2026.9"           # github.com/northpolesec/santa release (Apache-2.0)
+santa_pkg_sha256: "96821b6439d51ece2991e1d9a8ddd9969c6278391325d8e73904ff0961dff6ea"
 
 # Agents (claude CLI children of AgentKit / pulse-run-agent.sh) run as a separate,
 # non-admin macOS user that cannot read ~/.nos. Off = agents run as the operator, as today.
@@ -870,15 +870,15 @@ docker_bin: /usr/local/bin/docker
 # frankenphp_version: pazny.wing fetches exactly this release and refuses a
 # binary whose `frankenphp --version` does not report it. Bump = new version +
 # all four checksums below, in one commit.
-frankenphp_version: "1.13.3"
-# sha256 per release asset (frankenphp-<key>), measured 2026-10-23, each one's GitHub build
-# attestation verified (tag v1.13.3, upstream static.yaml); reports PHP 8.5.12, Caddy 2.11.7.
-# 1.13.1 carries GHSA-6q3j (high) + 3 lower advisories fixed in 1.13.2. mac-x86_64 had no
-# 1.13.3 asset yet: its pin is still 1.13.1's, so an Intel Mac fails closed (nOS: Apple Silicon).
+frankenphp_version: "1.13.4"
+# sha256 per release asset (frankenphp-<key>): GitHub's asset digest for tag v1.13.4, read
+# 2026-10-31 (attestation not re-verified). 1.13.3 carries GHSA-5f4m (high) + 6 lower, fixed in
+# 1.13.4. mac-x86_64 has no asset since 1.13.3: its pin is still 1.13.1's, so an Intel Mac
+# fails closed (nOS: Apple Silicon).
 frankenphp_checksums:
-  linux-aarch64: "49f09d389ab7b9e4511001ad670fd8952055f37976ea20ca63d113bf2f5ff802"
-  linux-x86_64: "d802c743a5b1020371a4e788b5a98a435ffa6e5588bead55286b29ef6ce9327a"
-  mac-arm64: "53f69626e8d7c656dfafdbbf65825b24d0e72ff55e71e520e06b988c8e3ced62"
+  linux-aarch64: "ba48195894c759e69d3b7034079273012d54fbf24c73f29c0f56703b3cb7b070"
+  linux-x86_64: "08916e397c6ced83c4ea5f4269532c2f8a481c773a6533a865de807c30dd9042"
+  mac-arm64: "9b8e3fa85a5605fac096afbc5c03db674d8a4173ad1c239df51c0308e34474e6"
   mac-x86_64: "b9123b427cb357eac076b1f316f71589cfe5c3db4ad2449114e243563d794a89"
 
 # ==============================================================================
@@ -1944,7 +1944,7 @@ jellyfin_extra_media_dirs: []
 
 uptime_kuma_domain: "uptime{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 uptime_kuma_port: 3001
-uptime_kuma_version: "2.5.7"        # GHSA-wf2j-5mc7-5c4w (high, <=2.5.3) fixed 2.5.4; 2.5.7 ships Node 22.23.4 [advisory-status 2026-10-23]. REM-073 applied 2026-07-24 (was 1.23.13; SSTI CVE-2026-33130 full fix). Role default stays "1"-track (intentional shadow). [swept 2.2.1 2026-08-06]
+uptime_kuma_version: "2.5.9"        # GHSA-86ch-2247-gr56 (<=2.5.8) + GHSA-v2p3 (admin RCE) fixed [advisory-status 2026-10-31]. REM-073 2026-07-24.
 uptime_kuma_admin_user: "admin"
 uptime_kuma_admin_password: "{{ nos_derived_secrets.uptime_kuma }}"
 uptime_kuma_auto_monitors: true  # Automatically create monitors for all install_* services
