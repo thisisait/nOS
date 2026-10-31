@@ -187,6 +187,19 @@ encrypt_stream() {
     fi
 }
 
+# A dump under a tenth of the one it replaces keeps that one as <name>.prev (one
+# generation) and prints "from X to Y". 2026-10-31: the nightly after a blank
+# overwrote the only plaintext Paperclip dump (6.2 MB -> 80 KB). Args: new old
+keep_if_shrunk() {
+    local new="$1" old="$2" n o
+    [[ -f "${old}" ]] || return 0
+    n="$(wc -c < "${new}" | tr -d ' ')"; o="$(wc -c < "${old}" | tr -d ' ')"
+    if (( o > 65536 && n * 10 < o )); then
+        mv -f "${old}" "${old}.prev" && echo "from ${o} to ${n}"
+    fi
+    return 0
+}
+
 # Append a source entry to the status JSON. Args: name size_bytes duration_ms success(0/1) [empty_ok]
 status_append() {
     local name="$1" size="$2" duration="$3" success="$4" empty_ok="${5:-0}"
@@ -194,15 +207,20 @@ status_append() {
     # .part AND yesterday's promoted copy, so the next restic snapshot does not
     # carry a stale file as if it were tonight's (restic history keeps the old
     # one). Every S3 key is `<name>.<ext>`, so the glob is exact per source.
-    local part
+    # A .prev is never dropped here: it is the copy a shrunk run kept.
+    local part shrank=""
     for part in "${STAGING_DIR}/${name}".*; do
-        [[ -e "${part}" ]] || continue
+        [[ -e "${part}" && "${part}" != *.prev ]] || continue
         if [[ "${success}" == "1" ]]; then
-            [[ "${part}" == *.part ]] && mv -f "${part}" "${part%.part}"
+            if [[ "${part}" == *.part ]]; then
+                shrank="$(keep_if_shrunk "${part}" "${part%.part}")"
+                mv -f "${part}" "${part%.part}"
+            fi
         else
             rm -f "${part}"
         fi
     done
+    [[ -z "${shrank}" ]] || log "WARN ${name}: dump shrank ${shrank} — previous kept as .prev"
     python3 - <<PY
 import json, os, time
 path = os.path.expanduser("${STATUS_FILE}")
@@ -221,6 +239,7 @@ s["sources"].append({
     "empty_ok": bool(int("${empty_ok}" or 0)),
     "off": bool(int("${STATUS_OFF:-0}")),
     "timestamp": int(time.time()),
+    **({"shrank": "${shrank}"} if "${shrank}" else {}),
 })
 with open(path, "w") as f:
     json.dump(s, f, indent=2)

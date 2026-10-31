@@ -49,5 +49,7 @@ The `paperclip` database is dumped alone every night (`postgres-paperclip.sql.gz
 beside the dumpall). The data dir rides `dir-paperclip`, which carries the secrets
 master key (`instances/default/secrets/master.key`) that `company_secrets` rows need.
 A blank wipes both, and Paperclip makes a new key on first start. To bring the company
-back after a blank, see [docs/restore-runbook.md](../../restore-runbook.md) §4,
+back after a blank, restore from `~/backups/pre-blank/<stamp>/` (the copy the blank
+took before wiping; `pre_blank` in `~/.nos/blank-runs.jsonl`), never from staging —
+the next nightly overwrites staging with the empty install. See [docs/restore-runbook.md](../../restore-runbook.md) §4,
 "One PostgreSQL database alone".

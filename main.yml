@@ -1776,7 +1776,7 @@
           ansible.builtin.lineinfile:
             path: "{{ nos_blank_record }}"
             line: "{{ {'started': nos_blank_started, 'finished': none, 'nos_commit': nos_deployed_ref | default('unknown'),
-                       'failed': none, 'smoke_strict': none} | to_json }}"
+                       'failed': none, 'smoke_strict': none, 'pre_blank': nos_pre_blank_copy | default(none)} | to_json }}"
             create: true
             mode: '0600'
 

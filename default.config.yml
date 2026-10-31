@@ -452,6 +452,7 @@ configure_backup: false
 # the DB dumps itself and snapshots them with the data dirs (ruling 2026-10-16).
 backup_copy1_enabled: "{{ (install_backup | default(false)) and (install_rustfs | default(false)) }}"
 backup_staging_dir: "{{ ansible_facts['env']['HOME'] }}/backups/staging"
+backup_pre_blank_dir: "{{ ansible_facts['env']['HOME'] }}/backups/pre-blank"  # staging as a blank found it (<UTC stamp>/, newest 2): restore_from after a blank
 one_way_upgrade_backup_dir: "{{ ansible_facts['env']['HOME'] }}/backups/pre-upgrade"  # tasks/one-way-upgrade-guard.yml: cold copy before a migration with no rollback (keep it off nos_data_root's volume)
 backup_restic_status_file: "{{ ansible_facts['env']['HOME'] }}/.nos/backup-restic-status.json"
 restic_repo: ""
@@ -3372,6 +3373,7 @@ backup_coverage:
   iiab_terminal_config_dir:    { class: derived, why: "rendered config" }
   node_exporter_textfile_dir:  { class: derived, why: "metrics scratch" }
   backup_staging_dir:          { class: store, why: "tonight's plaintext dumps — the restic source, rewritten every run" }
+  backup_pre_blank_dir:        { class: store, why: "the staging set as a blank found it (pre-wipe copy, newest 2)" }
   one_way_upgrade_backup_dir:  { class: store, why: "cold tars before a migration with no rollback (one-way-upgrade-guard); the operator prunes" }
 
 backup_databases_mariadb: "{{ install_mariadb | default(false) }}"        # the installed set (manifest forced_by applied at run time)

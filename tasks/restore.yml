@@ -167,7 +167,7 @@
 - name: "[Restore] Parse available source filenames"
   ansible.builtin.set_fact:
     restore_available_files: >-
-      {{ (restore_local.files | map(attribute='path') | map('basename') | list) if restore_from is defined
+      {{ (restore_local.files | map(attribute='path') | map('basename') | reject('search', '[.](prev|part)$') | list) if restore_from is defined
          else (restore_ls.stdout_lines
          | map('regex_replace', '^.*\s+([^\s]+)$', '\1')
          | reject('equalto', '')
@@ -219,6 +219,11 @@
       Files:     {{ restore_plan | map(attribute='file') | list | join(', ') }}
       Target:    live services (infra stack must be running)
       Work dir:  {{ restore_workdir }}
+      {% set sizes = restore_local.files | default([]) | items2dict(key_name='path', value_name='size') %}
+      {% for f in restore_local.files | default([]) if f.path is search('[.]prev$') and f.size > 10 * (sizes[f.path[:-5]] | default(0)) %}
+      SHRUNK:    {{ f.path[:-5] | basename }} is {{ sizes[f.path[:-5]] | default(0) }} B; its predecessor {{ f.path | basename }} is {{ f.size }} B.
+                 After a blank, restore_from={{ backup_pre_blank_dir | default('~/backups/pre-blank') }}/<stamp>, not staging.
+      {% endfor %}
 
 # ── 3. Destructive-action safety prompt ───────────────────────────────────────
 

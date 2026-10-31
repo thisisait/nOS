@@ -158,11 +158,12 @@ that dir and Paperclip makes a new key on first start, so restore the dir too:
 `dir-paperclip` carries the old key. It runs before the db.
 
 ```bash
-# after `nos --remove=data --confirm` and the converge; ~/backups/staging survives the blank
-nos --tags restore --check -e restore_date=$(date +%F) -e restore_from=~/backups/staging \
+# after `nos --remove=data --confirm` and the converge: the pre-blank copy, not staging
+PRE=$(ls -1d ~/backups/pre-blank/2*Z | tail -1)   # or `pre_blank` in ~/.nos/blank-runs.jsonl
+nos --tags restore --check -e restore_date=$(date +%F) -e restore_from=$PRE \
     -e restore_sources=dir-paperclip,dir-paperclip-workspaces -e restore_postgres_dbs=paperclip
 # the same, acting (asks ENTER for the dirs, restore_confirm for the db)
-nos --tags restore -e restore_date=$(date +%F) -e restore_from=~/backups/staging \
+nos --tags restore -e restore_date=$(date +%F) -e restore_from=$PRE \
     -e restore_sources=dir-paperclip,dir-paperclip-workspaces -e restore_postgres_dbs=paperclip \
     -e restore_confirm=true
 # when Paperclip looks right, drop the snapshot of the empty post-blank db
@@ -170,8 +171,11 @@ docker exec infra-postgresql-1 psql -U postgres -c 'DROP DATABASE "paperclip_pre
 ```
 
 `restore_date` only names the snapshot for a local set. The staging dir holds the
-last run only: take the blank right after a backup, or restore from a dated
-RustFS/restic copy instead.
+last run only, and the first nightly after a blank fills it with the empty
+reinstall (2026-10-31: Paperclip 6.2 MB → 80 KB). So the blank's pre-wipe step
+copies staging to `~/backups/pre-blank/<UTC stamp>/` first (newest 2 kept). A
+dump that shrank under a tenth keeps its predecessor as `<name>.prev` in
+staging, and red-status names it; the restore plan says so too.
 
 ### Verify the restore actually replayed
 

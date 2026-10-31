@@ -229,10 +229,24 @@
       mkdir -p "$STAGE" && chmod 700 "$STAGE"
       PATHS=("$STAGE")
       ROWS=()
+      # Same function as roles/pazny.backup/files/backup.sh (gate: test_a_good_dump_survives_the_next_backup).
+      keep_if_shrunk() {
+          local new="$1" old="$2" n o
+          [[ -f "${old}" ]] || return 0
+          n="$(wc -c < "${new}" | tr -d ' ')"; o="$(wc -c < "${old}" | tr -d ' ')"
+          if (( o > 65536 && n * 10 < o )); then
+              mv -f "${old}" "${old}.prev" && echo "from ${o} to ${n}"
+          fi
+          return 0
+      }
+      promote() {  # file name: .part -> file; a shrunk dump rides its row as a 4th field
+        local sh; sh="$(keep_if_shrunk "$STAGE/$1.part" "$STAGE/$1")"
+        mv -f "$STAGE/$1.part" "$STAGE/$1"; ROWS+=("$2 1 0${sh:+ ${sh// /_}}")
+      }
       stage_dump() {
         local name="$1"; shift
         if "$@" | gzip -c > "$STAGE/$name.sql.gz.part"; then
-          mv -f "$STAGE/$name.sql.gz.part" "$STAGE/$name.sql.gz"; ROWS+=("$name 1 0")
+          promote "$name.sql.gz" "$name"
         else
           rm -f "$STAGE/$name.sql.gz.part" "$STAGE/$name.sql.gz"; ROWS+=("$name 0 0")
         fi
@@ -284,7 +298,7 @@
       K="{{ backup_keap_container }}"; KT="/tmp/nos-keap-direct.$$"
       if keap_js | docker exec -i "$K" sh -c "cat > $KT.js && node --no-warnings $KT.js '{{ backup_keap_db_container_path }}' $KT.db" \
          && docker exec "$K" cat "$KT.db" | gzip -c > "$STAGE/keap-db.gz.part"; then
-        mv -f "$STAGE/keap-db.gz.part" "$STAGE/keap-db.gz"; ROWS+=("keap-db 1 0")
+        promote keap-db.gz keap-db
       else
         rm -f "$STAGE/keap-db.gz.part" "$STAGE/keap-db.gz"; ROWS+=("keap-db 0 0")
       fi
@@ -312,9 +326,10 @@
       restic backup --exclude-file="{{ restic_excludefile }}" --exclude='*.part' "${PATHS[@]}" || rc=$?
       FAILED="$(python3 - "{{ backup_restic_status_file }}" "$rc" "${ROWS[@]+"${ROWS[@]}"}" <<'PY'
       import json, sys, time
-      path, rc, rows = sys.argv[1], int(sys.argv[2]), [r.split() for r in sys.argv[3:]]
+      path, rc, rows = sys.argv[1], int(sys.argv[2]), [r.split() + [""] for r in sys.argv[3:]]
       now = int(time.time())
-      src = [{"name": n, "success": ok == "1" and rc == 0, "off": off == "1", "timestamp": now} for n, ok, off in rows]
+      src = [{"name": n, "success": ok == "1" and rc == 0, "off": off == "1", "timestamp": now,
+              **({"shrank": sh.replace("_", " ")} if sh else {})} for n, ok, off, sh, *_ in rows]
       json.dump({"last_run": now, "restic_rc": rc, "sources": src}, open(path, "w"), indent=2)
       print(",".join(s["name"] for s in src if not s["success"]) or ("restic" if rc else ""))
       PY

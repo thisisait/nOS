@@ -35,6 +35,36 @@
   when: _prewipe_backup_sh.stat.exists
   tags: ['blank', 'reset']
 
+# The blank keeps its own plaintext set. 2026-10-31: the 03:00 nightly after a blank
+# overwrote staging with the empty reinstall before the restore ran; only the restic
+# snapshot still held Paperclip. Restore from here (blank-runs.jsonl `pre_blank`).
+# APFS clone / reflink first (no 700 MB twice, no shared inode), plain copy last.
+- name: "[Pre-wipe] Keep a pre-blank copy of the staging set (newest 2)"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    [ -d "$NOS_STAGING" ] || { echo "no staging dir"; exit 0; }
+    dst="$NOS_PRE_BLANK/$NOS_STAMP"
+    mkdir -p "$NOS_PRE_BLANK" && chmod 700 "$NOS_PRE_BLANK" && rm -rf "$dst.part"
+    cp -cRp "$NOS_STAGING" "$dst.part" 2>/dev/null \
+      || { rm -rf "$dst.part"; cp -a --reflink=auto "$NOS_STAGING" "$dst.part" 2>/dev/null; } \
+      || { rm -rf "$dst.part"; cp -Rp "$NOS_STAGING" "$dst.part"; }
+    mv "$dst.part" "$dst" && echo "kept $dst"
+    ls -1d "$NOS_PRE_BLANK"/2*Z | sort -r | tail -n +3 | while read -r old; do rm -rf "$old"; done
+  args:
+    executable: /bin/bash
+  environment:
+    NOS_STAGING: "{{ backup_staging_dir | default(ansible_facts['env']['HOME'] + '/backups/staging') }}"
+    NOS_PRE_BLANK: "{{ backup_pre_blank_dir | default(ansible_facts['env']['HOME'] + '/backups/pre-blank') }}"
+    NOS_STAMP: "{{ now(utc=true, fmt='%Y%m%dT%H%M%SZ') }}"
+  register: _prewipe_pre_blank
+  changed_when: "'kept ' in _prewipe_pre_blank.stdout"
+  tags: ['blank', 'reset']
+
+- name: "[Pre-wipe] Name the pre-blank copy for the blank's record"
+  ansible.builtin.set_fact:
+    nos_pre_blank_copy: "{{ (_prewipe_pre_blank.stdout | regex_search('kept (.*)', '\\1') or [none]) | first }}"
+  tags: ['blank', 'reset']
+
 # Name the casualties. "returned non-zero" sends the operator to a 47 MB log at
 # the exact moment they are least able to read one; WHICH source died is the
 # whole decision. Reads the status file backup.sh just finalized.

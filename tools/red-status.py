@@ -780,6 +780,7 @@ def backups() -> dict | None:
         "sources": len(sources),
         "failed": failed,
         "backed_up_while_off": [s.get("name") for s in sources if s.get("off") and s.get("success")],
+        "shrank": [f"{s.get('name')} {s['shrank']}" for s in sources if s.get("shrank")],
         "last_source_at": when.isoformat() if when else None,
         "age": _age(when),
         "stale": when is None or when < _now() - STALE_AFTER,
@@ -1252,6 +1253,8 @@ def reds(report: dict) -> list[str]:
         out.append(f"backup sources failed: {', '.join(str(f) for f in bk['failed'])}")
     elif bk and bk.get("stale"):
         out.append(f"backup stale — newest source {bk['age']}")
+    if bk and bk.get("shrank"):
+        out.append(f"backup dump shrank to under a tenth (previous kept as <name>.prev): {'; '.join(bk['shrank'])}")
     drift = (report.get("digest_drift") or {}).get("drift") or []
     if drift:
         out.append(
