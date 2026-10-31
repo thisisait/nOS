@@ -1679,7 +1679,7 @@ n8n_port: 5678
 # 2.32.7 is the queue's number and sits above that floor, with six days of soak;
 # 2.34.2 shipped today and buys nothing — no advisory has been published since
 # 2026-07-22. Same-major, migrate-on-start. arm64 tag confirmed on the registry.
-n8n_version: "2.37.10"  # REM-253: 2026-09-02 wave, nineteen GHSAs, floor <2.37.7. Head of 2.37. [swept 2.35.7 2026-09-16]
+n8n_version: "2.45.7"  # Sep30-Oct28 GHSAs (unauth webhook/OAuth); 2.x floor 2.45.5, 2.46 is beta. One-way DB migrations: back up ~/n8n. Prior 2.37.10.
 n8n_data_dir: "{{ ansible_facts['env']['HOME'] }}/n8n"
 n8n_timezone: "{{ nos_timezone }}"
 # Where extra_hosts' `host-gateway` lands — BOTH families, CSV of CIDRs. The
