@@ -101,12 +101,14 @@ def plan(company, want, key):
         aid = ids[name]
         boss = ids.get(w["reports_to"]) if w.get("reports_to") else None
         heartbeat = {"enabled": False, "wakeOnDemand": True, "maxConcurrentRuns": w["max_concurrent_runs"]}
+        # 10-31: an agent created without one fails every turn with "terminal access failure"
+        conn = w.get("ai_connection")
         fields = {"name": name, "title": w["title"], "role": w["role"], "reportsTo": boss,
                   "budgetMonthlyCents": round(w["budget_usd"] * 100)}
         if aid is None:
             steps.append(("create", name, {**fields, "adapterType": w["adapter"],
                                            "adapterConfig": {"model": w["model"], "dangerouslySkipPermissions": True},
-                                           "runtimeConfig": {"heartbeat": heartbeat},
+                                           "runtimeConfig": {"heartbeat": heartbeat, **({"aiConnection": conn} if conn else {})},
                                            "instructionsBundle": {"files": {PROMPT: w["prompt"]}}}, "new agent"))
             continue
         a = have[aid]
@@ -114,8 +116,9 @@ def plan(company, want, key):
         if (a.get("adapterConfig") or {}).get("model") != w["model"]:
             diff["adapterConfig"] = {"model": w["model"]}
         hb = (a.get("runtimeConfig") or {}).get("heartbeat") or {}
-        if any(hb.get(k) != v for k, v in heartbeat.items()):
-            diff["runtimeConfig"] = {**(a.get("runtimeConfig") or {}), "heartbeat": {**hb, **heartbeat}}
+        rc = a.get("runtimeConfig") or {}
+        if any(hb.get(k) != v for k, v in heartbeat.items()) or (conn and rc.get("aiConnection") != conn):
+            diff["runtimeConfig"] = {**rc, "heartbeat": {**hb, **heartbeat}, **({"aiConnection": conn} if conn else {})}
         if diff:
             steps.append(("patch", name, diff, ", ".join(sorted(diff))))
         cur = call("GET", f"/agents/{aid}/instructions-bundle/file?path={PROMPT}", key=key).get("content")
