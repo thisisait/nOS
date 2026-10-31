@@ -34,7 +34,27 @@
   when:
     - _kiwix_zims.matched == 0
     - kiwix_init_zim_url | default('') | length > 0
+  register: _kiwix_init_dl
   failed_when: false
+
+# 10-30 blank: the download failed quietly, kiwix served "No ZIM files" (502) behind a green
+# converge. An offline host may not reach the mirror, so this warns instead of failing.
+- name: "[pazny.kiwix] Re-check the library after the init download"
+  ansible.builtin.find:
+    paths: "{{ kiwix_data_dir }}"
+    patterns: "*.zim"
+  register: _kiwix_zims_after
+  when: _kiwix_zims.matched == 0
+
+- name: "[pazny.kiwix] WARNING: the ZIM library is empty"
+  ansible.builtin.debug:
+    msg: >-
+      Kiwix has no .zim in {{ kiwix_data_dir }} and will answer 502. The init download from
+      {{ kiwix_init_zim_url | default('(no kiwix_init_zim_url)') }} said:
+      {{ _kiwix_init_dl.msg | default('skipped') }}. Re-run `nos --tags kiwix` online, or copy a .zim there.
+  when:
+    - _kiwix_zims.matched == 0
+    - (_kiwix_zims_after.matched | default(0)) == 0
 
 # Dalsi ZIM soubory (volitelne, z config.yml)
 - name: "[pazny.kiwix] Download configured ZIM files"
