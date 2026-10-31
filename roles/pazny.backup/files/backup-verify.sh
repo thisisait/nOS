@@ -51,6 +51,18 @@ NOS_BACKUP_KEYS=(
 LOG_FILE="{{ backup_verify_log | default(ansible_facts['env']['HOME'] + '/.nos/backup-verify.log') }}"
 RESULT_FILE="{{ backup_verify_result | default(ansible_facts['env']['HOME'] + '/.nos/backup-verify.json') }}"
 
+# Every per-db dump backup.sh writes (its PG_DBS filter) as "db owner table,table".
+# The owner defaults to the db's name, the role each app creates its database with.
+PG_DRILL_IMAGE="{{ ('nos/postgis:' ~ postgresql_version ~ '-' ~ postgis_version) if install_postgis | default(false) | bool else ('postgres:' ~ postgresql_version | default('16.15-alpine')) }}"
+PG_DRILL=(
+{% if backup_databases_postgresql | default(false) | bool %}
+{% for d in backup_postgres_dbs | default([]) if lookup('vars', d.flag, default=false) | bool %}
+    "{{ d.db }} {{ d.owner | default(d.db) }} {{ d.verify | join(',') }}"
+{% endfor %}
+{% endif %}
+)
+DRILL_LEFT=""   # scratch containers (each with its network) still standing; cleanup removes them
+
 DO_THALAMUS_LEDGER="{{ 'true' if backup_thalamus_ledger | default(false) else 'false' }}"
 DO_NOTIFY="{{ 'true' if backup_notify_enabled | default(true) else 'false' }}"
 NOTIFY_HMAC_SECRET="{{ bone_secret | default('') }}"
@@ -70,13 +82,15 @@ log() {
 }
 
 cleanup() {
+    local c
+    for c in ${DRILL_LEFT}; do drill_down "${c}"; done
     [[ -n "${WORKDIR}" && -d "${WORKDIR}" ]] && rm -rf "${WORKDIR}"
 }
 trap cleanup EXIT
 
 record() {
-    # name | ok(0/1) | detail  — one line per artifact, tab-separated
-    printf '%s\t%s\t%s\n' "$1" "$2" "$3" >> "${RESULT_TSV}"
+    # name | ok(0/1) | detail [| seconds | rows]  — one line per artifact, tab-separated
+    printf '%s\t%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "${4:-}" "${5:-}" >> "${RESULT_TSV}"
 }
 
 # Decrypt $1 -> $2, trying each key in the ring. Prints the ring position that
@@ -220,6 +234,67 @@ verify_thalamus_ledger() {
     log "thalamus-ledger: OK (events=${n})"
 }
 
+# ── postgres-<db>: replay the per-db pg_dump into a throwaway Postgres ──────
+# Its own container on its own --internal network, no published port, removed
+# on return and again by the EXIT trap. Mirrors tasks/_restore_postgres_db.yml:
+# the db owned by its role, the dump replayed ON_ERROR_STOP in one transaction,
+# owners realigned by the same SQL file, counts compared with the COPY blocks.
+drill_down() {
+    docker rm -f "$1" >/dev/null 2>&1
+    docker network rm "$1" >/dev/null 2>&1
+    DRILL_LEFT="${DRILL_LEFT// $1/}"
+}
+
+verify_postgres_db() {
+    local db="$1" owner="$2" tables="${3//,/ }" name="postgres-$1" t0="${SECONDS}"
+    local ctr="drill-$1-$$" expected actual i t bad=""
+    log "${name}: fetching ${DATE_STR}/${name}.sql.gz"
+    if ! fetch "${name}.sql.gz"; then
+        record "${name}" 0 "no object at ${DATE_STR}"; log "${name}: MISSING"; return 1
+    fi
+    expected="$(gunzip -c "${WORKDIR}/${name}.sql.gz" | awk -v want="${tables}" '
+      BEGIN { n = split(want, w, " "); for (i = 1; i <= n; i++) c[w[i]] = 0 }
+      /^COPY public\./ { t = $2; sub(/^public\./, "", t); gsub(/"/, "", t); on = (t in c); next }
+      on && $0 == "\\." { on = 0; next }
+      on { c[t]++ }
+      END { for (k in c) print k "=" c[k] }' | sort | tr '\n' ' ')" \
+        || { record "${name}" 0 "gunzip failed"; log "${name}: gunzip FAILED"; return 1; }
+    command -v docker >/dev/null 2>&1 || { record "${name}" 0 "docker not on PATH"; return 1; }
+
+    DRILL_LEFT="${DRILL_LEFT} ${ctr}"
+    q() { docker exec -i "${ctr}" psql -U postgres -v ON_ERROR_STOP=1 -Atq "$@"; }
+    if ! { docker network create --internal "${ctr}" \
+           && docker run -d --rm --name "${ctr}" --network "${ctr}" -e POSTGRES_HOST_AUTH_METHOD=trust \
+                "${PG_DRILL_IMAGE}"; } >/dev/null 2>>"${LOG_FILE}"; then
+        drill_down "${ctr}"; record "${name}" 0 "scratch postgres ${PG_DRILL_IMAGE} did not start"; return 1
+    fi
+    # TCP, not the socket: the image's init server listens on the socket only, then restarts.
+    for i in $(seq 60); do q -h 127.0.0.1 -c 'select 1' >/dev/null 2>&1 && break; sleep 1; done
+    if ! q -c "create role \"${owner}\" login" -c "create database \"${db}\" owner \"${owner}\"" >/dev/null 2>>"${LOG_FILE}" \
+       || ! gunzip -c "${WORKDIR}/${name}.sql.gz" | q -d "${db}" -1 >/dev/null 2>>"${LOG_FILE}"; then
+        drill_down "${ctr}"; record "${name}" 0 "replay failed — the dump is not restorable" "$((SECONDS - t0))"
+        log "${name}: REPLAY FAILED"; return 1
+    fi
+    q -d "${db}" >/dev/null 2>>"${LOG_FILE}" <<'SQL' || bad="owner realign failed"
+{% include 'pg-realign-owners.sql' %}
+
+SQL
+    [[ "$(q -d "${db}" -c "select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace
+          join pg_database d on d.datname = current_database() where c.relkind in ('r', 'p', 'S', 'v', 'm')
+          and c.relowner <> d.datdba and n.nspname not in ('pg_catalog', 'information_schema')
+          and n.nspname not like 'pg_toast%'" 2>>"${LOG_FILE}")" == 0 ]] \
+        || bad="${bad:-a relation is not owned by ${owner} after the realign}"
+    actual="$(for t in ${tables}; do echo "${t}=$(q -d "${db}" -c "select count(*) from public.\"${t}\"" 2>>"${LOG_FILE}")"; done \
+              | sort | tr '\n' ' ')"
+    drill_down "${ctr}"
+    [[ "${actual}" == "${expected}" ]] || bad="${bad:-restored ${actual}but the dump holds ${expected}}"
+    if [[ -n "${bad}" ]]; then
+        record "${name}" 0 "${bad}" "$((SECONDS - t0))" "${actual% }"; log "${name}: FAILED (${bad})"; return 1
+    fi
+    record "${name}" 1 "replayed into a scratch postgres, owner ${owner}, ${actual% }" "$((SECONDS - t0))" "${actual% }"
+    log "${name}: OK (${actual}in $((SECONDS - t0))s)"
+}
+
 write_result() {
     python3 - <<PY
 import json, os, time
@@ -230,14 +305,15 @@ try:
             line = line.rstrip("\n")
             if not line:
                 continue
-            parts = line.split("\t", 2)
-            if len(parts) < 2:
+            parts = line.split("\t") + ["", "", "", ""]
+            if not parts[1]:
                 continue
-            out.append({
-                "name": parts[0],
-                "success": parts[1] == "1",
-                "detail": parts[2] if len(parts) > 2 else "",
-            })
+            row = {"name": parts[0], "success": parts[1] == "1", "detail": parts[2]}
+            if parts[3]:
+                row["seconds"] = int(parts[3])
+            if parts[4]:
+                row["rows"] = parts[4]
+            out.append(row)
 except OSError:
     pass
 with open(os.path.expanduser("${RESULT_FILE}"), "w") as f:
@@ -318,6 +394,11 @@ main() {
     verify_keap_db || rc=1
     verify_wing_db || rc=1
     verify_thalamus_ledger || rc=1
+    local spec db owner tables
+    for spec in "${PG_DRILL[@]+"${PG_DRILL[@]}"}"; do
+        read -r db owner tables <<< "${spec}"
+        verify_postgres_db "${db}" "${owner}" "${tables}" || rc=1
+    done
 
     write_result
     notify
