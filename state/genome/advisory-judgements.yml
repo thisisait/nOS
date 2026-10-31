@@ -15,6 +15,12 @@
 # The operator writes these; an agent proposes them in a PR, never commits one.
 # Proposed 2026-10-31 from tools/advisory-status.py (HIGH/CRITICAL/KEV matches only — the rest never turn red).
 judgements:
+  # nginx.org/en/security_advisories.html (read 2026-10-31): the stable line fixes these below 1.30.6;
+  # the feed knows only the mainline fix (1.31.x), so a "bump" would be a step back.
+  - {id: CVE-2026-9256, subject: "apex_version", verdict: not-applicable, until: 2026-12-31,
+     reason: "fixed in stable 1.30.2+ (nginx.org); the pin is 1.30.6"}
+  - {id: CVE-2026-42055, subject: "apex_version", verdict: not-applicable, until: 2026-12-31,
+     reason: "fixed in stable 1.30.3+ (nginx.org); the pin is 1.30.6"}
   - {id: GHSA-qcff-6669-j3gj, subject: "erpnext_version", verdict: not-applicable, until: 2027-01-31,
      reason: "not deployed: install_erpnext is false in the estate (estate-status --config, 2026-10-31); re-judge when it is enabled (also parked as non-working)"}
   - {id: GHSA-mp29-fjc5-h86p, subject: "erpnext_version", verdict: not-applicable, until: 2027-01-31,
