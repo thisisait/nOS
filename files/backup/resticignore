@@ -4,3 +4,5 @@ __pycache__
 *.pyc
 .git
 .DS_Store
+# Kiwix ZIM library: downloaded, re-downloadable, kept by a blank (2026-10-31)
+*.zim

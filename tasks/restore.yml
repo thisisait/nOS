@@ -967,7 +967,7 @@
   ansible.builtin.debug:
     msg: |
       ══════════════════════════════════════════════════════════════════════
-      Restore complete — {{ restore_date }}
+      {{ 'DRY RUN — NOTHING RESTORED' if (ansible_check_mode or not restore_summary) else 'Restore complete' }} — {{ restore_date }}
       ══════════════════════════════════════════════════════════════════════
       Started:  {{ restore_started_at }}
       Finished: {{ lookup('pipe', 'date -Iseconds') }}
@@ -983,5 +983,7 @@
       Next steps:
         1. Verify the health probes:  ansible-playbook main.yml --tags health
         2. Spot-check DB row counts and service UIs (see docs/restore-runbook.md).
-        3. When satisfied, remove the work dir:  rm -rf {{ restore_workdir }}
+        {% if not (ansible_check_mode or not restore_summary) %}3. When satisfied, the work dir can go:  rm -rf {{ restore_workdir }}
+        {% else %}3. Keep {{ restore_workdir }}: nothing has been restored from it yet (10-31: a dry run advised deleting the only good copy).
+        {% endif %}
       ══════════════════════════════════════════════════════════════════════
