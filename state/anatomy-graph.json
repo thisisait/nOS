@@ -8120,7 +8120,7 @@
       "from": "reader:red-status",
       "to": "doctrine:ssot/doctrine/loop-contract.md#7",
       "kind": "governed_by",
-      "via": "cited at tools/red-status.py:844",
+      "via": "cited at tools/red-status.py:845",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"
