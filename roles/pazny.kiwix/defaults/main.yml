@@ -16,7 +16,7 @@ kiwix_domain: "kiwix{{ _host_alias_seg | default('') }}.{{ tenant_domain | defau
 
 # Default to a tiny (~10 MB) demo ZIM so blank reaches a working Kiwix UI
 # without manual onboarding. Override or set to "" in config.yml to opt out.
-kiwix_init_zim_url: "https://download.kiwix.org/zim/other/alpinelinux_en_all_maxi_2026-04.zim"
+kiwix_init_zim_url: "https://download.kiwix.org/zim/alpinelinux_en_all_maxi.zim"
 kiwix_init_zim_dest: "alpinelinux.zim"
 
 kiwix_zim_files: []

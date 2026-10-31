@@ -71,9 +71,6 @@
         (install_n8n | default(false)) | ternary(
           [n8n_data_dir | default(ansible_facts['env']['HOME'] + '/n8n')], [])
         +
-        (install_kiwix | default(false)) | ternary(
-          [kiwix_data_dir | default(ansible_facts['env']['HOME'] + '/kiwix')], [])
-        +
         (install_offline_maps | default(false)) | ternary(
           [maps_data_dir | default(ansible_facts['env']['HOME'] + '/maps')], [])
         +
@@ -257,6 +254,7 @@
       - { var: vllm_data_dir, level: all, why: "pinned model weights — re-downloadable, but tens of GB on a slow uplink: only uninstall takes them" }
       - { var: maps_cache_dir, level: never, why: "under artifact_cache_dir — the Planetiler base map takes ~10 min and GBs of downloads to rebuild" }
       - { var: calibreweb_books_dir, level: all, why: "user content — the tenant's shared library is SOURCE, not derived state" }
+      - { var: kiwix_data_dir, level: all, why: "user content: the downloaded ZIM library (Wikipedia, 100s of GB) is SOURCE, kept like the books (a blank deleted it 2026-10-30)" }
       - { var: paperclip_workspaces_dir, level: all, why: "the files Paperclip's agents built for a client (paid work product) — SOURCE, kept like the library" }
       - { var: erpnext_data_dir, level: all, why: "P0.1: sites live in a named volume (compose down -v); the var only names site_config.json" }
       - { var: backup_staging_dir, level: all, why: "under ~/backups: the plaintext dumps the pre-wipe snapshot reads" }

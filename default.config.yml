@@ -1418,11 +1418,12 @@ kiwix_port: 8888                           # Local kiwix-serve port
 kiwix_version: "3.8.2"                             # Docker image tag (ghcr.io/kiwix/kiwix-serve)
 
 # Init ZIM — downloaded automatically on first blank run so Kiwix can start
-# with a working demo (no manual onboarding step). based-cooking is ~10 MB
-# (recipe site) — fast on cold blank, validates UI render end-to-end. Set
+# with a working demo (no manual onboarding step). Alpine Linux wiki, ~3 MB.
+# The UNDATED permalink: dated names rotate off the mirror (_2026-04 404'd
+# by 2026-10, so the blank came up with no ZIM). Set
 # to "" in config.yml to opt out and rely on kiwix_zim_files / download-zim.sh.
 # WARNING: large ZIMs (>50 MB) block the playbook for the full download duration.
-kiwix_init_zim_url: "https://download.kiwix.org/zim/other/alpinelinux_en_all_maxi_2026-04.zim"
+kiwix_init_zim_url: "https://download.kiwix.org/zim/alpinelinux_en_all_maxi.zim"
 kiwix_init_zim_dest: "alpinelinux.zim"
 
 # ZIM files to download (empty = do not download automatically)

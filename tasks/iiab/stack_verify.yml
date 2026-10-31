@@ -7,7 +7,7 @@
 #   1. Load catalog
 #   2. Nginx :443 quick check (restart if not running)
 #   3. Auto-retry HTTP + TCP probes (2 minutes)
-#   4. Pause prompt for onboarding probes
+#   4. Warning for onboarding probes (never a pause)
 #   5. Summary
 #
 # Adding a new service = 1 entry in files/health-probes.yml. No edits
@@ -136,7 +136,7 @@
   when: (_auto_failed | length) > 0
 
 # ══════════════════════════════════════════════════════════════════════════
-# PHASE 2: Onboarding services - check + pause only if needed
+# PHASE 2: Onboarding services - check + warn (never pause)
 # ══════════════════════════════════════════════════════════════════════════
 
 - name: "[Verify] Check onboarding probes"
@@ -176,24 +176,21 @@
          + _probe_catalog._default_status) | unique | list
       }}
 
+# A warning, never a pause: a blank needs zero manual steps, and a prompt here
+# stopped the 2026-10-30 post-blank converge (test_no_converge_step_waits_for_enter).
 - name: "[Verify] Manual onboarding required"
-  ansible.builtin.pause:
-    prompt: |-
+  ansible.builtin.debug:
+    msg: |-
+      WARNING: onboarding pending — the converge continues.
       {% for svc in _onboarding_needed %}
-
-      ══════════════════════════════════════════════════════════════════════
-       {{ svc.name }} - REQUIRES MANUAL ONBOARDING
-       {{ svc.hint }}
-      ══════════════════════════════════════════════════════════════════════
+        - {{ svc.name }}: {{ svc.hint }}
       {% endfor %}
-
-       Perform the manual steps and press ENTER to continue
   when:
     - _onboarding_needed | default([]) | length > 0
 
 # Fee 45: every probe above is failed_when: false and the summary was a
 # debug — a task NAMED verify that could not fail the play. Onboarding stays
-# tolerant (interactive by design); infra still dead after the retries is a
+# tolerant (a warning); infra still dead after the retries is a
 # red converge, not a WARNING.
 - name: "[Verify] Infra that failed after retries fails the play"
   ansible.builtin.assert:

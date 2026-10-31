@@ -300,7 +300,7 @@ health_probes:
     hint: "docker compose -p engineering logs qgis"
 
   # ══════════════════════════════════════════════════════════════════════════
-  # Onboarding services – require manual setup (pause prompt)
+  # Onboarding services – require manual setup (warned by stack_verify)
   # ══════════════════════════════════════════════════════════════════════════
 
   - slug: uptime_kuma
@@ -338,7 +338,7 @@ health_probes:
     port_var: kiwix_port
     port_default: 8888
     onboarding: true
-    hint: "Kiwix needs ZIM files. Run download-zim.sh and restart."
+    hint: "No ZIM served — check the init ZIM download (kiwix_init_zim_url) or add kiwix_zim_files, then re-run --tags kiwix."
 
   - slug: outline
     name: "Outline"
