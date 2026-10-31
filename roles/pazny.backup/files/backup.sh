@@ -1077,7 +1077,7 @@ run_dirs() {
         # *.zim: Kiwix's downloaded library (tens to hundreds of GB under tenants/), re-downloadable
         # and kept by a blank since 2026-10-31 — never part of the nightly archive.
         docker run --rm -v "${path}:/data:ro" "${ALPINE_IMAGE}" \
-            sh -c "cd /data && tar -czvf - --exclude='*.zim' ." 2>"${tar_list}" \
+            sh -c "cd /data && tar -czvf - . --exclude='*.zim'" 2>"${tar_list}" \
           | encrypt_stream "${key}" \
           | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
         rc=$?
