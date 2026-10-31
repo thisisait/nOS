@@ -4,7 +4,7 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 565,
+    "nodes": 566,
     "edges": 557,
     "nodes_pulse": 44,
     "nodes_judge": 5,
@@ -28,7 +28,7 @@
     "nodes_tasktype": 9,
     "nodes_skill": 13,
     "nodes_reader": 66,
-    "nodes_effector": 113,
+    "nodes_effector": 114,
     "nodes_article": 28,
     "nodes_organ_system": 13,
     "nodes_tissue": 1,
@@ -2064,6 +2064,13 @@
       "title": "Makes Outline's admins exactly Authentik's tier-1 people (Outline takes no role from OIDC).",
       "anchor": "02.02.04",
       "description": "Effector tools/outline-roles.py: Makes Outline's admins exactly Authentik's tier-1 people (Outline takes no role from OIDC)."
+    },
+    "effector:paperclip-company": {
+      "kind": "effector",
+      "source": "tools/paperclip-company.py",
+      "title": "A Paperclip company declared in its repo (`ssot/company.yml` + `agents/<name>/AGENTS.md`) made real through Paperclip's API: names, roles, model, budget, concurrency, paused/active, prompts (`login`, `plan`, `apply --confirm`).",
+      "anchor": "02.02.04",
+      "description": "Effector tools/paperclip-company.py: A Paperclip company declared in its repo (`ssot/company.yml` + `agents/<name>/AGENTS.md`) made real through Paperclip's API: names, roles, model, budget, concurrency, paused/active, prompts (`login`, `plan`, `apply --confirm`)."
     },
     "effector:party-graph": {
       "kind": "effector",

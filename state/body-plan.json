@@ -12,7 +12,7 @@
     "organism": 0,
     "habitat": 9,
     "sense": 84,
-    "limb": 120,
+    "limb": 121,
     "memory": 41,
     "law": 54,
     "reflex": 44,
@@ -890,6 +890,10 @@
       "kind": "effector"
     },
     "effector:outline-roles": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:paperclip-company": {
       "level": "limb",
       "kind": "effector"
     },
