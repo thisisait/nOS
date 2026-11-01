@@ -148,10 +148,14 @@
 
 # Best-effort: kick embeddings for the freshly-materialised nodes now instead of
 # waiting for the nightly Pulse job. Never fails the play (Ollama may be busy/off;
-# the scheduled keap-embed-sync is the guarantee).
-- name: "[pazny.keap] Kick keap-embed-sync for new knowledge (best-effort)"
-  ansible.builtin.command:
-    cmd: "{{ ansible_python_interpreter | default('python3') }} {{ playbook_dir }}/files/anatomy/scripts/keap-embed-sync.py"
+# the scheduled keap-embed-sync is the guarantee). In the background: on a CPU-only
+# host the first corpus held the converge 20+ min with no output (Linux mini 11-01).
+- name: "[pazny.keap] Kick keap-embed-sync for new knowledge (best-effort, in the background)"
+  ansible.builtin.shell:
+    cmd: >-
+      {{ ansible_python_interpreter | default('python3') | quote }} -u
+      {{ (playbook_dir ~ '/files/anatomy/scripts/keap-embed-sync.py') | quote }}
+      > {{ (ansible_facts['env']['HOME'] ~ '/.nos/keap-embed-sync.log') | quote }} 2>&1
   # Same env the Pulse job gets (plugin.yml keap-base) — without it the script
   # exits "KEAP_AGENT_TOKEN_RW not set" and failed_when:false hid that, so the
   # kick was a silent no-op on every converge (caught on the 2026-07-17 blank).
@@ -159,6 +163,8 @@
     KEAP_API_URL: "http://127.0.0.1:{{ keap_port | default(8091) }}"
     KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw }}"
   register: _keap_embed
+  async: 7200
+  poll: 0
   changed_when: false
   failed_when: false
   when:
@@ -167,6 +173,11 @@
     # the self-model's own canonical in selfmodel.yml. Keying only on the first
     # left a freshly-ingested self-model tree unembedded until the nightly job.
     - (_keap_ingest_changed | default(false) | bool) or (_keap_sm_ingest_changed | default(false) | bool)
+
+- name: "[pazny.keap] Say where the embedding progress is"
+  ansible.builtin.debug:
+    msg: "Embedding the new knowledge in the background (upserted N/total per batch): tail -f ~/.nos/keap-embed-sync.log"
+  when: _keap_embed is not skipped
 
 # ── nOS-face config DataTables (SoC → runtime DataTable) ─────────────────────
 # Create face-layouts/face-wallpapers/face-controls in KEAP and upsert their
