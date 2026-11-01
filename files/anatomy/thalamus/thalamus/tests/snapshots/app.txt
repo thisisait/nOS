@@ -2,6 +2,16 @@ update nOS Roadmap (roadmap) / backup-restic-fork — nothing is written unless 
 u approve
   status: "open" -> "done"
   note: (empty) -> "landed"
+  3. [pending] Send the summary
+From
+  Expenses (expenses) / e1 — the 420 travel line
+  nOS Roadmap (roadmap) / backup-restic-fork
+you could ask:
+  > Chart this by month
+  > Which invoices are still unmatched?
+widget w5:
+count: 4
+  from count over 4 rows of Expenses
 widget w6:
   > 02 Formal Sciences — Mathematics, logic and computing.
 table expenses changed (row e3)
