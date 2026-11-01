@@ -70,6 +70,8 @@
         - { path: "{{ nos_system_home }}/.nos", group: "{{ nos_system_user }}", mode: '0750' }
         - { path: "{{ nos_system_home }}/genome", group: "{{ nos_system_user }}", mode: '0750' }
         - { path: "{{ nos_system_home }}/thalamus", owner: "{{ nos_system_user }}", group: "{{ nos_system_user }}", mode: '0700' }
+        # set-points (halt, loops pause): nos and the operator (group nos) both write, tmp + rename
+        - { path: "{{ nos_system_home }}/settings", group: "{{ nos_system_user }}", mode: '0770' }
 
     - name: "[pazny.medulla] The binary, outside $HOME"
       ansible.builtin.copy:

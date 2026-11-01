@@ -144,3 +144,13 @@
     groups: []
   when: nos_system_user | length > 0
   become: true
+
+# The operator's pulse and `nos halt` reach the set-points (/var/lib/nos/settings, root:nos 0770).
+# ponytail: takes effect at the operator's next login (their systemd --user pulse too); until then it reads no halt.
+- name: "[unix] The operator is in the service account's group"
+  ansible.builtin.user:
+    name: "{{ ansible_facts['user_id'] }}"
+    groups: ["{{ nos_system_user }}"]
+    append: true
+  when: nos_system_user | length > 0
+  become: true

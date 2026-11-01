@@ -55,6 +55,9 @@ pulse_medulla_env:
   NOS_REPO_ROOT: "{{ nos_main_checkout }}"
   MEDULLA_PULSE: "1"
   MEDULLA_DATA_DIR: "{{ medulla_data_dir }}"   # fire() holds a job pulse.paused names
+  # the set-points the medulla unit writes (thalamus.env.j2): a nos_system_user host keeps them outside $HOME
+  NOS_HALT_FILE: "{{ (nos_system_home ~ '/settings/halt') if (nos_system_user | default('') | length) else (ansible_facts['env']['HOME'] ~ '/.nos/halt') }}"
+  NOS_LOOPS_PAUSED_FILE: "{{ (nos_system_home ~ '/settings/loops-paused') if (nos_system_user | default('') | length) else (ansible_facts['env']['HOME'] ~ '/.nos/loops-paused') }}"
   MEDULLA_WING_TOKEN: "{{ medulla_wing_api_token }}"
   NOS_WING_URL: "{{ pulse_wing_api_base }}"
   PULSE_MEDULLA_JOBS: "{{ pulse_medulla_jobs | join(',') }}"
