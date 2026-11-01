@@ -80,10 +80,12 @@ $presenterCache = [];
  * Pull the class-level docblock out of a presenter and parse out lines
  * matching ``METHOD path — summary`` (or ``METHOD path?qs — summary``).
  * Returns a map keyed by the route path with sub-keys per HTTP method.
+ * ``METHOD path 503 — why`` adds a response beyond the shared set into
+ * $responses (path => method => code => description).
  *
  * @return array<string, array<string, string>>  path => method => summary
  */
-function parse_presenter_docblock(string $file): array
+function parse_presenter_docblock(string $file, array &$responses = []): array
 {
 	$src = file_get_contents($file);
 	if ($src === false) {
@@ -99,6 +101,10 @@ function parse_presenter_docblock(string $file): array
 	foreach (preg_split('/\R/', $doc) as $line) {
 		// Strip leading "* " from docblock line.
 		$line = preg_replace('/^\s*\*\s?/', '', $line) ?? $line;
+		if (preg_match('#^(GET|POST|PUT|PATCH|DELETE)\s+(/?\S+)\s+([1-5]\d\d)\s*[—\-]+\s*(.+)$#', trim($line), $mm)) {
+			$responses['/' . ltrim($mm[2], '/')][strtolower($mm[1])][$mm[3]] = ['description' => trim($mm[4])];
+			continue;
+		}
 		// Match: METHOD /path  — summary  (em-dash or hyphen).
 		if (preg_match(
 			'#^(GET|POST|PUT|PATCH|DELETE)\s+(/?\S+)\s*[—\-]+\s*(.+)$#',
@@ -177,8 +183,10 @@ foreach ($matches as $row) {
 	[$_, $pattern, $presenter, $action] = $row;
 	$presenterFile = $presentersDir . '/' . $presenter . 'Presenter.php';
 	if (!isset($presenterCache[$presenter])) {
+		$responses = [];
 		$presenterCache[$presenter] = [
-			'docblock' => parse_presenter_docblock($presenterFile),
+			'docblock' => parse_presenter_docblock($presenterFile, $responses),
+			'responses' => $responses,
 			'public'   => parse_action_list($presenterFile, 'publicActions'),
 			'operator' => parse_action_list($presenterFile, 'operatorActions'),
 		];
@@ -225,9 +233,14 @@ foreach ($matches as $row) {
 				// BaseApiPresenter refuses a bearer whose scopes do not permit the call (2026-10-25:
 				// pulse.run on the run record and the due feed); every bearer route can answer it.
 				$op['responses']['403'] = ['description' => "The token's scopes do not permit this call"];
-				ksort($op['responses']);
 				$op['security'] = [['BearerAuth' => $isOperator ? ['wing.operator'] : []]];
 			}
+			foreach ($pInfo['responses'] as $dPath => $byMethod) {
+				if (in_array($oaPath, nette_pattern_to_openapi($dPath)['paths'], true)) {
+					$op['responses'] = ($byMethod[$method] ?? []) + $op['responses'];
+				}
+			}
+			ksort($op['responses']);
 
 			// Path parameters.
 			preg_match_all('/\{(\w+)\}/', $oaPath, $pm);

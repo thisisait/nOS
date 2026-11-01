@@ -97,3 +97,21 @@ def test_php_and_the_medulla_answer_every_verdict_the_same(tmp_path, monkeypatch
         assert {k: seen.get(k) for k in verdict} == verdict, (state, seen)
     # The seed reaches every outcome; a fixture gone blind would pass the comparison vacuously.
     assert codes == {200, 401, 403}, codes
+
+
+@m.needs_cargo
+@pytest.mark.skipif(not shutil.which("php"), reason="php builds the schema")
+def test_an_unrendered_flag_is_a_503_the_contract_names(tmp_path, monkeypatch):
+    # Wing never says 503 here, the medulla does on Wing's path: the contract must name it for a caller.
+    monkeypatch.setenv("NOS_HALT_FILE", str(tmp_path / "halt"))
+    monkeypatch.delenv("MEDULLA_AUDIT_CHAIN", raising=False)
+    subprocess.run(["php", str(m.WING / "bin/init-db.php"), f"--data-dir={tmp_path}"], capture_output=True, check=True, timeout=60)
+    p._seed(tmp_path / "wing.db")
+    proc, port = m._serve(m._medulla(tmp_path), tmp_path / "wing.db")
+    try:
+        code, _, body = p._medulla_get(port, URL, p.AUTH["wing.read"])
+    finally:
+        proc.kill()
+        proc.wait()
+    assert code == 503 and "UNKNOWN" in json.loads(body)["error"], (code, body)
+    assert "503" in m.yaml.safe_load(m.OPENAPI.read_text(encoding="utf-8"))["paths"][URL]["get"]["responses"]

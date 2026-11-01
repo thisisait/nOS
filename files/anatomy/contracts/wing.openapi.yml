@@ -305,7 +305,7 @@ paths:
             type: string
   /api/v1/audit/verify:
     get:
-      summary: 'Audit::actionverify'
+      summary: cached tamper-evident-chain verdict.
       operationId: Audit_verify_get
       tags:
         - Audit
@@ -320,6 +320,8 @@ paths:
           description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
+        '503':
+          description: 'the medulla serving this read has no MEDULLA_AUDIT_CHAIN: chain on or off is UNKNOWN'
       security:
         - BearerAuth: []
   /api/v1/coexistence:
