@@ -1,5 +1,5 @@
 // nOS.app: the estate's state in the menu bar, read over the thalamus socket, and the face desktop in a window.
-// It writes nothing itself: a halt is asked of the medulla over the socket, which checks the person and
+// It writes nothing itself: a halt or a setting is asked of the medulla over the socket, which checks the person and
 // this signed exe (NOS_DECIDER_EXES), writes the set-point and tells Wing. Never a file here.
 import AppKit
 import Darwin
@@ -39,14 +39,13 @@ func ask(_ request: String, secs: Int = 2) -> Data? {
 
 func readState() -> EstateState? { ask(#"{"t":"state"}"#).flatMap { try? EstateState.decode($0) } }
 
-/// Halt or lift it through the medulla; what it said, in words. 15 s: it waits on Wing's record (10 s).
-func setHalt(_ on: Bool) -> String {
-    guard let d = ask(on ? #"{"t":"halt","reason":"nOS.app"}"# : #"{"t":"lift_halt"}"#, secs: 15),
+/// A halt or a setting asked of the medulla; what it said, in words. 15 s: it waits on Wing's record (10 s).
+func tell(_ request: String, done what: String) -> String {
+    guard let d = ask(request, secs: 15),
           let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any] else { return "the medulla did not answer: nothing changed" }
     if j["t"] as? String == "refused" { return "refused: \(j["reason"] as? String ?? "no reason given")" }
-    let act = j["act"] as? [String: Any]
-    let what = on ? "Halted" : "Resumed"
-    return act?["recorded"] as? Bool == true ? "\(what); Wing recorded it" : "\(what); NOT recorded: \(act?["why"] as? String ?? "?")"
+    let act = (try? EstateState.decode(d))?.act
+    return act?.recorded == true ? "\(what); Wing recorded it" : "\(what); NOT recorded: \(act?.why ?? "?")"
 }
 
 @MainActor final class Estate: ObservableObject {
@@ -61,19 +60,48 @@ func setHalt(_ on: Bool) -> String {
         }
     }
 
-    /// Asked twice on purpose: a halt holds every Pulse job, a native dialog is the confirmation.
-    func toggleHalt() {
-        let on = state?.halt.on != true
+    /// Asked twice on purpose: a native dialog is the confirmation. With `reason`, a field for one; the
+    /// answer is nil on Cancel, else the reason typed ("" when none).
+    func confirm(_ title: String, _ info: String, verb: String, reason: Bool = false) -> String? {
         let alert = NSAlert()
-        alert.messageText = on ? "Halt every Pulse job?" : "Lift the halt?"
-        alert.informativeText = on ? "Nothing scheduled runs until you resume." : "Scheduled jobs start firing again."
-        alert.addButton(withTitle: on ? "Halt" : "Resume"); alert.addButton(withTitle: "Cancel")
+        alert.messageText = title; alert.informativeText = info
+        alert.addButton(withTitle: verb); alert.addButton(withTitle: "Cancel")
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
+        field.placeholderString = "reason (optional)"
+        if reason { alert.accessoryView = field }
         NSApp.activate(ignoringOtherApps: true)
-        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        guard alert.runModal() == .alertFirstButtonReturn else { return nil }
+        return field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    func send(_ request: String, done: String) {
         Task.detached {
-            let words = setHalt(on)
+            let words = tell(request, done: done)
             await MainActor.run { self.said = words; self.poll() }
         }
+    }
+
+    func toggleHalt() {
+        let on = state?.halt.on != true
+        guard confirm(on ? "Halt every Pulse job?" : "Lift the halt?",
+                      on ? "Nothing scheduled runs until you resume." : "Scheduled jobs start firing again.",
+                      verb: on ? "Halt" : "Resume") != nil else { return }
+        send(on ? #"{"t":"halt","reason":"nOS.app"}"# : #"{"t":"lift_halt"}"#, done: on ? "Halted" : "Resumed")
+    }
+
+    func toggleLoops() {
+        let on = state?.loops_paused.on != true
+        guard let r = confirm(on ? "Pause the loops?" : "Resume the loops?",
+                              on ? "Agent runs skip as a hold until you resume." : "Agent runs start again.",
+                              verb: on ? "Pause" : "Resume", reason: on) else { return }
+        let value: JSONValue = on ? .object(r.isEmpty ? [:] : ["reason": .string(r)]) : .null
+        send(String(decoding: setting("loops.paused", value), as: UTF8.self), done: on ? "Loops paused" : "Loops resumed")
+    }
+
+    func unpause(_ job: String) {
+        guard confirm("Unpause \(job)?", "It is due again on its schedule; the halt and the loops pause still hold.",
+                      verb: "Unpause") != nil else { return }
+        send(String(decoding: setting("pulse.paused", .object([job: .null])), as: UTF8.self), done: "\(job) unpaused")
     }
 
     func poll() {
@@ -103,6 +131,21 @@ struct MenuView: View {
         Divider()
         Button(estate.state?.halt.on == true ? "Resume…" : "Halt…") { estate.toggleHalt() }
             .disabled(estate.state?.halt.on == nil)  // unknown: neither verb is honest
+        Button(estate.state?.loops_paused.on == true ? "Resume loops…" : "Pause loops…") { estate.toggleLoops() }
+            .disabled(estate.state?.loops_paused.on == nil)
+        if let s = estate.state {
+            if let jobs = s.pausedJobs {
+                Menu("Paused jobs (\(jobs.count))") {
+                    if jobs.isEmpty { Text("none") }
+                    ForEach(jobs, id: \.job) { j in
+                        Text("\(j.job): by \(j.by ?? "?") at \(j.at ?? "?")" + (j.reason.map { ", \($0)" } ?? ""))
+                        Button("Unpause \(j.job)…") { estate.unpause(j.job) }
+                    }
+                }
+            } else {
+                Text("Paused jobs: UNKNOWN")
+            }
+        }
         if let w = estate.said { Text(w) }
         Divider()
         Button("Face") { openWindow(id: "face"); NSApp.activate(ignoringOtherApps: true) }
