@@ -15,6 +15,9 @@
 - slug: advisory-patrol
   parent: rel-018
   track: security
+- slug: advisory-range-parse
+  parent: ''
+  track: security
 - slug: agent-action-catalog
   parent: ''
   track: agents
@@ -27,6 +30,9 @@
 - slug: agent-landing-zero-command-operator
   parent: ''
   track: platform
+- slug: agent-output-observed-not-kept
+  parent: pulse-redact-gaps
+  track: security
 - slug: agent-runtime-least-privilege
   parent: workload-allowlist
   track: security
@@ -81,12 +87,18 @@
 - slug: apex-organ-systems
   parent: body-organ
   track: platform
+- slug: apex-sign-where-it-refuses
+  parent: apex-signature-in-ci
+  track: platform
 - slug: apex-signature-in-ci
   parent: ''
   track: release
 - slug: apgar
   parent: body-cell
   track: agents
+- slug: app-credentials-in-nos
+  parent: ''
+  track: security
 - slug: app-standards-are-parsed
   parent: face-app-builder
   track: security
@@ -114,18 +126,30 @@
 - slug: backoffice-organ
   parent: ''
   track: platform
+- slug: backup-dna
+  parent: ''
+  track: platform
 - slug: backup-drill-keap-db
   parent: ''
   track: platform
 - slug: backup-nas-restic-copy
   parent: backup-restic-store
   track: platform
+- slug: backup-passphrase-rotation
+  parent: pulse-redact-gaps
+  track: security
 - slug: backup-restic-store
+  parent: ''
+  track: platform
+- slug: backup-run-now-ordering
   parent: ''
   track: platform
 - slug: backup-s3-leg-retire
   parent: backup-restic-store
   track: platform
+- slug: backup-staging-mode
+  parent: pulse-redact-gaps
+  track: security
 - slug: backup-unbacked-attachments
   parent: backup-restic-store
   track: platform
@@ -312,6 +336,9 @@
 - slug: converge-keychain-preflight
   parent: ''
   track: platform
+- slug: converge-pauses-become-failures
+  parent: ''
+  track: platform
 - slug: converge-plugin-vars
   parent: converge-speed
   track: platform
@@ -320,6 +347,9 @@
   track: platform
 - slug: converge-speed
   parent: plat
+  track: platform
+- slug: converge-sudo-from-keychain
+  parent: ''
   track: platform
 - slug: converge-watch
   parent: converge-speed
@@ -396,9 +426,15 @@
 - slug: daemon-manifest-drift
   parent: body-organ
   track: platform
+- slug: datatables-survive-a-blank
+  parent: ''
+  track: platform
 - slug: declare-playbook-started-daemons
   parent: workload-allowlist
   track: platform
+- slug: deep-suite-own-repo
+  parent: ''
+  track: security
 - slug: default-config-split
   parent: ''
   track: platform
@@ -723,6 +759,9 @@
 - slug: estate-token-gate-scans-tasks
   parent: ''
   track: security
+- slug: eval-mage-vl-cowork
+  parent: ''
+  track: cortex
 - slug: event-type-gate-dot-blind
   parent: wing-organ-without-face
   track: platform
@@ -759,6 +798,9 @@
 - slug: face-create-table-idempotent
   parent: face-the-endpoint
   track: face
+- slug: face-dock-table-def
+  parent: ''
+  track: face
 - slug: face-document-viewer
   parent: ''
   track: face
@@ -791,6 +833,9 @@
   track: face
 - slug: face-limbs-desktop
   parent: face-limbs
+  track: face
+- slug: face-list-detail-space
+  parent: genui-vocabulary-from-openui
   track: face
 - slug: face-loop-view
   parent: face
@@ -828,6 +873,9 @@
 - slug: face-tree
   parent: face
   track: face
+- slug: findings-code-hides-a-crash
+  parent: ''
+  track: platform
 - slug: fixture-apiary-coop
   parent: fixtures
   track: platform
@@ -870,6 +918,9 @@
 - slug: foss-crm-and-wordpress-cms
   parent: consulting-firm-deployment
   track: platform
+- slug: frankenphp-nightly-digest
+  parent: ''
+  track: security
 - slug: from-blank-fixture-marker-orphan
   parent: consulting-firm-deployment
   track: platform
@@ -924,8 +975,23 @@
 - slug: genome-ownership-facets
   parent: rel-017
   track: platform
+- slug: genui-chart-shapes
+  parent: genui-vocabulary-from-openui
+  track: face
+- slug: genui-fact-cards
+  parent: genui-vocabulary-from-openui
+  track: face
+- slug: genui-held-images
+  parent: genui-vocabulary-from-openui
+  track: face
 - slug: genui-renderers-2-followups
   parent: iris-genui
+  track: face
+- slug: genui-sources-beyond-rows
+  parent: genui-vocabulary-from-openui
+  track: face
+- slug: genui-vocabulary-from-openui
+  parent: ''
   track: face
 - slug: geo-vector-tiles
   parent: gis-property
@@ -993,6 +1059,9 @@
 - slug: identities-from-install
   parent: ''
   track: release
+- slug: identity-reader-knows-nos-pulse
+  parent: ''
+  track: security
 - slug: immune-apoptosis-regulator
   parent: immune-system
   track: security
@@ -1200,9 +1269,15 @@
 - slug: jeff
   parent: agents
   track: agents
+- slug: jellyfin-12-upgrade
+  parent: rel-018
+  track: security
 - slug: jellyfin-sso-provider-missing
   parent: identities-from-install
   track: platform
+- slug: jobs-that-read-secrets-yml
+  parent: secrets-at-rest
+  track: security
 - slug: keap-anchor-merge-never-heals
   parent: ''
   track: cortex
@@ -1257,6 +1332,9 @@
 - slug: keap-tables-after-a-blank
   parent: ''
   track: platform
+- slug: kiwix-init-zim-fails-silently
+  parent: ''
+  track: platform
 - slug: kpro
   parent: ''
   track: cortex
@@ -1281,6 +1359,9 @@
 - slug: ledger-constitution
   parent: backoffice-organ
   track: platform
+- slug: ledger-leaked-rows-purge
+  parent: pulse-redact-gaps
+  track: security
 - slug: ledger-organ
   parent: ''
   track: platform
@@ -1482,6 +1563,9 @@
 - slug: medulla-loop-engine
   parent: medulla
   track: agents
+- slug: medulla-native-app
+  parent: medulla
+  track: platform
 - slug: medulla-notifications-hub
   parent: medulla
   track: platform
@@ -1489,6 +1573,9 @@
   parent: medulla
   track: platform
 - slug: medulla-scheduler
+  parent: medulla
+  track: platform
+- slug: medulla-settings
   parent: medulla
   track: platform
 - slug: medulla-skeleton
@@ -1536,6 +1623,9 @@
 - slug: nodered-plugin-text-after-tiering
   parent: rbac-permission-genome
   track: security
+- slug: nos-admin-group
+  parent: nos-system-user-linux
+  track: security
 - slug: nos-assay
   parent: iris-genui-bench
   track: agents
@@ -1545,12 +1635,18 @@
 - slug: nos-forum
   parent: ''
   track: platform
+- slug: nos-linux-fhs-layout
+  parent: nos-system-user-linux
+  track: platform
 - slug: nos-push-silent-noop
   parent: ''
   track: release
 - slug: nos-system-user-linux
   parent: medulla
   track: security
+- slug: nos-terminal-in-app
+  parent: medulla-native-app
+  track: platform
 - slug: nos-user-macos
   parent: nos-system-user-linux
   track: security
@@ -1641,9 +1737,15 @@
 - slug: one-service-directory
   parent: ''
   track: platform
+- slug: one-vault
+  parent: ''
+  track: security
 - slug: oneshot-logprobs-for-field-confidence
   parent: consulting-firm-deployment
   track: agents
+- slug: openbao-spike
+  parent: one-vault
+  track: security
 - slug: openclaw-dead-handlers
   parent: body-organ
   track: platform
@@ -1695,6 +1797,24 @@
 - slug: orphan-extension-exclusion
   parent: workload-allowlist
   track: platform
+- slug: paperclip-agent-via-iris
+  parent: paperclip-company-dna
+  track: agents
+- slug: paperclip-budget-guard
+  parent: paperclip-company-dna
+  track: agents
+- slug: paperclip-claude-auth-toggle
+  parent: symbiont-claude
+  track: agents
+- slug: paperclip-company-dna
+  parent: ''
+  track: agents
+- slug: paperclip-restore-per-db
+  parent: pulse-redact-gaps
+  track: platform
+- slug: paperclip-state-to-repo
+  parent: paperclip-company-dna
+  track: agents
 - slug: party-ares-verify
   parent: digest
   track: digest
@@ -1866,12 +1986,21 @@
 - slug: prose-retirement
   parent: body-plan
   track: platform
+- slug: pulse-findings-streak
+  parent: medulla-scheduler
+  track: platform
 - slug: pulse-lineage
   parent: ''
   track: agents
 - slug: pulse-prefix-allowlist
   parent: workload-allowlist
   track: security
+- slug: pulse-redact-gaps
+  parent: medulla-scheduler
+  track: security
+- slug: pulse-tag-registers-jobs
+  parent: ''
+  track: platform
 - slug: pupil-build-role
   parent: iris-genui
   track: face
@@ -1983,6 +2112,9 @@
 - slug: repos-importer
   parent: digest
   track: digest
+- slug: research-agent-desktop
+  parent: ''
+  track: face
 - slug: retire-healing-words
   parent: body-plan
   track: platform
@@ -2016,6 +2148,9 @@
 - slug: rust-transplant-order
   parent: ''
   track: platform
+- slug: rustfs-1-0-3-upgrade
+  parent: rel-018
+  track: security
 - slug: santa-is-an-organ
   parent: workload-allowlist
   track: security
@@ -2142,6 +2277,9 @@
 - slug: sere-hosts
   parent: sere
   track: platform
+- slug: set-points-outside-home
+  parent: nos-linux-fhs-layout
+  track: platform
 - slug: share-grants-agents
   parent: dtt-share-model
   track: platform
@@ -2223,6 +2361,9 @@
 - slug: storage-genome
   parent: rel-018
   track: platform
+- slug: suite-prune-to-joints
+  parent: ''
+  track: platform
 - slug: swarm-2026-09-15
   parent: plat
   track: platform
@@ -2254,6 +2395,9 @@
   parent: ''
   track: release
 - slug: test-suite-diet
+  parent: ''
+  track: release
+- slug: test-suite-thinning
   parent: ''
   track: release
 - slug: tester-hardware-readiness
@@ -2523,12 +2667,18 @@
 - slug: wing-retired
   parent: medulla
   track: platform
+- slug: wing-successor-anatomy
+  parent: medulla
+  track: platform
 - slug: wing-tenants
   parent: ''
   track: platform
 - slug: wing-tier-followups
   parent: wing-organ-without-face
   track: security
+- slug: wing-to-medulla-waves
+  parent: medulla
+  track: platform
 - slug: wordpress-client-portal
   parent: consulting-firm-deployment
   track: face
@@ -2545,5 +2695,8 @@
   parent: ''
   track: platform
 - slug: workload-allowlist
+  parent: ''
+  track: security
+- slug: zod4-serde-yaml-debt
   parent: ''
   track: security
