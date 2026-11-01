@@ -48,6 +48,9 @@
         <string>{{ wing_data_dir }}/wing.db</string>
         <key>MEDULLA_HTTP_PORT</key>
         <string>{{ medulla_http_port }}</string>
+        <!-- AuditChain::chainKey()'s condition on Wing's secret, never the secret: absent, /audit/verify is 503. -->
+        <key>MEDULLA_AUDIT_CHAIN</key>
+        <string>{{ 'on' if ((wing_events_hmac_secret | default(bone_secret | default(''))) | string) not in ['', '0'] else 'off' }}</string>
 {% endif %}
         <!-- The settings store serve writes (src/settings.rs, state/genome/settings.yml); Wing reads the same path. -->
         <key>MEDULLA_DATA_DIR</key>

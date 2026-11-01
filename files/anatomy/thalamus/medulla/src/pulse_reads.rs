@@ -9,7 +9,7 @@ use serde_json::{json, Map, Value};
 use std::path::Path;
 use std::time::Duration;
 
-/// BaseApiPresenter's $bffOperatorReads on PulsePresenter: a Tier-1 person reads these through face-bff.
+/// PulsePresenter's $bffOperatorReads: a Tier-1 person reads these through face-bff.
 const OPERATOR_READS: [&str; 3] = ["jobs", "runs", "runSummary"];
 
 /// (status, body) for a path this module serves; None hands the request back (404 at the door).
@@ -38,7 +38,7 @@ fn route(path: &str) -> Option<(&'static str, Option<String>)> {
 fn serve(db: &Path, action: &str, id: Option<String>, query: &str, header: &dyn Fn(&str) -> Option<String>) -> rusqlite::Result<(u16, Value)> {
     let db = Connection::open_with_flags(db, OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX)?;
     db.busy_timeout(Duration::from_secs(5))?;
-    if let Err(refused) = auth(&db, action, header)? {
+    if let Err(refused) = auth(&db, action, &OPERATOR_READS, header)? {
         return Ok(refused);
     }
     let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs() as i64);
@@ -70,12 +70,13 @@ fn admin_state(db: &Connection) -> rusqlite::Result<Value> {
     Ok(v)
 }
 
-fn err(code: u16, msg: &str) -> (u16, Value) {
+pub fn err(code: u16, msg: &str) -> (u16, Value) {
     (code, json!({"error": msg, "code": code}))
 }
 
 /// BaseApiPresenter::startup() for a GET: requireTokenAuth, permits, EndUser, the thalamus and face-bff doors.
-pub fn auth(db: &Connection, action: &str, header: &dyn Fn(&str) -> Option<String>) -> rusqlite::Result<Result<(), (u16, Value)>> {
+/// `operator_reads` is the caller presenter's $bffOperatorReads: one set's list never opens another's.
+pub fn auth(db: &Connection, action: &str, operator_reads: &[&str], header: &dyn Fn(&str) -> Option<String>) -> rusqlite::Result<Result<(), (u16, Value)>> {
     let Some(token) = header("authorization").and_then(|h| h.strip_prefix("Bearer ").map(str::to_owned)) else {
         return Ok(Err(err(401, "Missing or invalid Authorization header. Use: Authorization: Bearer <token>")));
     };
@@ -101,7 +102,7 @@ pub fn auth(db: &Connection, action: &str, header: &dyn Fn(&str) -> Option<Strin
     if name == "thalamus" {
         return Ok(Err(err(403, "the thalamus token speaks for a person only to start or stop an agent session and read it")));
     }
-    if !OPERATOR_READS.contains(&action) {
+    if !operator_reads.contains(&action) {
         return Ok(Err(err(403, "the face-bff token does not reach this action")));
     }
     let groups = header("x-nos-user-groups").unwrap_or_default().to_ascii_lowercase();

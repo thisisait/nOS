@@ -942,6 +942,7 @@ medulla_routes: []
 # Named read sets whose GETs alone move; their writes stay PHP's (ruling 2026-10-25). [] = none.
 # [pulse] = GET /api/v1/pulse_jobs, /pulse_runs, /pulse_runs/summary, /pulse_runs/<id> (not /due).
 # [admin] = GET /api/v1/admin/state: PHP's halt_active + job_counts and the medulla's state struct.
+# [audit] = GET /api/v1/audit/verify: the cached audit-chain verdict (MEDULLA_AUDIT_CHAIN, never the secret).
 medulla_read_routes: []
 # The medulla's loopback HTTP door. 8095: free (8096 is Jellyfin; 8097 relay, 8098 cortex, 8099 Bone).
 medulla_http_port: 8095
