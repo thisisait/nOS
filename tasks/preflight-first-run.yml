@@ -30,7 +30,8 @@
     msg: |-
       global_password_prefix is {{ 'unset' if not (global_password_prefix | default('')) else 'weak (changeme or < 12 chars)' }}.
       88 credentials derive from it. Write a random one into credentials.yml (never printed):
-        umask 077; printf 'global_password_prefix: "%s"\n' "$(openssl rand -hex 16)" >> {{ playbook_dir }}/credentials.yml
+        cd {{ playbook_dir }}; umask 077
+        { grep -v '^global_password_prefix:' credentials.yml 2>/dev/null; printf 'global_password_prefix: "%s"\n' "$(openssl rand -hex 16)"; } > c.new && mv c.new credentials.yml
       Throwaway sandbox only: -e allow_weak_prefix=true.
   when:
     - not (allow_weak_prefix | default(false) | bool)
