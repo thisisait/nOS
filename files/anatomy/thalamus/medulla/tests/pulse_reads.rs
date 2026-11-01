@@ -76,6 +76,7 @@ fn the_auth_table_is_phps() {
         ("null", "scout", None, 1), ("blank", "blank", Some(" , "), 1), ("halt", "wing-halt", Some("wing.halt"), 1),
         ("gone", "retired", Some("wing.read"), 0), ("bff", "face-bff", Some("wing.operator,wing.write"), 1),
         ("thal", "thalamus", Some("wing.write"), 1),
+        ("answer", "wing-answer", Some("wing.answer,wing.write"), 1),
     ] {
         token(&db, plain, name, scopes, active);
     }
@@ -92,6 +93,7 @@ fn the_auth_table_is_phps() {
         (&[("Authorization", "Bearer null")], 200, ""),
         (&[("Authorization", "Bearer blank")], 200, ""),
         (&[("Authorization", "Bearer halt")], 403, "Token scope does not permit GET on the ops plane"),
+        (&[("Authorization", "Bearer answer")], 403, "the wing-answer token reaches the inbox answer and nothing else"),
         (&[("Authorization", "Bearer bff")], 401, "face-bff request without a canonical X-Nos-User-Uid"),
         (&[("Authorization", "Bearer bff"), ("X-Nos-User-Uid", "a--b")], 401, "face-bff request without a canonical X-Nos-User-Uid"),
         (&[("Authorization", "Bearer bff"), ("X-Nos-User-Uid", "alice"), ("X-Nos-User-Groups", "nos-users")], 403, t1),

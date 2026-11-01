@@ -90,6 +90,10 @@ pub fn auth(db: &Connection, action: &str, operator_reads: &[&str], header: &dyn
     // TokenRepository::permits: NULL/'' is unrestricted; a GET needs wing.read or wing.write.
     let scopes = scopes.unwrap_or_default();
     let granted: Vec<&str> = scopes.split(',').map(|s| s.trim_matches([' ', '\t', '\n', '\r', '\0', '\x0B'])).filter(|s| !s.is_empty() && *s != "0").collect();
+    // BaseApiPresenter confines wing.answer to an $answerActions POST; this door answers GETs only.
+    if granted.contains(&"wing.answer") {
+        return Ok(Err(err(403, "the wing-answer token reaches the inbox answer and nothing else")));
+    }
     if !granted.is_empty() && !granted.iter().any(|s| *s == "wing.read" || *s == "wing.write") {
         return Ok(Err(err(403, "Token scope does not permit GET on the ops plane")));
     }
