@@ -180,10 +180,11 @@ fn a_decider_pauses_a_job_both_schedulers_hold_it_and_no_one_else_sets_it() {
         .arg("{\"t\":\"setting\",\"key\":\"pulse.paused\",\"value\":{\"a:plain\":null}}\n").output().unwrap();
     let v: Value = serde_json::from_slice(&o.stdout).unwrap_or_else(|_| panic!("{}", said(&o)));
     assert!(v["t"] == "refused" && v["reason"].as_str().unwrap().contains("not a listed decider"), "{v}");
-    // A listed decider (this test binary): a key the genome does not name, a change that names who, a reason of two lines.
+    // A listed decider (this test binary): a key the genome does not name, a change that names who, a reason of two lines (\n or \r).
     for (line, why) in [("{\"t\":\"setting\",\"key\":\"pulse.speed\",\"value\":{\"a:plain\":null}}\n", "no setting the genome names"),
                         ("{\"t\":\"setting\",\"key\":\"pulse.paused\",\"value\":{\"a:plain\":{\"by\":\"bob\"}}}\n", "serve names who and when"),
-                        ("{\"t\":\"setting\",\"key\":\"pulse.paused\",\"value\":{\"a:plain\":{\"reason\":\"a\\nb\"}}}\n", "one line")] {
+                        ("{\"t\":\"setting\",\"key\":\"pulse.paused\",\"value\":{\"a:plain\":{\"reason\":\"a\\nb\"}}}\n", "one line"),
+                        ("{\"t\":\"setting\",\"key\":\"pulse.paused\",\"value\":{\"a:plain\":{\"reason\":\"a\\rb\"}}}\n", "one line")] {
         let v = raw(&home, line);
         assert!(v["t"] == "refused" && v["reason"].as_str().unwrap().contains(why), "{line}: {v}");
     }
