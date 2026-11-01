@@ -58,10 +58,20 @@ sys.path.insert(0, str(REPO / "tools"))  # nos_identity, imported lazily
 WING_DB = pathlib.Path.home() / "wing" / "app" / "data" / "wing.db"
 #: The runtime sentinel `nos loops pause` writes. Its presence is a HOLD, not a
 #: red and not a green — an operator paused the SERE agent loops on purpose.
-#: NOS_LOOPS_PAUSED_FILE overrides the path (must match agent-run-lock.sh).
-LOOPS_PAUSED_FILE = pathlib.Path(
-    os.environ.get("NOS_LOOPS_PAUSED_FILE",
-                   str(pathlib.Path.home() / ".nos" / "loops-paused")))
+#: Its path, and the halt's, by the one rule every reader shares (set_point_file).
+# ponytail: fixed though nos_system_home is configurable; upgrade = render the path into /etc/nos.
+SETTINGS_DIR = "/var/lib/nos/settings"
+_SET_POINTS = {"NOS_HALT_FILE": "halt", "NOS_LOOPS_PAUSED_FILE": "loops-paused"}
+
+
+def set_point_file(var: str) -> pathlib.Path:
+    """One rule in every reader (test_set_points_resolve_one_path.py): the env var
+    wins; else SETTINGS_DIR/<name> when that dir exists; else ~/.nos/<name>."""
+    base = pathlib.Path(SETTINGS_DIR) if os.path.isdir(SETTINGS_DIR) else pathlib.Path.home() / ".nos"
+    return pathlib.Path(os.environ.get(var) or base / _SET_POINTS[var])
+
+
+LOOPS_PAUSED_FILE = set_point_file("NOS_LOOPS_PAUSED_FILE")
 #: The exit code agent-run-lock.sh returns when the loops are paused; a pulse
 #: run recorded with it is a hold, never a failure.
 PAUSED_EXIT = 3
@@ -1157,7 +1167,7 @@ def collect() -> dict:
     # never becomes an UNKNOWN. Its presence is a HOLD, reported by hold_lines().
     report["loops_paused"] = loops_paused()
     # The emergency halt (one file, tools/nos halt): a HOLD in plain words, never silence.
-    halt = pathlib.Path(os.environ.get("NOS_HALT_FILE") or pathlib.Path.home() / ".nos" / "halt")
+    halt = set_point_file("NOS_HALT_FILE")
     try:
         report["halt"] = halt.read_text(encoding="utf-8").strip() if halt.is_file() else None
     except OSError:

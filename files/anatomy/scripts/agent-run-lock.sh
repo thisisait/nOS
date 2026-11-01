@@ -51,12 +51,15 @@
 # (`nos loops pause` -> the sentinel below), acquire returns 3 BEFORE taking any
 # slot. This is neither a refusal (2) nor a success (0): the run did not happen
 # and that is intentional. Callers skip as a HOLD and say so; red-status renders
-# it apart from red and from green. The sentinel lives under ~/.nos so it toggles
-# live with no converge; NOS_LOOPS_PAUSED_FILE overrides its path (tests).
+# it apart from red and from green. The sentinel toggles live with no converge, at
+# the one path every reader resolves (test_set_points_resolve_one_path.py):
+# NOS_LOOPS_PAUSED_FILE, else the system-user settings dir when it exists, else ~/.nos.
+# ponytail: fixed though nos_system_home is configurable; upgrade = render the path into /etc/nos.
 
 NOS_AGENT_LOCK="${NOS_AGENT_LOCK_DIR:-${HOME:-/nonexistent}/.nos/agent-run.lock}"
 NOS_AGENT_LOCK_SLOTS="${NOS_AGENT_LOCK_SLOTS:-3}"
-NOS_LOOPS_PAUSED_FILE="${NOS_LOOPS_PAUSED_FILE:-${HOME:-/nonexistent}/.nos/loops-paused}"
+_nos_sp=/var/lib/nos/settings; [ -d "$_nos_sp" ] || _nos_sp="${HOME:-/nonexistent}/.nos"
+NOS_LOOPS_PAUSED_FILE="${NOS_LOOPS_PAUSED_FILE:-$_nos_sp/loops-paused}"
 NOS_AGENT_LOCK_HELD=()
 
 nos_agent_lock_release() {

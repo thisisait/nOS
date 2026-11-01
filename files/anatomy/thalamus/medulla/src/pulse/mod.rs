@@ -60,8 +60,8 @@ fn open(db: &str) -> Result<rusqlite::Connection, String> {
 }
 
 /// One tick, judged not fired. Mirrors pulse/daemon.py: tick() takes due[:free_slots], _dispatch()
-/// skips a job in flight or a runner it lacks, the run thread holds on ~/.nos/halt and on
-/// ~/.nos/loops-paused for loop:*, the runner refuses outside the allowlist (126). In flight here is
+/// skips a job in flight or a runner it lacks, the run thread holds on the halt and on
+/// the loops pause (thalamus::state) for loop:*, the runner refuses outside the allowlist (126). In flight here is
 /// a pulse_runs row not finished, fired within the 3600 s run ceiling (the daemon's is in memory).
 /// Not judged: secret:<name> resolution (rc 255) — the medulla never reads secrets.yml.
 pub fn tick(db: &str, now: i64, cap: usize) -> Result<(), String> {

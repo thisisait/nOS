@@ -167,7 +167,7 @@ pub fn render(db: &Path) -> rusqlite::Result<String> {
         "# HELP nos_pulse_jobs Pulse job catalog state (1 = matches state, 0 otherwise).".into(),
         "# TYPE nos_pulse_jobs gauge".into(),
     ]);
-    // The emergency halt is one file (NOS_HALT_FILE, else ~/.nos/halt; row medulla-admin-halt):
+    // The emergency halt is one file (thalamus::state::halt_file; row medulla-admin-halt):
     // while it exists every job not paused by hand is emergency_halted.
     let halted = thalamus::state::halt_file().is_file();
     l.extend(rows(&db,

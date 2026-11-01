@@ -161,8 +161,8 @@ wire:
   state: >-
     v13: `state` is a listed person asking for the estate's runtime set-points (row medulla-settings); serve
     answers `state {halt, loops_paused, organs, settings}` (settings v15) without opening a session and writes nothing. halt and
-    loops_paused are {on, since?, reason?, file}: on while the file exists (NOS_HALT_FILE, else ~/.nos/halt;
-    NOS_LOOPS_PAUSED_FILE, else ~/.nos/loops-paused), since and reason as the file says them; organs are
+    loops_paused are {on, since?, reason?, file}: on while the file exists (NOS_HALT_FILE, else halt in
+    /var/lib/nos/settings when it exists, else ~/.nos; loops-paused alike), since and reason as the file says them; organs are
     [{name, label, running, pid?, last_exit?}] for the host LaunchAgents or systemd user units (pid and
     last_exit from the same one `launchctl list` or `systemctl --user show`). on, running, pid and last_exit
     are null (or absent) when the source could not be read: UNKNOWN, never off or 0. The same struct is `medulla state --json` and GET

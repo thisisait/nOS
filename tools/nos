@@ -202,12 +202,16 @@ DTT
   exec "$DTT_PY" "$NOS_SRC/tools/$tool" "$@"
 fi
 
+# The set-points (halt, loops pause), one rule in every reader (test_set_points_resolve_one_path.py):
+# NOS_*_FILE wins; else the system-user dir the medulla unit reads, when it exists; else ~/.nos.
+# ponytail: fixed though nos_system_home is configurable; upgrade = render the path into /etc/nos.
+_nos_sp=/var/lib/nos/settings; [ -d "$_nos_sp" ] || _nos_sp="$HOME/.nos"
+
 # ── `nos loops <pause|resume|status>` — live SERE-loop pause switch ───────────
 # Pause the AGENT RUNTIME at its single chokepoint (agent-run-lock.sh) so the
 # operator can hold the loops before a converge — instead of hand-unloading the
-# resident model — and resume after. The sentinel is a RUNTIME file under
-# ~/.nos, so this toggles LIVE with no converge. NOS_LOOPS_PAUSED_FILE overrides
-# the path (must match agent-run-lock.sh + red-status.py).
+# resident model — and resume after. The sentinel is a RUNTIME file (set-points
+# above), so this toggles LIVE with no converge.
 _loops_audit() {   # <event_type> <reason> — best-effort Bone audit event, never blocks
   local etype="$1" reason="${2:-}"
   local t; for t in jq openssl curl; do command -v "$t" >/dev/null 2>&1 || return 0; done
@@ -270,7 +274,7 @@ fi
 
 if [ "${1:-}" = "loops" ]; then
   shift
-  _lp="${NOS_LOOPS_PAUSED_FILE:-$HOME/.nos/loops-paused}"
+  _lp="${NOS_LOOPS_PAUSED_FILE:-$_nos_sp/loops-paused}"
   sub="${1:-status}"; [ $# -gt 0 ] && shift
   case "$sub" in
     pause)
@@ -321,7 +325,7 @@ LOOPS
 fi
 
 # ── `nos halt [--status]` / `nos resume` — emergency halt ─────────────────────
-# The halt IS one file, ~/.nos/halt (NOS_HALT_FILE): every scheduler holds every
+# The halt IS one file (set-points above): every scheduler holds every
 # due job while it exists (row medulla-admin-halt, 2026-10-25). The medulla sets
 # it first (`medulla halt|resume`: tier 1 at a listed decider, and it sends Wing
 # the act). When the medulla does not set it, this shell is the break-glass: it
@@ -332,7 +336,7 @@ if [ "${1:-}" = "halt" ] || [ "${1:-}" = "resume" ]; then
   verb="$1"; shift
   [ "$verb" = "halt" ] && [ "${1:-}" = "--status" ] && { verb="state"; shift; }
   [ $# -eq 0 ] || { echo "nos $verb: takes no arguments (nos halt [--status] | nos resume)" >&2; exit 64; }
-  _halt="${NOS_HALT_FILE:-$HOME/.nos/halt}"
+  _halt="${NOS_HALT_FILE:-$_nos_sp/halt}"
   _med="${NOS_MEDULLA:-$HOME/thalamus/bin/medulla}"
   if [ "$verb" != "state" ] && [ -x "$_med" ]; then
     rc=0; "$_med" "$verb" || rc=$?

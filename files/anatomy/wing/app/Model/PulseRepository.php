@@ -649,9 +649,13 @@ final class PulseRepository
 		return $map instanceof \stdClass ? array_map('strval', array_keys(get_object_vars($map))) : null;
 	}
 
+	/** NOS_HALT_FILE, else <settings>/halt when that dir exists, else ~/.nos/halt (test_set_points_resolve_one_path.py). */
 	public static function haltFile(): string
 	{
-		return (string) (getenv('NOS_HALT_FILE') ?: rtrim((string) getenv('HOME'), '/') . '/.nos/halt');
+		// ponytail: fixed though nos_system_home is configurable; upgrade = render the path into /etc/nos.
+		$dir = '/var/lib/nos/settings';
+		$dir = is_dir($dir) ? $dir : rtrim((string) getenv('HOME'), '/') . '/.nos';
+		return (string) (getenv('NOS_HALT_FILE') ?: $dir . '/halt');
 	}
 
 	/** Write the halt (idempotent). Returns how many unpaused jobs it now holds. */

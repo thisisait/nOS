@@ -148,7 +148,9 @@ not a timeout. Run it after a loop, or before a converge you need to trust.
 ## `nos halt` / `nos resume` — the emergency halt, break-glass
 
 The same act as the big red button on Wing's `/admin` page. **The halt is one file,
-`~/.nos/halt`** (`NOS_HALT_FILE`): while it exists every scheduler holds every due
+`~/.nos/halt`** (`NOS_HALT_FILE`; on a system-user Linux host
+`/var/lib/nos/settings/halt`, used whenever that directory exists — the loops pause
+follows the same rule): while it exists every scheduler holds every due
 Pulse job (the run ends `exit 3, PAUSED: emergency halt`). It flips no job row, so a
 manual pause is neither set nor lifted by it (operator ruling 2026-10-25, row
 medulla-admin-halt).

@@ -59,20 +59,31 @@ def _now_iso() -> str:
 
 # ── daemon ──────────────────────────────────────────────────────────────
 
+# ponytail: fixed though nos_system_home is configurable; upgrade = render the path into /etc/nos.
+SETTINGS_DIR = "/var/lib/nos/settings"
+_SET_POINTS = {"NOS_HALT_FILE": "halt", "NOS_LOOPS_PAUSED_FILE": "loops-paused"}
+
+
+def set_point_file(var: str) -> str:
+    """One rule in every reader (test_set_points_resolve_one_path.py): the env var
+    wins; else SETTINGS_DIR/<name> when that dir exists; else ~/.nos/<name>."""
+    base = SETTINGS_DIR if os.path.isdir(SETTINGS_DIR) else os.path.expanduser("~/.nos")
+    return os.environ.get(var) or os.path.join(base, _SET_POINTS[var])
+
 
 def paused_hold(job_id: str) -> "sp_runner.RunResult | None":
-    """Exit 3 for EVERY job while the emergency halt holds (~/.nos/halt), and for a
+    """Exit 3 for EVERY job while the emergency halt holds (set_point_file), and for a
     loop:* job while `nos loops pause` holds the estate.
 
     The halt is one file, not a flag on each job row (row medulla-admin-halt,
     2026-10-25): it works with Wing down and leaves manual pauses alone. Agents
     meet the loops pause in agent-run-lock.sh; loop runners take no lock.
     """
-    halt = os.environ.get("NOS_HALT_FILE") or os.path.expanduser("~/.nos/halt")
+    halt = set_point_file("NOS_HALT_FILE")
     if os.path.isfile(halt):
         return sp_runner.RunResult(exit_code=3, duration_s=0.0, stdout_tail="", timed_out=False,
                                    stderr_tail=f"PAUSED: emergency halt in force ({halt}) — {job_id} held")
-    sentinel = os.environ.get("NOS_LOOPS_PAUSED_FILE") or os.path.expanduser("~/.nos/loops-paused")
+    sentinel = set_point_file("NOS_LOOPS_PAUSED_FILE")
     if not job_id.startswith("loop:") or not os.path.isfile(sentinel):
         return None
     return sp_runner.RunResult(exit_code=3, duration_s=0.0, stdout_tail="", timed_out=False,

@@ -33,7 +33,8 @@ settings:
   loops.paused:
     scope: estate
     type: sentinel
-    file: NOS_LOOPS_PAUSED_FILE, else ~/.nos/loops-paused (`since:` / `reason:` lines, as tools/nos writes)
+    file: NOS_LOOPS_PAUSED_FILE, else /var/lib/nos/settings/loops-paused when that dir exists, else
+      ~/.nos/loops-paused (`since:` / `reason:` lines, as tools/nos writes; test_set_points_resolve_one_path.py)
     entry: {reason: "text?"}
     default: off
     set_by: {tier: 1, at: decider}

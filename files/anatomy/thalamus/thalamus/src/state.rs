@@ -3,6 +3,7 @@
 //! read() writes nothing; a source it cannot read is null (UNKNOWN), never off. set_halt (increment 2) writes
 //! the halt for serve alone, after its tier-1 and decider check; settings.rs (increment 3) the settings.
 use nos_contract::wire::{ActRecord, EstateState, Organ, SetPoint};
+use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -16,18 +17,29 @@ const ORGANS: [(&str, &str); 6] = [
     ("cortex", "eu.thisisait.nos.cortex"),
 ];
 
-fn file(var: &str, rel: &str) -> PathBuf {
-    std::env::var_os(var).filter(|v| !v.is_empty()).map(PathBuf::from).unwrap_or_else(|| PathBuf::from(std::env::var_os("HOME").unwrap_or_default()).join(rel))
+// ponytail: fixed though nos_system_home is configurable; upgrade = render the path into /etc/nos.
+const SETTINGS_DIR: &str = "/var/lib/nos/settings";
+
+/// One rule in every reader (test_set_points_resolve_one_path.py): the env var wins; else
+/// SETTINGS_DIR/<name> when that dir exists (a system-user host); else ~/.nos/<name>.
+fn resolve(explicit: Option<OsString>, dir: &Path, home: Option<OsString>, name: &str) -> PathBuf {
+    explicit.filter(|v| !v.is_empty()).map(PathBuf::from).unwrap_or_else(|| {
+        if dir.is_dir() { dir.join(name) } else { PathBuf::from(home.unwrap_or_default()).join(".nos").join(name) }
+    })
 }
 
-/// The emergency halt's one file (row medulla-admin-halt): NOS_HALT_FILE, else ~/.nos/halt.
+fn file(var: &str, name: &str) -> PathBuf {
+    resolve(std::env::var_os(var), Path::new(SETTINGS_DIR), std::env::var_os("HOME"), name)
+}
+
+/// The emergency halt's one file (row medulla-admin-halt): NOS_HALT_FILE, else <settings>/halt, else ~/.nos/halt.
 pub fn halt_file() -> PathBuf {
-    file("NOS_HALT_FILE", ".nos/halt")
+    file("NOS_HALT_FILE", "halt")
 }
 
-/// The loops maintenance pause (`nos loops pause`): NOS_LOOPS_PAUSED_FILE, else ~/.nos/loops-paused.
+/// The loops maintenance pause (`nos loops pause`), by the same rule as the halt.
 pub fn loops_paused_file() -> PathBuf {
-    file("NOS_LOOPS_PAUSED_FILE", ".nos/loops-paused")
+    file("NOS_LOOPS_PAUSED_FILE", "loops-paused")
 }
 
 pub fn read() -> EstateState {
@@ -205,6 +217,19 @@ fn systemd_parse(out: Option<&str>) -> Vec<Host> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_set_point_resolves_env_then_settings_dir_then_home() {
+        let tmp = std::env::temp_dir().join(format!("sp-resolve-{}", std::process::id()));
+        let (dir, home) = (tmp.join("settings"), Some(tmp.join("home").into_os_string()));
+        assert_eq!(resolve(Some("/x/halt".into()), &dir, home.clone(), "halt"), PathBuf::from("/x/halt"), "env wins");
+        assert_eq!(resolve(Some("".into()), &dir, home.clone(), "halt"), tmp.join("home/.nos/halt"), "empty env is unset");
+        assert_eq!(resolve(None, &dir, home.clone(), "loops-paused"), tmp.join("home/.nos/loops-paused"), "no dir: ~/.nos");
+        std::fs::create_dir_all(&dir).unwrap();
+        assert_eq!(resolve(None, &dir, home.clone(), "halt"), dir.join("halt"), "the dir exists: it wins over ~/.nos");
+        assert_eq!(resolve(Some("/x/lp".into()), &dir, home, "loops-paused"), PathBuf::from("/x/lp"), "env beats the dir");
+        std::fs::remove_dir_all(&tmp).unwrap();
+    }
 
     #[test]
     fn every_organ_label_is_one_a_role_installs() {
