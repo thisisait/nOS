@@ -6,16 +6,151 @@ Versioning is by git tag `v<semver>` cut from `master`. The latest tag is `v0.17
 
 ---
 
-## v0.18-beta — in progress
+## v0.18-beta — DRAFT (not cut)
 
-Exit criteria, copied from roadmap row `rel-018` (EXIT, readers):
+> **The medulla wakes, and a blank teaches the backup to keep what it was given.**
+> DRAFT 2026-11-01 (first draft 10-29 from `/release-prep v0.18-beta`). 773 commits since
+> `v0.17-beta` (807 files, +55.7k/−8.3k), measured with `git log v0.17-beta..origin/dev` at `bb3e061f`.
+> Offline (`tests/fast.sh`, 10-31 on the advisory branch): pytest 8863 passed, 8 failed — the eight
+> pupil/face vitest lanes with no `node_modules` in the worktree, not run. CI on dev was red from
+> 10-29 to 11-01 (yamllint on `ruling.yml`, then a layer-set gate on the new drill test); fixed in
+> `dd3912f7`, re-signed `bb3e061f` — CI result at the cut to be written here.
+> **Blank 2026-10-30** (`nos --remove=data --confirm`, then `nos`): it found ten defects, written
+> below under "The blank"; `nos-smoke --strict` 31/32 the next day (Kiwix), **32/32 on 2026-11-01**
+> after the Kiwix fixes. A second blank, after Paperclip re-boarding is tested, is still planned.
 
-- [ ] estate-status release gate green on a blank converge of the operator host + a second host
-- [ ] CI green on every lane at the release PR with no bypass
-- [ ] one live Iris journey: approve a sub-agent, its report returns, the tree shows parent and child
-- [ ] one loop proposed by Iris, filed by the operator, run by Pulse, analysed by Iris from its runs
-- [ ] estate-status --identity prints every host organ's runtime and uid
-- [ ] rbac-status prints the matrix
+Exit criteria, from roadmap row `rel-018` (EXIT, readers), as read on 2026-11-01:
+
+- [ ] estate-status release gate green on a blank converge of the operator host + a second host — operator host blanked 10-30 and smoke-strict 32/32 on 11-01; the second host (Mac mini / Ubuntu) not installed
+- [ ] CI green on every lane at the release PR with no bypass — dev red 10-29..11-01, fixed `dd3912f7`; Bonus lanes (per-stack converge) red, non-blocking, unverified
+- [ ] one live Iris journey: approve a sub-agent, its report returns, the tree shows parent and child — not run
+- [ ] one loop proposed by Iris, filed by the operator, run by Pulse, analysed by Iris from its runs — not run
+- [x] estate-status --identity prints every host organ's runtime and uid — `tools/estate-status.py --identity` on the operator host (nos-pulse, a LaunchAgent helper, is not listed: row to file)
+- [x] rbac-status prints the matrix — `tools/rbac-status.py`
+
+### Iris delegates
+- **She starts a sub-agent and hears it end.** `start_agent` asks the person first, then starts a
+  Wing agent run with that person's bearer (`c759cc3b`, `78dadee9`); managers may start read-only
+  sub-agents (`67a7f61e`). The run's end comes back as a card, not text injected into the
+  conversation (`4c79956c`, `2c5f32f4`); `stop_agent` stops a run she started, refereed by Wing
+  (`31aca64c`, `8bffc2b6`); `read_run` draws the run as a dendrogram (`49718ba4`, `d561fbf1`).
+  Not yet run end-to-end live (exit criterion above).
+- **Loops are data she can read and propose:** `read_loop_runs` and `propose_loop` (`703a5904`);
+  filing stays the operator's.
+- **Apps and knowledge:** `propose_app` drafts a manifest app, `app_slots`/`scaffold_app` lay it out
+  (`94bb04a0`, `853da645`); a knowledge turn searches first and cites each node it read (`02fc9600`,
+  `9646d58d`). The board: a card previews its child, a crumb renames a board (`e6850b4d`, `c8e5b3f7`).
+- **Show kinds:** callout, steps, sources, follow_up, each saying when to use it (`0582891f`, `4ff551d6`).
+- **Evals that do not flatter:** `NOS_LOCAL_SEED` pins the local sampler, and `iris-bench --compare`
+  pairs two runs by catalogue and engine, says when nothing is paired, and exits 3 (`4ad86570`,
+  `338ad70d`, `f150bbf7`).
+
+### Local models: vLLM beside Ollama, a DGX Spark joins
+- **vLLM:** one resident model, batched, beside Ollama, from an NGC image pinned by digest that the
+  host driver can run (`5bc37c57`, `ee1b88d2`, `23b54b84`), armed in the Linux Wing env too. Ollama
+  pinned at 0.40.6; a Linux host refuses a foreign Ollama install (`380da790`, `0c295337`).
+- **spark1 (DGX Spark, Ubuntu):** first converge 10-22 with five fixes (`ccbac9fe`), reviewed and
+  landed via PR #59/#60; not re-converged since. JupyterHub notebooks run as the person's own Linux
+  login (`65d6494f`).
+
+### The medulla: the scheduler, the state, the halt
+- **It fires Pulse jobs.** `pulse_medulla_jobs` (4 jobs live) runs as `nos-pulse serve`; results go
+  to Wing over the nerve with the medulla's own token (`pulse.run`). Every night since 10-27 green
+  (pulse_runs, actor `medulla`).
+- **One state reader, three doors:** `medulla state`, the socket's `{"t":"state"}` (wire v13) and
+  `GET /api/v1/admin/state` answer one struct — halt, loops pause, host organs; UNKNOWN never off.
+  Gate `medulla/tests/state.rs`.
+- **The halt moved in.** `medulla halt|resume` over the socket (wire v14): a tier-1 person at a
+  listed signed executable (`NOS_DECIDER_EXES`), the act recorded in Wing with the person
+  (`operator_username`) and the bearer (`vouched_by`). `nos halt` tries the medulla first; the
+  shell stays the break-glass. Live 2026-10-28: halt 16:56:28, resume 16:56:42, no job fired
+  between. Linux trusts no decider by design (SO_PEERCRED names the connector).
+- **Wing's reads, not its writes.** `medulla_read_routes: [pulse, admin]` and `medulla_routes:
+  [metrics]` are live behind Wing's Caddy split; parity gates against the real PHP presenter.
+- A rebuild restarts `nos-pulse` too (it ran the previous binary twice).
+
+### nOS.app: the medulla's native face (macOS)
+- A SwiftUI menu-bar app built with SwiftPM (no Xcode), installed by `pazny.medulla` to
+  `~/Applications/nOS.app`, signed with the local identity (TCC grants survive a rebuild), started at
+  login by a LaunchAgent. Menu: halt, loops pause, each organ; Halt…/Resume… with a native confirm;
+  the face in a WKWebView over SSO. Contract gate: the app's decoder reads the fixture's state.
+- Not yet: Developer ID and notarisation (another machine), native approvals (row
+  `wing-to-medulla-waves`, wave 1).
+
+### Loki stopped losing the logs
+- From 03:40 on 10-29 Loki was OOM-killed and restarted every ~15 s (2878 restarts): two 536 MB WAL
+  segments replayed into a 1 GiB container. `replay_memory_ceiling: 64MB` and ingestion 4/8 MB/s;
+  verified on a copy of the live WAL in the same image and limit (384MB OOM at 20 s, 64MB ready at
+  40 s). The healthcheck said healthy throughout; `tools/container-status.py` now puts a crash loop
+  on red-status.
+
+### Gates that hid a failure
+- A findings exit code may no longer be 1 or 2 (8 jobs moved to 10): `discovery:contradiction-scan`
+  had crashed 5/5 for four days as "found something".
+- Trunk sync excuses only a rejected fast-forward; a failed login is red.
+- The roadmap seed checks every row before its first write and files chosen rows (`--only`).
+- Doctrine: a suite gate lives at a joint (ssot/doctrine/gates.md §7); the record has one writer,
+  a separate Rust process (ssot/doctrine/medulla.md §4), ruled 2026-10-28.
+
+### The blank (2026-10-30) and what it taught the backup
+The release's blank wiped data and reinstalled; it went green, and the next days showed what green had hidden.
+- **The nightly overwrote the good dumps with empty ones.** At 03:00 after the blank, Paperclip's
+  dump went 6.2 MB → 80 KB in staging. The pre-wipe restic snapshot saved it. Now a blank clones its
+  dumps to `~/backups/pre-blank/<stamp>` (newest two kept) and a dump that shrinks below 10 % keeps its
+  predecessor as `.prev`, red on red-status (`9a815ff1`; gate `test_a_good_dump_survives_the_next_backup`).
+- **One database comes back alone.** `restore_postgres_dbs=paperclip` replaces a single db from its
+  own dump, the live one kept as `<db>_pre_restore_<date>` (`4e412d92`). The restored Paperclip then
+  restarted 74× on "permission denied": its dump carried three tables `OWNER TO postgres`. Every
+  relation is now given back to the db owner after replay (`a1792602`, one SQL file
+  `pg-realign-owners.sql` shared with the drill).
+- **The weekly drill replays it.** The restore drill now restores every per-db dump into a throwaway
+  Postgres (no ports, own network), realigns owners, compares row counts with the dump and records
+  the seconds (`fa28cbc0`; gate red against the old drill, live rehearsal on `drill-test-*` only). It
+  used to open three SQLite files. First step of row `backup-dna`; restore into a side instance with
+  a login probe is still to come — a client handover must not promise it yet.
+- **KEAP DataTables survive a blank:** exported before the wipe, imported after; rows pointing at a
+  table created later are retried once every table exists (`9ed7b5ac`, `e9c69597`). 617 rows and the
+  roadmap statuses came back.
+- **The Kiwix library is kept** through a blank (the ZIMs are downloaded user content), excluded from
+  the backup archive, and the server now waits for a ZIM instead of sleeping forever when it starts
+  without one (`35a72597`, `1e81a785`, `e8bd5881`).
+- **A converge never waits for ENTER on a failure path.** The onboarding prompt that stopped the
+  post-blank converge is a warning; Docker missing warns (the readiness gate decides), a refused
+  MariaDB root login fails instead of skipping every later task (`b07a7263`; gate allowlist emptied of
+  its "open" rows). Every hint the operator reads says `nos --tags …`, not `ansible-playbook` (17
+  hints, gate `test_operator_hints_say_nos`).
+
+### Security
+- Advisory patrol: every pin and organ lockfile matched nightly against public advisories
+  (`tools/advisory-status.py`, row `advisory-patrol`). Walked through with the operator on 10-31:
+  **bumped** n8n 2.37.10 → 2.45.7 (≈40 advisories, some unauthenticated via webhooks — the reader had
+  shown one), WordPress 7.1.4, Grafana 12.4.14, Redis 8.10.3, Uptime Kuma 2.5.9, FrankenPHP 1.13.4,
+  Santa 2026.9, cortex `qs`; **judged** 32 matches in `state/genome/advisory-judgements.yml`
+  (not deployed: gitlab, erpnext, jupyterlab; nginx 1.30.6 stable already carries the five fixes;
+  carried until 2026-12-31: martin, zod in cortex and face). Live and healthy on 11-01, n8n migrated.
+- **The reader is wrong both ways** (row `advisory-range-parse`): false alarms on multi-bound ranges
+  (jellyfin, gitea) and misses on `>= fix` ranges (n8n). Until it is fixed, red-status under-reports.
+- **FrankenPHP rebuilds its release binaries every night** (upstream `static.yaml`, `--clobber`), so a
+  sha256 pin goes stale within a day; re-pinned with `gh attestation verify` on 11-01 (`782d2a5b`).
+  Verifying provenance instead of bytes is row `frankenphp-nightly-digest`.
+- The telemetry ledger stopped carrying secrets (31 tasks `no_log`, the callback's key rules); the
+  Wing bearer was rotated (`-e secrets_rotate=wing_api_token`).
+
+### Agent companies: Paperclip declared in a repo
+- `tools/paperclip-company.py login|plan|apply --confirm`: a company file (`ssot/company.yml` +
+  `agents/<name>/AGENTS.md`) wins over Paperclip — names, roles, model, monthly budget, concurrency,
+  paused/active, prompts — written only through Paperclip's API, with a board key from its own
+  approval link (`5cc3fb5d`, `054e5397`). First use rebuilt a ten-agent company that had spent $81 in
+  three hours on unlimited Opus: Sonnet, $80/month cap, one run at a time.
+- `nos dtt create-table --template <path>.table.yml`: a company keeps its table definitions in its own
+  repo (`9e732f0e`).
+- Apex: a new graph node is withheld automatically and withheld changes need no signature; only what
+  is published is signed (`5d420b66`).
+
+### Known before the cut (not working, or not verified)
+- CI Bonus lanes (per-stack converges) red, non-blocking — unverified on Linux in CI.
+- No second host converged for this release; the e2e journeys last ran 2026-10-09.
+- Restore into a side instance with a login probe (handover point 7) does not exist yet.
 
 ---
 
