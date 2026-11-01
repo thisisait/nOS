@@ -60,6 +60,14 @@ pub enum ToThalamus {
     /// writes it, sends Wing the change and answers `state` with `act`, or `refused` with the store untouched.
     /// For a map setting `value` is the change: {entry: {reason?}} sets one, {entry: null} removes it.
     Setting { key: String, value: serde_json::Value },
+    /// The agents' open questions (v16) for a tier-1 person, read from wing.db with no bearer; serve answers `questions`.
+    Questions {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        agent: Option<String>,
+    },
+    /// A tier-1 decider answers one question (v16): serve relays it to Wing, which resolves it once, and
+    /// answers `answer_result`; anyone else gets `refused` and Wing hears nothing.
+    Answer { uuid: String, answer: String },
     /// The face's answer to an `act`: ok and what it returned, or why not.
     Acted {
         act: String,
@@ -212,7 +220,31 @@ pub enum ToShell {
     ModelState { session: String, loaded: bool },
     /// The answer to `state` (v13): the same struct as `medulla state --json` and GET /api/v1/admin/state.
     State(EstateState),
+    /// The open questions (v16), each a row as Wing's GET /api/v1/inbox/questions lists it.
+    Questions { items: Vec<serde_json::Map<String, serde_json::Value>> },
+    /// What Wing said to one relayed answer (v16); winning_answer only when lost, why when refused.
+    AnswerResult {
+        uuid: String,
+        outcome: AnswerOutcome,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        winning_answer: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        why: Option<String>,
+    },
 }
+
+/// answered: this answer resolved it; lost: another won first; expired: the deadline passed; refused: anything else.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AnswerOutcome {
+    Answered,
+    Lost,
+    Expired,
+    Refused,
+}
+
+/// The most open questions one `questions` carries (AgentQuestionRepository::listOpen's limit).
+pub const MAX_QUESTIONS: usize = 100;
 
 /// The runtime set-points and the host organs (row medulla-settings): one shape for every door.
 /// `on` and `running` are null when the source could not be read: UNKNOWN, never off.
@@ -634,6 +666,19 @@ fn check_shell(m: &ToShell) -> Result<(), String> {
         }
         ToShell::Workspace { doc } => doc.as_ref().map_or(Ok(()), need_doc),
         ToShell::State(_) => Ok(()),
+        ToShell::Questions { items } => {
+            if items.len() > MAX_QUESTIONS {
+                return Err(format!("questions holds at most {MAX_QUESTIONS} items"));
+            }
+            items.iter().try_for_each(|q| need_uuid("question", q.get("uuid").and_then(|u| u.as_str()).unwrap_or_default()))
+        }
+        ToShell::AnswerResult { uuid, outcome, winning_answer, .. } => {
+            need_uuid("question", uuid)?;
+            if winning_answer.is_some() && *outcome != AnswerOutcome::Lost {
+                return Err("only a lost answer names the answer that won".into());
+            }
+            Ok(())
+        }
         ToShell::Catalogue { session, tables } => {
             need_uuid("session", session)?;
             need_catalogue(tables)
@@ -696,6 +741,16 @@ pub fn decode_to_thalamus(line: &str) -> Result<ToThalamus, String> {
         ToThalamus::Setting { key, .. } if !key.split('.').all(|w| !w.is_empty() && w.bytes().all(|b| b.is_ascii_lowercase() || b == b'_'))
             || key.len() > 64 => {
             return Err("a setting key is dotted lowercase words of at most 64 chars".into());
+        }
+        ToThalamus::Questions { agent: Some(a) } if a.is_empty() || a.chars().count() > 200 => {
+            return Err("an agent filter is 1-200 chars".into());
+        }
+        // The uuid rides Wing's URL path: anything but a uuid is refused here.
+        ToThalamus::Answer { uuid, answer } => {
+            need_uuid("question", uuid)?;
+            if answer.trim().is_empty() || answer.chars().count() > 2000 {
+                return Err("an answer is 1-2000 chars, not blank".into());
+            }
         }
         ToThalamus::WorkingFor { scope } => need_scope(scope)?,
         ToThalamus::ModelPick { backend, model } => need_model(backend, model)?,

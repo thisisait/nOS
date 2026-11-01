@@ -294,7 +294,16 @@ export type ToShell =
 	| { t: 'catalogue'; session: string; tables: Catalogue['tables'] }
 	| ({ t: 'act'; session: string } & Act)
 	| { t: 'model_state'; session: string; loaded: boolean }
-	| ({ t: 'state' } & EstateState);
+	| ({ t: 'state' } & EstateState)
+	/** v16: the agents' open questions, each a row as Wing's GET /api/v1/inbox/questions lists it. */
+	| { t: 'questions'; items: { [k: string]: Value }[] }
+	| {
+			t: 'answer_result';
+			uuid: string;
+			outcome: 'answered' | 'lost' | 'expired' | 'refused';
+			winning_answer?: string;
+			why?: string;
+	  };
 
 /** The estate's set-points and host organs (wire.rs EstateState, v13); null is UNKNOWN, never off. */
 export type SetPoint = { on: boolean | null; since?: string; reason?: string; file: string };
@@ -302,7 +311,13 @@ export type EstateState = {
 	halt: SetPoint;
 	loops_paused: SetPoint;
 	/** pid and last_exit absent or null are UNKNOWN, never 0. */
-	organs: { name: string; label: string; running: boolean | null; pid?: number | null; last_exit?: number | null }[];
+	organs: {
+		name: string;
+		label: string;
+		running: boolean | null;
+		pid?: number | null;
+		last_exit?: number | null;
+	}[];
 	/** Each setting state/genome/settings.yml names (v15); a value null is UNKNOWN, the map null when the genome is. */
 	settings: { [key: string]: Value } | null;
 	/** Only on the answer to halt / lift_halt (v14) or setting (v15): whether Wing recorded the act. */
@@ -361,6 +376,8 @@ export type ToThalamus =
 	| { t: 'halt'; reason?: string }
 	| { t: 'lift_halt' }
 	| { t: 'setting'; key: string; value: Value }
+	| { t: 'questions'; agent?: string }
+	| { t: 'answer'; uuid: string; answer: string }
 	| { t: 'workspace_save'; doc: { [k: string]: unknown } }
 	| { t: 'catalogue' }
 	| { t: 'limbs'; limbs: Limb[] }

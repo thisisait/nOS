@@ -170,6 +170,15 @@ by a data blank and backed up as `dir-medulla`) and sends Wing the change as a r
 POST `/api/v1/admin/setting` (event `admin_setting_set`). Both schedulers hold a paused job:
 `medulla pulse` and Wing's due feed read the same file. Gate: `medulla/tests/settings.rs`.
 
+The agents' questions (wire v16; `medulla questions [--agent …]|answer <uuid> <answer>`):
+`questions` is a tier-1 read of wing.db (`NOS_INBOX_DB`, read-only, no bearer). `answer`
+needs the halt's tier-1 decider; serve relays it once, never retried, to POST
+`/api/v1/inbox/questions/<uuid>/answer` with the `wing-answer` bearer (scope `wing.answer`,
+which reaches that action and nothing else) from `~/.nos/secrets.yml`. Wing's conditional
+UPDATE writes the record; serve answers `answer_result` answered, lost (with the answer that
+won), expired or refused. Until a converge mints `wing_answer_token` the answer is refused.
+Gate: `medulla/tests/questions.rs`.
+
 What path identity cannot stop: anything that runs code inside a listed binary. Both are
 signed with the local identity but without the hardened runtime (`codesign --options
 runtime`), so `DYLD_INSERT_LIBRARIES` or a debugger attach by the same user still decides

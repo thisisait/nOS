@@ -6,7 +6,7 @@
 	import DashboardCard from './DashboardCard.svelte';
 	import Markdown from './Markdown.svelte';
 	import Message from './Message.svelte';
-	import { phaseName, type DashboardProps, type ToShell, type ToThalamus } from './wire';
+	import { cell, phaseName, type DashboardProps, type ToShell, type ToThalamus } from './wire';
 	import { groupChart } from './widgets';
 
 	// onpin: the person clicked "Sem" (the open board) or "Nová plocha" (a new board inside it) under a render serve gave a pin (genui I6).
@@ -160,7 +160,11 @@
 						— {p.reason}{/if} ({p.file})
 				</li>{/each}
 			{#each msg.organs as o}<li>
-					{o.name}: {o.running === null ? 'UNKNOWN' : o.running ? 'running' : 'stopped'}{#if o.pid != null}, pid
+					{o.name}: {o.running === null
+						? 'UNKNOWN'
+						: o.running
+							? 'running'
+							: 'stopped'}{#if o.pid != null}, pid
 						{o.pid}{/if}{#if o.last_exit != null}, last exit {o.last_exit}{/if} ({o.label})
 				</li>{/each}
 			{#if msg.settings === null}<li>
@@ -174,6 +178,25 @@
 						: `NOT recorded — ${msg.act.why ?? 'Wing did not say why'}`}
 				</li>{/if}
 		</ul>
+	{:else if msg.t === 'questions'}
+		<!-- nOS.app answers them natively; said here for any other host of a message. -->
+		{#if msg.items.length === 0}<p class="muted">no agent question waits</p>{:else}<ul
+				class="muted"
+			>
+				{#each msg.items as q}<li>
+						{#each Object.entries(q) as [k, v], i}{i ? '; ' : ''}{k} {cell(v)}{/each}
+					</li>{/each}
+			</ul>{/if}
+	{:else if msg.t === 'answer_result'}
+		<p class="muted">
+			answer {msg.uuid}: {msg.outcome === 'answered'
+				? 'answered, recorded by Wing'
+				: msg.outcome === 'lost'
+					? `LOST — ${msg.winning_answer ?? 'another answer'} won first`
+					: msg.outcome === 'expired'
+						? 'EXPIRED — the deadline passed, the agent took its default'
+						: `REFUSED — ${msg.why ?? 'Wing did not say why'}`}
+		</p>
 	{:else if msg.t === 'workspace'}
 		<p class="muted">
 			{msg.doc ? 'the workspace the thalamus holds' : 'the thalamus holds no workspace yet'}

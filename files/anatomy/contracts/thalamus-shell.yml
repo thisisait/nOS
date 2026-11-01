@@ -2,7 +2,7 @@
 # Protocol: ssot/doctrine/cross-repo-contracts.md §1 (spec + fixture + gates
 # over the same bytes). Both sides link one Rust crate (nos-contract), so the
 # gate is the crate decoding the fixture; one copy only, both sides cite this.
-contract_version: 15   # 15: setting, state settings; 14: halt, lift_halt, state act; 13: state (both ways); 12: callout, steps, sources, follow_up; 11: dendrogram; 10: knowledge_tree, widget spec knowledge; 9: resume workspace, clear, branch, stop, model_state; 8: catalogue (both ways), limbs, act, acted, action_approval; 7: resume, workspace_load, workspace_save, workspace, said, replay; 6: dashboard, kpi, working_for, model_options, model_pick; 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice, delta, sequence; 5: row_diff_approval op/title/read_from
+contract_version: 16   # 16: questions (both ways), answer, answer_result; 15: setting, state settings; 14: halt, lift_halt, state act; 13: state (both ways); 12: callout, steps, sources, follow_up; 11: dendrogram; 10: knowledge_tree, widget spec knowledge; 9: resume workspace, clear, branch, stop, model_state; 8: catalogue (both ways), limbs, act, acted, action_approval; 7: resume, workspace_load, workspace_save, workspace, said, replay; 6: dashboard, kpi, working_for, model_options, model_pick; 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice, delta, sequence; 5: row_diff_approval op/title/read_from
 fixture: files/anatomy/contracts/thalamus-shell.fixture.json
 
 producer:
@@ -24,8 +24,8 @@ gates:
 wire:
   framing: "newline-delimited JSON, one message per line, UTF-8"
   tag: "every message is an object whose `t` names its variant (snake_case)"
-  to_thalamus: [turn, approval_decision, control, widget, form_submit, choice_reply, working_for, model_options, model_pick, resume, workspace_load, workspace_save, catalogue, limbs, acted, clear, branch, stop, state, halt, lift_halt, setting]
-  to_shell: [session, text, render, approval_request, refused, activity, widget, form_result, table_changed, working_for, model_options, said, replay, workspace, catalogue, act, model_state, state]
+  to_thalamus: [turn, approval_decision, control, widget, form_submit, choice_reply, working_for, model_options, model_pick, resume, workspace_load, workspace_save, catalogue, limbs, acted, clear, branch, stop, state, halt, lift_halt, setting, questions, answer]
+  to_shell: [session, text, render, approval_request, refused, activity, widget, form_result, table_changed, working_for, model_options, said, replay, workspace, catalogue, act, model_state, state, questions, answer_result]
   widget: >-
     A widget is a spec the person placed; the pupil re-runs it over `widget {widget, spec, trigger}`
     and the thalamus answers as that person, without the model, with `widget {session, widget,
@@ -185,6 +185,20 @@ wire:
     untouched. `state` carries `settings`: each estate setting the genome names by key, its default while no
     file holds one, null when its file does not read; the whole map null when the genome does not read.
     `medulla pause <job> [--reason …]|unpause <job>` speaks pulse.paused; gate files/anatomy/thalamus/medulla/tests/settings.rs.
+  questions: >-
+    v16: `questions {agent?}` is a tier-1 person asking which agent questions wait (row agents-inbox); serve reads
+    them from wing.db read-only (NOS_INBOX_DB, else NOS_WING_DB; thalamus/src/inbox.rs, the reader GET
+    /api/v1/inbox/questions shares) with no bearer, writes nothing and answers `questions {items}`: each row as
+    AgentQuestionRepository::public() lists it, oldest first, at most 100, a past deadline left out. An inbox that
+    does not read is `refused`, never an empty list; so is a person not tier 1.
+  answer: >-
+    v16: `answer {uuid, answer}` (answer 1-2000 chars) answers one question; the same tier-1 decider as the halt
+    sends it. The medulla relays, Wing writes the record: serve POSTs /api/v1/inbox/questions/<uuid>/answer
+    {answer, answered_by: the kernel's person, via: medulla} with the wing-answer bearer (scope wing.answer, which
+    reaches that action and nothing else), read per act from ~/.nos/secrets.yml as the halt's is, and never retries.
+    Wing's conditional UPDATE resolves it once: 200 is `answer_result {uuid, outcome: answered}`, a 409 lost race
+    lost with winning_answer, a 409 past the deadline expired, anything else refused with why (no token, Wing
+    down, 404). Anyone else gets `refused` and Wing hears nothing. Gate files/anatomy/thalamus/medulla/tests/questions.rs.
   phase: [thinking, tool, writing, idle]   # activity.phase; tool is {tool: {name}}
   decision: [approve, reject]
   control_view: [inbox, approvals, red_status]

@@ -55,6 +55,11 @@
         <!-- The settings store serve writes (src/settings.rs, state/genome/settings.yml); Wing reads the same path. -->
         <key>MEDULLA_DATA_DIR</key>
         <string>{{ medulla_data_dir }}</string>
+{% if wing_data_dir is defined and not (nos_system_user | default('') | length) %}
+        <!-- The socket's questions (v16) read wing.db mode=ro; an answer goes to Wing with the wing-answer bearer. -->
+        <key>NOS_INBOX_DB</key>
+        <string>{{ wing_data_dir }}/wing.db</string>
+{% endif %}
         <!-- The table serve answers for the model's "roadmap" (src/serve.rs table_id). -->
         <key>NOS_ROADMAP_TABLE_ID</key>
         <string>{{ thalamus_roadmap_table_id }}</string>

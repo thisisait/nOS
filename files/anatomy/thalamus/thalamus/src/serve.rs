@@ -1270,6 +1270,8 @@ impl Server {
                 Ok(ToThalamus::Halt { reason }) => self.set_halt(&who, &mut out, &peer, true, reason.as_deref()),
                 Ok(ToThalamus::LiftHalt) => self.set_halt(&who, &mut out, &peer, false, None),
                 Ok(ToThalamus::Setting { key, value }) => self.set_setting(&who, &mut out, &peer, &key, &value),
+                Ok(ToThalamus::Questions { agent }) => self.questions(&who, &mut out, agent.as_deref()),
+                Ok(ToThalamus::Answer { uuid, answer }) => self.answer(&who, &mut out, &peer, &uuid, &answer),
                 Ok(ToThalamus::Acted { act, .. }) => refuse(&mut out, &format!("no act {act} waits for an answer")),
                 Ok(ToThalamus::WorkspaceSave { doc }) => {
                     if let Err(why) = store::write(&store::path(&self.data, &who.uid(), "workspace"), &doc) {
@@ -1753,6 +1755,30 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         let act = crate::state::record_setting(key, &written, &who.username, &self.wing.url);
         self.say(format!("setting {key} {written} by {} {peer}: {}", who.username, act.why.as_deref().unwrap_or("recorded")));
         send(out, &ToShell::State(EstateState { act: Some(act), ..crate::state::read() }));
+    }
+
+    /// questions (v16): the agents' open questions for a tier-1 person, read-only from wing.db (inbox.rs),
+    /// no bearer, nothing written. An inbox that does not read is refused, never an empty list.
+    fn questions(&self, who: &Person, out: &mut dyn Write, agent: Option<&str>) {
+        if !self.is_tier1(who) {
+            return refuse(out, &format!("{} is not tier 1, so the agents' questions are not theirs to read", who.username));
+        }
+        match crate::inbox::open_questions(agent) {
+            Ok(items) => send(out, &ToShell::Questions { items }),
+            Err(why) => refuse(out, &why),
+        }
+    }
+
+    /// answer (v16): the halt's tier-1 decider check, then the answer relayed to Wing, which writes the
+    /// record and resolves it once; the medulla never writes it. A refused peer reaches no Wing.
+    fn answer(&self, who: &Person, out: &mut dyn Write, peer: &Value, uuid: &str, answer: &str) {
+        if let Some(why) = self.setter_refusal(who, peer, "an answer") {
+            self.say(format!("refused an answer to {uuid} from {} {peer}: {why}", who.username));
+            return send(out, &ToShell::Refused { reason: why, widget: None });
+        }
+        let r = crate::inbox::relay(uuid, answer, &who.username, &self.wing.url);
+        self.say(format!("answer to {uuid} by {} {peer}: {}", who.username, encode(&r).trim_end()));
+        send(out, &r);
     }
 
     /// One ledger event; the row id, or the reason it was refused (also logged).

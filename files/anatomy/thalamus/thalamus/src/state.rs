@@ -93,20 +93,30 @@ pub fn record_setting(key: &str, change: &serde_json::Value, by: &str, wing_url:
 
 fn act(verb: &str, body: serde_json::Value, wing_url: &str) -> ActRecord {
     let not = |why: String| ActRecord { recorded: false, why: Some(why) };
-    let secrets = PathBuf::from(std::env::var_os("HOME").unwrap_or_default()).join(".nos/secrets.yml");
-    let token = std::fs::read_to_string(&secrets).ok().and_then(|t| t.lines().find_map(|l| {
-        Some(l.strip_prefix("wing_halt_token:")?.trim().trim_matches(['"', '\'']).to_string())
-    }));
-    let Some(token) = token.filter(|t| t.len() >= 32 && !t.starts_with("placeholder")) else {
-        return not(format!("no wing_halt_token in {} (a converge with --tags wing mints it)", secrets.display()));
+    let token = match bearer("wing_halt_token") {
+        Ok(t) => t,
+        Err(why) => return not(why),
     };
-    let base = if wing_url.is_empty() { "http://127.0.0.1:9000" } else { wing_url.trim_end_matches('/') };
-    let url = format!("{base}/api/v1/admin/{verb}");
+    let url = format!("{}/api/v1/admin/{verb}", wing_base(wing_url));
     match crate::serve::agent(10).post(&url).header("authorization", &format!("Bearer {token}")).send_json(body) {
         Err(e) => not(format!("Wing did not answer at {url}: {e}")),
         Ok(r) if r.status().is_success() => ActRecord { recorded: true, why: None },
         Ok(r) => not(format!("Wing refused it (HTTP {})", r.status().as_u16())),
     }
+}
+
+/// A Wing bearer read per act from ~/.nos/secrets.yml, so no plist holds it; a placeholder is none.
+pub fn bearer(name: &str) -> Result<String, String> {
+    let secrets = PathBuf::from(std::env::var_os("HOME").unwrap_or_default()).join(".nos/secrets.yml");
+    let token = std::fs::read_to_string(&secrets).ok().and_then(|t| t.lines().find_map(|l| {
+        Some(l.strip_prefix(name)?.strip_prefix(':')?.trim().trim_matches(['"', '\'']).to_string())
+    }));
+    token.filter(|t| t.len() >= 32 && !t.starts_with("placeholder"))
+        .ok_or_else(|| format!("no {name} in {} (a converge with --tags wing mints it)", secrets.display()))
+}
+
+pub fn wing_base(wing_url: &str) -> &str {
+    if wing_url.is_empty() { "http://127.0.0.1:9000" } else { wing_url.trim_end_matches('/') }
 }
 
 /// What `medulla state` prints: one line a set-point, one an organ; UNKNOWN said, never hidden.

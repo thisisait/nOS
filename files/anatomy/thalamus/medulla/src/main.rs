@@ -27,6 +27,8 @@ fn main() -> ExitCode {
         (_, Some("resume")) => halt(&args[1..], false),
         (_, Some("pause")) => pause(&args[1..], true),
         (_, Some("unpause")) => pause(&args[1..], false),
+        (_, Some("questions")) => questions(&args[1..]),
+        (_, Some("answer")) => answer(&args[1..]),
         (_, Some("--version")) => {
             println!("medulla {}", env!("CARGO_PKG_VERSION"));
             ExitCode::SUCCESS
@@ -36,7 +38,7 @@ fn main() -> ExitCode {
 }
 
 fn usage() -> ExitCode {
-    eprintln!("usage: medulla thalamus [serve --data-dir <dir>] | medulla wing serve --db <wing.db> --port <n> | medulla pulse plan --db <wing.db> | medulla state [--json] | medulla halt [--reason <text>] | medulla resume | medulla pause <job> [--reason <text>] | medulla unpause <job> | medulla --version");
+    eprintln!("usage: medulla thalamus [serve --data-dir <dir>] | medulla wing serve --db <wing.db> --port <n> | medulla pulse plan --db <wing.db> | medulla state [--json] | medulla halt [--reason <text>] | medulla resume | medulla pause <job> [--reason <text>] | medulla unpause <job> | medulla questions [--agent <name>] | medulla answer <uuid> <answer> | medulla --version");
     ExitCode::from(2)
 }
 
@@ -94,6 +96,25 @@ fn pause(args: &[String], on: bool) -> ExitCode {
     ask(if on { "pause" } else { "unpause" }, &nos_contract::wire::ToThalamus::Setting { key: "pulse.paused".into(), value })
 }
 
+/// `medulla questions [--agent …]`: the socket's questions, tier 1 only; nothing written.
+fn questions(args: &[String]) -> ExitCode {
+    let agent = match args {
+        [] => None,
+        [f, a] if f == "--agent" => Some(a.clone()),
+        _ => return usage(),
+    };
+    ask("questions", &nos_contract::wire::ToThalamus::Questions { agent })
+}
+
+/// `medulla answer <uuid> <answer>`: the socket's answer, so serve's decider check applies and Wing
+/// resolves it once. Exit 0 answered, 3 lost or expired, 1 refused, 69 the thalamus did not answer.
+fn answer(args: &[String]) -> ExitCode {
+    match args {
+        [uuid, answer] => ask("answer", &nos_contract::wire::ToThalamus::Answer { uuid: uuid.clone(), answer: answer.clone() }),
+        _ => usage(),
+    }
+}
+
 fn ask(verb: &str, msg: &nos_contract::wire::ToThalamus) -> ExitCode {
     use nos_contract::wire::{decode_to_shell, encode, ToShell};
     use std::io::{BufRead, Write};
@@ -116,6 +137,15 @@ fn ask(verb: &str, msg: &nos_contract::wire::ToThalamus) -> ExitCode {
             ToShell::State(s) => {
                 thalamus::state::lines(&s).iter().for_each(|l| println!("{l}"));
                 return if s.act.is_some_and(|a| a.recorded) { ExitCode::SUCCESS } else { ExitCode::from(3) };
+            }
+            m @ (ToShell::Questions { .. } | ToShell::AnswerResult { .. }) => {
+                use nos_contract::wire::AnswerOutcome;
+                thalamus::inbox::lines(&m).iter().for_each(|l| println!("{l}"));
+                return match m {
+                    ToShell::AnswerResult { outcome: AnswerOutcome::Lost | AnswerOutcome::Expired, .. } => ExitCode::from(3),
+                    ToShell::AnswerResult { outcome: AnswerOutcome::Refused, .. } => ExitCode::FAILURE,
+                    _ => ExitCode::SUCCESS,
+                };
             }
             ToShell::Refused { reason, .. } => {
                 eprintln!("medulla {verb}: refused — {reason}");
