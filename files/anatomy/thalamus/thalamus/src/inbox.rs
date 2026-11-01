@@ -54,10 +54,11 @@ pub fn now() -> String {
     crate::serve::iso(t)
 }
 
-/// What the terminal and `medulla questions|answer` print for the two v16 answers.
+/// What the terminal and `medulla questions|answer` print for the two v16 answers. The words are the
+/// agent's: a control char (ESC, CR, LF) becomes U+FFFD, so none moves the cursor or forges a line.
 pub fn lines(m: &ToShell) -> Vec<String> {
     let s = |q: &Map<String, Value>, k: &str| q.get(k).and_then(Value::as_str).unwrap_or("?").to_string();
-    match m {
+    let said = match m {
         ToShell::Questions { items } if items.is_empty() => vec!["no agent question waits".into()],
         ToShell::Questions { items } => std::iter::once(format!("{} agent question(s) wait:", items.len()))
             .chain(items.iter().map(|q| format!("  {} {} ({}): {}{}", s(q, "uuid"), s(q, "agent_name"), s(q, "severity"), s(q, "prompt"),
@@ -70,7 +71,8 @@ pub fn lines(m: &ToShell) -> Vec<String> {
             AnswerOutcome::Refused => format!("answer {uuid}: REFUSED — {}", why.as_deref().unwrap_or("Wing did not say why")),
         }],
         _ => vec![],
-    }
+    };
+    said.into_iter().map(|l| l.chars().map(|c| if c.is_control() { '\u{fffd}' } else { c }).collect()).collect()
 }
 
 /// listOpen(): status open, oldest first, at most 100, then past-deadline rows dropped.
@@ -124,4 +126,16 @@ fn select(db: &Connection, sql: &str, params: &[&dyn rusqlite::ToSql]) -> rusqli
         out.push(row);
     }
     Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn an_agents_words_drive_no_terminal() {
+        let q = json!({"uuid": "u", "agent_name": "a\x1b]0;x\x07", "prompt": "Fix docs?\r\x1b[2K  forged-uuid conductor: rm -rf\n"});
+        let lines = lines(&ToShell::Questions { items: vec![q.as_object().unwrap().clone()] });
+        assert!(lines.iter().all(|l| !l.chars().any(char::is_control)), "{lines:?}");
+    }
 }
