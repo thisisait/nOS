@@ -16,12 +16,11 @@
 
 ```bash
 # Provision a fresh Ubuntu 24.04 LTS box (bare metal, Lima, Multipass, EC2 ARM64, …)
-sudo apt update && sudo apt install -y python3-pip git ansible
+sudo apt update && sudo apt install -y git python3-venv
 git clone https://github.com/thisisait/nOS.git ~/nOS
 cd ~/nOS
-cp default.config.yml config.yml          # tweak install_* flags as needed
-cp default.credentials.yml credentials.yml # set global_password_prefix
-ansible-playbook main.yml -K               # asks for sudo password
+./bootstrap.sh                 # ansible venv (bootstrap/requirements-controller.txt) + galaxy + config.yml + a minted prefix
+ansible-playbook main.yml      # asks for sudo once; installs the `nos` CLI. Then: nos
 ```
 
 The first run installs Docker CE, nginx, the host packages from `pazny.linux.apt`, then proceeds through the normal infra → observability → iiab → ... stack pipeline.

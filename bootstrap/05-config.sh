@@ -19,37 +19,47 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLAYBOOK_DIR="$(dirname "$SCRIPT_DIR")"
 
 # ── config.yml ────────────────────────────────────────────────────────────────
+# Every setting has a default (default.config.yml); config.yml holds only your choices.
 step "config.yml (feature toggles)"
 if [[ -f "$PLAYBOOK_DIR/config.yml" ]]; then
   ok "config.yml already exists – skipping"
 else
-  cp "$PLAYBOOK_DIR/config.example.yml" "$PLAYBOOK_DIR/config.yml"
-  ok "Created config.yml from template"
-  echo "  Edit: nano $PLAYBOOK_DIR/config.yml"
+  cat > "$PLAYBOOK_DIR/config.yml" <<'YAML'
+---
+# Your choices only; every default lives in default.config.yml. A profile sets a whole
+# service set at once: ansible-playbook main.yml -e @profiles/core.yml (see profiles/).
+# The first run's preflight lists the settings still at their default.
+# tenant_domain: dev.local
+# host_alias: ""        # a second nOS host on the LAN: e.g. box -> kiwix.box.dev.local
+YAML
+  ok "Created a minimal config.yml"
 fi
 
 # ── credentials.yml ───────────────────────────────────────────────────────────
-step "credentials.yml (passwords and tokens)"
-if [[ -f "$PLAYBOOK_DIR/credentials.yml" ]]; then
-  ok "credentials.yml already exists – skipping"
+# Secrets derive from global_password_prefix: mint a strong one here, never printed.
+step "credentials.yml (the password prefix)"
+if grep -qE '^global_password_prefix: *"?[^"[:space:]]{12,}' "$PLAYBOOK_DIR/credentials.yml" 2>/dev/null; then
+  ok "credentials.yml has a prefix – skipping"
 else
-  cp "$PLAYBOOK_DIR/credentials.example.yml" "$PLAYBOOK_DIR/credentials.yml"
-  ok "Created credentials.yml from template"
-  warn "IMPORTANT: Replace all 'changeme_*' passwords!"
-  echo "  Edit: nano $PLAYBOOK_DIR/credentials.yml"
+  ( cd "$PLAYBOOK_DIR"; umask 077
+    { grep -v '^global_password_prefix:' credentials.yml 2>/dev/null || true
+      printf 'global_password_prefix: "%s"\n' "$(openssl rand -hex 16)"; } > credentials.yml.new
+    mv credentials.yml.new credentials.yml )
+  ok "Minted a random global_password_prefix into credentials.yml (0600, not shown)"
 fi
 
 # ── YAML validation ───────────────────────────────────────────────────────────
 step "YAML validation"
 VALID=true
+PY=python3; [[ -x "$HOME/.local/share/nos/ansible-venv/bin/python" ]] && PY="$HOME/.local/share/nos/ansible-venv/bin/python"
 
 for f in config.yml credentials.yml; do
   if [[ -f "$PLAYBOOK_DIR/$f" ]]; then
-    if python3 -c "import yaml,sys; yaml.safe_load(open('$PLAYBOOK_DIR/$f'))" 2>/dev/null; then
+    if "$PY" -c "import yaml,sys; yaml.safe_load(open('$PLAYBOOK_DIR/$f'))" 2>/dev/null; then
       ok "$f – YAML OK"
     else
       echo -e "\033[0;31m✗ $f – YAML error! Check the file.\033[0m" >&2
-      python3 -c "import yaml,sys; yaml.safe_load(open('$PLAYBOOK_DIR/$f'))" 2>&1 | head -5
+      "$PY" -c "import yaml,sys; yaml.safe_load(open('$PLAYBOOK_DIR/$f'))" 2>&1 | head -5
       VALID=false
     fi
   fi
@@ -63,4 +73,4 @@ fi
 
 echo ""
 echo -e "${GREEN}${BOLD}Configuration ready. Next step:${NC}"
-echo "  ansible-playbook main.yml -K"
+echo "  ansible-playbook main.yml     # asks for sudo once; installs the \`nos\` CLI"

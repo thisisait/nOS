@@ -4,14 +4,14 @@
 # Equivalent of "Run All Cells" in a Jupyter notebook.
 # Individual steps can be run separately:
 #
-#   bash bootstrap/01-xcode-clt.sh   # Step 1: Xcode CLT
-#   bash bootstrap/02-homebrew.sh    # Step 2: Homebrew
-#   bash bootstrap/03-ansible.sh     # Step 3: Ansible
+#   bash bootstrap/01-xcode-clt.sh   # Step 1: Xcode CLT (macOS; skipped on Linux)
+#   bash bootstrap/02-homebrew.sh    # Step 2: Homebrew (macOS; skipped on Linux)
+#   bash bootstrap/03-ansible.sh     # Step 3: Ansible (Linux: a venv from requirements-controller.txt)
 #   bash bootstrap/04-galaxy.sh      # Step 4: Galaxy roles
-#   bash bootstrap/05-config.sh      # Step 5: config.yml + credentials.yml
+#   bash bootstrap/05-config.sh      # Step 5: a minimal config.yml + a minted password prefix
 #
 # After successful bootstrap:
-#   ansible-playbook main.yml -K
+#   ansible-playbook main.yml
 # ─────────────────────────────────────────────────────────────────────────────
 set -e
 

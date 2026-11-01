@@ -12,6 +12,8 @@ BOLD='\033[1m'; GREEN='\033[0;32m'; NC='\033[0m'
 step() { echo -e "\n${BOLD}▶ $1${NC}"; }
 ok()   { echo -e "${GREEN}✓ $1${NC}"; }
 
+[[ "$(uname -s)" == Darwin ]] || { ok "Xcode CLT: macOS only, skipped on $(uname -s)"; exit 0; }
+
 step "Xcode Command Line Tools"
 
 if xcode-select -p &>/dev/null; then

@@ -17,6 +17,9 @@ if ! command -v brew &>/dev/null && [[ -f /opt/homebrew/bin/brew ]]; then
   eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
 
+# Linux: step 3 linked the venv's ansible-galaxy here, maybe not on PATH yet in this shell
+export PATH="$HOME/.local/bin:$PATH"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLAYBOOK_DIR="$(dirname "$SCRIPT_DIR")"
 
