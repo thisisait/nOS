@@ -45,7 +45,7 @@
     mode: '0644'
   become: true
   when: nos_lan_ip | default('') | length > 0
-  notify: Reload avahi
+  register: _mdns_hosts_file
 
 # use-ipv6=no: the records are A-only; an apex AAAA would point at a Traefik that may not serve v6.
 - name: "[mdns] Answer on the physical links only, IPv4 only"
@@ -61,7 +61,7 @@
     - { option: use-ipv6, value: "no" }
   when: item.value | length > 0
   become: true
-  notify: Restart avahi
+  register: _mdns_conf
 
 - name: "[mdns] The host resolves its own names at loopback"
   ansible.builtin.blockinfile:
@@ -77,6 +77,14 @@
     state: started
     enabled: true
   become: true
+
+# In line, not a handler: handlers run after the verify below, which would judge stale records.
+- name: "[mdns] avahi loads the new records and config now"
+  ansible.builtin.systemd:
+    name: avahi-daemon
+    state: restarted
+  become: true
+  when: (_mdns_hosts_file is changed) or (_mdns_conf is changed)
 
 - name: "[mdns] Verify: ask avahi and the resolver"  # noqa: command-instead-of-module
   ansible.builtin.shell: |

@@ -1001,19 +1001,6 @@
       when: ansible_os_family == 'Darwin'
       failed_when: false
 
-    # tasks/mdns.yml: a reload re-reads /etc/avahi/hosts; avahi-daemon.conf needs a restart.
-    - name: Reload avahi
-      ansible.builtin.systemd:
-        name: avahi-daemon
-        state: reloaded
-      become: true
-
-    - name: Restart avahi
-      ansible.builtin.systemd:
-        name: avahi-daemon
-        state: restarted
-      become: true
-
     - name: Restart ssh
       ansible.builtin.command: launchctl kickstart -k system/com.openssh.sshd
       become: true
