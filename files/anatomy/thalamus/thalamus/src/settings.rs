@@ -51,10 +51,11 @@ fn load(path: &Path) -> Result<Option<Value>, String> {
 }
 
 /// The state's `settings`: each estate setting's value (its default while no file holds one), null when
-/// its file cannot be read or no store is rendered; None when the genome cannot be read.
+/// its file cannot be read or no store is rendered; None when the genome cannot be read. A sentinel is
+/// left out: the state's own set-point (loops_paused) reads its file.
 pub fn read(repo: Option<&Path>) -> Option<BTreeMap<String, Value>> {
     let data = data_dir();
-    Some(genome(repo?).ok()?.into_iter().filter(|s| s.scope == "estate").map(|s| {
+    Some(genome(repo?).ok()?.into_iter().filter(|s| s.scope == "estate" && s.kind != "sentinel").map(|s| {
         let v = match data.as_deref().map(|d| load(&estate_file(d, &s.name))) {
             Some(Ok(Some(v))) => v,
             Some(Ok(None)) => s.default,
@@ -85,6 +86,9 @@ static WRITING: Mutex<()> = Mutex::new(());
 pub fn set(repo: &Path, key: &str, change: &Value, by: &str) -> Result<Value, String> {
     let g = genome(repo).map_err(|e| format!("the settings genome is unreadable ({e}), so no key is known"))?;
     let s = g.iter().find(|s| s.name == key).ok_or_else(|| format!("{key} is no setting the genome names ({GENOME})"))?;
+    if (key, s.kind.as_str(), s.tier) == ("loops.paused", "sentinel", 1) {
+        return loops_paused(key, change);
+    }
     // ponytail: only the estate-map, tier-1 shape is served; a person scope or a scalar adds its branch here.
     if (s.scope.as_str(), s.kind.as_str(), s.tier) != ("estate", "map", 1) {
         return Err(format!("{key} is a {} {} set by tier {}: not served yet", s.scope, s.kind, s.tier));
@@ -131,4 +135,42 @@ pub fn set(repo: &Path, key: &str, change: &Value, by: &str) -> Result<Value, St
     }
     crate::store::write(&path, &value)?;
     Ok(Value::Object(stamped))
+}
+
+/// loops.paused: {reason?} writes NOS_LOOPS_PAUSED_FILE as `nos loops pause` does (since:/reason: lines,
+/// tmp + rename), null deletes it; lifting a pause that is not there is done. Returns the change for Wing.
+fn loops_paused(key: &str, change: &Value) -> Result<Value, String> {
+    let path = crate::state::loops_paused_file();
+    let e = |e: std::io::Error| format!("{}: {e}", path.display());
+    let reason = match change {
+        Value::Null => {
+            return match std::fs::remove_file(&path) {
+                Err(x) if x.kind() != std::io::ErrorKind::NotFound => Err(e(x)),
+                _ => Ok(json!({"on": false})),
+            };
+        }
+        Value::Object(o) if o.keys().all(|k| k == "reason") => match o.get("reason") {
+            None => None,
+            Some(Value::String(r)) if r.chars().count() <= 300 && !r.contains('\n') => Some(r.trim()).filter(|r| !r.is_empty()),
+            Some(_) => return Err(format!("{key}: a reason is one line of at most 300 chars")),
+        },
+        _ => return Err(format!("{key}: a change is {{\"reason\"?}} to pause or null to lift; serve names who and when")),
+    };
+    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs() as i64);
+    let since = crate::serve::iso(now);
+    let mut text = format!("since: {since}\n");
+    let mut written = json!({"on": true, "since": since});
+    if let Some(r) = reason {
+        text += &format!("reason: {r}\n");
+        written["reason"] = r.into();
+    }
+    let _one = WRITING.lock().unwrap_or_else(|p| p.into_inner());
+    std::fs::create_dir_all(path.parent().ok_or("the loops pause file has no directory")?).map_err(e)?;
+    let tmp = path.with_extension(format!("tmp-{}", std::process::id()));
+    std::fs::write(&tmp, text).map_err(e)?;
+    std::fs::rename(&tmp, &path).map_err(|x| {
+        let _ = std::fs::remove_file(&tmp);
+        e(x)
+    })?;
+    Ok(written)
 }

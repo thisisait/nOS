@@ -33,6 +33,8 @@
     {"case": "a decider lifts the halt", "msg": {"t": "lift_halt"}},
     {"case": "a decider pauses a job", "msg": {"t": "setting", "key": "pulse.paused", "value": {"backup:nightly": {"reason": "vendor outage"}}}},
     {"case": "a decider unpauses a job", "msg": {"t": "setting", "key": "pulse.paused", "value": {"backup:nightly": null}}},
+    {"case": "a decider pauses the loops", "msg": {"t": "setting", "key": "loops.paused", "value": {"reason": "upgrade drill"}}},
+    {"case": "a decider lifts the loops pause", "msg": {"t": "setting", "key": "loops.paused", "value": null}},
     {"case": "the pupil saves the person's workspace", "msg": {"t": "workspace_save", "doc": {"version": 2, "active": "ws1", "chat": {"x": 24, "y": 24, "w": 420, "h": 560, "open": true}, "workspaces": [{"id": "ws1", "name": "Workspace", "widgets": []}]}}},
     {"case": "the shell asks for the person's catalogue", "msg": {"t": "catalogue"}},
     {"case": "the face declares its limbs", "msg": {"t": "limbs", "limbs": [{"app": "desktop", "action": "open_app", "params": {"slug": {"type": "string", "required": true}}, "writes": false, "says": "Open a face app, or bring its window to the front"}, {"app": "desktop", "action": "arrange", "params": {"mode": {"type": "enum", "values": ["half-v", "thirds", "2x2", "none"], "required": true}}, "writes": false, "says": "Tile the front windows (half-v, thirds, 2x2) or stop tiling (none)"}, {"app": "files", "action": "rename", "params": {"path": {"type": "string", "required": true}, "to": {"type": "string", "required": true}, "overwrite": {"type": "boolean"}}, "writes": true, "says": "Rename a file"}]}},

@@ -9,6 +9,8 @@
 #   type     map: an object of entries, changed one entry at a time ({key: entry} sets it,
 #            {key: null} removes it); serve stamps each entry's `by` (the kernel's person) and
 #            `at`, the caller sends only `reason`
+#            sentinel: on while its file exists ({reason?} sets it, null lifts it); held in the file
+#            its readers already read, not in the store
 #   default  the value while no file holds one
 #   set_by   who may change it over the socket: a tier and, at decider, a listed decider
 #            executable (NOS_DECIDER_EXES) as the kernel names the peer
@@ -26,3 +28,18 @@ settings:
       - Wing's due feed (PulseRepository::listDue), which Pulse's daemon and the medulla poll
     says: A job paused by hand. It is not due and does not fire until unpaused; the halt and
       the loops pause hold beside it.
+  # Known breach (operator ruling 2026-11-01): two writers, the medulla and `nos loops pause`
+  # (tools/nos), as the halt has; it closes when `nos loops pause` asks the medulla.
+  loops.paused:
+    scope: estate
+    type: sentinel
+    file: NOS_LOOPS_PAUSED_FILE, else ~/.nos/loops-paused (`since:` / `reason:` lines, as tools/nos writes)
+    entry: {reason: "text?"}
+    default: off
+    set_by: {tier: 1, at: decider}
+    readers:
+      - agent-run-lock.sh, the agent runtime's one chokepoint
+      - Pulse's daemon (pulse/daemon.py), tools/red-status.py, `nos loops status`
+      - the state's loops_paused (thalamus/src/state.rs)
+    says: The SERE loops held for maintenance. Agent runs skip as an intentional hold until it
+      is lifted; the halt and a job's pause hold beside it.
