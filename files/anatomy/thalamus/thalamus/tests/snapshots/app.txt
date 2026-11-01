@@ -2,6 +2,7 @@ update nOS Roadmap (roadmap) / backup-restic-fork — nothing is written unless 
 u approve
   status: "open" -> "done"
   note: (empty) -> "landed"
+widget w6:
   > 02 Formal Sciences — Mathematics, logic and computing.
 table expenses changed (row e3)
 refused: login carol has no row in the identity map
@@ -35,6 +36,11 @@ setting pulse.paused: {"backup:nightly":{"at":"2026-10-29T08:00:00Z","by":"alice
 ","reason":"vendor outage"}}
 organ thalamus: running (eu.thisisait.nos.thalamus)
 organ pulse: stopped (eu.thisisait.nos.pulse)
+organ cortex: UNKNOWN (eu.thisisait.nos.cortex)
+halt: off (no file at /Users/alice/.nos/halt)
+loops paused: off (no file at /Users/alice/.nos/loops-paused)
+organ thalamus: running, pid 412, last exit 0 (eu.thisisait.nos.thalamus)
+organ bone: stopped, last exit 78 (eu.thisisait.nos.bone)
 organ cortex: UNKNOWN (eu.thisisait.nos.cortex)
 halt: ON since 2026-10-28T09:05:00Z — upgrade drill (/Users/alice/.nos/halt)
 loops paused: off (no file at /Users/alice/.nos/loops-paused)

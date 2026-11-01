@@ -115,7 +115,9 @@ pub fn lines(s: &EstateState) -> Vec<String> {
     }
     out.extend(s.organs.iter().map(|o| {
         let r = match o.running { Some(true) => "running", Some(false) => "stopped", None => "UNKNOWN" };
-        format!("organ {}: {r} ({})", o.name, o.label)
+        let pid = o.pid.map(|p| format!(", pid {p}")).unwrap_or_default();
+        let exit = o.last_exit.map(|x| format!(", last exit {x}")).unwrap_or_default();
+        format!("organ {}: {r}{pid}{exit} ({})", o.name, o.label)
     }));
     out.extend(s.act.as_ref().map(|a| match &a.why {
         _ if a.recorded => "act: recorded by Wing".to_string(),
@@ -151,8 +153,10 @@ fn set_point(path: &Path) -> SetPoint {
 }
 
 fn organs() -> Vec<Organ> {
-    let running = if cfg!(target_os = "macos") { launchd() } else { systemd() };
-    ORGANS.iter().zip(running).map(|((name, label), running)| Organ { name: (*name).into(), label: (*label).into(), running }).collect()
+    let host = if cfg!(target_os = "macos") { launchd_parse(run("launchctl", &["list"]).as_deref()) } else { systemd() };
+    ORGANS.iter().zip(host).map(|((name, label), (running, pid, last_exit))| {
+        Organ { name: (*name).into(), label: (*label).into(), running, pid, last_exit }
+    }).collect()
 }
 
 fn run(cmd: &str, args: &[&str]) -> Option<String> {
@@ -160,27 +164,41 @@ fn run(cmd: &str, args: &[&str]) -> Option<String> {
     String::from_utf8(out.stdout).ok()
 }
 
-/// `launchctl list` once: a PID is running, "-" is loaded and stopped; not listed is unknown
-/// (another domain, e.g. a system daemon, is not this list's to say).
-fn launchd() -> Vec<Option<bool>> {
-    let list = run("launchctl", &["list"]);
+/// (running, pid, last_exit) an organ; None is UNKNOWN, never 0.
+type Host = (Option<bool>, Option<u32>, Option<i32>);
+
+/// `launchctl list` once (PID, Status, Label): a PID is running, "-" is loaded and stopped, Status the
+/// last exit; not listed is unknown (another domain, e.g. a system daemon, is not this list's to say).
+fn launchd_parse(list: Option<&str>) -> Vec<Host> {
     ORGANS.iter().map(|(_, label)| {
-        let row = list.as_deref()?.lines().map(|l| l.split('\t').collect::<Vec<_>>()).find(|c| c.len() == 3 && c[2] == *label)?;
-        Some(row[0] != "-")
+        let Some(row) = list.and_then(|l| l.lines().map(|l| l.split('\t').collect::<Vec<_>>()).find(|c| c.len() == 3 && c[2] == *label))
+        else { return (None, None, None) };
+        let pid = row[0].parse().ok();
+        let running = if row[0] == "-" { Some(false) } else { pid.map(|_| true) };
+        (running, pid, running.and(row[1].parse().ok()))
     }).collect()
 }
 
-/// `systemctl --user show` once: active is running, a loaded unit otherwise is stopped, not-found is unknown.
-fn systemd() -> Vec<Option<bool>> {
+/// `systemctl --user show` once: active is running, a loaded unit otherwise is stopped, not-found is unknown;
+/// MainPID 0 is no process, and ExecMainStatus counts only once ExecMainPID says the unit ever ran.
+fn systemd() -> Vec<Host> {
     let units: Vec<String> = ORGANS.iter().map(|(_, l)| format!("{l}.service")).collect();
-    let mut args = vec!["--user", "show", "--property=LoadState,ActiveState"];
+    let mut args = vec!["--user", "show", "--property=LoadState,ActiveState,MainPID,ExecMainPID,ExecMainStatus"];
     args.extend(units.iter().map(String::as_str));
-    let Some(out) = run("systemctl", &args) else { return vec![None; ORGANS.len()] };
-    let blocks: Vec<&str> = out.split("\n\n").collect();
+    systemd_parse(run("systemctl", &args).as_deref())
+}
+
+fn systemd_parse(out: Option<&str>) -> Vec<Host> {
+    let blocks: Vec<&str> = out.map(|o| o.split("\n\n").collect()).unwrap_or_default();
     (0..ORGANS.len()).map(|i| {
-        let b = blocks.get(i)?;
+        let Some(b) = blocks.get(i) else { return (None, None, None) };
         let prop = |k: &str| b.lines().find_map(|l| l.strip_prefix(k)?.strip_prefix('='));
-        (prop("LoadState")? == "loaded").then(|| prop("ActiveState") == Some("active"))
+        if prop("LoadState") != Some("loaded") {
+            return (None, None, None);
+        }
+        let pid = prop("MainPID").and_then(|v| v.parse().ok()).filter(|p: &u32| *p != 0);
+        let ran = prop("ExecMainPID").and_then(|v| v.parse::<u32>().ok()).is_some_and(|p| p != 0);
+        (Some(prop("ActiveState") == Some("active")), pid, prop("ExecMainStatus").filter(|_| ran).and_then(|v| v.parse().ok()))
     }).collect()
 }
 
@@ -196,6 +214,29 @@ mod tests {
         for (name, label) in ORGANS {
             assert!(defaults.contains(&format!("_launchd_label: \"{label}\"")), "{name}: no role defaults {label}");
         }
+    }
+
+    #[test]
+    fn the_host_list_names_each_organs_pid_and_last_exit() {
+        let list = "PID\tStatus\tLabel\n412\t0\teu.thisisait.nos.thalamus\n-\t78\teu.thisisait.nos.wing\n-\t0\teu.thisisait.nos.pulse\n\
+                    x\ty\teu.thisisait.nos.bone\n";
+        let l = launchd_parse(Some(list));
+        assert_eq!(l[0], (Some(true), Some(412), Some(0)), "running");
+        assert_eq!(l[1], (Some(false), None, Some(78)), "exited 78");
+        assert_eq!(l[3], (None, None, None), "not loaded");
+        assert_eq!(l[4], (None, None, None), "garbage is UNKNOWN, never 0");
+        assert_eq!(launchd_parse(None), vec![(None, None, None); ORGANS.len()]);
+        let b = |load, act, pid, epid, st| format!("LoadState={load}\nActiveState={act}\nMainPID={pid}\nExecMainPID={epid}\nExecMainStatus={st}\n");
+        let out = [b("loaded", "active", 900, 900, 0), b("loaded", "failed", 0, 77, 78), b("loaded", "inactive", 0, 0, 0),
+                   b("not-found", "inactive", 0, 0, 0), "LoadState=loaded\nActiveState=active\nMainPID=junk\nExecMainPID=1\nExecMainStatus=?\n".into()]
+            .join("\n");
+        let s = systemd_parse(Some(&out));
+        assert_eq!(s[0], (Some(true), Some(900), Some(0)), "running");
+        assert_eq!(s[1], (Some(false), None, Some(78)), "exited 78");
+        assert_eq!(s[2], (Some(false), None, None), "never started has no exit");
+        assert_eq!(s[3], (None, None, None), "not loaded");
+        assert_eq!(s[4], (Some(true), None, None), "garbage is UNKNOWN, never 0");
+        assert_eq!(s[5], (None, None, None));
     }
 
     #[test]

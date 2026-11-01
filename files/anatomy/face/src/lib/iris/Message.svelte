@@ -160,7 +160,8 @@
 						— {p.reason}{/if} ({p.file})
 				</li>{/each}
 			{#each msg.organs as o}<li>
-					{o.name}: {o.running === null ? 'UNKNOWN' : o.running ? 'running' : 'stopped'} ({o.label})
+					{o.name}: {o.running === null ? 'UNKNOWN' : o.running ? 'running' : 'stopped'}{#if o.pid != null}, pid
+						{o.pid}{/if}{#if o.last_exit != null}, last exit {o.last_exit}{/if} ({o.label})
 				</li>{/each}
 			{#if msg.settings === null}<li>
 					settings: UNKNOWN

@@ -252,12 +252,17 @@ pub struct SetPoint {
 }
 
 /// A host LaunchAgent or systemd user unit: running, stopped, or null when the host does not say.
+/// pid and last_exit likewise: absent or null is UNKNOWN, never 0 (optional, so v15 samples decode).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Organ {
     pub name: String,
     pub label: String,
     pub running: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pid: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_exit: Option<i32>,
 }
 
 /// A workspace document's cap, serialized: it rides one line of at most 1 MiB.

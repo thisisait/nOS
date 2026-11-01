@@ -301,7 +301,8 @@ export type SetPoint = { on: boolean | null; since?: string; reason?: string; fi
 export type EstateState = {
 	halt: SetPoint;
 	loops_paused: SetPoint;
-	organs: { name: string; label: string; running: boolean | null }[];
+	/** pid and last_exit absent or null are UNKNOWN, never 0. */
+	organs: { name: string; label: string; running: boolean | null; pid?: number | null; last_exit?: number | null }[];
 	/** Each setting state/genome/settings.yml names (v15); a value null is UNKNOWN, the map null when the genome is. */
 	settings: { [key: string]: Value } | null;
 	/** Only on the answer to halt / lift_halt (v14) or setting (v15): whether Wing recorded the act. */
