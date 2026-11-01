@@ -266,6 +266,33 @@ jobs:
         run: npm test
 
   # ──────────────────────────────────────────────────────────────────────────
+  # NOS-APP – nOS.app's Swift decoder against the thalamus-shell fixture
+  # (test_nos_app_reads_state.py), which skips without swift. Declared, so a runner
+  # without swift aborts. Non-blocking until green once: test_nos_app_lane_is_not_required_yet.
+  # ──────────────────────────────────────────────────────────────────────────
+  nos-app:
+    name: nOS.app (decoder vs contract)
+    runs-on: macos-26
+    timeout-minutes: 20
+    continue-on-error: true
+    env:
+      NOS_TEST_PROVIDES: swift
+    steps:
+      - name: Check out the codebase.
+        uses: actions/checkout@v7
+
+      - name: Set up Python 3.
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+
+      - name: Install test dependencies.
+        run: pip3 install pytest pyyaml
+
+      - name: Decode every contract state sample with the app's decoder.
+        run: python3 -m pytest tests/anatomy/test_nos_app_reads_state.py -q
+
+  # ──────────────────────────────────────────────────────────────────────────
   # CORTEX – the reasoning organ (vendored KEAP v1.27.0 port, files/anatomy/
   # cortex). Node-22 job modeled 1:1 on the face job above. The conformance
   # step is the shared onto1 gate: the organ must keep reproducing the
