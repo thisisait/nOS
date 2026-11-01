@@ -2,9 +2,9 @@
 
 WHY (read set [inbox]). An agent blocked on the operator is the most time-sensitive thing he can see, and
 reading it writes nothing: listOpen and poll move, answer and cancel stay PHP's (the Caddy matcher is GET
-only). PHP's deadline rule is a string compare against gmdate('Y-m-d\\TH:i:s\\Z'); the medulla makes the
-same compare for that one stored form and says 503 for any other, never a guess. Parity is measured as for
-the Pulse reads: the real presenter and the medulla answer one scratch wing.db x every bearer.
+only). PHP's deadline rule is a string compare against gmdate('Y-m-d\\TH:i:s\\Z') for any stored form, and
+the medulla makes the same compare, odd forms included. Parity is measured as for the Pulse reads: the real
+presenter and the medulla answer one scratch wing.db x every bearer.
 """
 from __future__ import annotations
 
@@ -37,7 +37,10 @@ QUESTIONS = {"q-open": ("alpha", "open", None, None, "2026-10-01 10:00:00"),
              "q-blank": ("beta", "open", "", None, "2026-10-01 12:00:00"),
              "q-answered": ("alpha", "answered", FUTURE, "yes", "2026-10-01 08:00:00"),
              "q-cancelled": ("beta", "cancelled", None, "not needed", "2026-10-01 07:00:00"),
-             "q-expired": ("alpha", "expired", PAST, "no", "2026-10-01 06:00:00")}
+             "q-expired": ("alpha", "expired", PAST, "no", "2026-10-01 06:00:00"),
+             # Forms ask() never writes: PHP still compares them lexically, so the medulla must too.
+             "q-odd-past": ("alpha", "open", "2001-01-01 00:00:00", None, "2026-10-01 13:00:00"),
+             "q-odd-word": ("beta", "open", "tomorrow", None, "2026-10-01 14:00:00")}
 URLS = ["/api/v1/inbox/questions", "/api/v1/inbox/questions?agent=alpha", "/api/v1/inbox/questions?agent=beta",
         "/api/v1/inbox/questions?agent=", "/api/v1/inbox/questions?agent=nobody", "/api/v1/inbox/questions/nope"]
 URLS += [f"/api/v1/inbox/questions/{u}" for u in QUESTIONS]
@@ -110,23 +113,9 @@ def test_php_and_the_medulla_answer_every_inbox_read_the_same(tmp_path, monkeypa
     assert codes == {200, 401, 403, 404}, codes
     read = list(p.AUTH).index("wing.read")
     seen = lambda url: json.loads(got[URLS.index(url) * len(p.AUTH) + read][2])  # noqa: E731
-    assert [q["uuid"] for q in seen("/api/v1/inbox/questions")["questions"]] == ["q-open", "q-open-later", "q-blank"]
+    assert [q["uuid"] for q in seen("/api/v1/inbox/questions")["questions"]] == ["q-open", "q-open-later", "q-blank", "q-odd-word"]
     assert [q["uuid"] for q in seen("/api/v1/inbox/questions?agent=alpha")["questions"]] == ["q-open"]
-    past = seen("/api/v1/inbox/questions/q-past")
-    assert (past["status"], past["answer"], past.get("expired_by_deadline")) == ("expired", "deny", True), past
+    for uuid in ("q-past", "q-odd-past"):
+        past = seen(f"/api/v1/inbox/questions/{uuid}")
+        assert (past["status"], past["answer"], past.get("expired_by_deadline")) == ("expired", "deny", True), past
 
-
-@m.needs_cargo
-@pytest.mark.skipif(not shutil.which("php"), reason="php builds the schema")
-@pytest.mark.skipif(not shutil.which("sqlite3"), reason="sqlite3 seeds the scratch wing.db")
-def test_a_deadline_in_another_form_is_unknown_not_guessed(tmp_path, monkeypatch):
-    # PHP compares any string lexically; the medulla vouches only for the form ask() writes.
-    monkeypatch.setenv("NOS_HALT_FILE", str(tmp_path / "halt"))
-    subprocess.run(["php", str(m.WING / "bin/init-db.php"), f"--data-dir={tmp_path}"], capture_output=True, check=True, timeout=60)
-    db = tmp_path / "wing.db"
-    p._seed(db)
-    _seed_questions(db, {"q-odd": ("alpha", "open", "2001-01-01 00:00:00", None, "2026-10-01 10:00:00")})
-    auth = p.AUTH["wing.read"]
-    cases = [{"url": u, "headers": auth} for u in ("/api/v1/inbox/questions", "/api/v1/inbox/questions/q-odd")]
-    for code, _, body in _medulla_answers(m._medulla(tmp_path), db, cases):
-        assert code == 503 and "UNKNOWN" in json.loads(body)["error"], (code, body)
