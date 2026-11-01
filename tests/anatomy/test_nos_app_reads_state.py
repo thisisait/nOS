@@ -7,6 +7,7 @@ so a renamed or dropped field fails here instead of showing as off in the menu b
 from __future__ import annotations
 
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -18,8 +19,23 @@ APP = REPO / "files/anatomy/thalamus/app"
 FIXTURE = REPO / "files/anatomy/contracts/thalamus-shell.fixture.json"
 
 
-@pytest.mark.skipif(sys.platform != "darwin" or not shutil.which("swift"), reason="SwiftUI builds on macOS only")
+def _state_check() -> subprocess.CompletedProcess:
+    return subprocess.run(["swift", "run", "-q", "state-check", str(FIXTURE)], cwd=APP,
+                          capture_output=True, text=True, timeout=900, check=False)
+
+
+darwin = pytest.mark.skipif(sys.platform != "darwin" or not shutil.which("swift"), reason="SwiftUI builds on macOS only")
+
+
+@darwin
 def test_the_app_decodes_every_contract_state_sample():
-    r = subprocess.run(["swift", "run", "-q", "state-check", str(FIXTURE)], cwd=APP,
-                       capture_output=True, text=True, timeout=900, check=False)
+    r = _state_check()
     assert r.returncode == 0 and r.stdout.startswith("ok "), (r.stdout + r.stderr)[-4000:]
+
+
+@darwin
+def test_nos_app_speaks_setting():
+    """The app's `setting` line is the fixture's, null kept (an unpause is {job: null}); settings and act decode."""
+    r = _state_check()
+    m = re.match(r"ok \d+ states (\d+) settings", r.stdout)
+    assert r.returncode == 0 and m and int(m[1]) >= 4, (r.stdout + r.stderr)[-4000:]
