@@ -1,0 +1,19 @@
+---
+# kiwix-serve reads /data/*.zim once, at start: a ZIM that arrived any other way (a restore,
+# download-zim.sh, rsync — the Linux mini 11-01, 335 books, served 1) needs a restart too.
+# The library's fingerprint (names + sizes) is the trigger; it changes only when the set does.
+- name: "[pazny.kiwix] Read the library as it is now"
+  ansible.builtin.find:
+    paths: "{{ kiwix_data_dir }}"
+    patterns: "*.zim"
+  register: _kiwix_library
+
+- name: "[pazny.kiwix] The library changed since Kiwix last read it"
+  ansible.builtin.copy:
+    content: |
+      {% for f in _kiwix_library.files | sort(attribute='path') %}
+      {{ f.path | basename }} {{ f.size }}
+      {% endfor %}
+    dest: "{{ kiwix_data_dir }}/.library"
+    mode: '0644'
+  notify: Restart kiwix

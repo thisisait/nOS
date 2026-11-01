@@ -69,6 +69,10 @@
   when: (kiwix_zim_files | default([])) | length > 0
   notify: Restart kiwix
 
+# kiwix-serve reads /data/*.zim once, at start: any new ZIM restarts it (tasks/library.yml).
+- name: "[pazny.kiwix] Restart Kiwix when its library changed"
+  ansible.builtin.include_tasks: library.yml
+
 # Nginx vhost templates staysji v playbook-level templates/nginx/
 # sites-available/ because of the auto-enable pattern — hence the absolute path via
 # {{ playbook_dir }}, not role-local templates/.
