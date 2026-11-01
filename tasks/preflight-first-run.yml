@@ -1,0 +1,58 @@
+---
+# ==============================================================================
+# A fresh host fails here, in the first minutes, with the command that fixes it,
+# not 120 tasks in (the Linux mini, 2026-11-01: passlib missing, then the weak
+# prefix gate). The late "[Security] Refuse a weak password prefix" stays the gate.
+# ==============================================================================
+
+- name: "[Preflight] The controller's Python has what the playbook imports"
+  ansible.builtin.command:
+    argv: ["{{ ansible_playbook_python }}", -c, "import passlib"]
+  register: _first_run_modules
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  delegate_to: localhost
+  when: (ansible_facts['system'] | default('')) == 'Linux'  # only pazny.linux.users hashes logins
+
+- name: "[Preflight] Missing controller modules"
+  ansible.builtin.fail:
+    msg: |-
+      The Python running ansible-playbook ({{ ansible_playbook_python }}) lacks a module:
+        {{ _first_run_modules.stderr_lines[-1] | default('?') }}
+      passlib hashes the unix logins (pazny.linux.users). Install:
+        {{ ansible_playbook_python }} -m pip install passlib
+  when: _first_run_modules.rc | default(0) != 0
+
+# A removal (blank) offers a new prefix itself, so only a plain converge is held here.
+- name: "[Preflight] A strong password prefix before anything derives from it"
+  ansible.builtin.fail:
+    msg: |-
+      global_password_prefix is {{ 'unset' if not (global_password_prefix | default('')) else 'weak (changeme or < 12 chars)' }}.
+      88 credentials derive from it. Write a random one into credentials.yml (never printed):
+        umask 077; printf 'global_password_prefix: "%s"\n' "$(openssl rand -hex 16)" >> {{ playbook_dir }}/credentials.yml
+      Throwaway sandbox only: -e allow_weak_prefix=true.
+  when:
+    - not (allow_weak_prefix | default(false) | bool)
+    - remove | default('none') == 'none'
+    - not (blank | default(false) | bool)
+    - (global_password_prefix | default('')) in ['changeme', ''] or (global_password_prefix | length) < 12
+
+# Settings a person usually chooses; left at the default they work, so this only says so.
+- name: "[Preflight] Recommended settings still at their default"
+  vars:
+    _first_run_defaults:
+      tenant_domain: dev.local     # every hostname ends in it
+      host_alias: ""               # a second nOS host on the LAN needs its own (bone.<alias>.dev.local)
+      nos_timezone: Europe/Prague
+      git_user_name: ""
+      git_user_email: ""
+    _first_run_left: >-
+      {%- set left = [] -%}
+      {%- for k, d in _first_run_defaults.items() if (lookup('vars', k, default='') | string) == d -%}
+      {%- set _ = left.append(k) -%}
+      {%- endfor -%}
+      {{ left }}
+  ansible.builtin.debug:
+    msg: "Left at the default (fine to keep; choose in config.yml or credentials.yml): {{ _first_run_left | join(', ') }}"
+  when: _first_run_left | length > 0

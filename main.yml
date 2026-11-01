@@ -636,6 +636,10 @@
         - "{{ playbook_dir }}/credentials.yml"
       tags: ['always']
 
+    # A fresh host: controller modules, a strong prefix, defaults worth choosing.
+    - import_tasks: tasks/preflight-first-run.yml
+      tags: ['always', 'preflight']
+
     # ── Persisted runtime secrets (encryption keys, APP_KEYs, JWT secrets) ──
     # File ~/.nos/secrets.yml is created on the first run (at the end of
     # the generation phase). On subsequent runs we load it BEFORE lazy-regen blocks,
