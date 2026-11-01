@@ -26,10 +26,14 @@ def _task(prefix: str) -> dict:
 
 
 def test_the_lan_records_skip_the_name_avahi_already_owns():
-    out = ENV.from_string((REPO / "templates/avahi-hosts.j2").read_text()).render(
-        _mdns_names=NAMES, ansible_facts={"hostname": "mini"}, nos_lan_ip="192.168.1.252", ansible_managed="x")
-    records = [ln for ln in out.splitlines() if ln and not ln.startswith("#")]
-    assert records == [f"192.168.1.252 {n}" for n in NAMES[1:]]
+    # Live on the mini 11-01: a static /etc/avahi/hosts record also claims the address's PTR,
+    # which mini.local already holds -> "Local name collision" for every name. -R publishes none.
+    vars_ = dict(_mdns_names=NAMES, ansible_facts={"hostname": "mini"}, nos_lan_ip="192.168.1.252", ansible_managed="x")
+    unit = ENV.from_string((REPO / "templates/nos-mdns-names.service.j2").read_text()).render(**vars_)
+    published = re.findall(r"avahi-publish -a -R (\S+) (\S+)", unit)
+    assert published == [(n, "192.168.1.252") for n in NAMES[1:]], published
+    hosts = ENV.from_string((REPO / "templates/avahi-hosts.j2").read_text()).render(**vars_)
+    assert not [ln for ln in hosts.splitlines() if ln and not ln.startswith("#")], "a static record collides with the host's PTR"
 
 
 def test_the_read_back_sees_file_routes_and_label_routes(tmp_path):
