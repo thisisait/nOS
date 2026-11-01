@@ -148,6 +148,56 @@
       until: "_rm_host_left.stdout | trim == 'LEFT: none'"
       failed_when: "_rm_host_left.stdout | trim != 'LEFT: none'"
 
+# ── Host layer (Linux) — the mDNS publisher of a .local tenant (tasks/mdns.yml) ──
+# /etc/avahi/hosts is in _blank_dirs (removal-set.yml); this takes what lives inside
+# shared files. Packages stay (distro). A hand-written record is reported, never deleted.
+- name: "[Remove:host] Host layer (Linux)"
+  when: ansible_facts['os_family'] == 'Debian' and not (nos_is_container | default(false) | bool)
+  block:
+    - name: "[Remove:host] Drop the nOS mDNS self block from /etc/hosts"
+      ansible.builtin.blockinfile:
+        path: /etc/hosts
+        marker: "# {mark} nOS mDNS self"
+        state: absent
+      become: true
+
+    - name: "[Remove:host] Is ufw here?"
+      ansible.builtin.stat:
+        path: /usr/sbin/ufw
+      register: _rm_ufw
+
+    - name: "[Remove:host] Close mDNS 5353/udp"
+      community.general.ufw:
+        rule: allow
+        proto: udp
+        port: "5353"
+        delete: true
+      become: true
+      when: _rm_ufw.stat.exists
+
+    - name: "[Remove:host] avahi forgets the records"
+      ansible.builtin.shell: |
+        systemctl is-active --quiet avahi-daemon || { echo "inactive"; exit 0; }
+        systemctl reload avahi-daemon && echo "reloaded"
+      become: true
+      register: _rm_avahi
+      changed_when: "'reloaded' in _rm_avahi.stdout"
+
+    - name: "[Remove:host] Read back the host layer (Linux)"
+      ansible.builtin.shell: |
+        left=""
+        f=/etc/avahi/hosts
+        [ -e "$f" ] && { grep -q 'tasks/mdns.yml' "$f" || grep -qvE '^[[:space:]]*(#|$)' "$f"; } && left="$left $f"
+        grep -q "nOS mDNS self" /etc/hosts && left="$left etc-hosts-block"
+        command -v ufw >/dev/null && ufw status 2>/dev/null | grep -qE '^5353/udp' && left="$left ufw:5353/udp"
+        echo "LEFT:${left:- none}"
+      args:
+        executable: /bin/bash
+      become: true
+      register: _rm_linux_left
+      changed_when: false
+      failed_when: "_rm_linux_left.stdout | trim != 'LEFT: none'"
+
 - name: "[Remove:source] Done"
   ansible.builtin.debug:
     msg: |

@@ -141,3 +141,18 @@ def test_the_reader_names_a_homebrew_7_plist_left_behind(tmp_path: Path) -> None
     r = subprocess.run(["/bin/bash", "-c", script], capture_output=True, text=True,
                        env={**os.environ, "HOME": str(home), "PATH": f"{bindir}:/usr/bin:/bin"})
     assert "sh.brew.grafana-alloy.plist" in r.stdout, r.stdout
+
+
+def test_a_leave_drops_the_linux_mdns_layer() -> None:
+    """tasks/mdns.yml writes /etc/avahi/hosts, a /etc/hosts block and a ufw rule on
+    a .local Debian tenant; the leave must take all three and read them back."""
+    tasks = yaml.safe_load(SRC.read_text(encoding="utf-8"))
+    names = [t.get("name", "") for t in tasks]
+    linux = tasks[names.index("[Remove:host] Host layer (Linux)")]
+    assert names.index("[Remove:host] Host layer (Linux)") < names.index("[Remove:source] Done")
+    assert "Debian" in linux["when"] and "nos_is_container" in linux["when"]
+    reader = next(t for t in linux["block"] if "Read back" in t["name"])
+    for probe in ("/etc/avahi/hosts", "nOS mDNS self", "5353"):
+        assert probe in reader["ansible.builtin.shell"], probe
+    assert "LEFT: none" in reader["failed_when"]
+    assert "'/etc/avahi/hosts'" in (REPO / "tasks/removal-set.yml").read_text(encoding="utf-8")

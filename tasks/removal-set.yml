@@ -230,6 +230,9 @@
         +
         ['/Library/LaunchDaemons/eu.thisisait.nos.dnsmasq-tailnet.plist',
          dnsmasq_tailnet_conf | default(homebrew_prefix + '/etc/dnsmasq-tailnet.conf')]
+        +
+        ((ansible_facts['os_family'] | default('')) == 'Debian' and (tenant_domain | default('')).endswith('.local')) | ternary(
+          ['/etc/avahi/hosts'], [])
       }}
 
 # nos_data_root covers every service on `platform/services/*` (even DISABLED ones)
