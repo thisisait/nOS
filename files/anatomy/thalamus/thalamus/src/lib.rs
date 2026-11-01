@@ -5,6 +5,7 @@
 pub mod binding;
 pub mod cli;
 pub mod cortex_plan;
+pub mod inbox;
 pub mod ledger;
 pub mod relay;
 pub mod septum;

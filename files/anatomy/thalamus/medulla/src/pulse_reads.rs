@@ -252,7 +252,7 @@ pub fn param(query: &str, key: &str) -> Option<String> {
     }).last()
 }
 
-fn decode(s: &str, plus: bool) -> String {
+pub fn decode(s: &str, plus: bool) -> String {
     let b = s.as_bytes();
     let mut out = Vec::with_capacity(b.len());
     let hex = |i: usize| b.get(i).and_then(|c| (*c as char).to_digit(16));

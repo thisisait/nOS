@@ -50,7 +50,8 @@ fn handle(mut s: TcpStream, db: &Path) -> std::io::Result<()> {
     let (path, query) = target.split_once('?').unwrap_or((target, ""));
     let head_only = method == "HEAD";
     if method == "GET" {
-        let read = crate::pulse_reads::answer(db, path, query, &header).or_else(|| crate::audit_reads::answer(db, path, &header));
+        let read = crate::pulse_reads::answer(db, path, query, &header).or_else(|| crate::audit_reads::answer(db, path, &header))
+            .or_else(|| crate::inbox_reads::answer(db, path, query, &header));
         if let Some((code, body)) = read {
             let status = match code {
                 200 => "200 OK", 401 => "401 Unauthorized", 403 => "403 Forbidden", 404 => "404 Not Found", 503 => "503 Service Unavailable",

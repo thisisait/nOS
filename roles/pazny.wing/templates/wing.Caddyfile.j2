@@ -99,8 +99,10 @@
     # A windowed run list (?since/?until) stays PHP's: strtotime()'s grammar is PHP's own.
     # admin: GET /api/v1/admin/state only (row medulla-settings); halt and resume are writes, PHP's.
     # audit: GET /api/v1/audit/verify, the cached verdict (test_medulla_serves_audit_verify.py).
+    # inbox: GET of the open list and one poll; POST answer and cancel stay PHP's (test_medulla_serves_inbox_questions.py).
 {% set _medulla_reads = {'pulse': ['path_regexp ^/api/v1/(pulse_jobs|pulse_runs|pulse_runs/summary|pulse_runs/[^/]+)$', 'not query since=*', 'not query until=*'],
-                         'admin': ['path /api/v1/admin/state'], 'audit': ['path /api/v1/audit/verify']} %}
+                         'admin': ['path /api/v1/admin/state'], 'audit': ['path /api/v1/audit/verify'],
+                         'inbox': ['path_regexp ^/api/v1/inbox/questions(/[^/]+)?$']} %}
 {% for name in medulla_read_routes | default([]) %}
     @medulla_read_{{ name }} {
         method GET
