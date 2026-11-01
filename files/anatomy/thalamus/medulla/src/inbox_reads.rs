@@ -13,13 +13,10 @@ pub fn answer(db: &Path, path: &str, query: &str, header: &dyn Fn(&str) -> Optio
         "" => None,
         p => Some(decode(p.strip_prefix('/').filter(|s| !s.is_empty() && !s.contains('/'))?, false)),
     };
-    Some(serve(db, uuid, query, header).unwrap_or_else(|e| match e {
-        inbox::Error::Deadline(why) => err(503, &format!("{why}: whether it has passed is UNKNOWN here")),
-        inbox::Error::Sql(e) => err(500, &e.to_string()),
-    }))
+    Some(serve(db, uuid, query, header).unwrap_or_else(|e| err(500, &e.to_string())))
 }
 
-fn serve(db: &Path, uuid: Option<String>, query: &str, header: &dyn Fn(&str) -> Option<String>) -> Result<(u16, Value), inbox::Error> {
+fn serve(db: &Path, uuid: Option<String>, query: &str, header: &dyn Fn(&str) -> Option<String>) -> rusqlite::Result<(u16, Value)> {
     let db = Connection::open_with_flags(db, OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX)?;
     db.busy_timeout(Duration::from_secs(5))?;
     // InboxPresenter declares no $bffOperatorReads: face-bff does not reach the inbox reads.
