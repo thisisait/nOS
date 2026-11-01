@@ -36,14 +36,24 @@
     rm -rf {{ thalamus_nos_app | quote }}
     mkdir -p "$(dirname {{ thalamus_nos_app | quote }})"
     ditto "$stage/nOS.app" {{ thalamus_nos_app | quote }}
-    # A stage copy LaunchServices knows is a second nOS in Spotlight, and not a decider (11-01).
-    /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -u "$stage/nOS.app" || true
-    rm -rf "$stage/nOS.app"
   args:
     executable: /bin/bash
   register: _nos_app_build
   when: _nos_app_src_sha.stdout != (_nos_app_built_sha.stdout | default(''))
   changed_when: true
+
+# A stage copy LaunchServices knows is a second nOS in Spotlight, and not a decider (11-01).
+- name: "[pazny.medulla] No nOS.app left in the stage"
+  ansible.builtin.shell: |
+    s={{ (thalamus_home ~ '/app-stage/nOS.app') | quote }}
+    [ -e "$s" ] || exit 0
+    pkill -f "$s/Contents/MacOS/nOS" || true
+    /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -u "$s" || true
+    rm -rf "$s" && echo removed
+  args:
+    executable: /bin/bash
+  register: _nos_app_stage
+  changed_when: "'removed' in _nos_app_stage.stdout"
 
 - name: "[pazny.medulla] Record the hash nOS.app was built from"
   ansible.builtin.copy:
@@ -82,7 +92,7 @@
     executable: /bin/bash
   register: _nos_app_restart
   changed_when: "'restarted' in _nos_app_restart.stdout"
-  when: _nos_app_build is changed
+  when: _nos_app_build is changed or _nos_app_stage is changed  # a stage copy left = a build never restarted
 
 # Start at login. The job only opens the app, so a reload re-runs `open`, never a second nOS.
 - name: "[pazny.medulla] Render the nOS.app login job"
