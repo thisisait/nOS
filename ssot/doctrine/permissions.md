@@ -20,7 +20,7 @@ gates:
 
 1. **One source.** `state/genome/permissions.yml` names every capability (a verb) and
    the roles that hold it. A role is a tier (1–4), an agent (`agent:<name>`) or a door
-   (a named bearer: `door:face-bff`, `door:thalamus`, `door:wing-halt`,
+   (a named bearer: `door:face-bff`, `door:thalamus`, `door:wing-halt`, `door:wing-answer`,
    `door:ansible-provisioned`, `door:device`), plus `operator-local` (loopback break-glass).
 2. **Every enforcement point reads its row.** Nothing names a group, a tier number or
    a scope the genome does not declare. Groups are the genome's projection into
@@ -66,7 +66,7 @@ the agent runtime scopes (`wing.read`, `wing.write`, `keap.read`, `keap.write`,
 
 ## 3. Two token systems, one verb set
 
-Wing bearer scopes (`wing.operator`, `wing.write`, `wing.halt`, `pulse.write`) and
+Wing bearer scopes (`wing.operator`, `wing.write`, `wing.halt`, `wing.answer`, `pulse.write`) and
 Bone Authentik-JWT scopes (`nos:*:read|apply`) guard the same apply verbs twice. The
 genome names the verb once; each system's scope is its spelling of it, generated.
 

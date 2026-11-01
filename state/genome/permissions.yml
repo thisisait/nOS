@@ -29,6 +29,7 @@ roles:
   - door:face-bff
   - door:thalamus
   - door:wing-halt            # the operator's shell (`nos halt`)
+  - door:wing-answer          # the medulla's answer relay (socket `answer`)
   - door:ansible-provisioned  # the converge's own Wing bearer
   - engine:evaluator          # Pulse judging a loop proposal (Bone loopauth)
   - operator-local            # the human on loopback (Bone loopauth `operator`)
@@ -54,6 +55,7 @@ capabilities:
   identity.assert: [door:face-bff, door:thalamus]
   # ── Wing bearer scopes reserved to one bearer (bin/provision-token.php) ─
   wing.halt: [door:wing-halt]
+  wing.answer: [door:wing-answer]   # Inbox:answer only (BaseApiPresenter), Q3 ruled 2026-11-01
   pulse.write: [door:ansible-provisioned]
   # ── Bone loop API, loopback only (bone/loopauth.py IDENTITIES) ─────────
   loop:read: [agent:proposer, engine:evaluator, operator-local]

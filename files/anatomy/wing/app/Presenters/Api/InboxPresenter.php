@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Presenters\Api;
 
 use App\Model\AgentQuestionRepository;
+use App\Model\TokenRepository;
 use Nette\Http\IResponse;
 
 /**
@@ -39,6 +40,11 @@ use Nette\Http\IResponse;
 final class InboxPresenter extends BaseApiPresenter
 {
 	protected array $operatorActions = ['answer'];
+
+	/** wing.answer: the medulla relays a tier-1 decider's answer (Q3, ruled 2026-11-01); BaseApiPresenter confines it here. */
+	protected array $operatorScopes = ['wing.operator', 'wing.answer'];
+
+	protected array $answerActions = ['answer'];
 
 	public function __construct(
 		private AgentQuestionRepository $questions,
@@ -115,13 +121,15 @@ final class InboxPresenter extends BaseApiPresenter
 
 	/**
 	 * POST /api/v1/inbox/questions/<uuid>/answer
-	 *   body: {reply_token, answer, answered_by?, via?}
+	 *   body: {reply_token, answer, answered_by?, via?}; the wing.answer relay sends no reply_token
 	 */
 	public function actionAnswer(string $uuid): void
 	{
 		$this->requireMethod('POST');
 		$b = $this->getJsonBody();
-		foreach (['reply_token', 'answer'] as $required) {
+		// The medulla relays a tier-1 decider its kernel named; the bearer reaches nothing but this action.
+		$relay = TokenRepository::grants($this->validatedToken['scopes'] ?? null, 'wing.answer');
+		foreach ($relay ? ['answer', 'answered_by'] : ['reply_token', 'answer'] as $required) {
 			if (!isset($b[$required]) || (string) $b[$required] === '') {
 				$this->sendError("Missing required field: {$required}");
 			}
@@ -149,13 +157,19 @@ final class InboxPresenter extends BaseApiPresenter
 			);
 		}
 
-		$verdict = $this->questions->answer(
-			uuid:        $uuid,
-			replyToken:  (string) $b['reply_token'],
-			answer:      (string) $b['answer'],
-			answeredBy:  $answeredBy,
-			via:         (string) ($b['via'] ?? 'api'),
-		);
+		if ($relay && !preg_match('/^[A-Za-z0-9._-]{1,64}$/', $answeredBy)) {
+			$this->sendError('answered_by from the medulla is the login name its kernel named');
+		}
+
+		$verdict = $relay
+			? $this->questions->answerAsOperator($uuid, (string) $b['answer'], $answeredBy, 'medulla')
+			: $this->questions->answer(
+				uuid:        $uuid,
+				replyToken:  (string) $b['reply_token'],
+				answer:      (string) $b['answer'],
+				answeredBy:  $answeredBy,
+				via:         (string) ($b['via'] ?? 'api'),
+			);
 
 		match ($verdict['result']) {
 			AgentQuestionRepository::ANSWER_OK => $this->sendSuccess([
@@ -165,15 +179,19 @@ final class InboxPresenter extends BaseApiPresenter
 			// 409, not 200: the caller decided something and their decision did
 			// not take effect. Returning the winning answer lets a channel bot
 			// say WHAT was decided instead of just "too late".
+			// `result` tells the two 409s apart for a caller that does not parse prose (the medulla).
 			AgentQuestionRepository::ANSWER_ALREADY => $this->sendError(
 				'Already answered by ' . (string) ($verdict['question']['answered_by'] ?? '?')
 				. ': ' . (string) ($verdict['question']['answer'] ?? ''),
 				IResponse::S409_Conflict,
+				['result' => 'already', 'answer' => $verdict['question']['answer'] ?? null,
+				 'answered_by' => $verdict['question']['answered_by'] ?? null],
 			),
 			AgentQuestionRepository::ANSWER_EXPIRED => $this->sendError(
 				'Deadline passed; the agent proceeded with: '
 				. (string) ($verdict['question']['default_on_expiry'] ?? '(no default)'),
 				IResponse::S409_Conflict,
+				['result' => 'expired', 'default_on_expiry' => $verdict['question']['default_on_expiry'] ?? null],
 			),
 			default => $this->sendError('Question not found', IResponse::S404_NotFound),
 		};

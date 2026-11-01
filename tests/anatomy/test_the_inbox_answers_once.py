@@ -27,8 +27,11 @@ structural test fails and this file must be re-read, not just re-run.
 
 from __future__ import annotations
 
+import json
 import re
+import shutil
 import sqlite3
+import subprocess
 import time
 import threading
 from pathlib import Path
@@ -36,6 +39,8 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parents[2]
+WING = REPO / "files/anatomy/wing"
+AUTOLOAD = WING / "vendor/autoload.php"
 SCHEMA = REPO / "files/anatomy/wing/db/schema-extensions.sql"
 REPOSITORY = REPO / "files/anatomy/wing/app/Model/AgentQuestionRepository.php"
 PRESENTER = REPO / "files/anatomy/wing/app/Presenters/Api/InboxPresenter.php"
@@ -272,3 +277,75 @@ def test_the_token_is_stored_hashed_and_never_returned_in_a_list():
         "public() no longer strips reply_token_sha — the hash must not leave "
         "the repository either."
     )
+
+
+# ── the medulla's relay, run: the wing.answer bearer over the REAL presenters (Q3, ruled 2026-11-01) ──
+
+_HARNESS = r"""
+$composer = require $argv[1];
+$home = dirname(realpath($argv[1]), 2);
+spl_autoload_register(function ($c) use ($composer, $home) {   // this tree's app/, even with vendor symlinked
+  $own = getcwd() . '/app/' . str_replace('\\', '/', substr($c, 4)) . '.php';
+  $f = realpath((string) $composer->findFile($c));
+  if (str_starts_with($c, 'App\\') && is_file($own)) require $own;
+  elseif ($f && str_starts_with($f, $home . '/app/')) require getcwd() . substr($f, strlen($home));
+}, prepend: true);
+$pdo = new Nette\Database\Connection('sqlite:' . $argv[2]);
+$pdo->query('INSERT INTO api_tokens', ['token' => hash('sha256', 'answer'), 'name' => 'wing-answer', 'scopes' => 'wing.answer,wing.write', 'active' => 1]);
+$cache = new Nette\Caching\Storages\DevNullStorage;
+$structure = new Nette\Database\Structure($pdo, $cache);
+$db = new Nette\Database\Explorer($pdo, $structure, new Nette\Database\Conventions\DiscoveredConventions($structure), $cache);
+$events = new App\Model\EventRepository($db);
+$questions = new App\Model\AgentQuestionRepository($db, $events, new App\Model\NotificationRepository($db));
+$out = [];
+foreach (json_decode($argv[3], true) as $c) {
+  $cls = 'App\\Presenters\\Api\\' . $c['presenter'] . 'Presenter';
+  $p = $c['presenter'] === 'Inbox' ? new $cls($questions) : (new ReflectionClass($cls))->newInstanceWithoutConstructor();
+  $p->tokenRepo = new App\Model\TokenRepository($db);
+  $p->autoCanonicalize = false;
+  $req = new Nette\Http\Request(new Nette\Http\UrlScript('http://wing/api'), headers: ['authorization' => 'Bearer answer'],
+    method: 'POST', rawBodyCallback: fn () => json_encode($c['body'] ?? []));
+  $res = new Nette\Http\Response;
+  $p->injectPrimary($req, $res);
+  try {
+    $r = $p->run(new Nette\Application\Request('Api:' . $c['presenter'], 'POST', ['action' => $c['action']] + ($c['params'] ?? [])));
+    $payload = $r instanceof Nette\Application\Responses\JsonResponse ? $r->getPayload() : null;
+  } catch (Error $e) {
+    if (!str_contains($e->getMessage(), 'must not be accessed before initialization')) throw $e;
+    $payload = 'reached';
+  }
+  $out[] = ['code' => $res->getCode(), 'payload' => $payload];
+}
+$row = $pdo->fetch("SELECT status, answer, answered_by, answered_via FROM agent_questions WHERE uuid = 'q-relay'");
+$out[] = ['row' => (array) $row, 'decisions' => (int) $pdo->fetchField("SELECT COUNT(*) FROM events WHERE actor_action_id = 'q-relay'")];
+echo json_encode($out);
+"""
+
+
+@pytest.mark.skipif(not shutil.which("php"), reason="php runs Wing")
+@pytest.mark.skipif(not AUTOLOAD.exists(), reason="wing vendor/autoload.php missing (composer install)")
+def test_the_wing_answer_bearer_answers_once_and_reaches_nothing_else(tmp_path):
+    subprocess.run(["php", str(WING / "bin/init-db.php"), f"--data-dir={tmp_path}"], capture_output=True, check=True, timeout=60)
+    con = sqlite3.connect(tmp_path / "wing.db", isolation_level=None)
+    con.execute("INSERT INTO agent_questions (uuid, agent_name, kind, prompt, reply_token_sha, status, expires_at, default_on_expiry)"
+                " VALUES ('q-relay', 'conductor', 'approval', 'Apply the upgrade?', 'no-token-the-medulla-holds', 'open', ?, 'no')", (FUTURE,))
+    con.close()
+
+    def answer(a: str, by: str = "alice") -> dict:
+        return {"presenter": "Inbox", "action": "answer", "params": {"uuid": "q-relay"}, "body": {"answer": a, "answered_by": by, "via": "medulla"}}
+    cases = [answer("yes"), answer("no"), answer("x", "agent:conductor"),
+             {"presenter": "Inbox", "action": "questions", "body": {"agent_name": "x", "prompt": "self-ask"}},
+             {"presenter": "Admin", "action": "halt"},
+             {"presenter": "Pulse", "action": "jobs", "body": {"plugin_name": "p", "job_name": "j", "command": "/bin/sh"}}]
+    r = subprocess.run(["php", "-d", "error_reporting=E_ALL", "-r", _HARNESS, str(AUTOLOAD), str(tmp_path / "wing.db"), json.dumps(cases)],
+                       capture_output=True, text=True, timeout=120, cwd=WING, check=False)
+    assert r.returncode == 0, r.stdout + r.stderr
+    got = json.loads(r.stdout)
+    assert got[0]["code"] == 200 and got[0]["payload"]["result"] == "ok", got[0]
+    assert got[1]["code"] == 409, f"the second answer must lose, not land: {got[1]}"
+    assert (got[1]["payload"]["result"], got[1]["payload"]["answer"]) == ("already", "yes"), got[1]
+    assert got[2]["code"] == 400, f"the relay still refuses a non-person answerer: {got[2]}"
+    for i, what in ((3, "POST inbox/questions"), (4, "POST admin/halt"), (5, "POST pulse_jobs")):
+        assert got[i]["code"] == 403, f"wing.answer reached {what}: {got[i]}"
+    assert got[6]["row"] == {"status": "answered", "answer": "yes", "answered_by": "alice", "answered_via": "medulla"}, got[6]
+    assert got[6]["decisions"] == 1, f"one decision event, on the winning write only: {got[6]}"

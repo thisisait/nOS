@@ -52,6 +52,9 @@ abstract class BaseApiPresenter extends Presenter
 	/** Scopes any one of which carries this presenter's operator verbs. */
 	protected array $operatorScopes = ['wing.operator'];
 
+	/** POST actions the wing.answer bearer (the medulla's answer relay) reaches; it reaches nothing else. */
+	protected array $answerActions = [];
+
 	public function startup(): void
 	{
 		parent::startup();
@@ -64,6 +67,12 @@ abstract class BaseApiPresenter extends Presenter
 		}
 
 		$this->requireTokenAuth();
+
+		// wing.answer (Q3, ruled 2026-11-01) confines its token to an $answerActions POST, whatever else it names.
+		if (TokenRepository::grants($this->validatedToken['scopes'] ?? null, 'wing.answer')
+			&& !($this->getMethod() === 'POST' && in_array(strtolower($this->getAction()), $this->answerActions, true))) {
+			$this->sendError('the wing-answer token reaches the inbox answer and nothing else', IResponse::S403_Forbidden);
+		}
 
 		if (!TokenRepository::permits($this->validatedToken['scopes'] ?? null, $this->getMethod())) {
 			$this->sendError(
@@ -189,10 +198,11 @@ abstract class BaseApiPresenter extends Presenter
 		$this->sendJson($data);
 	}
 
-	protected function sendError(string $message, int $code = IResponse::S400_BadRequest): never
+	/** @param array<string, mixed> $extra fields beside error and code, for a caller that reads no prose */
+	protected function sendError(string $message, int $code = IResponse::S400_BadRequest, array $extra = []): never
 	{
 		$this->getHttpResponse()->setCode($code);
-		$this->sendJson(['error' => $message, 'code' => $code]);
+		$this->sendJson(['error' => $message, 'code' => $code] + $extra);
 	}
 
 	protected function sendCreated(array $data): never

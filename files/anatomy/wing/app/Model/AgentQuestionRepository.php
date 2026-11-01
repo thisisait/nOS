@@ -333,7 +333,9 @@ final class AgentQuestionRepository
 	 * `test_only_a_gated_presenter_answers_without_a_token.py` refuses any new
 	 * caller that is not similarly gated. Do not call it from an API presenter
 	 * that authenticates with a bearer token — a service token is not a person,
-	 * and "who approved this" must name someone.
+	 * and "who approved this" must name someone. The one exception (Q3, ruled
+	 * 2026-11-01) is the medulla's wing.answer relay: its tier-1 and decider
+	 * check names the person, and the bearer reaches only Api\InboxPresenter::answer.
 	 *
 	 * Everything else — resolve-once, the deadline in the WHERE clause, the
 	 * single decision event on the winning write — is identical, because it is
@@ -345,6 +347,7 @@ final class AgentQuestionRepository
 		string $uuid,
 		string $answer,
 		string $operator,
+		string $via = 'wing',
 	): array {
 		$now = gmdate('Y-m-d\TH:i:s\Z');
 
@@ -355,7 +358,7 @@ final class AgentQuestionRepository
 			->update([
 				'answer'       => $answer,
 				'answered_by'  => $operator,
-				'answered_via' => 'wing',
+				'answered_via' => $via,
 				'answered_at'  => $now,
 				'status'       => 'answered',
 				'updated_at'   => $now,
@@ -372,7 +375,7 @@ final class AgentQuestionRepository
 				[
 					'verdict'           => $answer,
 					'operator_username' => $operator,
-					'via'               => 'wing',
+					'via'               => $via,
 					'kind'              => $row['kind'] ?? null,
 					'waited_seconds'    => isset($row['created_at'])
 						? max(0, strtotime($now) - strtotime((string) $row['created_at']))
