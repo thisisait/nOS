@@ -72,7 +72,7 @@
            Extensions (the (i) button) -> toggle ON "Santa".
         2. System Settings -> Privacy & Security -> Full Disk Access -> toggle ON
            "com.northpolesec.santa.daemon".
-        3. Re-run: ansible-playbook main.yml --tags santa
+        3. Re-run: nos --tags santa
       Nothing blocks executions meanwhile: no rules and no profile are installed.
   when: >-
     santa_status.rc != 0

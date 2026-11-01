@@ -78,7 +78,7 @@
       created via UI or seeder.
 
       If this is acceptable, re-run with:
-        ansible-playbook main.yml --tags infisical-reset-admin \
+        nos --tags infisical-reset-admin \
           -e infisical_reset_force=true
 
       For non-destructive recovery, log in via Infisical UI as

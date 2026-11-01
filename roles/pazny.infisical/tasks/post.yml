@@ -149,7 +149,7 @@
       Infisical is up and usable, but A18 invite-flow Cesta B will skip Infisical writes until recovered.
 
       Recover with EITHER:
-        • ansible-playbook main.yml --tags infisical-reset-admin   (clears the stale creds, then reseed), OR
+        • nos --tags infisical-reset-admin   (clears the stale creds, then reseed), OR
         • re-create the `nos-seeder` identity in Infisical and paste fresh
           infisical_machine_id_client_id / _client_secret into credentials.yml, then re-run.
   when:

@@ -144,7 +144,7 @@
       LOCKOUT. The source is registered by tasks/stacks/authentik_service_post.yml
       via `gitea admin auth add-oauth`; a service-only `--tags gitea` run SKIPS
       it. Run the full SSO wiring:
-          ansible-playbook main.yml --tags authentik,anatomy,gitea
+          nos --tags authentik,anatomy,gitea
       (or a full run), then the 'Sign in with Authentik' button appears.
   when:
     - _gitea_container.stdout | default('') | length > 0

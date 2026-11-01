@@ -87,7 +87,7 @@
   ansible.builtin.debug:
     msg: |
       WARN: Ollama persistent LaunchAgent missing - after reboot Ollama won't see SSD models.
-      Fix: ansible-playbook main.yml -K --tags ollama
+      Fix: nos --tags ollama
   when:
     - ansible_os_family == 'Darwin'
     - install_ollama | default(false) | bool

@@ -115,7 +115,7 @@
 
           Recovery: fix the manifest(s) and re-run with the Section 12
           recipe (no full blank required):
-            ansible-playbook main.yml -K --tags apps,manifest-app,apps-runner
+            nos --tags apps,manifest-app,apps-runner
           apps_runner main.yml (render) ALREADY ran successfully —
           _apps_render.apps has {{ (_apps_render.apps | default([])) | length }} entries.
       when: (_apps_stack_result.rc | default(1)) != 0

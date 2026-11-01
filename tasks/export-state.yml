@@ -174,6 +174,6 @@
        EXPORT COMPLETE
        Tarball: {{ export_dir }}/nos-export-{{ ansible_date_time.date }}.tar.gz
        Contents: {{ _export_files.files | length + 1 }} files (+ manifest.json)
-       Import: ansible-playbook main.yml -K --tags import \
+       Import: nos --tags import \
                -e "import_tarball={{ export_dir }}/nos-export-{{ ansible_date_time.date }}.tar.gz"
       ══════════════════════════════════════════════════════════════════════

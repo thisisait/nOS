@@ -20,7 +20,7 @@
       cannot reuse your Claude login (it lives in your keychain). As yourself, run:
         claude setup-token
       put the printed token in credentials.yml as  agents_claude_oauth_token: "<token>"
-      and re-run: ansible-playbook main.yml --tags agent_user,wing,pulse
+      and re-run: nos --tags agent_user,wing,pulse
   when: agents_claude_oauth_token | length == 0
   tags: ['agent_user']
 

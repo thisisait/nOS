@@ -35,7 +35,7 @@
   ansible.builtin.fail:
     msg: |
       restore_date is not set. Pass the backup date on the CLI, e.g.:
-        ansible-playbook main.yml -K --tags restore -e restore_date=2026-04-20
+        nos --tags restore -e restore_date=2026-04-20
       List available dates with:
         aws --endpoint-url http://127.0.0.1:{{ rustfs_api_port | default(9010) }} s3 ls backups/
   when: restore_date is not defined or (restore_date | string | length) == 0
@@ -981,7 +981,7 @@
       {% endfor %}
 
       Next steps:
-        1. Verify the health probes:  ansible-playbook main.yml --tags health
+        1. Verify the health probes:  nos --tags health
         2. Spot-check DB row counts and service UIs (see docs/restore-runbook.md).
         {% if not (ansible_check_mode or not restore_summary) %}3. When satisfied, the work dir can go:  rm -rf {{ restore_workdir }}
         {% else %}3. Keep {{ restore_workdir }}: nothing has been restored from it yet (10-31: a dry run advised deleting the only good copy).

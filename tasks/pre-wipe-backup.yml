@@ -161,7 +161,7 @@
         survive ONLY if backrest's scheduled off-site run already carried them.
       {% elif (_prewipe_snapshot.rc | default(1)) == 0 %}
       ✓ off-site snapshot committed to the restic repo (tag pre-wipe). Restore
-        after reinstall: ansible-playbook main.yml --tags restore -e restore_date=<date>
+        after reinstall: nos --tags restore -e restore_date=<date>
       {% else %}
       ⚠ off-site snapshot FAILED (rc={{ _prewipe_snapshot.rc | default('?') }}).
         Captures may exist ONLY in the about-to-be-wiped copy #1. If you need

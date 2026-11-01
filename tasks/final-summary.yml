@@ -104,7 +104,7 @@
         2. login.tailscale.com/admin/dns → Nameservers → Add nameserver → Custom…
            → Nameserver: {{ nos_lan_ip }} → turn on "Restrict to domain"
            → Domain: {{ tenant_domain }} → Save.
-        Check: ansible-playbook main.yml --tags verify   (or tools/tailscale-status.py)
+        Check: nos --tags verify   (or tools/tailscale-status.py)
       {% endif %}
 
       {# ── A16 (2026-05-17): CI autowire token reminder ────────────────────── #}
@@ -127,7 +127,7 @@
                         woodpecker_api_token: "<token>"
 
         After provisioning, re-run the playbook (only the affected tags is
-        enough): ansible-playbook main.yml --tags woodpecker
+        enough): nos --tags woodpecker
 
       {% endif %}
       ═══════════════════════════════════════════════════════════════════════════

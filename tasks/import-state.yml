@@ -22,7 +22,7 @@
       - import_tarball | length > 0
     fail_msg: >
       Missing path to export tarball. Run with:
-      ansible-playbook main.yml -K --tags import -e "import_tarball=/path/to/export.tar.gz"
+      nos --tags import -e "import_tarball=/path/to/export.tar.gz"
 
 - name: "[Import] Check tarball exists"
   ansible.builtin.stat:
@@ -281,5 +281,5 @@
        Restored from: {{ _import_manifest.hostname | default('unknown') }}
              ({{ _import_manifest.date | default('unknown date') }})
        Recommendation: run the full playbook to reconfigure services:
-         ansible-playbook main.yml -K
+         nos
       ══════════════════════════════════════════════════════════════════════
