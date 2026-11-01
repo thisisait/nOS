@@ -87,6 +87,8 @@
     pgrep -x nOS >/dev/null || { echo not-running; exit 0; }
     osascript -e 'tell application id "eu.thisisait.nos.app" to quit' || true
     for _ in 1 2 3 4 5; do pgrep -x nOS >/dev/null || break; sleep 1; done
+    # -600 while LaunchServices still holds the quitting one (11-01): ask again
+    for _ in 1 2 3 4 5; do open -a {{ thalamus_nos_app | quote }} 2>/dev/null && { echo restarted; exit 0; }; sleep 1; done
     open -a {{ thalamus_nos_app | quote }} && echo restarted
   args:
     executable: /bin/bash
