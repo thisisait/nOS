@@ -1,0 +1,114 @@
+---
+# A .local tenant on Linux: avahi publishes every name Traefik routes at nos_lan_ip,
+# and a marked /etc/hosts block lets the host resolve itself at 127.0.0.1 (no nss-mdns).
+# Runs after apps-up: label-routed apps (manifest apps, Stalwart) exist only by then.
+# Doc: docs/systems/dnsmasq/README.md §Linux: mDNS. Gate: test_a_local_tenant_is_published_by_mdns.py.
+
+- name: "[mdns] Install avahi"
+  ansible.builtin.apt:
+    name: [avahi-daemon, avahi-utils]
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  become: true
+
+# conf.d is the file provider; labels are the docker provider. Either alone misses names.
+- name: "[mdns] Read back every Host() Traefik routes (conf.d and container labels)"
+  ansible.builtin.shell: |
+    set -o pipefail
+    {% raw %}fmt='{{json .Config.Labels}}'{% endraw %}
+
+    {
+      cat {{ traefik_config_dir | quote }}/conf.d/*.yml 2>/dev/null
+      ids=$({{ nos_docker_bin | quote }} ps -q 2>/dev/null)
+      [ -z "$ids" ] || {{ nos_docker_bin | quote }} inspect --format "$fmt" $ids
+    } | grep -o 'Host(`[^`]*`)' | sed 's/^Host(`//;s/`)$//' \
+      | grep -E '(^|\.){{ tenant_domain | regex_escape }}$' | sort -u
+  args:
+    executable: /bin/bash
+  register: _mdns_readback
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "[mdns] Name the records"
+  ansible.builtin.set_fact:
+    _mdns_names: "{{ _mdns_readback.stdout_lines | default([]) }}"
+    # The DGX scar (bootstrap/minimal-linux-dgx/setup-root.sh): never answer with a bridge address.
+    _mdns_ifaces: "{{ ansible_facts['interfaces'] | default([]) | reject('match', '^(lo|docker|br-|veth|virbr|tailscale|tun|wg)') | sort | join(',') }}"
+
+# ponytail: nos_lan_ip is baked at converge (as dnsmasq does); a DHCP reservation keeps it true.
+- name: "[mdns] Publish the names at the LAN address"
+  ansible.builtin.template:
+    src: avahi-hosts.j2
+    dest: /etc/avahi/hosts
+    mode: '0644'
+  become: true
+  when: nos_lan_ip | default('') | length > 0
+  notify: Reload avahi
+
+# use-ipv6=no: the records are A-only; an apex AAAA would point at a Traefik that may not serve v6.
+- name: "[mdns] Answer on the physical links only, IPv4 only"
+  community.general.ini_file:
+    path: /etc/avahi/avahi-daemon.conf
+    section: server
+    option: "{{ item.option }}"
+    value: "{{ item.value }}"
+    no_extra_spaces: true
+    mode: '0644'
+  loop:
+    - { option: allow-interfaces, value: "{{ _mdns_ifaces }}" }
+    - { option: use-ipv6, value: "no" }
+  when: item.value | length > 0
+  become: true
+  notify: Restart avahi
+
+- name: "[mdns] The host resolves its own names at loopback"
+  ansible.builtin.blockinfile:
+    path: /etc/hosts
+    marker: "# {mark} nOS mDNS self"
+    block: "{% for n in _mdns_names %}127.0.0.1 {{ n }}\n{% endfor %}"
+  become: true
+  when: _mdns_names | length > 0
+
+- name: "[mdns] avahi-daemon runs"
+  ansible.builtin.systemd:
+    name: avahi-daemon
+    state: started
+    enabled: true
+  become: true
+
+- name: "[mdns] Verify: ask avahi and the resolver"  # noqa: command-instead-of-module
+  ansible.builtin.shell: |
+    set -o pipefail
+    systemctl is-active --quiet avahi-daemon || { echo inactive; exit 0; }
+    echo "avahi=$(avahi-resolve -4 -n {{ authentik_domain | quote }} 2>/dev/null | awk '{print $2}')"
+    echo "getent=$(getent hosts {{ authentik_domain | quote }} | awk '{print $1}' | head -1)"
+  args:
+    executable: /bin/bash
+  register: _mdns_probe
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  tags: ['verify']
+
+# Reported on a converge, fails under --tags verify (as tasks/dnsmasq.yml does).
+- name: "[mdns] Verify: judge"
+  ansible.builtin.assert:
+    that:
+      - ("avahi=" ~ nos_lan_ip) in _mdns_probe.stdout_lines
+      - "'getent=127.0.0.1' in _mdns_probe.stdout_lines"
+    fail_msg: >-
+      RED: {{ authentik_domain }} answered {{ _mdns_probe.stdout_lines | join(' ') }}; want avahi={{ nos_lan_ip }}
+      (another host publishing the same name answers otherwise) and getent=127.0.0.1. docs/systems/dnsmasq/README.md.
+    success_msg: "OK: {{ authentik_domain }} -> {{ nos_lan_ip }} on the LAN (mDNS), 127.0.0.1 on this host"
+  register: _mdns_assert
+  failed_when: _mdns_assert.failed | default(false) and 'verify' in ansible_run_tags
+  when: "'inactive' not in _mdns_probe.stdout_lines | default(['inactive'])"
+  tags: ['verify']
+
+- name: "[mdns] Verify: UNKNOWN while avahi-daemon is not active"
+  ansible.builtin.debug:
+    msg: "UNKNOWN: avahi-daemon is not active, so no mDNS answer was checked (systemctl status avahi-daemon)."
+  when: "'inactive' in _mdns_probe.stdout_lines | default(['inactive'])"
+  tags: ['verify']

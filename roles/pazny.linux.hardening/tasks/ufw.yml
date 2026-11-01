@@ -22,6 +22,15 @@
     comment: "{{ item.comment | default(item.port | string) }}"
   loop: "{{ hardening_ufw_allowed_services }}"
 
+# tasks/mdns.yml publishes a .local tenant by mDNS; unicast replies need the port open.
+- name: "[hardening.ufw] mDNS for a .local tenant"
+  community.general.ufw:
+    rule: allow
+    proto: udp
+    port: "5353"
+    comment: "mDNS (tasks/mdns.yml)"
+  when: (tenant_domain | default('')).endswith('.local')
+
 - name: "[hardening.ufw] Containers reach the host daemons on docker0 (their ports only)"
   community.general.ufw:
     rule: allow

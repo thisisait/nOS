@@ -1001,6 +1001,19 @@
       when: ansible_os_family == 'Darwin'
       failed_when: false
 
+    # tasks/mdns.yml: a reload re-reads /etc/avahi/hosts; avahi-daemon.conf needs a restart.
+    - name: Reload avahi
+      ansible.builtin.systemd:
+        name: avahi-daemon
+        state: reloaded
+      become: true
+
+    - name: Restart avahi
+      ansible.builtin.systemd:
+        name: avahi-daemon
+        state: restarted
+      become: true
+
     - name: Restart ssh
       ansible.builtin.command: launchctl kickstart -k system/com.openssh.sshd
       become: true
@@ -3081,6 +3094,15 @@
     - import_tasks: tasks/stacks/apps-up.yml
       when: nos_docker_ready | default(true)
       tags: ['apps', 'manifest-app', 'tier2', 'stack', 'stacks', 'apps-runner']
+
+    # A .local tenant on Linux: publish every routed name by mDNS (docs/systems/dnsmasq).
+    # After apps-up, so label-routed apps are running and read back with the rest.
+    - import_tasks: tasks/mdns.yml
+      when:
+        - tenant_domain.endswith('.local')
+        - ansible_os_family == 'Debian'
+        - not (nos_is_container | default(false) | bool)
+      tags: ['mdns', 'dns', 'network', 'traefik']
 
     # Verification: confirms all services respond (after post-start tasks)
     - import_tasks: tasks/iiab/stack_verify.yml

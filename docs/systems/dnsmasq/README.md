@@ -56,6 +56,35 @@ Check: `ansible-playbook main.yml --tags verify` digs `@<tailscale ip>` for one 
 name — RED if it does not answer the Tailscale IP, UNKNOWN when Tailscale is down.
 Gate: `tests/anatomy/test_a_roaming_host_answers_the_tailnet.py`.
 
+## Linux: mDNS
+
+dnsmasq is macOS only. On a Debian/Ubuntu host whose `tenant_domain` ends in `.local`
+(and not inside a container), `tasks/mdns.yml` runs after the apps stack and:
+
+1. reads back every `Host()` Traefik routes: the conf.d files **and** the labels of the
+   running containers (manifest apps and Stalwart route by label);
+2. writes `/etc/avahi/hosts`, one `<nos_lan_ip> <name>` line per name, so LAN devices
+   resolve `*.<tenant_domain>` by mDNS. `<hostname>.local` is left out: avahi
+   publishes it itself, so the apex comes from the hostname;
+3. limits avahi to the physical links (`allow-interfaces`, never a docker bridge) and
+   to IPv4 (`use-ipv6=no`: the records are A-only);
+4. adds a marked block (`nOS mDNS self`) to `/etc/hosts` mapping every name to
+   `127.0.0.1`, so the host resolves itself without nss-mdns or its LAN address;
+5. opens `5353/udp` through `pazny.linux.hardening` (ufw).
+
+The hostname is the operator's: `sudo hostnamectl set-hostname mini` makes the apex
+`mini.local`. The LAN address is baked at converge, so give the host a DHCP
+reservation (or pin `nos_lan_ip` in `config.yml`). A `--tags <svc>` run that adds a
+service publishes it only after `nos --tags mdns` (or `traefik`) or a full `nos`.
+Clients: macOS/iOS resolve multi-label `.local` names; stock Ubuntu desktops do not,
+and Windows/Android are untested. Their fallback is `~/.nos/hosts-snippet.txt` by
+`scp` (it lacks label-routed apps).
+
+Check: `nos --tags verify` asks `avahi-resolve -4 -n <authentik_domain>` (must answer
+`nos_lan_ip`; another host publishing the same name answers otherwise) and `getent hosts`
+(must answer `127.0.0.1`); UNKNOWN while avahi-daemon is not active.
+Gate: `tests/anatomy/test_a_local_tenant_is_published_by_mdns.py`.
+
 ## Off
 
 `install_dnsmasq: false` must be AUTHORED in `config.yml`: the authored stop boots the
