@@ -35,7 +35,10 @@ def test_every_cargo_target_runs(name):
     r = subprocess.run(["cargo", "test", "--locked", *extra], cwd=crate,
                        capture_output=True, text=True, timeout=1800, check=False)
     out = r.stdout + r.stderr
-    assert r.returncode == 0, f"{name}: cargo test failed\n" + out[-6000:]
+    # The failing test's name and panic live in stdout; stderr is mostly compile lines. 11-01: CI
+    # showed only "error: test failed" because the tail of stdout+stderr was all stderr.
+    assert r.returncode == 0, (f"{name}: cargo test failed\n" + r.stdout[-6000:]
+                               + "\n--- stderr (tail) ---\n" + r.stderr[-1500:])
     ran = sum(int(n) for n in re.findall(r"test result: ok\. (\d+) passed", out))
     assert ran > 0, f"{name}: cargo test ran no test\n" + out[-2000:]
 
