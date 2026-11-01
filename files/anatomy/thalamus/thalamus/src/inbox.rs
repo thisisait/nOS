@@ -30,7 +30,7 @@ pub fn relay(uuid: &str, answer: &str, by: &str, wing_url: &str) -> ToShell {
         Err(why) => return done(AnswerOutcome::Refused, None, Some(why)),
     };
     let url = format!("{}/api/v1/inbox/questions/{uuid}/answer", crate::state::wing_base(wing_url));
-    let body = json!({"answer": answer, "answered_by": by, "via": "medulla"});
+    let body = json!({"answer": answer.trim(), "answered_by": by, "via": "medulla"});  // trimmed as Wing's browser path is
     match crate::serve::agent(10).post(&url).header("authorization", &format!("Bearer {token}")).send_json(body) {
         Err(e) => done(AnswerOutcome::Refused, None, Some(format!("Wing did not answer at {url}: {e}"))),
         Ok(mut r) => {
