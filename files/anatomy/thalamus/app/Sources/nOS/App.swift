@@ -39,25 +39,28 @@ func ask(_ request: String, secs: Int = 2) -> Data? {
 
 func readState() -> EstateState? { ask(#"{"t":"state"}"#).flatMap { try? EstateState.decode($0) } }
 
-/// A halt or a setting asked of the medulla; what it said, in words. 15 s: it waits on Wing's record (10 s).
-func tell(_ request: String, done what: String) -> String {
+/// A halt or a setting asked of the medulla; what it said, in words, and the state it answered with (the new
+/// set-points, so the menu need not wait for a poll). 15 s: it waits on Wing's record (10 s).
+func tell(_ request: String, done what: String) -> (String, EstateState?) {
     guard let d = ask(request, secs: 15),
-          let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any] else { return "the medulla did not answer: nothing changed" }
-    if j["t"] as? String == "refused" { return "refused: \(j["reason"] as? String ?? "no reason given")" }
-    let act = (try? EstateState.decode(d))?.act
-    return act?.recorded == true ? "\(what); Wing recorded it" : "\(what); NOT recorded: \(act?.why ?? "?")"
+          let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any] else { return ("the medulla did not answer: nothing changed", nil) }
+    if j["t"] as? String == "refused" { return ("refused: \(j["reason"] as? String ?? "no reason given")", nil) }
+    let s = try? EstateState.decode(d)
+    return (s?.act?.recorded == true ? "\(what); Wing recorded it" : "\(what); NOT recorded: \(s?.act?.why ?? "?")", s)
 }
 
 @MainActor final class Estate: ObservableObject {
     @Published var state: EstateState?  // nil: the medulla did not answer, never green
     @Published var said: String?        // the last halt/resume answer
+    @Published var busy: String?        // a verb asked and not yet answered
     private var timer: Timer?
 
     init() {
         poll()
-        timer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.poll() }
-        }
+        let t = Timer(timeInterval: 5, repeats: true) { [weak self] _ in Task { @MainActor in self?.poll() } }
+        // .common: a default-mode timer never fires while the menu is open (event tracking), so it went stale.
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
     }
 
     /// Asked twice on purpose: a native dialog is the confirmation. With `reason`, a field for one; the
@@ -74,10 +77,16 @@ func tell(_ request: String, done what: String) -> String {
         return field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    func send(_ request: String, done: String) {
+    /// `doing` shows at once, so a menu opened before the answer says the verb is in flight, never the old verb.
+    func send(_ request: String, doing: String, done: String) {
+        busy = doing; said = nil
         Task.detached {
-            let words = tell(request, done: done)
-            await MainActor.run { self.said = words; self.poll() }
+            let (words, s) = tell(request, done: done)
+            await MainActor.run {
+                self.busy = nil; self.said = words
+                if let s { self.state = s }
+                self.poll()
+            }
         }
     }
 
@@ -86,7 +95,8 @@ func tell(_ request: String, done what: String) -> String {
         guard confirm(on ? "Halt every Pulse job?" : "Lift the halt?",
                       on ? "Nothing scheduled runs until you resume." : "Scheduled jobs start firing again.",
                       verb: on ? "Halt" : "Resume") != nil else { return }
-        send(on ? #"{"t":"halt","reason":"nOS.app"}"# : #"{"t":"lift_halt"}"#, done: on ? "Halted" : "Resumed")
+        send(on ? #"{"t":"halt","reason":"nOS.app"}"# : #"{"t":"lift_halt"}"#, doing: on ? "Halting…" : "Resuming…",
+             done: on ? "Halted" : "Resumed")
     }
 
     func toggleLoops() {
@@ -95,13 +105,15 @@ func tell(_ request: String, done what: String) -> String {
                               on ? "Agent runs skip as a hold until you resume." : "Agent runs start again.",
                               verb: on ? "Pause" : "Resume", reason: on) else { return }
         let value: JSONValue = on ? .object(r.isEmpty ? [:] : ["reason": .string(r)]) : .null
-        send(String(decoding: setting("loops.paused", value), as: UTF8.self), done: on ? "Loops paused" : "Loops resumed")
+        send(String(decoding: setting("loops.paused", value), as: UTF8.self), doing: on ? "Pausing the loops…" : "Resuming the loops…",
+             done: on ? "Loops paused" : "Loops resumed")
     }
 
     func unpause(_ job: String) {
         guard confirm("Unpause \(job)?", "It is due again on its schedule; the halt and the loops pause still hold.",
                       verb: "Unpause") != nil else { return }
-        send(String(decoding: setting("pulse.paused", .object([job: .null])), as: UTF8.self), done: "\(job) unpaused")
+        send(String(decoding: setting("pulse.paused", .object([job: .null])), as: UTF8.self), doing: "Unpausing \(job)…",
+             done: "\(job) unpaused")
     }
 
     func poll() {
@@ -128,25 +140,26 @@ struct MenuView: View {
         } else {
             Text("medulla unreachable")
         }
+        if let b = estate.busy { Text(b) }
+        if let w = estate.said { Text(w) }
         Divider()
         Button(estate.state?.halt.on == true ? "Resume…" : "Halt…") { estate.toggleHalt() }
-            .disabled(estate.state?.halt.on == nil)  // unknown: neither verb is honest
+            .disabled(estate.state?.halt.on == nil || estate.busy != nil)  // unknown: neither verb is honest
         Button(estate.state?.loops_paused.on == true ? "Resume loops…" : "Pause loops…") { estate.toggleLoops() }
-            .disabled(estate.state?.loops_paused.on == nil)
+            .disabled(estate.state?.loops_paused.on == nil || estate.busy != nil)
         if let s = estate.state {
             if let jobs = s.pausedJobs {
                 Menu("Paused jobs (\(jobs.count))") {
                     if jobs.isEmpty { Text("none") }
                     ForEach(jobs, id: \.job) { j in
                         Text("\(j.job): by \(j.by ?? "?") at \(j.at ?? "?")" + (j.reason.map { ", \($0)" } ?? ""))
-                        Button("Unpause \(j.job)…") { estate.unpause(j.job) }
+                        Button("Unpause \(j.job)…") { estate.unpause(j.job) }.disabled(estate.busy != nil)
                     }
                 }
             } else {
                 Text("Paused jobs: UNKNOWN")
             }
         }
-        if let w = estate.said { Text(w) }
         Divider()
         Button("Face") { openWindow(id: "face"); NSApp.activate(ignoringOtherApps: true) }
         Button("Quit nOS") { NSApp.terminate(nil) }.keyboardShortcut("q")
