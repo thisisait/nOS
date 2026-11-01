@@ -91,7 +91,8 @@ def auth_host() -> str:
     spec.loader.exec_module(smoke)
     v = smoke.load_vars()
     os.environ.setdefault("TENANT_DOMAIN", str(v.get("tenant_domain", "dev.local")))
-    return os.environ.get("AUTHENTIK_DOMAIN") or f"auth.{v.get('tenant_domain', 'dev.local')}"
+    # authentik_domain carries host_alias (auth.box.dev.local on a second host); the tenant alone does not.
+    return os.environ.get("AUTHENTIK_DOMAIN") or str(v.get("authentik_domain") or f"auth.{v.get('tenant_domain', 'dev.local')}")
 
 
 @pytest.fixture(scope="session")

@@ -35,9 +35,11 @@ CAN run rather than one that DOES.
 
 from __future__ import annotations
 
+import os
 import pathlib
 import re
 import stat
+import subprocess
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 RUNNER = REPO / "tools/run-journeys.sh"
@@ -93,6 +95,18 @@ def test_the_runner_reads_the_estate_rather_than_hard_coding_it() -> None:
             "from the resolved config, or every journey silently targets an "
             "estate that is not this one."
         )
+
+
+def test_a_second_host_is_addressed_by_its_alias(tmp_path) -> None:
+    """The Linux mini (11-01, host_alias box) answers at auth.box.dev.local: a runner that
+    exported the bare tenant sent every login journey to the other host's Authentik."""
+    est = tmp_path / ".nos" / "estate"
+    (est / ".git").mkdir(parents=True)
+    (est / "config.yml").write_text("tenant_domain: dev.local\nhost_alias: box\n")
+    out = subprocess.run([str(RUNNER), "--show-env"], capture_output=True, text=True, timeout=60,
+                         env={**os.environ, "HOME": str(tmp_path), "NOS_ESTATE_DIR": str(est)})
+    line = next((l for l in out.stdout.splitlines() if l.strip().startswith("NOS_HOST")), "")
+    assert line.split()[-1:] == ["box.dev.local"], f"NOS_HOST must carry host_alias: {line!r} {out.stderr[-300:]}"
 
 
 def test_a_configuration_skip_is_not_reported_as_a_pass() -> None:

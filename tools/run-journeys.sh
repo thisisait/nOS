@@ -86,11 +86,15 @@ if sp.exists():
         print(f"echo '[journeys] could not read {sp}: {exc}' >&2")
 
 tenant = from_config("tenant_domain", "dev.local")
+# Every hostname is <svc>[.<host_alias>].<tenant> (default.config.yml _host_alias_seg): a second
+# host (the Linux mini, 11-01, host_alias box) answers at auth.box.dev.local, never auth.dev.local.
+alias = from_config("host_alias", "").strip(".")
+hosts = f"{alias}.{tenant}" if alias else tenant
 
 exported = {
     # The tenant, which is what `authentik_login` falls back to `dev.local`
     # without — the reason test_operator_login had never once run here.
-    "NOS_HOST": tenant,
+    "NOS_HOST": hosts,
     "TENANT_DOMAIN": tenant,
     "WING_API_URL": "http://127.0.0.1:9000",
     "WING_DB": str(home / "wing/app/data/wing.db"),
