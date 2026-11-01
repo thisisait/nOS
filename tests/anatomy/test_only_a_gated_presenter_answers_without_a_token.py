@@ -20,7 +20,11 @@ the completion plan, 2026-08-08). Now it reads code:
    browser presenter declaring `$minAccessTier = 1` (the declarative gate
    BasePresenter::startup() enforces). An API presenter must never call it:
    a bearer token names a service, not a person, and "who approved this"
-   must name someone.
+   must name someone. ONE exception, ruled by the operator (Q3, 2026-11-01):
+   Api\\InboxPresenter's medulla relay, only on the branch the wing.answer
+   scope selects, and only while BaseApiPresenter confines that scope to an
+   $answerActions POST. The medulla's tier-1 + decider check names the person;
+   medulla/tests/questions.rs and test_the_inbox_answers_once.py run it.
 
 2. The token path's HTTP endpoint must refuse an ANONYMOUS identity. A
    channel adapter that cannot map its chat identity to an operator must be
@@ -61,6 +65,23 @@ def call_sites() -> dict[Path, str]:
     return out
 
 
+BASE_API = APP / "Presenters/Api/BaseApiPresenter.php"
+
+
+def _the_ruled_relay(path: Path, code: str) -> bool:
+    """Api\\InboxPresenter, the call on the wing.answer branch, and that scope confined to $answerActions POSTs."""
+    if path != API_PRESENTER:
+        return False
+    branch = re.search(r"\$relay\s*=\s*TokenRepository::grants\([^;]*'wing\.answer'\)\s*;", code) and \
+        re.search(r"\$relay\s*\?\s*\$this->questions->answerAsOperator\(", code) and \
+        len(re.findall(r"->answerAsOperator\s*\(", code)) == 1
+    base = code_only(BASE_API.read_text(encoding="utf-8"))
+    confined = re.search(r"grants\([^;]*'wing\.answer'\)\s*&&\s*!\(\$this->getMethod\(\)\s*===\s*'POST'\s*&&\s*"
+                         r"in_array\(strtolower\(\$this->getAction\(\)\),\s*\$this->answerActions,\s*true\)\)\)\s*\{\s*"
+                         r"\$this->sendError\([^;]*S403_Forbidden", base)
+    return bool(branch and confined)
+
+
 def test_every_token_less_answer_sits_behind_a_tier_gate():
     sites = call_sites()
     assert sites, (
@@ -73,6 +94,8 @@ def test_every_token_less_answer_sits_behind_a_tier_gate():
     for path, code in sites.items():
         rel = str(path.relative_to(REPO))
         if "/Presenters/Api/" in rel.replace("\\", "/"):
+            if _the_ruled_relay(path, code):
+                continue
             offenders.append(f"{rel}: API presenters authenticate services, not people")
             continue
         if not re.search(r"\$minAccessTier\s*=\s*1\s*;", code):
