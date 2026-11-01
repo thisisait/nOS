@@ -39,3 +39,11 @@ def test_nos_app_speaks_setting():
     r = _state_check()
     m = re.match(r"ok \d+ states (\d+) settings", r.stdout)
     assert r.returncode == 0 and m and int(m[1]) >= 4, (r.stdout + r.stderr)[-4000:]
+
+
+@darwin
+def test_nos_app_reads_questions_and_answers():
+    """questions and every answer_result outcome decode (an unknown one fails, lost names its winner); answer encodes."""
+    r = _state_check()
+    m = re.match(r"ok \d+ states \d+ settings (\d+) questions (\d+) results (\d+) answers", r.stdout)
+    assert r.returncode == 0 and m and int(m[1]) >= 2 and int(m[2]) >= 4 and int(m[3]) >= 1, (r.stdout + r.stderr)[-4000:]

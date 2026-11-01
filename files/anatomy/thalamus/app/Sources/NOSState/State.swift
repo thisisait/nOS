@@ -22,13 +22,17 @@ public struct Organ: Decodable, Sendable, Equatable {
     public let name: String
     public let label: String
     public let running: Bool?     // nil: the host did not say, UNKNOWN (never stopped)
+    public let pid: Int?          // nil or absent: UNKNOWN, never 0
+    public let last_exit: Int?
 
-    enum CodingKeys: String, CodingKey { case name, label, running }
+    enum CodingKeys: String, CodingKey { case name, label, running, pid, last_exit }
     public init(from d: Decoder) throws {
         let c = try d.container(keyedBy: CodingKeys.self)
         name = try c.decode(String.self, forKey: .name)
         label = try c.decode(String.self, forKey: .label)
         running = try c.decode(Bool?.self, forKey: .running)
+        pid = try c.decodeIfPresent(Int.self, forKey: .pid)
+        last_exit = try c.decodeIfPresent(Int.self, forKey: .last_exit)
     }
 }
 
@@ -107,4 +111,76 @@ public struct EstateState: Decodable, Sendable, Equatable {
 public func setting(_ key: String, _ value: JSONValue) -> Data {
     let line: JSONValue = .object(["t": .string("setting"), "key": .string(key), "value": value])
     return (try? JSONEncoder().encode(line)) ?? Data()  // a JSONValue always encodes
+}
+
+/// One open agent question (v16 `questions {items}`, AgentQuestionRepository::public()). Its text is the
+/// agent's: shown as plain text, never interpreted.
+public struct Question: Decodable, Sendable, Equatable {
+    public let uuid: String, agent_name: String, kind: String, prompt: String
+    public let options_json: String?, severity: String?, expires_at: String?, default_on_expiry: String?
+
+    enum CodingKeys: String, CodingKey { case uuid, agent_name, kind, prompt, options_json, severity, expires_at, default_on_expiry }
+    public init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: CodingKeys.self)
+        uuid = try c.decode(String.self, forKey: .uuid)
+        agent_name = try c.decode(String.self, forKey: .agent_name)
+        kind = try c.decode(String.self, forKey: .kind)
+        prompt = try c.decode(String.self, forKey: .prompt)
+        options_json = try c.decode(String?.self, forKey: .options_json)
+        severity = try c.decode(String?.self, forKey: .severity)
+        expires_at = try c.decode(String?.self, forKey: .expires_at)
+        default_on_expiry = try c.decode(String?.self, forKey: .default_on_expiry)
+    }
+
+    /// The options as button labels; nil when there are none (or not all are strings): a text field then.
+    public var options: [String]? {
+        guard let j = options_json?.data(using: .utf8), let a = try? JSONDecoder().decode([String].self, from: j), !a.isEmpty else { return nil }
+        return a
+    }
+}
+
+public struct Questions: Decodable, Sendable, Equatable {
+    public let items: [Question]
+    enum CodingKeys: String, CodingKey { case t, items }
+    public init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: CodingKeys.self)
+        guard try c.decode(String.self, forKey: .t) == "questions" else {
+            throw DecodingError.dataCorruptedError(forKey: .t, in: c, debugDescription: "not a questions message")
+        }
+        items = try c.decode([Question].self, forKey: .items)
+    }
+    public static func decode(_ line: Data) throws -> Questions { try JSONDecoder().decode(Questions.self, from: line) }
+}
+
+/// How Wing resolved one answer (v16). Only `answered` is the operator's decision; an outcome the contract does
+/// not name fails the decode, and a lost race must say who won.
+public enum AnswerOutcome: Sendable, Equatable { case answered, lost(winning: String), expired, refused(why: String?) }
+
+public struct AnswerResult: Decodable, Sendable, Equatable {
+    public let uuid: String
+    public let outcome: AnswerOutcome
+    public var decided: Bool { outcome == .answered }
+
+    enum CodingKeys: String, CodingKey { case t, uuid, outcome, winning_answer, why }
+    public init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: CodingKeys.self)
+        guard try c.decode(String.self, forKey: .t) == "answer_result" else {
+            throw DecodingError.dataCorruptedError(forKey: .t, in: c, debugDescription: "not an answer_result")
+        }
+        uuid = try c.decode(String.self, forKey: .uuid)
+        switch try c.decode(String.self, forKey: .outcome) {
+        case "answered": outcome = .answered
+        case "lost": outcome = .lost(winning: try c.decode(String.self, forKey: .winning_answer))
+        case "expired": outcome = .expired
+        case "refused": outcome = .refused(why: try c.decodeIfPresent(String.self, forKey: .why))
+        case let o: throw DecodingError.dataCorruptedError(forKey: .outcome, in: c, debugDescription: "unknown outcome \(o)")
+        }
+    }
+    public static func decode(_ line: Data) throws -> AnswerResult { try JSONDecoder().decode(AnswerResult.self, from: line) }
+}
+
+/// The to_thalamus `answer {uuid, answer}` line (v16).
+public func answer(_ uuid: String, _ text: String) -> Data {
+    let line: JSONValue = .object(["t": .string("answer"), "uuid": .string(uuid), "answer": .string(text)])
+    return (try? JSONEncoder().encode(line)) ?? Data()
 }

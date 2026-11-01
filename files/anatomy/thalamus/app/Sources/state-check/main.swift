@@ -1,6 +1,7 @@
 // state-check <fixture.json>: decodes every to_shell `state` sample with the app's decoder and checks null
-// stays UNKNOWN, then encodes every to_thalamus `setting` sample with the app's encoder. Exit 0 and
-// "ok N states M settings" when all hold; run by tests/anatomy/test_nos_app_reads_state.py.
+// stays UNKNOWN, decodes every `questions` and `answer_result` sample, then encodes every to_thalamus `setting`
+// and `answer` sample with the app's encoder. Exit 0 and "ok N states M settings Q questions R results A answers"
+// when all hold; run by tests/anatomy/test_nos_app_reads_state.py.
 import Foundation
 import NOSState
 
@@ -19,7 +20,10 @@ for msg in samples {
     do { s = try EstateState.decode(try JSONSerialization.data(withJSONObject: msg)) } catch { fail("decode: \(error)") }
     let organs = msg["organs"] as? [[String: Any]] ?? []
     if s.organs.count != organs.count { fail("organs: \(s.organs.count) decoded, \(organs.count) sent") }
-    for (o, j) in zip(s.organs, organs) where o.running != (j["running"] as? Bool) { fail("\(o.name): running mis-read") }
+    for (o, j) in zip(s.organs, organs) {
+        if o.running != (j["running"] as? Bool) { fail("\(o.name): running mis-read") }
+        if o.pid != (j["pid"] as? Int) || o.last_exit != (j["last_exit"] as? Int) { fail("\(o.name): pid or last_exit mis-read") }
+    }
     if (s.settings == nil) != (msg["settings"] is NSNull) { fail("settings: null and a map mis-read") }
     let act = msg["act"] as? [String: Any]
     if s.act?.recorded != act?["recorded"] as? Bool || s.act?.why != act?["why"] as? String { fail("act mis-read") }
@@ -31,6 +35,42 @@ for msg in settings {
           let line = try? JSONSerialization.jsonObject(with: setting(key, value)) else { fail("setting: \(msg) does not encode") }
     if !same(line, msg) { fail("setting: \(msg) encodes as \(line)") }
 }
+func data(_ m: [String: Any]) -> Data { (try? JSONSerialization.data(withJSONObject: m)) ?? Data() }
+let shell = cases.compactMap { $0["msg"] as? [String: Any] }
+let qs = shell.filter { $0["t"] as? String == "questions" }
+for msg in qs {
+    let q: Questions
+    do { q = try Questions.decode(data(msg)) } catch { fail("questions: \(error)") }
+    let items = msg["items"] as? [[String: Any]] ?? []
+    if q.items.map(\.uuid) != items.compactMap({ $0["uuid"] as? String }) { fail("questions: items mis-read") }
+    for (i, j) in zip(q.items, items) where i.prompt != j["prompt"] as? String || i.expires_at != j["expires_at"] as? String
+        || (i.options != nil) != (j["options_json"] is String) { fail("questions: \(i.uuid) mis-read") }
+}
+let results = shell.filter { $0["t"] as? String == "answer_result" }
+var outcomes = Set<String>()
+for msg in results {
+    let r: AnswerResult
+    do { r = try AnswerResult.decode(data(msg)) } catch { fail("answer_result: \(error)") }
+    switch r.outcome {
+    case .answered: outcomes.insert("answered")
+    case .lost(let w): if w != msg["winning_answer"] as? String { fail("lost: winning_answer mis-read") }; outcomes.insert("lost")
+    case .expired: outcomes.insert("expired")
+    case .refused(let why): if why != msg["why"] as? String { fail("refused: why mis-read") }; outcomes.insert("refused")
+    }
+    if r.decided != (msg["outcome"] as? String == "answered") { fail("\(msg): decided mis-read (lost or refused is never decided)") }
+}
+if outcomes != ["answered", "lost", "expired", "refused"] { fail("the fixture misses an answer_result outcome: \(outcomes)") }
+// An outcome the contract does not name, or a lost race with no winner, must fail the decode.
+for bad in [["t": "answer_result", "uuid": "u", "outcome": "maybe"], ["t": "answer_result", "uuid": "u", "outcome": "lost"]] {
+    if (try? AnswerResult.decode(data(bad))) != nil { fail("answer_result: \(bad) decoded") }
+}
+let answers = asks.compactMap { $0["msg"] as? [String: Any] }.filter { $0["t"] as? String == "answer" }
+for msg in answers {
+    guard let u = msg["uuid"] as? String, let a = msg["answer"] as? String,
+          let line = try? JSONSerialization.jsonObject(with: answer(u, a)) else { fail("answer: \(msg) does not encode") }
+    if !same(line, msg) { fail("answer: \(msg) encodes as \(line)") }
+}
+if qs.isEmpty || answers.isEmpty { fail("the fixture carries no questions or answer sample") }
 let keys = Set(settings.compactMap { $0["key"] as? String })
 if !keys.isSuperset(of: ["pulse.paused", "loops.paused"]) { fail("the fixture misses a setting sample: \(keys)") }
-print("ok \(samples.count) states \(settings.count) settings")
+print("ok \(samples.count) states \(settings.count) settings \(qs.count) questions \(results.count) results \(answers.count) answers")
