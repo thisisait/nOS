@@ -10,15 +10,14 @@ use serde_json::{json, Map, Value};
 pub fn open_questions(agent: Option<&str>) -> Result<Vec<Map<String, Value>>, String> {
     let var = |k| std::env::var(k).ok().filter(|v| !v.is_empty());
     let db = var("NOS_INBOX_DB").or_else(|| var("NOS_WING_DB")).ok_or("the inbox is UNKNOWN here: neither NOS_INBOX_DB nor NOS_WING_DB names wing.db")?;
-    let read = || -> Result<Vec<Value>, Error> {
+    let read = || -> rusqlite::Result<Vec<Value>> {
         let c = Connection::open_with_flags(&db, OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX)?;
         c.busy_timeout(std::time::Duration::from_secs(5))?;
         list_open(&c, agent, &now())
     };
     match read() {
         Ok(rows) => Ok(rows.into_iter().filter_map(|r| match r { Value::Object(m) => Some(m), _ => None }).collect()),
-        Err(Error::Sql(e)) => Err(format!("the inbox {db} does not read: {e}")),
-        Err(Error::Deadline(why)) => Err(format!("{why}: whether it has passed is UNKNOWN here")),
+        Err(e) => Err(format!("the inbox {db} does not read: {e}")),
     }
 }
 
