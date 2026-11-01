@@ -6,6 +6,7 @@ use std::process::ExitCode;
 mod audit_reads;
 mod inbox_reads;
 mod metrics;
+mod notification_reads;
 mod pulse;
 mod pulse_reads;
 

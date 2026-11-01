@@ -128,7 +128,7 @@ fn object(r: &Row, names: &[String]) -> Map<String, Value> {
     names.iter().enumerate().map(|(i, n)| (n.clone(), value(r.get_ref(i).unwrap_or(ValueRef::Null)))).collect()
 }
 
-fn select(db: &Connection, sql: &str, params: &[&dyn rusqlite::ToSql]) -> rusqlite::Result<Vec<Value>> {
+pub fn select(db: &Connection, sql: &str, params: &[&dyn rusqlite::ToSql]) -> rusqlite::Result<Vec<Value>> {
     let mut st = db.prepare(sql)?;
     let names: Vec<String> = st.column_names().into_iter().map(str::to_owned).collect();
     let mut rs = st.query(params)?;

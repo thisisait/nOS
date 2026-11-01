@@ -618,6 +618,7 @@ dependencies = [
  "nos-contract",
  "ring",
  "rusqlite",
+ "serde",
  "serde_json",
  "thalamus",
  "time",

@@ -45,12 +45,12 @@ BULK = 520  # info rows for the operator: limit's 500 ceiling has more than 500 
 
 URLS = ["/api/v1/notifications"] + [f"/api/v1/notifications?{q}" for q in (
     "severity=high", "severity=info", "severity=0", "severity=", "severity=nope",
-    "since=2026-10-04", "since=2026-10-06T10:00:00Z", "since=0", "since=",
+    "since=2026-10", "since=2026-10-04", "since=2026-10-06T10:00:00Z", "since=0", "since=",
     "actor_action_id=aa-1", "actor_action_id=0", "actor_action_id=",
     "target_actor_id=agent%3Ax", "target_actor_id=0", "target_actor_id=", "target_actor_id=nobody",
     "unread_only=1", "unread_only=0", "unread_only=", "unread_only=no",
     "limit=0", "limit=1", "limit=501", "limit=abc", "limit=3abc", "limit=", "limit=-5", "limit=1e1&limit=7",
-    "severity=high&actor_action_id=aa-1&target_actor_id=agent:x", "unread_only=1&since=2026-10-02&limit=2")]
+    "severity=high&actor_action_id=aa-1&target_actor_id=agent:x", "unread_only=1&since=2026-10-02&limit=2", "unread_only=1&since=2026-10")]
 
 
 def _seed_notifications(db: pathlib.Path) -> None:
@@ -112,7 +112,7 @@ def test_php_and_the_medulla_answer_every_notifications_read_the_same(tmp_path, 
     assert len(everything["notifications"]) == 100 and everything["total"] == BULK + 8, everything["total"]
     assert len(seen("/api/v1/notifications?limit=501")["notifications"]) == 500
     assert len(seen("/api/v1/notifications?limit=abc")["notifications"]) == 1
-    unread = [n["uuid"] for n in seen("/api/v1/notifications?unread_only=1")["notifications"]]
-    assert "n-med" not in unread and "n-high" not in unread and "n-crit" in unread, unread[:12]
-    by = {n["uuid"]: n for n in everything["notifications"]}
+    unread = [n["uuid"] for n in seen("/api/v1/notifications?unread_only=1&since=2026-10")["notifications"]]
+    assert "n-med" not in unread and "n-high" not in unread and "n-crit" in unread, unread
+    by = {n["uuid"]: n for n in seen("/api/v1/notifications?since=2026-10")["notifications"]}
     assert (by["n-list"]["channels"], by["n-keyed"]["channels"], by["n-high"]["channels"]) == (["mail", "ntfy"], {"1": "ntfy", "0": "mail"}, [])
