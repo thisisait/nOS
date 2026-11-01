@@ -167,6 +167,12 @@ async def handle(reader, writer, upstream: tuple, map_path: str):
                 status, first = (chunk.split(b" ", 2)[1].decode(errors="replace") if b" " in chunk else "?"), False
             writer.write(chunk)
             await writer.drain()
+    except ConnectionResetError as e:
+        # A starting KEAP container: Docker's port accepts, then resets (Linux mini 11-01).
+        if not first:
+            raise
+        status = "502"
+        await reply(writer, 502, f"KEAP reset the connection: {e}")
     finally:
         uw.close()
         writer.close()

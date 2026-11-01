@@ -54,3 +54,8 @@ def test_a_socket_that_answers_late_still_passes(tmp_path):
 def test_a_socket_that_never_answers_fails(tmp_path):
     out = _run(tmp_path, ["000"])
     assert "code=200" not in out and "mode=600" in out
+
+
+def test_a_keap_slow_to_start_still_passes(tmp_path):
+    # The Linux mini 11-01: KEAP, recreated just before, answered ~80 s later.
+    assert "code=200" in _run(tmp_path, ["502"] * 90 + ["200"])

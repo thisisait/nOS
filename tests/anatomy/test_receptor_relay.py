@@ -17,6 +17,7 @@ import os
 import pathlib
 import pwd
 import socket
+import struct
 import subprocess
 import sys
 import tempfile
@@ -69,12 +70,38 @@ def _upstream(seen: list):
     return srv
 
 
-def _run(logins: dict, extra: str = "", secret: str = "s3cret", raw: bytes | None = None):
+def _resetting():
+    """KEAP's Docker port while the container starts: accepts, then resets (the Linux mini 11-01)."""
+    srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    srv.bind(("127.0.0.1", 0))
+    srv.listen(8)
+
+    def serve():
+        while True:
+            try:
+                c, _ = srv.accept()
+            except OSError:
+                return
+            c.recv(65536)
+            c.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0))
+            c.close()
+
+    threading.Thread(target=serve, daemon=True).start()
+
+    class Up:
+        server_port = srv.getsockname()[1]
+
+        def shutdown(self):
+            srv.close()
+    return Up()
+
+
+def _run(logins: dict, extra: str = "", secret: str = "s3cret", raw: bytes | None = None, reset: bool = False):
     d = pathlib.Path(tempfile.mkdtemp(prefix="rcp-", dir="/tmp"))
     sock, mapf = d / "s", d / "identity-map.yml"
     mapf.write_text(json.dumps({"logins": logins}))
     seen: list = []
-    up = _upstream(seen)
+    up = _resetting() if reset else _upstream(seen)
     proc = subprocess.Popen([sys.executable, str(RELAY), "--socket", str(sock), "--map", str(mapf),
                              "--upstream", f"127.0.0.1:{up.server_port}"],
                             env={**os.environ, "KEAP_PROXY_SHARED_SECRET": secret},
@@ -243,3 +270,9 @@ def test_the_receptor_comes_up_after_keap():
     receptor = at(lambda t: t.get("ansible.builtin.import_role", {}).get("name") == "pazny.receptor")
     thalamus = at(lambda t: t.get("ansible.builtin.import_role", {}).get("name") == "pazny.thalamus")
     assert stacks < receptor < thalamus, (stacks, receptor, thalamus)
+
+
+@needs_peercred
+def test_a_keap_that_resets_is_a_502_not_a_dropped_socket():
+    _, status, _ = _run({ME: {"username": "alice", "groups": ["nos-users"]}}, reset=True)
+    assert status == "502", f"a reset upstream must answer 502 (the verify retries it), got {status!r}"

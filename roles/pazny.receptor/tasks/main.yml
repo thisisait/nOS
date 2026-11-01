@@ -87,8 +87,9 @@
     set -eo pipefail
     for _ in $(seq 1 20); do [ -S "{{ receptor_socket }}" ] && break; sleep 0.5; done
     MODE=$(stat -c '%a' "{{ receptor_socket }}" 2>/dev/null || stat -f '%Lp' "{{ receptor_socket }}")
-    # A restart leaves the old file a moment (client 2026-10-16): retry what is transient (000/502), ~30 s.
-    for _ in $(seq 1 30); do
+    # A restart leaves the old file a moment (client 2026-10-16): retry what is transient (000/502).
+    # 120 s: a just-recreated KEAP took ~80 s to listen on a CPU-only host (Linux mini 11-01).
+    for _ in $(seq 1 120); do
       CODE=$(curl -s -o /dev/null -w '%{http_code}' -m 10 --unix-socket "{{ receptor_socket }}" http://keap/api/me) || CODE=000
       case "$CODE" in 000|502) sleep 1 ;; *) break ;; esac
     done
