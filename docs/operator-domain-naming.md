@@ -154,6 +154,31 @@ if you want box-scoped sender addresses.
 
 ---
 
+## Renaming the tenant (e.g. `dev.local` → `mini.local`)
+
+No blank. A plain `nos` after the `config.yml` change re-mints by itself:
+
+- **Cert SANs:** `tasks/tls-certs.yml` deletes a cert missing a required SAN and issues a new one.
+- **Authentik:** providers and apps are keyed by name/slug, so launch URLs, proxy `external_host`
+  and the outpost host follow `authentik_domain`; the operator user keeps its username.
+- **Traefik routes, Wing env, mDNS records** (Linux `.local` tenant): rendered from the `*_domain` vars on every converge.
+- **Identity e-mails** (`nos_operator_email`, `default_admin_email`, `<svc>@<tenant_domain>`) follow the
+  new tenant. Caveat: an app that links OIDC accounts by e-mail (Nextcloud, Grafana, Gitea) may
+  create a second account; check those before renaming a full estate.
+
+The one move it needs is by hand: `nos_tenant_slug` is the first label of `tenant_domain`, and it
+names the data tree `{{ nos_data_root }}/tenants/<slug>` (Kiwix ZIMs, Calibre, Jellyfin, Nextcloud,
+per-user files). The first-run preflight refuses a converge whose slug tree is missing while another
+exists, and prints the exact command:
+
+```bash
+mv ~/nos/tenants/dev ~/nos/tenants/mini
+```
+
+With two or more other trees it lists them and does not guess. Removals (`--remove=…`) skip the check.
+
+---
+
 ## Reference
 
 - Phase plan + commit log: see Track F entries in

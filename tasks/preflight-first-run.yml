@@ -73,3 +73,30 @@
       On the command line pass them as JSON: -e '{"{{ _first_run_str_toggles[0] }}": true}'
       (the nos CLI does that for you), or set them in config.yml.
   when: _first_run_str_toggles | length > 0
+
+# A renamed tenant_domain moves nos_tenant_slug; core-up would then mint an empty
+# tenants/<new> and orphan the old tree (ZIMs, user files). Held here, before core-up.
+- name: "[Preflight] Tenant trees on disk"
+  ansible.builtin.find:
+    paths: "{{ nos_data_root }}/tenants"
+    file_type: directory
+  register: _first_run_tenants
+  when:
+    - remove | default('none') == 'none'
+    - not (blank | default(false) | bool)
+    - not (nos_removing | default(false) | bool)
+
+- name: "[Preflight] The tenant was renamed but its tree was not moved"
+  vars:
+    _old: "{{ _first_run_tenants.files | default([]) | map(attribute='path') | map('basename') | sort }}"
+  ansible.builtin.fail:
+    msg: |-
+      tenant_domain is {{ tenant_domain }}, so the tenant tree is {{ nos_data_root }}/tenants/{{ nos_tenant_slug }},
+      which does not exist. {{ nos_data_root }}/tenants holds: {{ _old | join(', ') }}.
+      {% if _old | length == 1 %}Move it (certs, SSO and routes re-mint by themselves; no blank):
+        mv {{ nos_data_root }}/tenants/{{ _old[0] }} {{ nos_data_root }}/tenants/{{ nos_tenant_slug }}
+      {% else %}More than one tree: move the one that belongs to {{ tenant_domain }} by hand; nOS does not guess.
+      {% endif %}
+  when:
+    - _old | length > 0
+    - nos_tenant_slug not in _old
