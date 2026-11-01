@@ -2672,12 +2672,15 @@
       "max_runtime_s": 1800,
       "category": "security",
       "paused": false,
-      "findings_exit_codes": null,
+      "findings_exit_codes": [
+        10,
+        11
+      ],
       "command_name": "advisory-patrol.py",
       "claims": [],
       "runs_agent": null,
       "anchor": "02.02.08",
-      "description": "Pulse scheduled job (security): runs advisory-patrol.py on cron `50 3 * * *`"
+      "description": "Pulse scheduled job (security): runs advisory-patrol.py on cron `50 3 * * *` — exits [10, 11] mean findings, not failure"
     },
     "pulse:alert-relay:relay-firing": {
       "kind": "pulse",

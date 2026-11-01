@@ -30,8 +30,9 @@ requires:
 # =============================================================================
 # PULSE JOB — the verdict is pulse_runs.exit_code, written by the patrol:
 #   0  every source read, no unjudged HIGH / CRITICAL / KEV match
-#   1  an unjudged serious match
-#   2  a source unreadable (rate limit, offline): NOTHING SERIOUS FOUND IS NOT CLEAN
+#   10 an unjudged serious match
+#   11 a source unreadable (rate limit, offline): NOTHING SERIOUS FOUND IS NOT CLEAN
+#   (was 1 / 2 until 11-01: a crash exits 1 too, so a dead patrol read as a finding)
 #
 # 03:50 UTC: before the 04:20 npm IOC scan and the 04:15+ KEAP chain.
 # What leaves the host: repo names, purls and ids (the inventory is public in
@@ -48,6 +49,7 @@ pulse:
       jitter_min: 7
       max_runtime_s: 1800       # ~800 calls, paced by GitHub's API
       max_concurrent: 1
+      findings_exit_codes: [10, 11]
       env: {}
 
 gdpr:

@@ -70,8 +70,8 @@ def test_patrol_keeps_the_report_and_exits_with_the_verdict(tmp_path, monkeypatc
     snap = tmp_path / "advisory" / "last.json"
     monkeypatch.setattr(patrol, "SNAPSHOT", snap)
     monkeypatch.setattr(patrol, "_github_token", lambda: None)
-    cases = [(_rep(pins=[("x_version", "1", [_m("A", 9.8)])]), 1),
-             (_rep(unknown=True), 2),
+    cases = [(_rep(pins=[("x_version", "1", [_m("A", 9.8)])]), 10),
+             (_rep(unknown=True), 11),
              (_rep(), 0)]
     for rep, code in cases:
         monkeypatch.setattr(patrol.adv, "collect", lambda rep=rep, **_: rep)

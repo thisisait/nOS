@@ -4,9 +4,10 @@
 Pulse job advisory-patrol:nightly (files/anatomy/plugins/advisory-patrol). The
 report lands in ~/.nos/advisory/last.json (0600) for tools/red-status.py.
 
-  exit 0  every source read, no unjudged HIGH / CRITICAL / KEV match
-  exit 1  an unjudged serious match (state/genome/advisory-judgements.yml)
-  exit 2  nothing serious found, but a source was unreadable: NOT clean
+  exit 0   every source read, no unjudged HIGH / CRITICAL / KEV match
+  exit 10  an unjudged serious match (state/genome/advisory-judgements.yml)
+  exit 11  nothing serious found, but a source was unreadable: NOT clean
+  (1 and 2 are a crash's and argparse's codes: a finding must not look like either; gates.md, findings 10)
 
 GitHub allows 60 unauthenticated calls an hour and one run makes ~800, so a
 missing GITHUB_TOKEN falls back to `gh auth token`; the token is never printed.
@@ -22,6 +23,8 @@ import sys
 from datetime import datetime, timezone
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
+EXIT_FINDINGS = 10   # an unjudged serious match
+EXIT_BLIND = 11      # nothing serious found, a source unreadable: not clean
 SNAPSHOT = pathlib.Path(os.environ.get("NOS_ADVISORY_SNAPSHOT") or pathlib.Path.home() / ".nos" / "advisory" / "last.json")
 
 _spec = importlib.util.spec_from_file_location("advisory_status", REPO / "tools" / "advisory-status.py")
@@ -59,7 +62,7 @@ def main(argv: list[str] | None = None) -> int:
     if blind:
         print(f"UNKNOWN source(s): {', '.join(blind)} — not clean")
     print(f"advisory patrol: {rep['verdict']}, {len(bad)} unjudged serious, {rep.get('calls', '?')} calls -> {SNAPSHOT}")
-    return 1 if bad else 2 if blind else 0
+    return EXIT_FINDINGS if bad else EXIT_BLIND if blind else 0
 
 
 if __name__ == "__main__":
