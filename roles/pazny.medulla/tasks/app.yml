@@ -36,6 +36,9 @@
     rm -rf {{ thalamus_nos_app | quote }}
     mkdir -p "$(dirname {{ thalamus_nos_app | quote }})"
     ditto "$stage/nOS.app" {{ thalamus_nos_app | quote }}
+    # A stage copy LaunchServices knows is a second nOS in Spotlight, and not a decider (11-01).
+    /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -u "$stage/nOS.app" || true
+    rm -rf "$stage/nOS.app"
   args:
     executable: /bin/bash
   register: _nos_app_build
@@ -67,6 +70,19 @@
   register: _nos_app_signed
   changed_when: "'signed' in _nos_app_signed.stdout"
   when: _thalamus_signing.stdout_lines | default([]) | length > 0  # --check mints nothing
+
+# A running nOS keeps the code it started with: a rebuild quits it and opens the installed one.
+- name: "[pazny.medulla] Restart a running nOS.app on the new build"
+  ansible.builtin.shell: |
+    pgrep -x nOS >/dev/null || { echo not-running; exit 0; }
+    osascript -e 'tell application id "eu.thisisait.nos.app" to quit' || true
+    for _ in 1 2 3 4 5; do pgrep -x nOS >/dev/null || break; sleep 1; done
+    open -a {{ thalamus_nos_app | quote }} && echo restarted
+  args:
+    executable: /bin/bash
+  register: _nos_app_restart
+  changed_when: "'restarted' in _nos_app_restart.stdout"
+  when: _nos_app_build is changed
 
 # Start at login. The job only opens the app, so a reload re-runs `open`, never a second nOS.
 - name: "[pazny.medulla] Render the nOS.app login job"
