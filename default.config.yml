@@ -1734,7 +1734,7 @@ gitea_allow_only_external_registration: true
 gitlab_domain: "gitlab{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 gitlab_http_port: 8929          # Internal HTTP port (nginx handles SSL, forwards here)
 gitlab_ssh_port: 2224           # Git SSH (22=system, 2222=Gitea → Gitlab on 2224)
-gitlab_version: "18.11.12-ce.0"  # REM-264/REM-159: last 18.11.x patch (fixes 18.11.9 unauth file read + GraphQL injection); 19.x is the next step
+gitlab_version: "18.11.13-ce.0"  # 2026-10-21 critical patch (CVE-2026-110264 CVSS 10, -112212 7.5); last 18.11.x; 19.x is the next step
 gitlab_timezone: "{{ nos_timezone }}"
 gitlab_signup_enabled: false    # Disables registration of new users
 gitlab_puma_workers: 2          # Worker processes (min 2, with 36 GB feel free to use 4)
