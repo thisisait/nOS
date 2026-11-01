@@ -22,6 +22,9 @@ ROWS = [  # args -> exact printed argv
     (["--print-cmd", "--tags", "keap"],            f"{BASE} --tags keap {V}"),
     (["--print-cmd", "--remove=data"],             f"{BASE} -e remove=data {V}"),
     (["--print-cmd", "--remove=none"],             f"{BASE} {V}"),           # emits NOTHING
+    # A toggle's true/false reaches ansible as a bool, not the string ansible-core 2.19+ refuses (11-01)
+    (["--print-cmd", "-e", "install_kiwix=true", "-e", "configure_x=False", "-e", "other=true"],
+     f'{BASE} -e {{"install_kiwix": true}} -e {{"configure_x": false}} -e other=true {V}'),
     (["--print-cmd", "--remove=data", "--confirm"], f"{BASE} -e remove=data -e confirm=true {V}"),
     (["--print-cmd", "--remove=all", "-y", "--leave"],
      f"{BASE} -e remove=all -e confirm=true -e assume_yes=true -e nos_sudo_password= -e leave=true {V}"),

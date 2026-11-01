@@ -418,6 +418,22 @@ while [ $# -gt 0 ]; do
   esac
 done
 
+# `-e install_x=true` hands ansible the STRING "true", which ansible-core 2.19+ refuses in
+# every `when:` (the Linux mini, 11-01). A toggle's true/false is sent as JSON, a real bool.
+_args=() _next_e=0
+for a in ${PASSTHRU[@]+"${PASSTHRU[@]}"}; do
+  if [ "$_next_e" -eq 1 ]; then
+    _next_e=0
+    case "$a" in
+      install_*=[Tt]rue|configure_*=[Tt]rue)   a="{\"${a%%=*}\": true}" ;;
+      install_*=[Ff]alse|configure_*=[Ff]alse) a="{\"${a%%=*}\": false}" ;;
+    esac
+  fi
+  case "$a" in -e|--extra-vars) _next_e=1 ;; esac
+  _args+=("$a")
+done
+PASSTHRU=(${_args[@]+"${_args[@]}"})
+
 # ── refusals ────────────────────────────────────────────────────────────────
 if [ "$CONFIRM" -eq 1 ] && [ "$YES" -eq 1 ]; then
   echo "nos: --confirm together with -y is ambiguous (interactive vs non-interactive) — pick one" >&2

@@ -57,3 +57,19 @@
   ansible.builtin.debug:
     msg: "Left at the default (fine to keep; choose in config.yml or credentials.yml): {{ _first_run_left | join(', ') }}"
   when: _first_run_left | length > 0
+
+# `-e install_x=true` is the STRING "true"; ansible-core 2.19+ refuses it in every `when:` (11-01).
+- name: "[Preflight] A toggle given as text"
+  vars:
+    _first_run_str_toggles: >-
+      {%- set out = [] -%}
+      {%- for k in query('varnames', '^(install|configure)_[a-z0-9_]+$') if lookup('vars', k) is string -%}
+      {%- set _ = out.append(k) -%}
+      {%- endfor -%}
+      {{ out }}
+  ansible.builtin.fail:
+    msg: |-
+      These toggles are text, not true/false: {{ _first_run_str_toggles | join(', ') }}.
+      On the command line pass them as JSON: -e '{"{{ _first_run_str_toggles[0] }}": true}'
+      (the nos CLI does that for you), or set them in config.yml.
+  when: _first_run_str_toggles | length > 0
