@@ -34,7 +34,7 @@ VERIFY = REPO / "roles/pazny.backup/files/backup-verify.sh"
 IMAGE = "postgres:16.15-alpine"
 KEY = "drill-test-key"
 DATE = "2026-10-31"
-DECLARED = yaml.safe_load((REPO / "default.config.yml").read_text(encoding="utf-8"))["backup_postgres_dbs"]
+DECLARED = ni.resolve_list("backup_postgres_dbs", ni.default_layers())   # the committed layers, not config.yml
 
 # aws: `s3 ls` lists one dated prefix, `s3 cp` copies from $BUCKET (a local dir) or fails.
 STUB_AWS = """#!/bin/bash

@@ -368,14 +368,3 @@ nodes:
   "service:ntfy":          { publish: voice, speaks: "a tap on the shoulder when something matters" }
   "service:wordpress":     { publish: voice, speaks: "the public word, published from home" }
   "service:mikopbx":       { publish: voice, speaks: "a telephone switchboard of one's own" }
-
-
-
-
-
-
-
-
-
-
-
