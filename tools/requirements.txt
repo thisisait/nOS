@@ -1,3 +1,4 @@
 requests>=2.32,<3
 Jinja2>=3.1,<4
 PyYAML>=6,<7
+pytest>=8,<10               # tools/run-journeys.sh runs tests/e2e on the estate

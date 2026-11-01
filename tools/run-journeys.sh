@@ -154,7 +154,14 @@ set +e
 # The estate has this exact scar already (`pulse-run-agent.sh` scope_args, and
 # the sibling `${#arr[@]}` Jinja trap in backup.sh); it is written down and it
 # still caught this file on its first run.
-out="$(python3 -m pytest tests/e2e/ -q -rs ${PYTEST_ARGS[@]+"${PYTEST_ARGS[@]}"} 2>&1)"
+# The tools venv the playbook builds (tools/requirements.txt carries pytest): a fresh host's
+# python3 has none (the Linux mini, 11-01). NOS_JOURNEY_PY overrides.
+PY="${NOS_JOURNEY_PY:-$HOME/.nos/tools-venv/bin/python}"
+[ -x "$PY" ] || PY=python3
+"$PY" -c 'import pytest' 2>/dev/null || {
+  echo "[journeys] $PY has no pytest: converge (tasks/tools-venv.yml installs tools/requirements.txt) or set NOS_JOURNEY_PY" >&2
+  exit 2; }
+out="$("$PY" -m pytest tests/e2e/ -q -rs ${PYTEST_ARGS[@]+"${PYTEST_ARGS[@]}"} 2>&1)"
 rc=$?
 set -e
 printf '%s\n' "$out"
