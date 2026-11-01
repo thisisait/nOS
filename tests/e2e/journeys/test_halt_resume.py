@@ -37,7 +37,10 @@ ADMIN_HEADERS = {
 }
 
 
-HALT_FILE = os.environ.get("NOS_HALT_FILE") or os.path.expanduser("~/.nos/halt")
+# The rule Wing uses to write it (test_set_points_resolve_one_path.py).
+_SP = "/var/lib/nos/settings"
+HALT_FILE = os.environ.get("NOS_HALT_FILE") or os.path.join(
+    _SP if os.path.isdir(_SP) else os.path.expanduser("~/.nos"), "halt")
 
 
 def _emergency_halted() -> list[str]:
