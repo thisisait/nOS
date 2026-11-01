@@ -165,7 +165,11 @@ func relay(_ q: Question, _ text: String) -> String {
         let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
         if options.isEmpty { field.placeholderString = "your answer"; alert.accessoryView = field; alert.addButton(withTitle: "Answer") }
         for o in options { alert.addButton(withTitle: o) }
-        alert.addButton(withTitle: "Cancel")
+        let cancel = alert.addButton(withTitle: "Cancel")
+        if !options.isEmpty {  // Return never picks an option ("yes" to an approval): it cancels (11-01 ruling)
+            alert.buttons.first?.keyEquivalent = ""
+            cancel.keyEquivalent = "\r"
+        }
         NSApp.activate(ignoringOtherApps: true)
         let i = alert.runModal().rawValue - NSApplication.ModalResponse.alertFirstButtonReturn.rawValue
         let text = options.isEmpty ? (i == 0 ? field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines) : "")
