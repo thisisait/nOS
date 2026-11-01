@@ -49,15 +49,54 @@ func tell(_ request: String, done what: String) -> (String, EstateState?) {
     return (s?.act?.recorded == true ? "\(what); Wing recorded it" : "\(what); NOT recorded: \(s?.act?.why ?? "?")", s)
 }
 
+/// The open questions; nil and why when the medulla refused or did not answer (UNKNOWN, never "none").
+func readQuestions() -> ([Question]?, String) {
+    guard let d = ask(#"{"t":"questions"}"#) else { return (nil, "the medulla did not answer") }
+    if let q = try? Questions.decode(d) { return (q.items, "") }
+    let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any]
+    return (nil, j?["t"] as? String == "refused" ? "refused: \(j?["reason"] as? String ?? "no reason given")" : "an answer the app cannot read")
+}
+
+/// An answer relayed to Wing, in words. Only `answered` says decided; lost and refused never read as it.
+func relay(_ q: Question, _ text: String) -> String {
+    guard let d = ask(String(decoding: answer(q.uuid, text), as: UTF8.self), secs: 15) else {
+        return "The medulla did not answer: nothing was decided."
+    }
+    guard let r = try? AnswerResult.decode(d) else {
+        let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any]
+        return "NOT decided: refused: \(j?["reason"] as? String ?? "an answer the app cannot read")"
+    }
+    switch r.outcome {
+    case .answered: return "Decided: \(text). Wing recorded it."
+    case .lost(let w): return "NOT yours: someone answered first with \(w)."
+    case .expired: return "NOT decided: the deadline passed first."
+    case .refused(let why): return "NOT decided: Wing refused it: \(why ?? "no reason given")."
+    }
+}
+
 @MainActor final class Estate: ObservableObject {
     @Published var state: EstateState?  // nil: the medulla did not answer, never green
     @Published var said: String?        // the last halt/resume answer
     @Published var busy: String?        // a verb asked and not yet answered
+    @Published var questions: [Question]?
+    @Published var questionsWhy = ""    // why questions is nil
     private var timer: Timer?
+    private var open = false, ticks = 0  // questions: every 30 s, every 5 s while the menu is open
 
     init() {
-        poll()
-        let t = Timer(timeInterval: 5, repeats: true) { [weak self] _ in Task { @MainActor in self?.poll() } }
+        poll(); pollQuestions()
+        for (n, v) in [(NSMenu.didBeginTrackingNotification, true), (NSMenu.didEndTrackingNotification, false)] {
+            NotificationCenter.default.addObserver(forName: n, object: nil, queue: .main) { [weak self] _ in
+                Task { @MainActor in self?.open = v; if v { self?.pollQuestions() } }
+            }
+        }
+        let t = Timer(timeInterval: 5, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                self.poll(); self.ticks += 1
+                if self.open || self.ticks % 6 == 0 { self.pollQuestions() }
+            }
+        }
         // .common: a default-mode timer never fires while the menu is open (event tracking), so it went stale.
         RunLoop.main.add(t, forMode: .common)
         timer = t
@@ -116,6 +155,39 @@ func tell(_ request: String, done what: String) -> (String, EstateState?) {
              done: "\(job) unpaused")
     }
 
+    /// The agent's words go in as plain strings (NSAlert renders no markup); options are buttons, else a field.
+    func answerQuestion(_ q: Question) {
+        let alert = NSAlert()
+        alert.messageText = "\(q.agent_name) asks (\(q.kind)\(q.severity.map { ", \($0)" } ?? ""))"
+        let deadline = q.expires_at.map { "Deadline: \($0)" + (q.default_on_expiry.map { ", then \($0)" } ?? "") } ?? "No deadline"
+        alert.informativeText = q.prompt + "\n\n" + deadline
+        let options = q.options ?? []
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
+        if options.isEmpty { field.placeholderString = "your answer"; alert.accessoryView = field; alert.addButton(withTitle: "Answer") }
+        for o in options { alert.addButton(withTitle: o) }
+        alert.addButton(withTitle: "Cancel")
+        NSApp.activate(ignoringOtherApps: true)
+        let i = alert.runModal().rawValue - NSApplication.ModalResponse.alertFirstButtonReturn.rawValue
+        let text = options.isEmpty ? (i == 0 ? field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines) : "")
+                                   : (i >= 0 && i < options.count ? options[i] : "")
+        guard !text.isEmpty, text.count <= 2000 else { return }  // Cancel, or an answer the contract refuses
+        busy = "Answering \(q.agent_name)…"; said = nil
+        Task.detached {
+            let words = relay(q, text)
+            await MainActor.run {
+                self.busy = nil; self.said = words; self.pollQuestions()
+                let done = NSAlert(); done.messageText = words; done.runModal()
+            }
+        }
+    }
+
+    func pollQuestions() {
+        Task.detached {
+            let (q, why) = readQuestions()
+            await MainActor.run { self.questions = q; self.questionsWhy = why }
+        }
+    }
+
     func poll() {
         Task.detached {
             let s = readState()
@@ -125,6 +197,16 @@ func tell(_ request: String, done what: String) -> (String, EstateState?) {
 }
 
 func word(_ b: Bool?, on: String, off: String) -> String { b.map { $0 ? on : off } ?? "UNKNOWN" }
+
+/// running with its pid, stopped with its last exit; a value the host did not give is UNKNOWN, never 0.
+func organLine(_ o: Organ) -> String {
+    let unknown = "UNKNOWN"
+    switch o.running {
+    case true?: return "\(o.name): running, pid \(o.pid.map(String.init) ?? unknown)"
+    case false?: return "\(o.name): stopped, exit \(o.last_exit.map(String.init) ?? unknown)"
+    case nil: return "\(o.name): \(unknown)"
+    }
+}
 
 struct MenuView: View {
     @ObservedObject var estate: Estate
@@ -136,7 +218,7 @@ struct MenuView: View {
             if let r = s.halt.reason { Text("  " + r) }
             Text("Loops paused: " + word(s.loops_paused.on, on: "yes", off: "no"))
             Divider()
-            ForEach(s.organs, id: \.label) { o in Text("\(o.name): " + word(o.running, on: "running", off: "stopped")) }
+            ForEach(s.organs, id: \.label) { o in Text(verbatim: organLine(o)) }
         } else {
             Text("medulla unreachable")
         }
@@ -147,6 +229,18 @@ struct MenuView: View {
             .disabled(estate.state?.halt.on == nil || estate.busy != nil)  // unknown: neither verb is honest
         Button(estate.state?.loops_paused.on == true ? "Resume loops…" : "Pause loops…") { estate.toggleLoops() }
             .disabled(estate.state?.loops_paused.on == nil || estate.busy != nil)
+        if let qs = estate.questions {
+            Menu("Questions (\(qs.count))") {
+                if qs.isEmpty { Text("none waiting") }
+                ForEach(qs, id: \.uuid) { q in
+                    // Agent-written: a String title, never a LocalizedStringKey (which would read markdown).
+                    let title: String = "\(q.agent_name): " + String(q.prompt.prefix(80)) + (q.prompt.count > 80 ? "…" : "")
+                    Button(title) { estate.answerQuestion(q) }.disabled(estate.busy != nil)
+                }
+            }
+        } else {
+            Text(verbatim: "Questions: UNKNOWN (\(estate.questionsWhy))")
+        }
         if let s = estate.state {
             if let jobs = s.pausedJobs {
                 Menu("Paused jobs (\(jobs.count))") {
@@ -204,6 +298,7 @@ struct WebView: NSViewRepresentable {
         } label: {
             let on = estate.state?.halt.on  // unreachable or unreadable: a question mark, never the calm icon
             Image(systemName: on == nil ? "questionmark.circle" : on == true ? "stop.circle.fill" : "circle.hexagongrid")
+            if let n = estate.questions?.count, n > 0 { Text(verbatim: "\(n)") }
         }
         Window("Face", id: "face") {
             if let url = faceURL() { WebView(url: url).frame(minWidth: 900, minHeight: 600) } else { Text("NOSFaceURL is not set") }
