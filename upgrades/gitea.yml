@@ -400,7 +400,7 @@ recipes:
 
   - id: "gitea-28-current"
     from_regex: "^28\\."
-    to: "28.2.0"           # == installed (2026-10-25: GHSA-vcp6 + GHSA-mf69 high, 7 lower; was 28.1.0, REM-294)
+    to: "28.3.0"           # == installed (2026-11-01: 7 high + 15 medium fixed in 28.3.0; was 28.2.0)
     severity: security
     changelog_url: "https://blog.gitea.com/"
     notes: |

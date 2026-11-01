@@ -1562,7 +1562,7 @@ prometheus_version: "v3.13.2"   # synced to role default (cleared version-pin sh
 loki_version: "3.7.6"           # synced to role default (cleared version-pin shadow) [swept 3.7.2 2026-08-06]
 
 # Gitea Docker
-gitea_version: "28.2.0"                 # 2026-10-25: GHSA-vcp6-2qc6-gvq3 + GHSA-mf69-7pqq-86vx (high) + 7 lower fixed in 28.2.0; prior REM-294 28.1.0 (recipe gitea-1.27-to-28)
+gitea_version: "28.3.0"                 # 2026-11-01: 7 high (GHSA-32h8, -9v6p, -6h2f, -jh8p, -37xv, -8g99, -8p3x) + 15 medium fixed in 28.3.0; prior 28.2.0
 
 # ── Grafana ───────────────────────────────────────────────────────────────────
 grafana_admin_user: "admin"
