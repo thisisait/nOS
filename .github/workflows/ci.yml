@@ -524,7 +524,10 @@ jobs:
           . "${GITHUB_WORKSPACE}/tools/ci-freeze.env"
           "$PY" -m venv "$RUNNER_TEMP/nosvenv"
           "$RUNNER_TEMP/nosvenv/bin/pip" install --upgrade pip
-          "$RUNNER_TEMP/nosvenv/bin/pip" install "$NOS_ANSIBLE_CORE" pyyaml jsonschema
+          # The controller list bootstrap installs (passlib for password_hash, …), its ansible-core
+          # line swapped for the frozen pin: one list, so CI and a fresh host need the same (11-01).
+          grep -v '^ansible-core' "${GITHUB_WORKSPACE}/bootstrap/requirements-controller.txt" > "$RUNNER_TEMP/controller.txt"
+          "$RUNNER_TEMP/nosvenv/bin/pip" install "$NOS_ANSIBLE_CORE" -r "$RUNNER_TEMP/controller.txt"
           echo "$RUNNER_TEMP/nosvenv/bin" >> "$GITHUB_PATH"
           # Modules run target-side on $PY (the module interpreter, set via
           # ANSIBLE_PYTHON_INTERPRETER below) — NOT the venv (the venv is only the
@@ -683,7 +686,10 @@ jobs:
           . "${GITHUB_WORKSPACE}/tools/ci-freeze.env"
           "$PY" -m venv "$RUNNER_TEMP/nosvenv"
           "$RUNNER_TEMP/nosvenv/bin/pip" install --upgrade pip
-          "$RUNNER_TEMP/nosvenv/bin/pip" install "$NOS_ANSIBLE_CORE" pyyaml jsonschema
+          # The controller list bootstrap installs (passlib for password_hash, …), its ansible-core
+          # line swapped for the frozen pin: one list, so CI and a fresh host need the same (11-01).
+          grep -v '^ansible-core' "${GITHUB_WORKSPACE}/bootstrap/requirements-controller.txt" > "$RUNNER_TEMP/controller.txt"
+          "$RUNNER_TEMP/nosvenv/bin/pip" install "$NOS_ANSIBLE_CORE" -r "$RUNNER_TEMP/controller.txt"
           echo "$RUNNER_TEMP/nosvenv/bin" >> "$GITHUB_PATH"
           # Modules run target-side on $PY (the module interpreter, set via
           # ANSIBLE_PYTHON_INTERPRETER below) — NOT the venv (the venv is only the
@@ -876,7 +882,10 @@ jobs:
         run: |
           . "${GITHUB_WORKSPACE}/tools/ci-freeze.env"
           "$PY" -m venv "$RUNNER_TEMP/nosvenv"
-          "$RUNNER_TEMP/nosvenv/bin/pip" install "$NOS_ANSIBLE_CORE" pyyaml jsonschema
+          # The controller list bootstrap installs (passlib for password_hash, …), its ansible-core
+          # line swapped for the frozen pin: one list, so CI and a fresh host need the same (11-01).
+          grep -v '^ansible-core' "${GITHUB_WORKSPACE}/bootstrap/requirements-controller.txt" > "$RUNNER_TEMP/controller.txt"
+          "$RUNNER_TEMP/nosvenv/bin/pip" install "$NOS_ANSIBLE_CORE" -r "$RUNNER_TEMP/controller.txt"
           echo "$RUNNER_TEMP/nosvenv/bin" >> "$GITHUB_PATH"
           "$PY" -m pip install --break-system-packages "$NOS_ANSIBLE_CORE" pyyaml jsonschema
 
@@ -946,7 +955,10 @@ jobs:
         run: |
           . "${GITHUB_WORKSPACE}/tools/ci-freeze.env"
           "$PY" -m venv "$RUNNER_TEMP/nosvenv"
-          "$RUNNER_TEMP/nosvenv/bin/pip" install "$NOS_ANSIBLE_CORE" pyyaml jsonschema
+          # The controller list bootstrap installs (passlib for password_hash, …), its ansible-core
+          # line swapped for the frozen pin: one list, so CI and a fresh host need the same (11-01).
+          grep -v '^ansible-core' "${GITHUB_WORKSPACE}/bootstrap/requirements-controller.txt" > "$RUNNER_TEMP/controller.txt"
+          "$RUNNER_TEMP/nosvenv/bin/pip" install "$NOS_ANSIBLE_CORE" -r "$RUNNER_TEMP/controller.txt"
           echo "$RUNNER_TEMP/nosvenv/bin" >> "$GITHUB_PATH"
           "$PY" -m pip install --break-system-packages "$NOS_ANSIBLE_CORE" pyyaml jsonschema
 
