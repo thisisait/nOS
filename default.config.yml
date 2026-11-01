@@ -2702,7 +2702,8 @@ paperclip_native_oidc_enabled: false
 # Host folders Paperclip's agents may work in, each mounted at /workspaces/<name> (mode rw|ro,
 # default rw). Empty = isolated. A client's project, never $HOME, ~/.nos or the data root
 # (the role refuses those). In config.yml, e.g.:
-#   paperclip_host_workspaces: [{name: hnedweb, path: /Users/<you>/projects/hnedweb}]
+#   paperclip_host_workspaces: [{name: hnedweb, path: /Users/<you>/projects/hnedweb},
+#     {name: nos, path: /Users/<you>/projects/nos-agent, mode: ro, follow: dev}]   # follow: kept at origin/dev each converge
 paperclip_host_workspaces: []
 paperclip_drain_timeout_s: 900                     # a converge waits this long for agent runs to finish before a restart; 0 = restart now
 

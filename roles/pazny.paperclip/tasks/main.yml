@@ -47,6 +47,27 @@
     mode: '0755'
   loop: "{{ paperclip_host_workspaces | default([]) }}"
 
+# `follow: <branch>`: the agents read origin/<branch>, not the day someone cloned it
+# (11-01: an oponent reviewed against a 24-10 clone and flagged shipped fixes as missing).
+# Detached at the tip; a dirty clone is refused, never reset.
+- name: "[pazny.paperclip] A followed workspace sits at its branch's tip"
+  ansible.builtin.shell: |
+    set -eo pipefail
+    cd {{ item.path | quote }}
+    git rev-parse --git-dir >/dev/null 2>&1 || { echo "{{ item.name }}: {{ item.path }} is no git clone (follow needs one)" >&2; exit 1; }
+    [ -z "$(git status --porcelain --untracked-files=no)" ] || { echo "{{ item.name }}: local changes, not moved" >&2; exit 1; }
+    before=$(git rev-parse HEAD)
+    git fetch -q origin {{ item.follow | quote }}
+    git checkout -q --detach FETCH_HEAD
+    [ "$before" = "$(git rev-parse HEAD)" ] && echo "at $before" || echo "moved $before -> $(git rev-parse HEAD)"
+  args:
+    executable: /bin/bash
+  register: _paperclip_follow
+  changed_when: "'moved' in _paperclip_follow.stdout"
+  loop: "{{ paperclip_host_workspaces | default([]) | selectattr('follow', 'defined') | list }}"
+  loop_control:
+    label: "{{ item.name }} -> {{ item.follow }}"
+
 # A recreate kills every run in flight, and its working files with it (2026-10-23:
 # six runs lost to one restart). Wait until no run is going; on timeout refuse, so
 # the operator chooses: wait more, or `-e paperclip_drain_timeout_s=0` to restart now.
