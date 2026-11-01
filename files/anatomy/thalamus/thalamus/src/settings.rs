@@ -76,6 +76,11 @@ pub fn paused(job: &str) -> Option<String> {
     }
 }
 
+/// No char a reader splits a line on: control chars, and U+2028/U+2029 (Python's splitlines() in red-status).
+fn one_line(r: &str) -> bool {
+    !r.chars().any(|c| c.is_control() || c == '\u{2028}' || c == '\u{2029}')
+}
+
 /// One store, one writer at a time: a change reads, merges and writes the whole file.
 static WRITING: Mutex<()> = Mutex::new(());
 
@@ -109,7 +114,7 @@ pub fn set(repo: &Path, key: &str, change: &Value, by: &str) -> Result<Value, St
                 let mut e = json!({"by": by, "at": at});
                 match o.get("reason") {
                     None => {}
-                    Some(Value::String(r)) if r.chars().count() <= 300 && !r.chars().any(char::is_control) => {
+                    Some(Value::String(r)) if r.chars().count() <= 300 && one_line(r) => {
                         if !r.trim().is_empty() {
                             e["reason"] = r.trim().into();
                         }
@@ -151,7 +156,7 @@ fn loops_paused(key: &str, change: &Value) -> Result<Value, String> {
         }
         Value::Object(o) if o.keys().all(|k| k == "reason") => match o.get("reason") {
             None => None,
-            Some(Value::String(r)) if r.chars().count() <= 300 && !r.chars().any(char::is_control) => Some(r.trim()).filter(|r| !r.is_empty()),
+            Some(Value::String(r)) if r.chars().count() <= 300 && one_line(r) => Some(r.trim()).filter(|r| !r.is_empty()),
             Some(_) => return Err(format!("{key}: a reason is one line of at most 300 chars")),
         },
         _ => return Err(format!("{key}: a change is {{\"reason\"?}} to pause or null to lift; serve names who and when")),

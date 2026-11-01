@@ -122,8 +122,10 @@ fn a_decider_pauses_the_loops_and_nos_reads_it_as_paused() {
     };
 
     // A reason with a control character could forge a line of the pause file: refused, nothing written.
-    let v = raw("{\"t\":\"setting\",\"key\":\"loops.paused\",\"value\":{\"reason\":\"a\\rb\"}}\n");
-    assert!(v["t"] == "refused" && v["reason"].as_str().unwrap().contains("one line") && !file.exists(), "{v}");
+    for r in ["a\\rb", "a\\u2028since: 2001-01-01T00:00:00Z"] {
+        let v = raw(&format!("{{\"t\":\"setting\",\"key\":\"loops.paused\",\"value\":{{\"reason\":\"{r}\"}}}}\n"));
+        assert!(v["t"] == "refused" && v["reason"].as_str().unwrap().contains("one line") && !file.exists(), "{r}: {v}");
+    }
     let v = raw("{\"t\":\"setting\",\"key\":\"loops.paused\",\"value\":{\"reason\":\"upgrade drill\"}}\n");
     assert_eq!(v["t"], "state", "{v}");
     let text = std::fs::read_to_string(&file).unwrap();
