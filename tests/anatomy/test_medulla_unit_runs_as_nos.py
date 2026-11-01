@@ -129,10 +129,13 @@ def test_no_line_of_the_unit_or_env_names_the_operators_home():
 
 def test_nos_writes_only_its_ledger_never_what_it_reads():
     """nos owned /var/lib/nos and could rename genome/ or .nos/ and plant its own identity map.
-    The home is root:nos 0750 so no entry in it can be renamed by nos; the one writable path is the ledger."""
+    The home is root:nos 0750 so no entry in it can be renamed by nos; the writable paths are the
+    ledger and, since 2026-11-01, the set-points dir (halt, loops pause: written tmp + rename;
+    operator ruling: root:nos 0770, the operator in group nos) — nothing else."""
     u = _unit()
     data = u["ExecStart"][0].split()[3]
-    assert u.get("ReadWritePaths") == [data] == ["/var/lib/nos/thalamus"], f"nos may write only its ledger: {u.get('ReadWritePaths')}"
+    assert u.get("ReadWritePaths") == [f"{data} /var/lib/nos/settings"] and data == "/var/lib/nos/thalamus", \
+        f"nos may write only its ledger and the set-points dir: {u.get('ReadWritePaths')}"
     dirs = _task(_tasks(MEDULLA_LINUX), lambda t: "Its directories" in str(t.get("name")), "no directories task")
     ctx = {"nos_system_home": "/var/lib/nos", "nos_system_user": "nos"}
     got = {}
@@ -144,6 +147,8 @@ def test_nos_writes_only_its_ledger_never_what_it_reads():
     for path in ("/var/lib/nos", "/var/lib/nos/.nos", "/var/lib/nos/genome"):
         assert got.get(path) == ("root", "nos", "0750"), f"{path} must be root:nos 0750 (nos reads, never renames): {got.get(path)}"
     assert got.get(data) == ("nos", "nos", "0700"), f"the ledger dir is nos's own: {got.get(data)}"
+    assert got.get("/var/lib/nos/settings") == ("root", "nos", "0770"), \
+        f"the set-points dir is root:nos 0770 (nos and the operator write, neither owns it): {got.get('/var/lib/nos/settings')}"
 
 
 def _task(tasks, pred, what):

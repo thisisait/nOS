@@ -19,7 +19,8 @@ from pathlib import Path
 
 T = Path(__file__).resolve().parents[2] / "roles" / "pazny.thalamus" / "templates"
 # systemd hands thalamus a shared socket and relay host; launchd sockets live in the plist's own keys.
-LINUX_ONLY = {"THALAMUS_RELAY_HOST", "THALAMUS_SOCKET", "THALAMUS_SOCKET_SHARED"}
+# NOS_HALT_FILE / NOS_LOOPS_PAUSED_FILE: only a system-user host (Linux) moves the set-points out of ~/.nos
+LINUX_ONLY = {"THALAMUS_RELAY_HOST", "THALAMUS_SOCKET", "THALAMUS_SOCKET_SHARED", "NOS_HALT_FILE", "NOS_LOOPS_PAUSED_FILE"}
 
 
 def _plist() -> set[str]:
