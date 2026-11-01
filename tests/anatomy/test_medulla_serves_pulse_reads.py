@@ -75,11 +75,13 @@ ROUTING = [("GET", "/api/v1/pulse_jobs", "pulse"), ("GET", "/api/v1/pulse_runs",
            ("HEAD", "/api/v1/pulse_jobs", "php"), ("GET", "/api/v1/pulse_jobs/due", "php"),
            ("GET", "/api/v1/pulse_jobs/a:b", "php"), ("GET", "/api/v1/pulse_runs?since=2026-01-01", "php"),
            ("GET", "/api/v1/pulse_runs?limit=2&until=now", "php"), ("GET", "/api/v1/pulse_runsx", "php"),
-           ("GET", "/api/v1/pulse_runs/", "php"), ("GET", "/api/v1/dashboard/summary", "php")]
+           ("GET", "/api/v1/pulse_runs/", "php"), ("GET", "/api/v1/dashboard/summary", "php"),
+           ("GET", "/api/v1/notifications?unread_only=1", "notifications"), ("POST", "/api/v1/notifications", "php"),
+           ("POST", "/api/v1/notifications/1/read", "php"), ("GET", "/api/v1/notifications/1", "php")]
 
 
 @pytest.mark.skipif(not m._frankenphp(), reason="no frankenphp binary runs the Caddyfile")
-@pytest.mark.parametrize("reads", [[], ["pulse"], ["pulse", "admin"]])
+@pytest.mark.parametrize("reads", [[], ["pulse"], ["pulse", "admin"], ["notifications"]])
 def test_caddy_sends_only_the_reads_to_the_medulla(tmp_path, reads):
     (tmp_path / "www").mkdir()
     (tmp_path / "www/index.php").write_text("<?php echo 'php';")
