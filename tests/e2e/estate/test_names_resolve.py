@@ -25,11 +25,17 @@ NAMES = sorted({PM._host(s["launch_url"]) for s in PLAN if s.get("launch_url")} 
 
 
 def _lan_ip() -> str | None:
-    """nos_lan_ip comes from facts at converge; offline, NOS_LAN_IP or nothing."""
+    """NOS_LAN_IP, a pinned nos_lan_ip, else the default-route source (Ansible's default_ipv4)."""
     raw = os.environ.get("NOS_LAN_IP") or str(PM.smoke.load_vars().get("nos_lan_ip") or "")
     try:
         return str(ipaddress.IPv4Address(raw))
     except ValueError:
+        pass
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("192.0.2.1", 53))      # UDP connect sends nothing; it only picks the route
+            return s.getsockname()[0]
+    except OSError:
         return None
 
 
