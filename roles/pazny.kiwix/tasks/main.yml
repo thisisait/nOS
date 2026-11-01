@@ -36,6 +36,8 @@
     - kiwix_init_zim_url | default('') | length > 0
   register: _kiwix_init_dl
   failed_when: false
+  # kiwix-serve reads /data only at start: 11-01 the ZIM arrived at 08:06, the container kept 502
+  notify: Restart kiwix
 
 # 10-30 blank: the download failed quietly, kiwix served "No ZIM files" (502) behind a green
 # converge. An offline host may not reach the mirror, so this warns instead of failing.
@@ -65,6 +67,7 @@
     timeout: 3600
   loop: "{{ kiwix_zim_files | default([]) }}"
   when: (kiwix_zim_files | default([])) | length > 0
+  notify: Restart kiwix
 
 # Nginx vhost templates staysji v playbook-level templates/nginx/
 # sites-available/ because of the auto-enable pattern — hence the absolute path via
