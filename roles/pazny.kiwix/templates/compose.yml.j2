@@ -27,11 +27,12 @@ services:
     # Must be a single string: block-scalar command: | gets split by newlines
     # into separate argv elements when entrypoint is an array, so only the
     # first line would run as the script (rest become $0,$1,...).
-    # $$ → $ after Docker Compose variable interpolation.
+    # Waits for a ZIM instead of `sleep infinity`: 11-01 the init ZIM landed after start and the
+    # container stayed "Up" serving nothing (smoke 502) until someone recreated it by hand.
     entrypoint:
       - /bin/sh
       - -c
-      - 'ZIMS=$$(ls /data/*.zim 2>/dev/null); if [ -n "$$ZIMS" ]; then exec /usr/local/bin/kiwix-serve --port=8080 $$ZIMS; else echo "No ZIM files in /data -- add .zim files and restart"; exec sleep infinity; fi'
+      - 'until ls /data/*.zim >/dev/null 2>&1; do echo "No ZIM files in /data -- waiting, next check in 30 s"; sleep 30; done; exec /usr/local/bin/kiwix-serve --port=8080 /data/*.zim'
     networks:
       - iiab_net
       - {{ stacks_shared_network }}
