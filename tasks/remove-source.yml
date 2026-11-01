@@ -175,6 +175,20 @@
       become: true
       when: _rm_ufw.stat.exists
 
+    - name: "[Remove:host] Stop publishing the names"
+      ansible.builtin.systemd:
+        name: nos-mdns-names
+        state: stopped
+        enabled: false
+      become: true
+      failed_when: false   # absent on a host that never published
+
+    - name: "[Remove:host] Drop the publisher unit"
+      ansible.builtin.file:
+        path: /etc/systemd/system/nos-mdns-names.service
+        state: absent
+      become: true
+
     - name: "[Remove:host] avahi forgets the records"
       ansible.builtin.shell: |
         systemctl is-active --quiet avahi-daemon || { echo "inactive"; exit 0; }
@@ -189,6 +203,7 @@
         f=/etc/avahi/hosts
         [ -e "$f" ] && { grep -q 'tasks/mdns.yml' "$f" || grep -qvE '^[[:space:]]*(#|$)' "$f"; } && left="$left $f"
         grep -q "nOS mDNS self" /etc/hosts && left="$left etc-hosts-block"
+        [ -e /etc/systemd/system/nos-mdns-names.service ] && left="$left nos-mdns-names.service"
         command -v ufw >/dev/null && ufw status 2>/dev/null | grep -qE '^5353/udp' && left="$left ufw:5353/udp"
         echo "LEFT:${left:- none}"
       args:

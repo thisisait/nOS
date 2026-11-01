@@ -110,7 +110,7 @@ sudo sysctl --system
 Debian's nginx runs as `www-data`; macOS Homebrew runs as `_www`. The `nos_nginx_run_user` variable in `_platform.yml` resolves both. Vhost templates that hard-code `_www` (legacy: `tasks/observability.yml` blackbox config) will be updated to use the variable as part of cross-cutting cleanup.
 
 ### Local names: mDNS, not dnsmasq
-`tasks/dnsmasq.yml` and `/etc/resolver` are macOS only. On Linux a `.local` tenant is published by avahi instead: `tasks/mdns.yml` writes every routed name to `/etc/avahi/hosts` at `nos_lan_ip` for the LAN and to a marked `/etc/hosts` block at `127.0.0.1` for the host itself ([docs/systems/dnsmasq/README.md](systems/dnsmasq/README.md) §Linux: mDNS). A non-`.local` local tenant (`firm.internal`, `home.arpa`) still has no Linux resolver: use the LAN's DNS (Pi-hole / AdGuard) or a hosts file.
+`tasks/dnsmasq.yml` and `/etc/resolver` are macOS only. On Linux a `.local` tenant is published by avahi instead: `tasks/mdns.yml` publishes every routed name at `nos_lan_ip` for the LAN (`nos-mdns-names.service`, `avahi-publish -R`) and to a marked `/etc/hosts` block at `127.0.0.1` for the host itself ([docs/systems/dnsmasq/README.md](systems/dnsmasq/README.md) §Linux: mDNS). A non-`.local` local tenant (`firm.internal`, `home.arpa`) still has no Linux resolver: use the LAN's DNS (Pi-hole / AdGuard) or a hosts file.
 
 ### Apple Silicon vs Linux ARM64
 nOS works fine on `aarch64` Linux (Raspberry Pi 5, AWS Graviton, Apple Silicon under Multipass / Lima). No code changes needed; the Docker images we build (`nos-bone`, `nos-wing`) are platform-agnostic.

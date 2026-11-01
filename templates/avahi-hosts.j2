@@ -1,5 +1,3 @@
-# {{ ansible_managed }} by nOS (tasks/mdns.yml): the names Traefik routes, at this host's LAN address.
-# <hostname>.local is left out: avahi publishes it itself, and a static duplicate is a conflict.
-{% for n in _mdns_names if n != (ansible_facts['hostname'] ~ '.local') %}
-{{ nos_lan_ip }} {{ n }}
-{% endfor %}
+# {{ ansible_managed }} by nOS (tasks/mdns.yml): no static records here on purpose.
+# A record in this file also claims the address's PTR, which <hostname>.local holds, and
+# fails "Local name collision"; the names are published by nos-mdns-names.service instead.

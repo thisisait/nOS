@@ -63,9 +63,11 @@ dnsmasq is macOS only. On a Debian/Ubuntu host whose `tenant_domain` ends in `.l
 
 1. reads back every `Host()` Traefik routes: the conf.d files **and** the labels of the
    running containers (manifest apps and Stalwart route by label);
-2. writes `/etc/avahi/hosts`, one `<nos_lan_ip> <name>` line per name, so LAN devices
-   resolve `*.<tenant_domain>` by mDNS. `<hostname>.local` is left out: avahi
-   publishes it itself, so the apex comes from the hostname;
+2. runs `nos-mdns-names.service`: one `avahi-publish -a -R <name> <nos_lan_ip>` per name,
+   so LAN devices resolve `*.<tenant_domain>` by mDNS. `-R` publishes no PTR: a static
+   `/etc/avahi/hosts` record claims the address's PTR too, which `<hostname>.local` holds,
+   and fails "Local name collision" (the mini, 2026-11-01), so that file stays empty.
+   `<hostname>.local` is left out: avahi publishes it itself;
 3. limits avahi to the physical links (`allow-interfaces`, never a docker bridge) and
    to IPv4 (`use-ipv6=no`: the records are A-only);
 4. adds a marked block (`nOS mDNS self`) to `/etc/hosts` mapping every name to

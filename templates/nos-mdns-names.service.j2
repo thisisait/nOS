@@ -1,0 +1,17 @@
+# {{ ansible_managed }} by nOS (tasks/mdns.yml): the names Traefik routes, at this host's LAN address.
+# avahi-publish -R: no PTR, which <hostname>.local already holds (a static /etc/avahi/hosts
+# record claims it too and fails "Local name collision" — the mini, 2026-11-01).
+[Unit]
+Description=nOS LAN names over mDNS
+After=avahi-daemon.service
+Requires=avahi-daemon.service
+PartOf=avahi-daemon.service
+
+[Service]
+DynamicUser=yes
+ExecStart=/bin/sh -c '{% for n in _mdns_names if n != (ansible_facts['hostname'] ~ '.local') %}avahi-publish -a -R {{ n }} {{ nos_lan_ip }} & {% endfor %}wait'
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

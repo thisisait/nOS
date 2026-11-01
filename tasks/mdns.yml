@@ -38,17 +38,26 @@
     # The DGX scar (bootstrap/minimal-linux-dgx/setup-root.sh): never answer with a bridge address.
     _mdns_ifaces: "{{ ansible_facts['interfaces'] | default([]) | reject('match', '^(lo|docker|br-|veth|virbr|tailscale|tun|wg)') | sort | join(',') }}"
 
-# ponytail: nos_lan_ip is baked at converge (as dnsmasq does); a DHCP reservation keeps it true.
-- name: "[mdns] Publish the names at the LAN address"
+# No static records: each would collide with the host's own PTR (templates/avahi-hosts.j2).
+- name: "[mdns] avahi's static hosts file holds no record"
   ansible.builtin.template:
     src: avahi-hosts.j2
     dest: /etc/avahi/hosts
     mode: '0644'
   become: true
+  register: _mdns_hosts_file
+
+# ponytail: nos_lan_ip is baked at converge (as dnsmasq does); a DHCP reservation keeps it true.
+- name: "[mdns] Publish the names at the LAN address (no PTR)"
+  ansible.builtin.template:
+    src: nos-mdns-names.service.j2
+    dest: /etc/systemd/system/nos-mdns-names.service
+    mode: '0644'
+  become: true
   when:
     - nos_lan_ip | default('') | length > 0
     - _mdns_readback.rc == 0   # a partial read-back never overwrites the last full set
-  register: _mdns_hosts_file
+  register: _mdns_unit
 
 # use-ipv6=no: the records are A-only; an apex AAAA would point at a Traefik that may not serve v6.
 - name: "[mdns] Answer on the physical links only, IPv4 only"
@@ -76,7 +85,7 @@
 
 - name: "[mdns] The read-back failed: the last records stay"
   ansible.builtin.debug:
-    msg: "docker did not answer the label read-back (rc={{ _mdns_readback.rc }}); /etc/avahi/hosts and /etc/hosts keep the last full set"
+    msg: "docker did not answer the label read-back (rc={{ _mdns_readback.rc }}); nos-mdns-names and /etc/hosts keep the last full set"
   when: _mdns_readback.rc != 0
 
 - name: "[mdns] avahi-daemon runs"
@@ -93,6 +102,20 @@
     state: restarted
   become: true
   when: (_mdns_hosts_file is changed) or (_mdns_conf is changed)
+
+- name: "[mdns] The names are published, again on any change"
+  ansible.builtin.systemd:
+    name: nos-mdns-names
+    daemon_reload: "{{ _mdns_unit is changed }}"
+    enabled: true
+    state: "{{ 'restarted' if (_mdns_unit is changed or _mdns_hosts_file is changed or _mdns_conf is changed) else 'started' }}"
+  become: true
+  when: _mdns_unit is not skipped   # skipped = a failed read-back: the running unit keeps the last set
+
+- name: "[mdns] Give avahi a moment to announce before the verify asks"
+  ansible.builtin.wait_for:
+    timeout: 3
+  when: _mdns_unit is changed
 
 - name: "[mdns] Verify: ask avahi and the resolver"  # noqa: command-instead-of-module
   ansible.builtin.shell: |
