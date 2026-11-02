@@ -68,6 +68,18 @@ def _wing_rows(agent: str) -> list[dict]:
     return body.get("data", [])
 
 
+def _closed_agent() -> str:
+    """An agent Wing holds whose metadata.end_user is not true (conductor opened in 67a7f61ec)."""
+    code, body = _call(f"{WING_URL}/api/v1/agents", {"Authorization": f"Bearer {os.environ['WING_API_TOKEN']}"})
+    if code != 200:
+        raise RuntimeError(f"Wing agent list unreadable: HTTP {code}")
+    for name in sorted(a["name"] for a in body.get("data", []) if "error" not in a):
+        code, a = _call(f"{WING_URL}/api/v1/agents/{name}", {"Authorization": f"Bearer {os.environ['WING_API_TOKEN']}"})
+        if code == 200 and (a.get("metadata") or {}).get("end_user") is not True:
+            return name
+    pytest.skip("every agent on this estate is open to end users: nothing to refuse")
+
+
 def _running_test_sessions() -> list[str]:
     if not AGENT:
         return []
@@ -95,8 +107,9 @@ def test_a_user_sees_no_session_that_is_not_theirs(journey):
     with journey("face_sessions_isolation/read") as j:
         user = _user("reader")
         with j.step("an agent not open to end users is refused") as s:
-            code, _ = _face("/bff/agents/conductor/sessions", user, {"prompt": "e2e"})
-            s.note = f"status={code}"
+            closed = _closed_agent()
+            code, _ = _face(f"/bff/agents/{closed}/sessions", user, {"prompt": "e2e"})
+            s.note = f"{closed}: status={code}"
             assert code == 403
         with j.step("the user's list holds none of the estate's sessions") as s:
             code, body = _face("/bff/agents/conductor/sessions", user)
