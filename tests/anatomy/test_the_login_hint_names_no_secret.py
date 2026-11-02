@@ -17,7 +17,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 MSG = next(t for t in yaml.safe_load((REPO / "tasks/login-hint.yml").read_text())
            if t["name"].startswith("[Login] How to log in"))["ansible.builtin.debug"]["msg"]
-SECRET = "s3cr3t-prefix-VALUE"
+SECRET = "fake-prefix-not-a-secret"
 
 
 def _render(scheme: str, local: bool, ca_rc: int = 0) -> str:
