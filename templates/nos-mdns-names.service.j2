@@ -8,8 +8,12 @@ Requires=avahi-daemon.service
 PartOf=avahi-daemon.service
 
 [Service]
-DynamicUser=yes
-ExecStart=/bin/sh -c '{% for n in _mdns_names if n != (ansible_facts['hostname'] ~ '.local') %}avahi-publish -a -R {{ n }} {{ nos_lan_ip }} & {% endfor %}wait'
+# Not DynamicUser: its avahi-publish got "Failed to create client object" from D-Bus (the
+# mini, 11-02). The avahi account exists with the package; the D-Bus default policy admits it.
+User=avahi
+Group=avahi
+# One publisher gone is the unit gone: wait -n returns on the first exit, so systemd restarts all.
+ExecStart=/bin/bash -c '{% for n in _mdns_names if n != (ansible_facts['hostname'] ~ '.local') %}avahi-publish -a -R {{ n }} {{ nos_lan_ip }} & {% endfor %}wait -n; exit 1'
 Restart=on-failure
 RestartSec=5
 
