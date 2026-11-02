@@ -65,10 +65,11 @@ def test_operator_login(journey, tester_identity):
                 pytest.skip(f"authentik unreachable: {exc}")
 
         with j.step("wing_token_works") as s:
-            # Bearer-token round-trip via /api/v1/hub/health. Anonymous in
-            # Authentik but the token's UPSERT proves provision-token.php ran.
+            # Bearer-token round-trip; the token's UPSERT proves provision-token.php ran.
+            # Not /api/v1/hub/health: it probes every service live and outran the 5 s on
+            # the Studio's ~30 services (11-02). events?limit=1 is the same bearer check.
             r = requests.get(
-                f"{WING_URL}/api/v1/hub/health",
+                f"{WING_URL}/api/v1/events?limit=1",
                 headers=tester_identity.authorization_header,
                 timeout=5,
             )

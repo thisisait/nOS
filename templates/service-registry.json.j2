@@ -20,6 +20,7 @@
 {% set _cards = playbook_dir | nos_hub_cards %}
 {% set _meta = {
   'jellyfin': {"health_url": "http://127.0.0.1:" ~ (jellyfin_port | default(8096)) ~ "/health"},
+  'device_gateway': {"health_url": "http://127.0.0.1:" ~ (device_gateway_port | default(8770)) ~ "/health"},
   'bluesky_pds': {"name": "Bluesky PDS", "description": "AT Protocol Personal Data Server"},
   'dnsmasq': {"name": "dnsmasq", "description": "DNS resolver (*." ~ (dnsmasq_dev_domain | default('dev.local')) ~ ")"},
   'mariadb': {"name": "MariaDB", "description": "Relational database",

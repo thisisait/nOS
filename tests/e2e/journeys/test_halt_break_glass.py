@@ -41,7 +41,9 @@ def _api(method: str, path: str, token: str) -> tuple[int, dict]:
 
 
 def _nos(*args: str) -> subprocess.CompletedProcess:
-    env = dict(os.environ, WING_HALT_TOKEN=HALT, NOS_WING_URL=WING_URL)
+    # The break-glass is the shell's own path; since v0.18 `nos halt` asks the medulla first
+    # (it prints no Wing JSON), so this journey points NOS_MEDULLA at nothing (11-02).
+    env = dict(os.environ, WING_HALT_TOKEN=HALT, NOS_WING_URL=WING_URL, NOS_MEDULLA="/nonexistent/medulla")
     return subprocess.run(["bash", str(REPO / "tools/nos"), *args], env=env, capture_output=True, text=True, timeout=30)
 
 

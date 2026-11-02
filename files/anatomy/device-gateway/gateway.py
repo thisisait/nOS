@@ -324,6 +324,13 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(500, {"error": str(exc)})
         self._send(200, data)
 
+    # Wing's hub probes with HEAD; without this the gateway answered 501 and read down (11-02).
+    def do_HEAD(self) -> None:  # noqa: N802 — BaseHTTPRequestHandler
+        ok = self.path.split("?", 1)[0] == "/health"
+        self.send_response(200 if ok else 405)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
 
 def main() -> int:
     httpd = ThreadingHTTPServer((BIND, PORT), Handler)
