@@ -523,6 +523,17 @@ def introspect_apps(apps_dir: str, role_vars: Optional[Dict[str, Any]] = None) -
     return {"runner_enabled": True, "deployed": sorted(ids - skip)}
 
 
+_BOOLS = {"true": True, "yes": True, "1": True, "false": False, "no": False, "0": False}
+
+
+def introspect_flags(role_vars: Optional[Dict[str, Any]] = None) -> Dict[str, bool]:
+    """Every install_* this run resolved to a plain bool (-e profiles included), so a
+    reader sees install_loops=false that no file shows. A template is skipped, not guessed."""
+    return {k: v if isinstance(v, bool) else _BOOLS[str(v).strip().lower()]
+            for k, v in sorted((role_vars or {}).items())
+            if k.startswith("install_") and (isinstance(v, bool) or str(v).strip().lower() in _BOOLS)}
+
+
 # ---------------------------------------------------------------------------
 # JSON-safe serialization (for Ansible return payloads)
 # ---------------------------------------------------------------------------

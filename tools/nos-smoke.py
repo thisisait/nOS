@@ -129,6 +129,8 @@ def apply_runtime_estate(
         deployed = set(apps.get("deployed") or [])
         vars_dict["apps_skip"] = sorted(p.stem for p in (REPO / "apps").glob("*.yml")
                                         if not p.name.startswith("_") and p.stem not in deployed)
+    # The run's install_* answers (state_manager): -e install_loops=false included.
+    vars_dict.update({k: bool(v) for k, v in (state.get("flags") or {}).items()})
     services = state.get("services") or {}
     if not services:
         return

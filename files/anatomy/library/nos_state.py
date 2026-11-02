@@ -133,6 +133,7 @@ try:
         expand_path,
         introspect_all,
         introspect_apps,
+        introspect_flags,
         load_manifest,
         load_state,
         to_json_safe,
@@ -152,6 +153,7 @@ except ImportError:
         expand_path,
         introspect_all,
         introspect_apps,
+        introspect_flags,
         load_manifest,
         load_state,
         to_json_safe,
@@ -257,6 +259,9 @@ def _action_introspect(module, params):
     if params.get("apps_dir"):
         apps = introspect_apps(params["apps_dir"], params.get("role_vars") or {})
         state["apps"] = apps
+    # The run's install_* answers, replaced whole: an -e profile is otherwise invisible to readers.
+    if params.get("role_vars"):
+        state["flags"] = introspect_flags(params["role_vars"])
     state["generated_at"] = utcnow_iso()
 
     changed = True  # Introspection records 'generated_at' every run.

@@ -28,7 +28,7 @@ import yaml
 REPO = Path(__file__).resolve().parents[1]
 PLUGINS = REPO / "files/anatomy/plugins"
 sys.path.insert(0, str(REPO / "tools"))
-from nos_identity import SYNTHETIC_FLAG, installed_apps, ran, synthetic_identities  # noqa: E402
+from nos_identity import SYNTHETIC_FLAG, installed_apps, plugin_installed, ran, synthetic_identities  # noqa: E402
 MODES = ("native_oidc", "forward_auth", "header_oidc")
 
 _spec = importlib.util.spec_from_file_location("nos_smoke", REPO / "tools/nos-smoke.py")
@@ -125,8 +125,9 @@ def plan(vars_: dict | None = None, include_disabled: bool = False) -> list[dict
     vars_, env = _resolved(vars_)
     edge, domains = _edge_modes(), _manifest_domains()
     rows = []
-    for path in sorted(PLUGINS.glob("*/plugin.yml")):      # discovery, gitleaks carry no -base
-        doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    docs = {p: yaml.safe_load(p.read_text(encoding="utf-8")) or {} for p in sorted(PLUGINS.glob("*/plugin.yml"))}
+    plugins = {d.get("name"): d for d in docs.values()}
+    for path, doc in docs.items():      # discovery, gitleaks carry no -base
         ak = doc.get("authentik") or {}
         e2e = doc.get("e2e") or {}
         if not ak and not e2e:
@@ -135,6 +136,8 @@ def plan(vars_: dict | None = None, include_disabled: bool = False) -> list[dict
         ak = {k: v for k, v in ak.items() if k != "client_secret"}
         r = _render(env, ak)
         enabled = _truthy(r.get("enabled", _render(env, e2e.get("enabled", "false"))))
+        # The Pulse catalog's rule (requires.feature_flag + peers): a plugin it drops has no wiring to probe.
+        enabled = enabled and plugin_installed(doc.get("name"), plugins, vars_)
         if not enabled and not include_disabled:
             continue
         redirects = r.get("redirect_uris") or []

@@ -67,6 +67,11 @@
       }
     },
 
+    "flags": {
+      "type": "object",
+      "description": "Every install_* the last converge resolved to a plain bool (-e profiles included). Replaced whole every run; templates are omitted. Readers apply it over the file layers.",
+      "additionalProperties": {"type": "boolean"}
+    },
     "apps": {
       "type": "object",
       "description": "The manifest apps (apps/*.yml) pazny.apps_runner deploys, as the last converge resolved it (-e included). Replaced whole every run. Absent on a state.yml written before it was recorded; readers then fall back to the file layers and say so.",

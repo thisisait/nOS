@@ -247,8 +247,10 @@ class Ran(NamedTuple):
             rec = self.apps()
             return [("apps", None if rec is None else rec.get("runner_enabled"))]
         recorded = self.state.get("services") or {}
-        return [(r["id"], (recorded.get(r["id"]) or {}).get("enabled"))
+        rows = [(r["id"], (recorded.get(r["id"]) or {}).get("enabled"))
                 for r in services() if r.get("install_flag") == flag]
+        flags = self.state.get("flags") or {}   # install_loops: no service row, still recorded
+        return rows or ([("flags", flags[flag])] if flag in flags else [])
 
 
 def ran(path: Path | None = None) -> Ran:
