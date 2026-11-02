@@ -98,7 +98,8 @@ class TestSection6_GdprRows:
                 "FROM gdpr_processing WHERE id = ?",
                 (app_id,),
             ).fetchone()
-        assert row is not None, f"{app_id} GDPR row missing"
+        if row is None:
+            _missing(f"{app_id} GDPR row missing — apps runner off, or its upsert failed")
         legal_basis, transfers, retention = row
         assert legal_basis == expected, (
             f"{app_id} legal_basis={legal_basis!r} (expected {expected!r}); "
