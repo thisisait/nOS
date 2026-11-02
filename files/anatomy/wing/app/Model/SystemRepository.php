@@ -271,6 +271,11 @@ final class SystemRepository
 				? (string) $sys['health_url']
 				: (string) $sys['url'];
 			$result = $this->probe($target, $timeout);
+			// One slow answer is not an outage: on the Studio a different two of ~30 read
+			// down each run while all answered (2026-11-02). Down only when asked twice.
+			if ($result['status'] !== 'up') {
+				$result = $this->probe($target, $timeout);
+			}
 			$this->setHealth($sys['id'], $result['status'], $result['http_code'], $result['ms']);
 			$results[$sys['id']] = $result;
 		}
