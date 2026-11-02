@@ -69,16 +69,8 @@
     - (_wing_component_count.stdout | default('0') | trim | int) == 0
     - (_wing_legacy_md.files | default([]) | length) > 0
 
-# ── Service registry ingestion ───────────────────────────────────────────────
-
-- name: "[pazny.wing] Ingest service-registry.json into systems table"
-  ansible.builtin.command:
-    cmd: "{{ wing_php_cli }} bin/ingest-registry.php --registry={{ ansible_facts['env']['HOME'] }}/projects/default/service-registry.json"
-    chdir: "{{ wing_app_dir }}"
-  register: _wing_ingest
-  # The script counts rows it WROTE (all of them, every run); digest-changed
-  # compares the table before/after (App\Model\TableDigest).
-  changed_when: "'digest-changed=1' in (_wing_ingest.stdout | default(''))"
+# Service registry ingestion runs in tasks/service-registry.yml, right after this
+# run renders the file (here it read the previous run's: 2026-11-02, stale tenant).
 
 # ── Security-research re-sync (idempotent) ───────────────────────────────────
 # bin/migrate.php is a ONE-SHOT bootstrap: once systems.source='components_db'
