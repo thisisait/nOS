@@ -189,7 +189,8 @@
         state: absent
       become: true
 
-    - name: "[Remove:host] avahi forgets the records"
+    # reload only while it runs: the systemd module would start a stopped avahi
+    - name: "[Remove:host] avahi forgets the records"  # noqa: command-instead-of-module
       ansible.builtin.shell: |
         systemctl is-active --quiet avahi-daemon || { echo "inactive"; exit 0; }
         systemctl reload avahi-daemon && echo "reloaded"
@@ -199,12 +200,13 @@
 
     - name: "[Remove:host] Read back the host layer (Linux)"
       ansible.builtin.shell: |
+        set -o pipefail
         left=""
         f=/etc/avahi/hosts
         [ -e "$f" ] && { grep -q 'tasks/mdns.yml' "$f" || grep -qvE '^[[:space:]]*(#|$)' "$f"; } && left="$left $f"
         grep -q "nOS mDNS self" /etc/hosts && left="$left etc-hosts-block"
         [ -e /etc/systemd/system/nos-mdns-names.service ] && left="$left nos-mdns-names.service"
-        command -v ufw >/dev/null && ufw status 2>/dev/null | grep -qE '^5353/udp' && left="$left ufw:5353/udp"
+        command -v ufw >/dev/null && ufw status 2>/dev/null | grep -E '^5353/udp' >/dev/null && left="$left ufw:5353/udp"
         echo "LEFT:${left:- none}"
       args:
         executable: /bin/bash
