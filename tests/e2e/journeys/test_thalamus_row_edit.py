@@ -11,8 +11,9 @@ write path is an approval the person gave. This walks it on the live estate:
   4. a reader, not the thalamus, says it happened: KEAP holds the new title and
      the ledger holds the approve decision and a written tool result
 
-The cell is put back by the undo (registered before the approval), and the probe
-fails the next run if any roadmap title still carries the journey's marker.
+The journey writes its own row (a fresh estate's roadmap is empty) and registers
+its delete the moment before; the probe fails the next run if any roadmap title
+still carries the journey's marker.
 The model chooses the tool calls, so a model that will not follow the turn fails
 step 1 with what it said instead.
 """
@@ -76,8 +77,12 @@ def _marked() -> list[str]:
 RESIDUE_PROBES = (ResidueProbe("roadmap title edited by the thalamus journey", _marked),)
 
 
-def _restore(row_id: str, title: str) -> None:
-    keap_api.write_row(TABLE, {"slug": row_id, "title": title})
+def _probe_row(j, marker: str) -> tuple[str, str]:
+    """Write the row this journey edits; its delete is registered first, so a crash mid-write still unwinds."""
+    row_id, title = f"{MARK}{marker}", f"thalamus journey probe {MARK}{marker}"
+    j.mutates("roadmap_row", row_id, lambda: keap_api.delete_row(TABLE, row_id))
+    keap_api.write_row(TABLE, {"slug": row_id, "title": title, "status": "inbox"})
+    return row_id, title
 
 
 class Wire:
@@ -112,12 +117,10 @@ def test_thalamus_writes_one_cell_only_after_approval(journey):
     marker = uuid.uuid4().hex[:10]
     with journey("thalamus_row_edit", residue_probes=RESIDUE_PROBES) as j:
 
-        with j.step("pick_a_row") as s:
-            rows = [r for r in _rows() if isinstance((r.get("values") or {}).get("title"), str) and r.get("id")]
-            assert rows, f"no titled row in roadmap table {TABLE}"
-            row = next((r for r in rows if r["values"].get("status") == "shipped"), rows[0])
-            row_id, old = row["id"], row["values"]["title"]
-            new = f"{old} [{MARK}{marker}]"
+        with j.step("make_a_row") as s:
+            row_id, old = _probe_row(j, marker)
+            assert [r["values"]["title"] for r in _rows() if r["id"] == row_id] == [old], "KEAP lacks the probe row"
+            new = f"{old} edited"
             s.note = row_id
 
         w = Wire(SOCK)
@@ -136,8 +139,6 @@ def test_thalamus_writes_one_cell_only_after_approval(journey):
             s.note = f"approval={approval[:8]}"
 
         with j.step("the_person_approves") as s:
-            # Registered before the write it undoes: a crash on the next line still restores.
-            j.mutates("roadmap_title", row_id, lambda: _restore(row_id, old))
             w.send(t="approval_decision", approval=approval, decision="approve", note=None)
             got = w.until_end()
             assert got[-1]["t"] == "text" and got[-1]["text"].startswith("Approved: row"), got
