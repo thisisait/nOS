@@ -3,7 +3,6 @@
 # A fresh Linux host (11-02) left its operator asking both: scheme v2 made `<prefix>_pw_*`
 # wrong, and Authentik's flow page would not load until the host's CA was trusted.
 # Never a secret value: the command that reads one on this host, or the rule (v1).
-# Gate: tests/anatomy/test_the_login_hint_names_no_secret.py.
 
 - name: "[Login] This host's CA fingerprint"
   ansible.builtin.command:
