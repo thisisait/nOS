@@ -1,0 +1,28 @@
+#cloud-config
+# nOS host autoinstall seed (Ubuntu Server 24.04 LTS), rendered by tools/installer/build-usb.sh.
+# Asks once "Continue with autoinstall?" (no `autoinstall` on the kernel line): a stray boot wipes nothing.
+autoinstall:
+  version: 1
+  locale: en_US.UTF-8
+  keyboard: {layout: us}
+  timezone: __TIMEZONE__
+  identity:
+    hostname: __HOSTNAME__
+    username: __USERNAME__
+    realname: __USERNAME__
+    password: "__PASSWORD_HASH__"
+  ssh:
+    install-server: true
+    allow-pw: true
+    authorized-keys:
+__KEYS__
+  storage:
+    # The largest disk. Unplug every other large disk (backups!) before booting the installer.
+    layout:
+      name: direct
+      match: {size: largest}
+  packages: [git, python3-venv, curl, rsync, exfatprogs]
+  late-commands:
+__EXTRA_LATE__
+    - curtin in-target -- sudo -u __USERNAME__ git clone https://github.com/thisisait/nOS.git /home/__USERNAME__/nOS || true
+  shutdown: reboot
