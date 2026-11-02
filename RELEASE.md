@@ -9,24 +9,66 @@ Versioning is by git tag `v<semver>` cut from `master`. The latest tag is `v0.17
 ## v0.18-beta — DRAFT (not cut)
 
 > **The medulla wakes, and a blank teaches the backup to keep what it was given.**
-> DRAFT 2026-11-01 (first draft 10-29 from `/release-prep v0.18-beta`). 773 commits since
-> `v0.17-beta` (807 files, +55.7k/−8.3k), measured with `git log v0.17-beta..origin/dev` at `bb3e061f`.
-> Offline (`tests/fast.sh`, 10-31 on the advisory branch): pytest 8863 passed, 8 failed — the eight
-> pupil/face vitest lanes with no `node_modules` in the worktree, not run. CI on dev was red from
-> 10-29 to 11-01 (yamllint on `ruling.yml`, then a layer-set gate on the new drill test); fixed in
-> `dd3912f7`, re-signed `bb3e061f` — CI result at the cut to be written here.
+> DRAFT 2026-11-02 (first draft 10-29 from `/release-prep v0.18-beta`). 862 commits since
+> `v0.17-beta` (872 files, +60.1k/−8.4k), measured against `origin/dev` at `62eb8832`.
+> CI on dev green at `27390c4b` (one red run before it, `be470983`: a new gate committed before the
+> anatomy graph was regenerated). Lint went red once on 11-02 (`e4d490df` fixed it); integration
+> now runs ansible-lint repo-wide, not only `tests/fast.sh`.
 > **Blank 2026-10-30** (`nos --remove=data --confirm`, then `nos`): it found ten defects, written
 > below under "The blank"; `nos-smoke --strict` 31/32 the next day (Kiwix), **32/32 on 2026-11-01**
-> after the Kiwix fixes. A second blank, after Paperclip re-boarding is tested, is still planned.
+> and again on 2026-11-02 after a full converge. A second blank of the Studio is the last step
+> before the cut.
 
-Exit criteria, from roadmap row `rel-018` (EXIT, readers), as read on 2026-11-01:
+Exit criteria, from roadmap row `rel-018` (EXIT, readers), as read on 2026-11-02:
 
-- [ ] estate-status release gate green on a blank converge of the operator host + a second host — operator host blanked 10-30 and smoke-strict 32/32 on 11-01; the second host (Mac mini / Ubuntu) not installed
-- [ ] CI green on every lane at the release PR with no bypass — dev red 10-29..11-01, fixed `dd3912f7`; Bonus lanes (per-stack converge) red, non-blocking, unverified
-- [ ] one live Iris journey: approve a sub-agent, its report returns, the tree shows parent and child — not run
-- [ ] one loop proposed by Iris, filed by the operator, run by Pulse, analysed by Iris from its runs — not run
+- [ ] estate-status release gate green on a blank converge of the operator host + a second host — the
+  second host is done (the Linux mini, installed from nothing on 11-01..02, below); the operator host's
+  second blank is still to run
+- [ ] CI green on every lane at the release PR with no bypass — dev green at `27390c4b`; Bonus lanes
+  (per-stack converge) red, non-blocking, unverified
+- [x] one live Iris journey: approve a sub-agent, its report returns, the tree shows parent and child —
+  run `0153c4c7`, parent `thalamus:a03c5f17`, on the Studio 11-02
+- [ ] one loop proposed by Iris, filed by the operator, run by Pulse, analysed by Iris from its runs —
+  **half**: after the validator fix Iris drafted a valid, runnable `repo-health-check`; the operator
+  declined to file it (it duplicates `repo-check`). Filing, run and analysis move to v0.19.
 - [x] estate-status --identity prints every host organ's runtime and uid — `tools/estate-status.py --identity` on the operator host (nos-pulse, a LaunchAgent helper, is not listed: row to file)
 - [x] rbac-status prints the matrix — `tools/rbac-status.py`
+
+### A second host: Ubuntu from nothing (11-01..02)
+A small Intel box (i5, no AVX2) was installed from a USB stick and converged from the repo, as a
+stranger would. It is a test host, not an AI node. Every defect was fixed in the repo, never on the box.
+- **Bootstrap and preflight.** `bootstrap.sh` brings a fresh Ubuntu to a first `nos` (`ca3e3811`);
+  preflight fails early with the fix — missing passlib, a weak prefix, text toggles, the defaults the
+  operator should set (`93295de7`, `717d7657`). A toggle from the command line reaches Ansible as a
+  bool (`7af7ae5d`). A tenant rename that did not move its data is refused (`21bee189`).
+- **`.local` names on the LAN.** A `*.mini.local` tenant is published over mDNS: names are read back
+  from Traefik and the Docker labels, one `avahi-publish -a -R` each under `User=avahi`, failing loud;
+  a failed read-back keeps the last records; a leave removes the layer (`2b5a1b36` … `f19acc96`).
+  Verified from the Studio: `kiwix.mini.local` resolves, the CA is trusted, SSO login as akadmin.
+- **The end of a converge says how to log in**: the command that reads the password on this host
+  (scheme v2) or the rule (v1), and how another machine trusts the CA; never a secret (`b9da77a7`).
+- **Wing on Linux** names its runner's PHP CLI (`2bb1b51e`) and ingests the registry the run just wrote
+  (`dd80dd81`); the e2e plan probes only the jobs the catalog registers (`1035756f`).
+- **The medulla as a system service** (`nos_system_user: nos`): set-points live in
+  `/var/lib/nos/settings` (`c56f4b65`, one path rule in every reader `445be415`). Wing kept its old
+  groups until a reboot and wrote a halt nobody read; the operator now gets an ACL there (`edd9238d`).
+  Halt journeys 2/2 on the mini after it.
+- Journeys on the mini 40/41 (Iris too slow on that CPU, expected). Kiwix serves 336 books.
+- An experimental USB installer (autoinstall seed, gpg-checked ISO, refuses an internal disk) is on
+  branch `feat/installer-experimental`, **not in this release**: under review.
+
+### The Studio's journeys (11-02)
+- Full converge failed=0, smoke `--strict` 32/32, every journey green except `row_edit`, where the
+  medulla rightly refuses an approval from a test that is not a decider (row `row-edit-journey-decider`).
+- The hub read the device gateway as down: it probes with HEAD, the gateway answered 501
+  (`c1fa5638`). A service is now down only when asked twice (`6851ff9a`).
+- A structured one-shot on Ollama does not think: `invoice-extract` spent all 4096 tokens reasoning and
+  returned 0 bytes, so two loops were red (`7d36d9f1`).
+- The loop validator's refusals name the runners that exist and the fix (`be470983`): Iris had guessed
+  runners until she gave up on `run:`.
+- `nos` says what it will run (commit, tags, profile, removal) before Ansible goes quiet, and refuses
+  any of its own flags placed after the Ansible ones (`62eb8832`; `--print-cmd` there had started a
+  real converge).
 
 ### Iris delegates
 - **She starts a sub-agent and hears it end.** `start_agent` asks the person first, then starts a
@@ -149,8 +191,13 @@ The release's blank wiped data and reinstalled; it went green, and the next days
 
 ### Known before the cut (not working, or not verified)
 - CI Bonus lanes (per-stack converges) red, non-blocking — unverified on Linux in CI.
-- No second host converged for this release; the e2e journeys last ran 2026-10-09.
 - Restore into a side instance with a login probe (handover point 7) does not exist yet.
+- Iris on the local model answers, but slowly: unusable on the mini's CPU, slow on the Studio. A loop
+  she proposes is not yet filed, run and analysed (v0.19).
+- An unknown `--tags` value is silently skipped (row `unknown-tag-is-refused`).
+- A set-point writer that cannot reach `/var/lib/nos/settings` still falls back to `~/.nos` instead of
+  refusing (row `set-point-stray-file`); the ACL closes it for the operator only.
+- ZIM libraries (framework docs especially) have no update path yet (roadmap).
 
 ---
 

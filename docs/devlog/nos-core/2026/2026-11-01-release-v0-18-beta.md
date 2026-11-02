@@ -3,8 +3,8 @@ id: 2026-11-01-release-v0-18-beta
 title: "v0.18-beta — the medulla wakes, and a blank teaches the backup to keep what it was given"
 date: 2026-11-01
 namespace: nos-core
-summary: "DRAFT, not cut. 773 commits after v0.17-beta. One Rust core fires the schedule, holds the halt and the settings, and gets a native face (nOS.app). Iris starts sub-agents, hears them end and can propose loops. The 2026-10-30 blank went green and the days after showed what green had hidden: a nightly that overwrote good dumps with empty ones, a restore that brought the data back but not the service, a Kiwix that slept forever. Each is now pinned by a gate or a drill. Eight security bumps, and an advisory reader found to be wrong in both directions."
-tags: [release, medulla, nos-app, iris, backup, blank, restore, advisories, paperclip]
+summary: "DRAFT, not cut. 862 commits after v0.17-beta. One Rust core fires the schedule, holds the halt and the settings, and gets a native face (nOS.app). Iris starts sub-agents and hears them end, live. The 2026-10-30 blank went green and the days after showed what green had hidden; each defect is now pinned by a gate or a drill. A second host, Ubuntu on a small Intel box, was installed from nothing and reached SSO over mDNS, with every defect fixed in the repo. Eight security bumps, and an advisory reader found to be wrong in both directions."
+tags: [release, medulla, nos-app, iris, backup, blank, restore, advisories, paperclip, linux, mdns]
 release: v0.18-beta
 status: draft
 actors: [pazny, claude]
@@ -58,9 +58,39 @@ Developer ID and native approvals.
 `start_agent` asks the person, then starts a Wing run with their bearer;
 managers may start read-only sub-agents; the end comes back as a card, not as
 text injected into her context; `stop_agent` is refereed by Wing; `read_run`
-draws the run as a tree. She can read loop runs and propose a loop — filing it
-stays the operator's. None of this has run end-to-end live yet; that is an exit
-criterion, not a footnote.
+draws the run as a tree. On 11-02 it ran live on the Studio: run `0153c4c7`,
+parent `thalamus:a03c5f17`, the report shown, the tree drawn.
+
+The loop half went less far. Iris guessed runner paths and `for_each` flags
+until she dropped `run:` altogether; the validator only said "no". Its refusals
+now name the runners that exist and the fix, and her next draft,
+`repo-health-check`, was valid and runnable. The operator did not file it — it
+duplicates `repo-check` — so filing, a Pulse run and her analysis move to v0.19.
+She answers sensibly on the local model, but slowly enough to be hard to use.
+
+## A second host, from nothing
+
+A small Intel box (i5, no AVX2) was installed from a USB stick and converged
+from the repo the way a stranger would. The rule was that nothing is fixed on
+the box: each defect went back into the repo and the box ran `nos update` and
+`nos` again.
+
+- `bootstrap.sh` now takes a fresh Ubuntu to a first `nos`; preflight stops
+  early with the fix (missing passlib, a weak prefix, toggles typed as text).
+- A `.local` tenant is published over mDNS. The first version collided on the
+  reverse record, then could not reach D-Bus, then hid the failure behind a shell
+  `wait`. It now publishes each name with no PTR, as `avahi`, and exits when one
+  publisher dies. From the Studio `kiwix.mini.local` resolved and SSO worked.
+- A fresh host minted the v2 secret scheme, so the operator's old
+  `<prefix>_pw_…` habit was wrong and nothing said what was right. A converge
+  now ends with how to log in and how another machine trusts the CA — never a
+  secret.
+- With the medulla as a system service, Wing kept its old groups until a
+  reboot, could not see `/var/lib/nos/settings`, wrote the halt to `~/.nos` and
+  answered success, while Pulse read the other file. An ACL fixes it for the
+  operator; the fallback itself should refuse (row `set-point-stray-file`).
+
+Journeys there: 40/41, the one miss Iris on a CPU she cannot use.
 
 ## Advisories, walked by hand
 
@@ -90,7 +120,8 @@ had spent $81 in three hours on unlimited Opus.
 
 ## What is not true yet
 
-CI was red on dev from 10-29 to 11-01 (a lint error the local suite does not
-run, then a gate the full run caught); green again at `7bc17c34`. No second host
-converged this release. The e2e journeys last ran on 10-09. A second blank —
-after Paperclip re-boarding is tested — is planned before the cut.
+CI was red on dev from 10-29 to 11-01, and once more on 11-02 (a lint error the
+local suite does not run, then a gate committed before the graph it reads was
+regenerated); green at `27390c4b`. A second blank of the Studio is the last step
+before the cut. The USB installer exists on a branch and stays there until it
+has been reviewed more than once. A loop from Iris is proposed, not yet run.
