@@ -177,13 +177,20 @@ def validate_manifest(path: str, m: dict | None = None, root: str = REPO) -> lis
             why.append(f"step `{s['id']}` runner must be one of {sorted(_STEP_RUNNERS)}")
         fe = s.get("for_each")
         if fe is not None and fe not in params:
-            why.append(f"step `{s['id']}` for_each `{fe}` is not a declared param")
+            why.append(f"step `{s['id']}` for_each `{fe}` is not a declared param "
+                       f"(params: {sorted(params) or 'none'}; a step that runs once: leave it out)")
         writes += s.get("writes") or []
     run = m.get("run")
     if run is not None:
         name = str(run)[len(_RUN_PREFIX):] if str(run).startswith(_RUN_PREFIX) else ""
         if not name or "/" in name or not os.path.isfile(os.path.join(root, "tools", "loops", name)):
-            why.append(f"run {run!r} must name an existing {_RUN_PREFIX}<file>")
+            d = os.path.join(root, "tools", "loops")
+            have = sorted(f for f in (os.listdir(d) if os.path.isdir(d) else [])
+                          if not f.startswith(("_", ".")) and os.path.isfile(os.path.join(d, f))) or ["none"]
+            why.append(f"run {run!r} must name an existing {_RUN_PREFIX}<file> (existing runners: {', '.join(have)})")
+    codes = pulse.get("findings_exit_codes") or []
+    if 0 in codes:
+        why.append("pulse.findings_exit_codes holds 0: exit 0 is success, so every clean run would read as a finding")
     for w in writes:
         target = str(w.get("target", "") if isinstance(w, dict) else w)
         if _SCHEME.match(target):

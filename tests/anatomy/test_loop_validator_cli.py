@@ -57,6 +57,9 @@ def _cron_range(m): m["trigger"]["cadence"] = "61 * * * *"
 def _run_missing(m): m["run"] = "{{ playbook_dir }}/tools/loops/no-such-loop.py"
 def _run_outside(m): m["run"] = "/bin/sh"
 def _writes_root(m): m["steps"][1]["writes"].append({"target": "files/anatomy/loops/x.loop.yml"})
+# Iris 11-02 guessed runners and for_each flags until it dropped `run:`; the refusals now teach.
+def _findings_zero(m): m["pulse"] = {"findings_exit_codes": [0]}
+def _for_each_bool(m): m["steps"][0]["for_each"] = False
 
 
 @pytest.mark.parametrize("mutate,rule", [
@@ -71,6 +74,9 @@ def _writes_root(m): m["steps"][1]["writes"].append({"target": "files/anatomy/lo
     (_run_missing, "tools/loops/"),
     (_run_outside, "tools/loops/"),
     (_writes_root, "allowed roots"),
+    (_run_missing, "existing runners: "),
+    (_findings_zero, "exit 0 is success"),
+    (_for_each_bool, "leave it out"),
 ])
 def test_each_rule_refuses_with_its_reason(tmp_path, mutate, rule):
     m = copy.deepcopy(GOOD)
