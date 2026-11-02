@@ -1,0 +1,28 @@
+---
+# The last thing a converge says: how to log in and how another machine trusts this one.
+# A fresh Linux host (11-02) left its operator asking both: scheme v2 made `<prefix>_pw_*`
+# wrong, and Authentik's flow page would not load until the host's CA was trusted.
+# Never a secret value: the command that reads one on this host, or the rule (v1).
+# Gate: tests/anatomy/test_the_login_hint_names_no_secret.py.
+
+- name: "[Login] This host's CA fingerprint"
+  ansible.builtin.command:
+    argv: [openssl, x509, -noout, -fingerprint, -sha256, -in, "{{ stacks_dir }}/shared-certs/rootCA.pem"]
+  register: _login_ca
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: tenant_domain_is_local | bool
+
+- name: "[Login] How to log in, how to trust this host"
+  ansible.builtin.debug:
+    msg: >-
+      {{ (['Log in: https://' ~ authentik_domain ~ '/ as akadmin (or ' ~ nos_primary_admin ~ ').']
+          + (['Password, on this host: python3 ' ~ playbook_dir ~ '/tools/nos-secret.py authentik_admin  (every login: --accounts)']
+             if (_nos_secret_scheme.scheme | default('v1')) == 'v2' else
+             ['Password: your global_password_prefix (credentials.yml) followed by _pw_authentik_admin'])
+          + ((['This host signs its own https (mkcert). Trust it once on another machine — CA '
+               ~ stacks_dir ~ '/shared-certs/rootCA.pem, ' ~ (_login_ca.stdout | default('') | trim),
+               'macOS: sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain <ca.pem>',
+               'Linux: sudo cp <ca.pem> /usr/local/share/ca-certificates/nos.crt && sudo update-ca-certificates'])
+             if (tenant_domain_is_local | bool) and (_login_ca.rc | default(1)) == 0 else [])) }}
