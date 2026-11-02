@@ -7,9 +7,12 @@ set WING_PHP_BIN. The PHP CLI there is the nos-php shim (wing_php_cli).
 CEILING: names, not the running env; the effect is a 202 from POST /agents/<a>/sessions.
 """
 import re
+import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 ENVFILE = REPO / "roles/pazny.wing/templates/wing.env.j2"
 TRIGGER = REPO / "files/anatomy/wing/app/AgentKit/OperatorTrigger.php"
 
@@ -26,7 +29,7 @@ def test_the_trigger_reads_it_first():
 
 
 def test_wing_php_cli_on_linux_is_the_shim_the_role_installs():
-    cfg = (REPO / "default.config.yml").read_text(encoding="utf-8")
+    cfg = ni.default_config_text()
     line = next(x for x in cfg.splitlines() if x.startswith("wing_php_cli:"))
     assert "/.local/bin/nos-php" in line, line
     tasks = (REPO / "roles/pazny.wing/tasks/main.yml").read_text(encoding="utf-8")
