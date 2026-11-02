@@ -38,7 +38,7 @@ def test_v2_names_the_reader_command():
 
 def test_v1_names_the_rule_not_the_value():
     out = _render("v1", True)
-    assert "_pw_authentik_admin" in out and SECRET not in out
+    assert "key authentik_admin" in out and "secrets-p1-hkdf" in out and SECRET not in out
 
 
 def test_the_ca_lines_only_for_a_local_tenant_with_a_ca():

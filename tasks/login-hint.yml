@@ -20,7 +20,7 @@
       {{ (['Log in: https://' ~ authentik_domain ~ '/ as akadmin (or ' ~ nos_primary_admin ~ ').']
           + (['Password, on this host: python3 ' ~ playbook_dir ~ '/tools/nos-secret.py authentik_admin  (every login: --accounts)']
              if (_nos_secret_scheme.scheme | default('v1')) == 'v2' else
-             ['Password: your global_password_prefix (credentials.yml) followed by _pw_authentik_admin'])
+             ['Password (scheme v1, derived from the prefix in credentials.yml): key authentik_admin, the rule in docs/secrets-p1-hkdf.md'])
           + ((['This host signs its own https (mkcert). Trust it once on another machine — CA '
                ~ stacks_dir ~ '/shared-certs/rootCA.pem, ' ~ (_login_ca.stdout | default('') | trim),
                'macOS: sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain <ca.pem>',
