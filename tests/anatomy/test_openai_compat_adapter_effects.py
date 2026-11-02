@@ -183,6 +183,27 @@ $try('response_format_when_schema_set', function () use ($binding) {
     ];
 });
 
+$try('ollama_schema_turns_thinking_off', function () use ($binding) {
+    $ok = new Response(200, [], json_encode([
+        'choices' => [['message' => ['content' => '{"id":"A-1"}'], 'finish_reason' => 'stop']],
+        'usage' => ['prompt_tokens' => 3, 'completion_tokens' => 4],
+    ]));
+    $schema = ['title' => 'r', 'type' => 'object', 'properties' => ['id' => ['type' => 'string']]];
+    $ollama = new Binding(name: 'ollama', baseUrl: 'http://127.0.0.1:11434/v1', authToken: 'x', modelId: 'qwen3.5:9b');
+    $h1 = [];
+    (new OpenAiCompatAdapter(clientWith([$ok], $h1), 'openai-local-sonnet', $ollama))->withResponseSchema($schema)->send('', [Message::userText('hi')]);
+    $h2 = [];
+    (new OpenAiCompatAdapter(clientWith([clone $ok], $h2), 'openai-x', $binding))->withResponseSchema($schema)->send('', [Message::userText('hi')]);
+    $h3 = [];
+    (new OpenAiCompatAdapter(clientWith([clone $ok], $h3), 'openai-local-sonnet', $ollama))->send('', [Message::userText('hi')]);
+    $b = fn ($h) => json_decode((string) $h[0]['request']->getBody(), true);
+    return [
+        'ollama_schema' => $b($h1)['reasoning_effort'] ?? null,
+        'mistral_schema' => $b($h2)['reasoning_effort'] ?? null,
+        'ollama_chat' => $b($h3)['reasoning_effort'] ?? null,
+    ];
+});
+
 $try('length_maps_to_max_tokens', function () use ($binding) {
     $history = [];
     $http = clientWith([new Response(200, [], json_encode([
@@ -323,3 +344,12 @@ def test_unbound_openai_refuses_with_a_pointer(verdicts):
         f"an unbound openai-* build did not refuse: {v!r} — openai names a "
         "protocol, and without a registry row there is no place requests go"
     )
+
+
+def test_a_structured_one_shot_on_ollama_does_not_think(verdicts):
+    """invoice-extract on qwen3.5:9b (2026-11-02): finish_reason length, 4096 tokens of
+    reasoning, 0 bytes of the record — loop:vision-bench and pipeline-exercise red."""
+    v = verdicts["ollama_schema_turns_thinking_off"]
+    assert v["ollama_schema"] == "none", "a schema'd ollama one-shot must not spend its budget thinking"
+    assert v["mistral_schema"] is None, "reasoning_effort is ollama's knob; another vendor may refuse it"
+    assert v["ollama_chat"] is None, "a chat turn (no schema) keeps the model's own reasoning"

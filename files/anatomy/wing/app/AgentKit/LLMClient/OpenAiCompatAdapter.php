@@ -127,6 +127,12 @@ final class OpenAiCompatAdapter implements LLMClientInterface
 					'schema' => $schema,
 				],
 			];
+			// A thinking model (qwen3.5) spent the whole max_tokens reasoning and emitted
+			// 0 bytes of the record (invoice-extract, 2026-11-02). Ollama's compat surface
+			// reads reasoning_effort; other vendors may refuse it, so only for ollama.
+			if ($this->binding->name === 'ollama') {
+				$body['reasoning_effort'] = 'none';
+			}
 		}
 
 		try {
