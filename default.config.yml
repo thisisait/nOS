@@ -2218,6 +2218,10 @@ traefik_image_version: "v3.7.16"        # GHSA-hrpp-p4fc-wwf8, -p8wx-ph99-xgcr, 
 traefik_http_port: 80
 traefik_https_port: 443
 traefik_dashboard_port: 8082            # 8080=cadvisor, 8081=tileserver, 8090=freescout — 8082 is the first free slot
+# REM-194: the dashboard's only door is the SSO-gated api@internal router, which
+# fails closed (404) until an Authentik provider exists for traefik_domain (none yet).
+# Off = no router, no hub card; the registry and the role both read this one value.
+traefik_dashboard_route_enabled: false
 # Cloudflare Authenticated Origin Pulls: a second, mTLS-only door. :443 is untouched;
 # the router forwards WAN 443 here instead. Runbook: docs/traefik-primary-proxy.md.
 traefik_origin_pull_enabled: false

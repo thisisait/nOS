@@ -36,6 +36,7 @@
             "health_url": "http://127.0.0.1:" ~ (tempo_http_port | default(3200)) ~ "/ready"},
   'alloy': {"name": "Alloy", "description": "Metrics and logs collector",
             "health_url": "http://127.0.0.1:" ~ (alloy_ui_port | default(12345)) ~ "/-/ready"},
+  'traefik': {"health_url": "http://127.0.0.1:" ~ (traefik_dashboard_port | default(8082)) ~ "/ping"},
   'ollama': {"name": "Ollama", "description": "LLM inference engine",
              "health_url": "http://127.0.0.1:11434/api/version"},
   'uptime_kuma': {"health_url": "http://127.0.0.1:" ~ (uptime_kuma_port | default(3001))},
@@ -55,7 +56,7 @@
                  "tier": 2, "enabled": true, "toggle_var": r.install_flag,
                  "type": "docker" if r.stack else "host", "stack": r.stack} %}
 {%   if r.port_var is defined %}{% set _ = _svc.update({"port": lookup('vars', r.port_var, default=none)}) %}{% endif %}
-{%   if r.domain_var is defined and (r.id not in _skip or (r.id == 'traefik' and traefik_dashboard_route_enabled | default(true) | bool)) %}
+{%   if r.domain_var is defined and (r.id not in _skip or (r.id == 'traefik' and traefik_dashboard_route_enabled | default(false) | bool)) %}
 {%     set _host = lookup('vars', r.domain_var, default=(r.id | replace('_', '-')) ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) %}
 {%     set _ = _svc.update({"tier": 1, "domain": _host, "url": "https://" ~ _host}) %}
 {%   endif %}

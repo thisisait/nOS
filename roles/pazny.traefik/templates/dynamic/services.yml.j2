@@ -196,7 +196,7 @@ http:
 {# REM-144 shape: the upstream is the built-in api@internal service (not the    #}
 {# Docker host-gateway), and `traefik` stays in traefik_skip_ids so the manifest #}
 {# auto-loop emits nothing for it. Gate: test_traefik_api_not_insecure.py.       #}
-{% if traefik_dashboard_route_enabled | default(true) | bool %}
+{% if traefik_dashboard_route_enabled | default(false) | bool %}
 {% for _sfx, _ep, _tls in _doors %}
     traefik-dashboard{{ _sfx }}:
       rule: "Host(`{{ traefik_domain }}`)"
