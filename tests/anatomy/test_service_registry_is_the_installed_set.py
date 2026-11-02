@@ -24,9 +24,9 @@ from module_utils import load_plugins as lp  # noqa: E402
 
 TEMPLATE = REPO / "templates/service-registry.json.j2"
 FILTER = REPO / "filter_plugins/nos_installed.py"
-#: Traefik routes no host for these (roles/pazny.traefik/vars/main.yml); traefik's
-#: own dashboard is the separate SSO-gated router, so it keeps its card.
-SKIP = set(yaml.safe_load((REPO / "roles/pazny.traefik/vars/main.yml").read_text())["traefik_skip_ids"]) - {"traefik"}
+#: Traefik routes no host for these (roles/pazny.traefik/vars/main.yml). Traefik's own
+#: dashboard router is opt-in (traefik_dashboard_route_enabled, off): no router, no card.
+SKIP = set(yaml.safe_load((REPO / "roles/pazny.traefik/vars/main.yml").read_text())["traefik_skip_ids"])
 
 #: Host nginx and its exporters: installed by install_nginx, no manifest row.
 HOST_PACKAGES = {"nginx", "phpfpm", "nginx_exporter", "phpfpm_exporter"}
@@ -67,7 +67,7 @@ def _installed_ui(flags: dict) -> set[str]:
 
 def test_core_registry_lists_its_installed_services_with_a_ui() -> None:
     got = _with_ui(render(_flags("core.yml")))
-    assert got == {"authentik", "face", "keap", "traefik", "wing"}, (
+    assert got == {"authentik", "face", "keap", "wing"}, (
         f"core host: registry cards {sorted(got)}; a core hub must offer exactly what core runs")
 
 
@@ -87,3 +87,15 @@ def test_registry_is_the_installed_set() -> None:
 def test_a_service_switched_off_disappears() -> None:
     flags = dict(_flags("core.yml"), install_keap=False)
     assert "keap" not in {s["id"] for s in render(flags)}
+
+
+def test_traefik_card_follows_its_router() -> None:
+    """MEASURED 2026-11-02 on a Linux host: the registry gave traefik https://traefik.<tld>,
+    a host Traefik never routed (router off) and mDNS never published, so Wing's probe
+    read it down. The play renders this template where the role default is out of scope."""
+    off = next(s for s in render(_flags("core.yml")) if s["id"] == "traefik")
+    assert "url" not in off, f"router off, yet the card links {off.get('url')}"
+    assert off.get("health_url", "").endswith("/ping"), f"traefik has no probe target: {off}"
+    on = next(s for s in render(dict(_flags("core.yml"), traefik_dashboard_route_enabled=True))
+              if s["id"] == "traefik")
+    assert on.get("url") == "https://traefik.dev.local", on
