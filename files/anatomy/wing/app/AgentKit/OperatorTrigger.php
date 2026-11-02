@@ -86,7 +86,7 @@ final class OperatorTrigger
 		// PHP_BINARY is EMPTY under FrankenPHP's embedded SAPI (no CLI binary
 		// backs the worker), so proc_open threw "First element must contain a
 		// non-empty program name". Resolution order: explicit WING_PHP_BIN env
-		// (the launchd plist pins it) → PHP_BINARY when non-empty (classic
+		// (wing.env sets it on Linux) → PHP_BINARY when non-empty (classic
 		// FPM/CLI) → first executable brew/system php.
 		$phpBin = getenv('WING_PHP_BIN') ?: (PHP_BINARY !== '' ? PHP_BINARY : null);
 		if ($phpBin === null || !is_executable($phpBin)) {
