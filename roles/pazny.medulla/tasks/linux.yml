@@ -73,6 +73,29 @@
         # set-points (halt, loops pause): nos and the operator (group nos) both write, tmp + rename
         - { path: "{{ nos_system_home }}/settings", group: "{{ nos_system_user }}", mode: '0770' }
 
+    # The operator's group membership reaches a lingering systemd --user manager only at its
+    # restart (a reboot): Wing could not see /var/lib/nos, fell back to ~/.nos/halt and answered
+    # success while Pulse read none (the mini, 11-02). An ACL for the operator works at once.
+    - name: "[pazny.medulla] setfacl is there"
+      ansible.builtin.apt:
+        name: acl
+        state: present
+
+    - name: "[pazny.medulla] The operator reaches the set-points now, not after a reboot"
+      ansible.posix.acl:
+        path: "{{ item.path }}"
+        entity: "{{ ansible_facts['user_id'] }}"
+        etype: user
+        permissions: "{{ item.perms }}"
+        default: "{{ item.default }}"
+        state: present
+      loop:
+        - { path: "{{ nos_system_home }}", perms: x, default: false }
+        - { path: "{{ nos_system_home }}/settings", perms: rwx, default: false }
+        - { path: "{{ nos_system_home }}/settings", perms: rw, default: true }
+      loop_control:
+        label: "{{ item.path }} {{ 'default ' if item.default else '' }}{{ item.perms }}"
+
     - name: "[pazny.medulla] The binary, outside $HOME"
       ansible.builtin.copy:
         src: "{{ medulla_bin }}"
