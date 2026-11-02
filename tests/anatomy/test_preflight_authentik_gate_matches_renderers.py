@@ -196,7 +196,10 @@ def test_the_dashboard_exemption_is_the_only_one(payload):
         "the refusal no longer subtracts exactly traefik-dashboard — a wider "
         "exemption silently stops refusing services that WILL 500"
     )
-    assert "traefik-dashboard" in _rendered_gated(payload), (
+    # The dashboard router is opt-in (traefik_dashboard_route_enabled, off by
+    # default); the exemption matters only when it is on, so render that case.
+    on = _render(_fact_expression(), extra=["traefik_dashboard_route_enabled=true"])
+    assert "traefik-dashboard" in _rendered_gated(on), (
         "traefik-dashboard is no longer gated, so the exemption is now dead "
         "code hiding whatever takes its place"
     )
