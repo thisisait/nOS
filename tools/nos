@@ -447,11 +447,12 @@ fi
 # `nos --tags iiab --remove=data` would leave --remove INSIDE the passthrough
 # — unparsed, no exit-65. Scan the passthrough and refuse rather than let
 # ansible die on an unknown flag.
+# Every nos flag, not only --remove: `nos -e x --print-cmd` ran a real converge (11-02).
 for a in ${PASSTHRU[@]+"${PASSTHRU[@]}"}; do
   case "$a" in
-    --remove=*|--remove)
-      echo "nos: '--remove' found after the first passthrough token — put" >&2
-      echo "  --remove (and every nos flag) BEFORE ansible passthrough args." >&2
+    --remove=*|--remove|--confirm|--yes|--leave|--print-cmd)
+      echo "nos: '$a' found after the first passthrough token — put" >&2
+      echo "  $a (and every nos flag) BEFORE ansible passthrough args." >&2
       exit 64 ;;
   esac
 done
@@ -515,6 +516,18 @@ if [ -f "$_NOS_LOG" ]; then
     chmod 600 "${_NOS_LOG}.1" 2>/dev/null || true
   fi
 fi
+
+# Ansible prints nothing until it has read the playbook and every config layer (5 s on the
+# Studio, ~20 s on the Linux mini, 11-02): say at once what is about to run.
+_say_tags="" _say_prof=""
+_prev=""
+for a in ${PASSTHRU[@]+"${PASSTHRU[@]}"}; do
+  case "$_prev" in --tags|-t) _say_tags="$a" ;; -e|--extra-vars) case "$a" in @profiles/*) _say_prof="${_say_prof:+$_say_prof }${a#@profiles/}" ;; esac ;; esac
+  case "$a" in --tags=*) _say_tags="${a#--tags=}" ;; esac
+  _prev="$a"
+done
+echo "nos: converge $(git -C "$NOS_SRC" rev-parse --short HEAD 2>/dev/null || echo '?') from $NOS_SRC — tags: ${_say_tags:-all} · profile: ${_say_prof:-none} · removal: ${REMOVE:-none}" >&2
+echo "nos: Ansible reads the playbook and every config layer first (quiet for a while), then asks for sudo once." >&2
 
 cd "$NOS_SRC"
 # The playbook writes ~/.ansible_askpass (the sudo password, in plaintext) and
