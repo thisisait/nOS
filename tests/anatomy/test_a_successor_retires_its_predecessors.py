@@ -609,18 +609,18 @@ def test_every_caller_of_the_shared_sender_names_itself():
     offenders: list[str] = []
     for manifest in sorted((REPO / "files/anatomy/plugins").glob("*/plugin.yml")):
         raw = manifest.read_text(encoding="utf-8")
-        if "NOS_NOTIFY_BIN" not in raw:
+        # 11-03: NOS_NOTIFY_BIN left the job env; NOS_NOTIFY_ACTOR is what turns notifying on now.
+        if "NOS_NOTIFY_ACTOR" not in raw:
             continue
         doc = _yaml.safe_load(raw) or {}
         for job in (doc.get("pulse", {}) or {}).get("jobs", []) or []:
             env = job.get("env") or {}
-            if "NOS_NOTIFY_BIN" not in env:
+            if "NOS_NOTIFY_ACTOR" not in env:
                 continue
-            missing = [k for k in ("NOS_NOTIFY_ORIGIN", "NOS_NOTIFY_ACTOR") if k not in env]
-            if missing:
+            if "NOS_NOTIFY_ORIGIN" not in env:
                 offenders.append(
                     f"{manifest.parent.name}/{job.get('name', '?')} declares "
-                    f"NOS_NOTIFY_BIN without {', '.join(missing)}")
+                    f"NOS_NOTIFY_ACTOR without NOS_NOTIFY_ORIGIN")
 
     assert not offenders, (
         "these jobs send through the shared notifier without saying who they "
