@@ -109,6 +109,14 @@ sys.exit(0 if have == hashlib.sha256(body.encode()).hexdigest() else 1)'; then
   # Point the CLI at the estate: replace NOS_SRC, keep every other line.
   _cli="$HOME/.nos/nos-cli.env"
   { [ -f "$_cli" ] && grep -v '^NOS_SRC=' "$_cli"; echo "NOS_SRC=$_est"; } > "$_cli.tmp" && mv "$_cli.tmp" "$_cli"
+  # The installed CLI moves with the clone (atomic: this running copy keeps its inode). Only the
+  # installed one: `tools/nos update` from a checkout leaves that checkout alone. 11-03: the CLI
+  # was copied mid-converge only, so every `nos` ran the previous release's CLI.
+  _self="$(command -v nos 2>/dev/null || true)"
+  if [ -n "$_self" ] && [ "$0" = "$_self" ] && [ -w "$(dirname "$_self")" ] && ! cmp -s "$_est/tools/nos" "$_self"; then
+    cp "$_est/tools/nos" "$_self.new" && chmod 0755 "$_self.new" && mv "$_self.new" "$_self" \
+      && echo "nos update: the nos CLI at $_self is now the estate's"
+  fi
   echo "nos update: the estate is at $_ref ${_new:0:9} in $_est; the next \`nos\` converges from it"
   exit 0
 fi
