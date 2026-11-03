@@ -20,3 +20,6 @@ code_server_tz: "{{ nos_timezone | default('Europe/Prague') }}"
 code_server_default_workspace: "/config/workspace"
 code_server_mem_limit: "{{ docker_mem_limit_critical | default('2g') }}"
 code_server_cpus: "{{ docker_cpus_standard | default('1.0') }}"
+# argon2 hash (`echo -n pw | npx argon2-cli -e`); required when services_lan_access
+# publishes the port past Authentik — tasks/main.yml refuses to render without it.
+code_server_hashed_password: ""
