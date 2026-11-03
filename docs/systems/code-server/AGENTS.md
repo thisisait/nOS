@@ -9,7 +9,7 @@
 ### Context
 
 - Access is a pure forward-auth gate — there is no per-user identity or API token inside code-server.
-- Built-in password auth is disabled (`PASSWORD`/`HASHED_PASSWORD` empty); the Authentik proxy is the only gate.
+- Built-in login is off on loopback (`HASHED_PASSWORD` empty); the port binds the LAN only when `code_server_hashed_password` is set (rendered into `HASHED_PASSWORD`).
 - Full host-workspace shell access, so it is an admin-only surface.
 
 ### Capabilities
