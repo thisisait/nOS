@@ -145,6 +145,16 @@
     state: present
   when: ansible_os_family == 'Darwin'
 
+# `state: present` leaves a formula that arrived as a dependency marked as one, and `brew
+# cleanup` autoremoves it: 2026-11-02 a disk cleanup took php-zts and every Wing Pulse job
+# went rc=127 on /opt/homebrew/bin/php. Marking them installed-on-request keeps them.
+- name: "[pazny.wing] (macOS) Mark php-zts and its libs installed on request"
+  ansible.builtin.command:
+    argv: ["{{ homebrew_prefix | default('/opt/homebrew') }}/bin/brew", tab, --installed-on-request,
+           php-zts, freetds, gd, libpq, argon2, watcher, tidy-html5, net-snmp, openldap]
+  changed_when: false
+  when: ansible_os_family == 'Darwin'
+
 # ---- Every platform: the pinned static binary ----
 # FrankenPHP ships a static per-OS/arch binary on GitHub releases. On Linux its
 # embedded PHP also runs composer via `frankenphp php-cli`, so no separate php
