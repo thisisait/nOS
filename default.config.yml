@@ -2214,7 +2214,7 @@ coexistence_secondary_ttl_days: 7
 # Backward compatibility – old monolithic compose dir (will be removed after migration)
 
 # ── Traefik ────────────────────────────────────────────────────────────────────
-traefik_image_version: "v3.7.16"        # GHSA-hrpp-p4fc-wwf8, -p8wx-ph99-xgcr, -fh26-gfpp-7xxx, -qvj7-gq9c-hp7q, -53qr-784g-cj35, -rv2h-qh7j-xrjw (high, <=v3.7.13..15) fixed v3.7.16 [advisory-status 2026-10-23]. REM-251 GHSA-rf44-j88r-hh8c (aliasHeadersStrategy, floor v3.7.12) + GHSA-v67p-phpq-fc8x trailer bypass (patched v3.7.13). Prior REM-145 CONNECT poisoning. [swept v3.7.10 2026-09-16]
+traefik_image_version: "v3.7.17"        # GHSA-xv5x-242w-7hf7 Negotiate/NTLM transport leak (high, v3.7.14..16) fixed v3.7.17 [advisory-status 2026-11-03]. GHSA-hrpp-p4fc-wwf8, -p8wx-ph99-xgcr, -fh26-gfpp-7xxx, -qvj7-gq9c-hp7q, -53qr-784g-cj35, -rv2h-qh7j-xrjw (high, <=v3.7.13..15) fixed v3.7.16 [advisory-status 2026-10-23]. REM-251 GHSA-rf44-j88r-hh8c (aliasHeadersStrategy, floor v3.7.12) + GHSA-v67p-phpq-fc8x trailer bypass (patched v3.7.13). Prior REM-145 CONNECT poisoning. [swept v3.7.10 2026-09-16]
 traefik_http_port: 80
 traefik_https_port: 443
 traefik_dashboard_port: 8082            # 8080=cadvisor, 8081=tileserver, 8090=freescout — 8082 is the first free slot
