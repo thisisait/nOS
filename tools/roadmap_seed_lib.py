@@ -267,7 +267,8 @@ def restore_table_owned(rows: list[dict], db_path: str, table_id: str, keep: set
     import json
     import sqlite3
     import subprocess
-    with sqlite3.connect(f"file:{db_path}?mode=ro", uri=True) as db:
+    # immutable, not mode=ro: a fresh WAL copy (gunzip of keap-db.gz) cannot open ro without its -shm
+    with sqlite3.connect(f"file:{db_path}?immutable=1", uri=True) as db:
         old = {rid: (json.loads(data), ts) for rid, data, ts in db.execute(
             "SELECT row_id, data, updated_at FROM table_rows WHERE table_id = ?", (table_id,))}
     log = subprocess.run(["git", "-C", seed or seed_dir(), "log", "--format=@%ct", "--name-only"],
