@@ -13,7 +13,7 @@
 There is deliberately no callable action for code-server:
 
 - It exposes no REST/RPC API that nOS drives — the manifest declares no `health_check`, the role has no `post.yml`, and no `tools/*` script targets it.
-- Built-in password auth is off (`PASSWORD`/`HASHED_PASSWORD` empty), so there is not even a login endpoint to script.
+- Built-in login is off by default (`HASHED_PASSWORD` empty); when set for a LAN-bound port it is a human password prompt, not an endpoint to script.
 - All use is interactive and human: opening files, running a terminal, editing the `/config/workspace` tree — none of it is an agent-triggerable skill.
 
 If an agent needs to act on the same files, it should operate on the host filesystem (`{{ nos_data_root }}/platform/services/code_server/workspace`) or through the host shell directly, not through code-server.
