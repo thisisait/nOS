@@ -39,6 +39,8 @@ fn handle(mut s: TcpStream, db: &Path) -> std::io::Result<()> {
         head.extend_from_slice(&buf[..n]);
     }
     let head = String::from_utf8_lossy(&head);
+    // Headers end at the first blank line; bytes past it are body, never headers.
+    let head = head.split("\r\n\r\n").next().unwrap_or_default();
     let mut lines = head.split("\r\n");
     let mut req = lines.next().unwrap_or_default().split(' ');
     let (method, target) = (req.next().unwrap_or_default(), req.next().unwrap_or_default());

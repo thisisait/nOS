@@ -62,9 +62,12 @@ def login(company_id):
         time.sleep(1)
         st = call("GET", f"/cli-auth/challenges/{ch['id']}?token={ch['token']}")
         if st.get("status") == "approved":
-            KEY_FILE.parent.mkdir(parents=True, exist_ok=True)
-            KEY_FILE.write_text(ch["boardApiToken"])
-            KEY_FILE.chmod(0o600)
+            # Born 0600, never world-readable between write and chmod; fchmod covers an older 0644 file.
+            KEY_FILE.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+            fd = os.open(KEY_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            os.fchmod(fd, 0o600)
+            with os.fdopen(fd, "w") as f:
+                f.write(ch["boardApiToken"])
             print(f"approved; key saved to {KEY_FILE}")
             return 0
         if st.get("status") in ("cancelled", "expired", "rejected"):
