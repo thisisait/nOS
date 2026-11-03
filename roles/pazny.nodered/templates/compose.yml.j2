@@ -18,7 +18,7 @@ services:
     # cannot create /data/lib (EACCES restart loop, CI bonus lane 2026-10-19).
     user: "{{ nos_container_user if (nos_container_user | default('') | length > 0) else (nodered_uid | string ~ ':' ~ nodered_gid | string) }}"
     ports:
-{% if services_lan_access %}
+{% if services_lan_access | default(false) %}
       - "{{ nodered_port }}:1880"
 {% else %}
       - "127.0.0.1:{{ nodered_port }}:1880"

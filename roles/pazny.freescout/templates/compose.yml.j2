@@ -13,7 +13,7 @@ services:
     image: nfrastack/freescout:{{ freescout_version }}
     restart: unless-stopped
     ports:
-{% if services_lan_access %}
+{% if services_lan_access | default(false) %}
       - "{{ freescout_port }}:80"
 {% else %}
       - "127.0.0.1:{{ freescout_port }}:80"
