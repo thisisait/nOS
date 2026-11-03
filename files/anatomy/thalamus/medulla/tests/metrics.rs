@@ -93,6 +93,19 @@ fn the_halt_file_halts_every_job_not_paused_by_hand() {
 }
 
 #[test]
+fn a_body_line_is_not_read_as_a_header() {
+    let (dir, db) = scratch();
+    let s = serve(&db);
+    let mut c = TcpStream::connect(("127.0.0.1", s.1)).unwrap();
+    // One write, so the body lands in the same read as the head.
+    c.write_all(b"GET /api/v1/metrics HTTP/1.1\r\nHost: x\r\n\r\nContent-Length: 999999\r\n").unwrap();
+    let mut r = String::new();
+    c.read_to_string(&mut r).unwrap();
+    assert!(r.starts_with("HTTP/1.1 200"), "{r}");
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[test]
 fn it_binds_loopback_only() {
     let (dir, db) = scratch();
     let s = serve(&db);
