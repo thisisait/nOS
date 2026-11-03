@@ -26,7 +26,7 @@ import os
 import re
 import sys
 from pathlib import Path
-from urllib.parse import urljoin, urlparse
+from urllib.parse import parse_qs, urljoin, urlparse
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -62,6 +62,19 @@ def landed(w, start: str, page: str = "", auth_host: str = "") -> bool:
     return (w.outcome == REACHED and u.netloc == urlparse(start).netloc
             and not any(bad in tail for bad in ("login", "error", "link_account", "signin", "callback"))
             and not (page and sso_button(page, auth_host, w.url)))
+
+
+def js_finish(sess, w, page: str, verify) -> bool | None:
+    """Jellyfin's SSO-Auth callback page finishes in JS: it POSTs the state to
+    /sso/OID/Auth/<provider>, and that POST creates the user. None = not such a page."""
+    m = re.search(r"/sso/OID/Auth/([A-Za-z0-9_-]+)", page)
+    if w.outcome != REACHED or not m:
+        return None
+    u = urlparse(w.url)
+    body = {"deviceId": "nos-first-login", "deviceName": "nOS", "appName": "nOS first login",
+            "appVersion": "1", "data": parse_qs(u.query).get("state", [""])[0]}
+    r = sess.post(f"{u.scheme}://{u.netloc}/sso/OID/Auth/{m.group(1)}", json=body, timeout=20, verify=verify)
+    return r.status_code == 200 and "AccessToken" in r.text
 
 
 def within_tier(ident: dict, row: dict) -> bool:
@@ -115,7 +128,7 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"-     {name} → {r['slug']}: a tier-{ident['tier']} identity may not open a tier-{r['tier']} app")
                 continue
             w = walk(sess, r["first_login"], a.auth_host, verify=verify)
-            page = sess.get(w.url, timeout=20, verify=verify).text if w.outcome == REACHED else ""
+            page = w.body if w.outcome == REACHED else ""
             button = sso_button(page, a.auth_host, w.url) if page else None
             if button:                      # click it once, then judge
                 method, url, data = button
@@ -124,8 +137,9 @@ def main(argv: list[str] | None = None) -> int:
                                    allow_redirects=False, timeout=20, verify=verify)
                     url = urljoin(url, r2.headers.get("location", url))
                 w = walk(sess, url, a.auth_host, verify=verify)
-                page = sess.get(w.url, timeout=20, verify=verify).text if w.outcome == REACHED else ""
-            ok = landed(w, r["first_login"], page, a.auth_host)
+                page = w.body if w.outcome == REACHED else ""
+            finish = js_finish(sess, w, page, verify)
+            ok = finish if finish is not None else landed(w, r["first_login"], page, a.auth_host)
             failed += not ok
             print(f"{'ok' if ok else 'FAIL':<5} {name} → {r['slug']}" + ("" if ok else f": {w.outcome} at {w.url[:120]}"))
     return 1 if failed else 0

@@ -14,7 +14,7 @@ Two invocation modes from `tasks/stacks/stack-up.yml`:
    - Prints a post-install note
    - Renders `templates/compose.yml.j2` into `{{ stacks_dir }}/iiab/overrides/jellyfin.yml`
    - Notifies `Restart jellyfin` when the override changes
-   - **(Native OIDC)** Downloads [`jellyfin-plugin-sso`](https://github.com/9p4/jellyfin-plugin-sso) v{{ jellyfin_sso_plugin_version }} into `{{ jellyfin_config_dir }}/plugins/SSO-Auth_<version>.0/` and post.yml writes the Authentik provider through the plugin API (`/sso/OID/Add`), then reads it back (gated on `install_authentik`)
+   - **(Native OIDC)** Downloads [`jellyfin-plugin-sso`](https://github.com/K0lin/jellyfin-plugin-sso) (the K0lin fork: upstream 9p4 stops at Jellyfin 10.11) v{{ jellyfin_sso_plugin_version }} into `{{ jellyfin_config_dir }}/plugins/SSO-Auth_<version>.0/` and post.yml writes the Authentik provider through the plugin API (`/sso/OID/Add`), then reads it back (gated on `install_authentik`)
 
 2. **Post (`tasks/post.yml`)** — runs *after* `docker compose -p iiab up`:
    - Waits for `/health` to return 200
@@ -47,7 +47,7 @@ Two invocation modes from `tasks/stacks/stack-up.yml`:
 | `jellyfin_country` | `CZ` | Startup `MetadataCountryCode` |
 | `jellyfin_mem_limit` | `docker_mem_limit_critical` | Defaults to `2g` |
 | `jellyfin_cpus` | `docker_cpus_standard` | Defaults to `1.0` |
-| `jellyfin_sso_plugin_version` | `3.5.2.4` | jellyfin-plugin-sso release (last 3.x, compatible with Jellyfin 10.10.x; 4.x targets 10.11) |
+| `jellyfin_sso_plugin_version` | `5.1.1` | K0lin fork release for Jellyfin 12 (targetAbi 12.0.0.0); sha256-pinned in `jellyfin_sso_plugin_sha256` |
 | `jellyfin_sso_plugin_url` | *(GitHub release zip)* | Override only for air-gapped mirrors |
 | `jellyfin_oidc_provider_name` | `Authentik` | Key used in `OidConfigs` dict + login button label |
 | `jellyfin_oidc_client_id` | `nos-jellyfin` | Authentik OIDC client ID |

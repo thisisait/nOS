@@ -25,6 +25,7 @@ class Walk:
     url: str
     status: int | None = None
     trail: list[str] = field(default_factory=list)
+    body: str = ""      # the REACHED page as served: a one-time callback cannot be fetched twice
 
 
 def _flow(sess: requests.Session, url: str, verify: bool) -> tuple[str | None, str | None]:
@@ -77,7 +78,7 @@ def walk(sess: requests.Session, url: str, auth_host: str, verify: bool = True,
             url = urljoin(url, r.headers.get("location", ""))
             continue
         if u.netloc != auth_host and r.status_code < 400:
-            return Walk(REACHED, url, r.status_code, trail)
+            return Walk(REACHED, url, r.status_code, trail, r.text)
         # A policy refusal is NOT a flow: /application/o/authorize/ answers
         # 200 with the "Permission denied - authentik" page (measured 2026-09-30).
         if u.netloc == auth_host and "Permission denied - authentik" in r.text:

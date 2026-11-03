@@ -39,7 +39,9 @@ authentik:
   client_id: nos-jellyfin
   client_secret: "{{ nos_derived_secrets.oidc_jellyfin }}"
   slug: jellyfin
-  first_login_blocked: "the SSO-Auth provider is written via the plugin API only when the nOS admin can sign in (roles/pazny.jellyfin/tasks/post.yml); not yet proven live"
+  # The SSO-Auth plugin's start; its callback page finishes in JS (POST /sso/OID/Auth/<provider>),
+  # which tools/nos-first-login.py does too — that POST is what creates the Jellyfin user.
+  first_login: "https://{{ jellyfin_domain | default('media' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/sso/OID/start/Authentik"
   name: 'Jellyfin'
   enabled: "{{ install_jellyfin | default(false) }}"
   redirect_uris:
