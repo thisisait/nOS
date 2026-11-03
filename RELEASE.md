@@ -188,6 +188,13 @@ The release's blank wiped data and reinstalled; it went green, and the next days
   - **mDNS label injection** (introduced 11-01): a container's `Host()` label went unquoted into the
     publisher's `bash -c` and ran as avahi at boot. Only DNS names leave the read-back (`9cc92a9a`).
   - **Traefik v3.7.17** (GHSA-xv5x-242w-7hf7, high, Negotiate/NTLM transport leak) (`08f5666d`).
+  - **Wave 1 of the plan** (a definition pass, then one agent per item, each reviewed): a Pulse job's
+    env no longer names the notifier binary (`NOS_NOTIFY_BIN` let a `pulse.write` holder run any
+    program through an allowed script); gitleaks got its own `wing.write` token instead of the only
+    `pulse.write` one (gate `test_no_job_holds_the_catalog_token`); the Paperclip board key is born
+    0600; the medulla's metrics parser stops at the blank line (`186d0879` … `0b4c0093`). The rest of
+    the wave (deciders are the GUI apps, role defaults never shadow config, edge tokens 0600, Paperclip
+    `.git` read-only) is built and waits for the operator's rulings after the cut.
   - Left on the roadmap under `security-review-1103`: agents still run as the operator's uid and can
     read job env through `sqlite3`; a decider is a path, not a signature; `services_lan_access` lets
     Docker publish past ufw on Linux; Traefik's dynamic config with edge tokens is 0644; cortex zod 4.
@@ -195,6 +202,18 @@ The release's blank wiped data and reinstalled; it went green, and the next days
   CVE-2026-98432 (remote, fix still in -proposed) and Playwright's bundled Chromium
   (CVE-2026-118306, no fixed release yet; ours is test-only). It reads pins and lockfiles, not host
   packages, a pending reboot, or a browser inside an npm package.
+
+### Jellyfin: one login through Authentik, on the web and the TV
+- The SSO-Auth plugin (K0lin fork 5.1.1, the only line built for Jellyfin 12) was installed but its
+  first login was never walked: the plugin row said `first_login_blocked`. It now declares
+  `first_login`; the callback page finishes in JavaScript (POST `/sso/OID/Auth/<provider>`, which is
+  what creates the user), and `tools/nos-first-login.py` does that POST; a walk keeps the page it
+  reached, so a one-time callback is never fetched twice (`52a83e39`). Proven live 11-03:
+  `ok akadmin → jellyfin`, and the operator's own login through the new "Sign in with Authentik"
+  button, which the role writes into Jellyfin's login disclaimer (`6be1ccaa`).
+- A TV signs in with Quick Connect: the app shows a code, a person signed in through Authentik enters
+  it under Profile → Quick Connect. Reaching Jellyfin from a TV on a `.local` tenant still needs the
+  LAN port (row `jellyfin-tv-login`).
 
 ### Agent companies: Paperclip declared in a repo
 - `tools/paperclip-company.py login|plan|apply --confirm`: a company file (`ssot/company.yml` +
