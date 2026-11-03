@@ -162,3 +162,24 @@ def test_every_converge_installs_the_cli():
     tasks = [t for play in plays for key in ("pre_tasks", "tasks") for t in play.get(key) or []]
     cli = next(t for t in tasks if t.get("ansible.builtin.import_tasks") == "tasks/nos-cli.yml")
     assert "always" in cli["tags"], cli["tags"]
+
+
+def test_the_installed_cli_moves_with_the_estate(tmp_path):
+    """The converge copies the CLI only mid-run, after the sudo prompt: on 11-03 `nos` still ran
+    the 11-02 07:43 copy, a day of CLI fixes behind its own estate. `nos update` moves it too."""
+    _, dev, home, _ = _world(tmp_path)
+    (dev / "tools").mkdir(exist_ok=True)
+    (dev / "tools" / "nos").write_text("#!/bin/sh\necho the-estate-cli\n")
+    _commit(dev, "cli")
+    _git(dev, "push", "-q", "origin", "HEAD:refs/heads/dev")
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    installed = bin_dir / "nos"
+    installed.write_text(NOS.read_text(encoding="utf-8"))
+    installed.chmod(0o755)
+    env = {k: v for k, v in os.environ.items() if not k.startswith(("GIT", "NOS_"))}
+    env.update(HOME=str(home), NOS_SRC=str(dev), PATH=f"{bin_dir}:{env['PATH']}")
+    got = subprocess.run(["nos", "update"], env=env, capture_output=True, text=True, timeout=60)
+    assert got.returncode == 0, got.stdout + got.stderr
+    assert installed.read_text() == "#!/bin/sh\necho the-estate-cli\n", "the installed CLI stayed behind"
+    assert os.access(installed, os.X_OK)
