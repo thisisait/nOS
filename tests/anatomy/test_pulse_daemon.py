@@ -19,6 +19,14 @@ from pulse.daemon import PulseDaemon
 from pulse.runners.subprocess import RunResult
 
 
+@pytest.fixture(autouse=True)
+def _no_set_point_holds(monkeypatch, tmp_path):
+    """paused_hold() reads the halt / loops-pause files: one left in the shared test HOME
+    by another test held every run here (CI 11-03, shard 3: no PULSE_RUN_ID reached the child)."""
+    monkeypatch.setenv("NOS_HALT_FILE", str(tmp_path / "no-halt"))
+    monkeypatch.setenv("NOS_LOOPS_PAUSED_FILE", str(tmp_path / "no-loops-paused"))
+
+
 def make_config(**overrides) -> PulseConfig:
     """PulseConfig with sensible test defaults."""
     base = dict(
