@@ -386,9 +386,9 @@ def test_verify_warns_on_an_unbound_model_and_fails_on_anything_else():
     assert subprocess.run([sys.executable, "-c", snippet], input=_verify_rows(socket="RED"), text=True).returncode == 1
 
 
-def test_the_decider_list_names_the_medulla_and_nos_app_on_macos():
-    """Operator ruling 2026-10-28: `nos halt` goes through the medulla and nOS.app decides, so both are
-    listed by default; the pupil and the terminal stay listed (they decided while the list was off).
+def test_the_decider_list_names_only_the_gui_apps_on_macos():
+    """Operator ruling B1 2026-11-03 (superseding 2026-10-28): only the GUI apps decide, the pupil and
+    nOS.app; neither the terminal shell nor the medulla CLI is listed, and `nos halt` needs no decider.
     Linux stays empty: SO_PEERCRED fails a set list closed (src/serve.rs decider_refusal). The app is
     signed with the medulla's identity, so the decider it lists is the one the role installed."""
     from jinja2.nativetypes import NativeEnvironment
@@ -404,7 +404,8 @@ def test_the_decider_list_names_the_medulla_and_nos_app_on_macos():
     raw = defaults["thalamus_decider_exes"]
     assert env.from_string(raw).render(**ctx, nos_service_manager="systemd") == []
     exes = env.from_string(raw).render(**ctx, nos_service_manager="launchd")
-    assert exes == [ctx["thalamus_pupil_exe"], ctx["thalamus_bin"], medulla_bin, ctx["thalamus_nos_app_exe"]]
+    assert exes == [ctx["thalamus_pupil_exe"], ctx["thalamus_nos_app_exe"]]
+    assert medulla_bin not in exes and ctx["thalamus_bin"] not in exes
     assert _plist(thalamus_decider_exes=exes)["EnvironmentVariables"]["NOS_DECIDER_EXES"] == ":".join(exes)
     assert "NOS_DECIDER_EXES" not in _plist(thalamus_decider_exes=[])["EnvironmentVariables"]
     main = (REPO / "files/anatomy/thalamus/thalamus/src/cli.rs").read_text()
