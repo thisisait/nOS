@@ -24,7 +24,8 @@ make the marker inexpressible.
 
 So the verdict is produced, not supplied:
 
-    --by "<command>"   the command RUNS. exit 0 -> confirmed. non-zero -> contradicted.
+    --by "<command>"   the command RUNS. exit 0 -> confirmed. 77 -> unverifiable (the
+                       deliverable is not installed here). other non-zero -> contradicted.
     --unverifiable "…" no command exists for this row; say why, and that is the verdict.
 
 `unverifiable` is not a failure — it is an honest third answer, and it is what
@@ -214,7 +215,9 @@ def main() -> int:
             # A probe that never answered observed nothing. Calling that
             # `contradicted` would put a finding in the table that no one made.
             rc, out, err = None, "", f"timed out after {args.timeout}s"
-        verdict = ("unverifiable" if rc is None
+        # 77 (automake's "skipped"): the probe could not observe here — a service not installed
+        # on this estate read as a broken one (sec-transport-*, 11-03).
+        verdict = ("unverifiable" if rc in (None, 77)
                    else "confirmed" if rc == 0 else "contradicted")
         by = args.by
         evidence = {"command": args.by, "cwd": cwd, "exit": rc,
