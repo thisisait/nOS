@@ -24,7 +24,10 @@
       ids=$({{ nos_docker_bin | quote }} ps -q) || exit 3
       [ -z "$ids" ] || {{ nos_docker_bin | quote }} inspect --format "$fmt" $ids || exit 3
     } | grep -o 'Host(`[^`]*`)' | sed 's/^Host(`//;s/`)$//' \
+      | grep -E '^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$' \
       | grep -E '(^|\.){{ tenant_domain | regex_escape }}$' | sort -u
+    # Only a DNS name leaves: any container's label is read, and a name reaches a bash -c unit
+    # and /etc/hosts (review 11-03: `a;touch …;b.<tenant>` ran as avahi at boot).
   args:
     executable: /bin/bash
   register: _mdns_readback

@@ -13,7 +13,7 @@ PartOf=avahi-daemon.service
 User=avahi
 Group=avahi
 # One publisher gone is the unit gone: wait -n returns on the first exit, so systemd restarts all.
-ExecStart=/bin/bash -c '{% for n in _mdns_names if n != (ansible_facts['hostname'] ~ '.local') %}avahi-publish -a -R {{ n }} {{ nos_lan_ip }} & {% endfor %}wait -n; exit 1'
+ExecStart=/bin/bash -c '{% for n in _mdns_names if n is match('^[a-z0-9][a-z0-9.-]*$') and n != (ansible_facts['hostname'] ~ '.local') %}avahi-publish -a -R {{ n }} {{ nos_lan_ip }} & {% endfor %}wait -n; exit 1'
 Restart=on-failure
 RestartSec=5
 

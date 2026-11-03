@@ -50,6 +50,26 @@ def test_the_read_back_sees_file_routes_and_label_routes(tmp_path):
     assert out.split() == ["auth.mini.local", "notes.apps.mini.local"]
 
 
+def test_a_hostile_label_never_reaches_the_publisher(tmp_path):
+    """Any container's label is read back (an upstream image's LABEL too), and the names went
+    unquoted into the unit's bash -c: `a;touch${IFS}/tmp/x;b.mini.local` ran as avahi at every
+    boot (review 2026-11-03). Only a DNS name leaves the read-back, and the unit drops any other."""
+    (tmp_path / "traefik" / "conf.d").mkdir(parents=True)
+    docker = tmp_path / "docker"
+    docker.write_text('#!/bin/sh\n[ "$1" = ps ] && { echo c1; exit 0; }\n'
+                      'echo \'{"r1":"Host(`a;touch${IFS}/tmp/x;b.mini.local`)","r2":"Host(`$(id).mini.local`)",'
+                      '"r3":"Host(`ok.mini.local`)","r4":"Host(`x y.mini.local`)"}\'\n')
+    docker.chmod(0o755)
+    script = ENV.from_string(_task("[mdns] Read back")["ansible.builtin.shell"]).render(
+        traefik_config_dir=str(tmp_path / "traefik"), nos_docker_bin=str(docker), tenant_domain="mini.local")
+    out = subprocess.run(["bash", "-c", script], capture_output=True, text=True, check=True).stdout
+    assert out.split() == ["ok.mini.local"], out
+    vars_ = dict(_mdns_names=["ok.mini.local", "a;b.mini.local"], ansible_facts={"hostname": "mini"},
+                 nos_lan_ip="192.168.1.252", ansible_managed="x")
+    unit = ENV.from_string((REPO / "templates/nos-mdns-names.service.j2").read_text()).render(**vars_)
+    assert "-R ok.mini.local" in unit and "a;b" not in unit, "a non-DNS name reached the unit's bash -c"
+
+
 def test_it_runs_after_apps_up_and_only_for_a_local_linux_host():
     plays = yaml.safe_load((REPO / "main.yml").read_text())
     tasks = next(p["tasks"] for p in plays if any(t.get("import_tasks") == "tasks/stacks/apps-up.yml"
