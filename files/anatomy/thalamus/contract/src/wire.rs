@@ -48,13 +48,14 @@ pub enum ToThalamus {
     Limbs { limbs: Vec<Limb> },
     /// The estate's set-points and host organs (v13), read-only for any listed person; serve answers `state`.
     State,
-    /// A tier-1 decider halts the estate (v14): serve writes the halt file, sends Wing the act and answers
-    /// `state` with `act`, or `refused` naming why with the file untouched.
+    /// A tier-1 person halts the estate (v14), from any executable: serve writes the halt file, sends Wing
+    /// the act and answers `state` with `act`, or `refused` naming why with the file untouched.
     Halt {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         reason: Option<String>,
     },
-    /// The same decider lifts the halt (v14): serve removes the file; `resume` is a session's word already.
+    /// A tier-1 person at a listed decider lifts the halt (v14): serve removes the file; `resume` is a
+    /// session's word already.
     LiftHalt,
     /// A tier-1 decider changes one setting the genome names (v15, state/genome/settings.yml): serve
     /// writes it, sends Wing the change and answers `state` with `act`, or `refused` with the store untouched.

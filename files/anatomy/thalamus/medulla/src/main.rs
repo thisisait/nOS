@@ -69,8 +69,8 @@ fn state(args: &[String]) -> ExitCode {
     ExitCode::SUCCESS
 }
 
-/// `medulla halt [--reason …]` / `medulla resume`: the socket's halt and lift_halt, so serve's tier-1 and
-/// decider check is the one that applies; this CLI never writes the file. Exit 0 set and recorded, 3 set
+/// `medulla halt [--reason …]` / `medulla resume`: the socket's halt and lift_halt, so serve's checks apply
+/// (a halt tier 1, a resume also a listed decider, which this CLI is not); this CLI never writes the file. Exit 0 set and recorded, 3 set
 /// but NOT recorded, 1 refused (the file untouched), 69 the thalamus did not answer.
 fn halt(args: &[String], on: bool) -> ExitCode {
     use nos_contract::wire::ToThalamus;

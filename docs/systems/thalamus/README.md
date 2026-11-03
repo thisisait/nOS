@@ -141,8 +141,8 @@ the peer's `{pid, exe}`; `commit()` does the one
 POST, and the shell gets `form_result` and `table_changed`.
 
 Who may decide: `thalamus_decider_exes` (role default `[]`, off: the peer is only
-recorded). When the operator sets it in `config.yml` — recommended
-`[thalamus_pupil_exe, thalamus_bin]`, the pupil and the y/n terminal shell — serve
+recorded). On macOS the role lists the GUI apps only (ruling B1 2026-11-03),
+`[thalamus_pupil_exe, thalamus_nos_app_exe]`, the pupil and nOS.app; with a list set, serve
 refuses a `form_submit`, `approval_decision` or `choice_reply` sent by any other
 executable, or one it cannot name. The sender is read per line (macOS `LOCAL_PEERPID`,
 the last process to use the socket) and its kernel path is compared to the
@@ -157,9 +157,10 @@ gets a `refused` for its decision and no `idle`. A mis-set list admits nobody, s
 relative or `:` entry, or a path that names no file once the pupil is built) and serve warns
 at start (`serve::deciders`).
 
-The emergency halt (`halt`, `lift_halt`, wire v14; `medulla halt|resume`) is stricter: it
-needs a tier-1 person AND a listed decider, and an empty list admits nobody, since a halt
-has no record-only mode. The answer is `state` with `act {recorded, why?}`: serve writes the
+The emergency halt (`halt`, `lift_halt`, wire v14; `medulla halt|resume`): a halt is the
+safe direction, so it needs a tier-1 person only, from any executable and on Linux too
+(ruling B1). Lifting it needs a tier-1 person AND a listed decider, and an empty list
+admits nobody, since a lift has no record-only mode. The answer is `state` with `act {recorded, why?}`: serve writes the
 file, then sends Wing POST `/api/v1/admin/{halt,resume}` with the `wing-halt` bearer read from
 `~/.nos/secrets.yml`. Gate: `medulla/tests/halt.rs`.
 
@@ -172,7 +173,7 @@ POST `/api/v1/admin/setting` (event `admin_setting_set`). Both schedulers hold a
 
 The agents' questions (wire v16; `medulla questions [--agent …]|answer <uuid> <answer>`):
 `questions` is a tier-1 read of wing.db (`NOS_INBOX_DB`, read-only, no bearer). `answer`
-needs the halt's tier-1 decider; serve relays it once, never retried, to POST
+needs the lift's tier-1 decider; serve relays it once, never retried, to POST
 `/api/v1/inbox/questions/<uuid>/answer` with the `wing-answer` bearer (scope `wing.answer`,
 which reaches that action and nothing else) from `~/.nos/secrets.yml`. Wing's conditional
 UPDATE writes the record; serve answers `answer_result` answered, lost (with the answer that

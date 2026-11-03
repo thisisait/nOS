@@ -77,7 +77,7 @@ fn raw(home: &Path, line: &str) -> Value {
 }
 
 /// Linux CI (dev 2127c10b): SO_PEERCRED names the connector, not the sender, so serve trusts no
-/// decider there and a halt over the socket is refused by design; the shell's break-glass halts.
+/// decider there: a halt over the socket is set (it needs none), its lift refused by design.
 #[cfg(target_os = "linux")]
 #[test]
 fn on_linux_no_decider_is_trusted_to_halt() {
@@ -152,5 +152,37 @@ fn a_decider_halts_and_resumes_and_no_one_else_does() {
     assert_eq!(state()["halt"]["on"], false);
     assert_eq!(held()["exit_code"], 0, "a lifted halt still holds the job");
     assert_eq!(seen.lock().unwrap().last().cloned(), Some(format!("POST /api/v1/admin/resume Bearer {} {{\"by\":\"alice\"}}", "h".repeat(64))));
+    let _ = std::fs::remove_dir_all(&home);
+}
+
+/// Ruling B1 (2026-11-03): only the GUI apps decide, and the halt is the safe direction. With the medulla
+/// not listed, `medulla halt` still halts, while its resume, pause and answer are refused unseen by Wing.
+#[test]
+fn the_cli_halts_but_only_a_listed_decider_resumes_pauses_or_answers() {
+    let home = std::path::PathBuf::from(format!("/tmp/md-cli-halt-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&home);
+    std::fs::create_dir_all(home.join(".nos")).unwrap();
+    map(&home, &["nos-admins"]);
+    std::fs::write(home.join(".nos/secrets.yml"), format!("wing_halt_token: \"{}\"\n", "h".repeat(64))).unwrap();
+    let (code, seen) = (Arc::new(Mutex::new(200)), Arc::new(Mutex::new(Vec::new())));
+    let port = wing(code, seen.clone());
+    let gui = std::fs::canonicalize("/bin/sh").unwrap();
+    let _served = Served(env(&mut Command::new(env!("CARGO_BIN_EXE_medulla")), &home, port)
+        .args(["thalamus", "serve", "--data-dir"]).arg(home.join("data"))
+        .env("KEAP_PROXY_SHARED_SECRET", "s").env("NOS_TIER1_GROUPS", "nos-admins").env("NOS_DECIDER_EXES", &gui)
+        .stdout(Stdio::null()).stderr(Stdio::null()).spawn().unwrap());
+    for _ in 0..200 {
+        if home.join(".nos/thalamus.sock").exists() { break }
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    let o = medulla(&home, port, &["halt", "--reason", "drill"]);
+    assert!(o.status.success() && home.join("halt").is_file(), "the CLI did not halt: {}", said(&o));
+    let before = std::fs::read(home.join("halt")).unwrap();
+    for args in [&["resume"][..], &["pause", "a:plain"], &["answer", "7f3e2d1c-0b9a-4c8d-9e7f-6a5b4c3d2e1f", "yes"]] {
+        let o = medulla(&home, port, args);
+        assert!(o.status.code() == Some(1) && said(&o).contains("decider"), "{args:?} was not refused: {}", said(&o));
+    }
+    assert_eq!(std::fs::read(home.join("halt")).unwrap(), before, "a refused resume changed the halt");
+    assert_eq!(seen.lock().unwrap().len(), 1, "only the halt reaches Wing: {:?}", seen.lock().unwrap());
     let _ = std::fs::remove_dir_all(&home);
 }

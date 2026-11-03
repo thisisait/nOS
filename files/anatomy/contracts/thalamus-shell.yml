@@ -169,15 +169,15 @@ wire:
     /api/v1/admin/state (thalamus/src/state.rs; gate files/anatomy/thalamus/medulla/tests/state.rs).
   halt: >-
     v14: `halt {reason?}` and `lift_halt` set the emergency halt (`resume` already names a session's resume).
-    Only a tier-1 person (NOS_TIER1_GROUPS) at a listed decider executable (NOS_DECIDER_EXES; empty admits
-    nobody here, and Linux none) sets it: serve writes the halt file whole ({"by","at","reason"?}, the shape
+    A tier-1 person (NOS_TIER1_GROUPS) sets it from any executable; only one at a listed decider executable
+    (NOS_DECIDER_EXES; empty admits nobody here, and Linux none) lifts it (ruling B1 2026-11-03): serve writes the halt file whole ({"by","at","reason"?}, the shape
     tools/nos writes) or removes it, then sends Wing the act (POST /api/v1/admin/{halt,resume}, the wing-halt
     bearer from ~/.nos/secrets.yml) and answers `state` with `act {recorded, why?}`. The set-point holds
     whether or not Wing recorded it. Anyone else gets `refused` naming why, the file untouched. reason is one
     line of at most 300 chars. `medulla halt|resume` speaks it; gate files/anatomy/thalamus/medulla/tests/halt.rs.
   setting: >-
     v15: `setting {key, value}` changes one setting state/genome/settings.yml names (key dotted lowercase, at
-    most 64 chars); the same tier-1 decider as the halt sets it. A map setting's value is the change, one
+    most 64 chars); the same tier-1 decider as the halt's lift sets it. A map setting's value is the change, one
     entry each: {entry: {reason?}} sets it, {entry: null} removes it; serve stamps by (the kernel's person)
     and at, writes MEDULLA_DATA_DIR/estate/<key>.json whole (thalamus/src/settings.rs), sends Wing the change
     (POST /api/v1/admin/setting {by, key, change}, record-only, the wing-halt bearer) and answers `state` with
@@ -192,7 +192,7 @@ wire:
     AgentQuestionRepository::public() lists it, oldest first, at most 100, a past deadline left out. An inbox that
     does not read is `refused`, never an empty list; so is a person not tier 1.
   answer: >-
-    v16: `answer {uuid, answer}` (answer 1-2000 chars) answers one question; the same tier-1 decider as the halt
+    v16: `answer {uuid, answer}` (answer 1-2000 chars) answers one question; the same tier-1 decider as the halt's lift
     sends it. The medulla relays, Wing writes the record: serve POSTs /api/v1/inbox/questions/<uuid>/answer
     {answer, answered_by: the kernel's person, via: medulla} with the wing-answer bearer (scope wing.answer, which
     reaches that action and nothing else), read per act from ~/.nos/secrets.yml as the halt's is, and never retries.

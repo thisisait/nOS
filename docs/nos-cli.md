@@ -163,8 +163,9 @@ nos resume             # remove the file (and any pre-2026-10-25 halt rows), rec
 
 **The medulla sets it first** (row medulla-settings, increment 2): `nos` runs
 `~/thalamus/bin/medulla halt|resume` (`NOS_MEDULLA`), which asks the thalamus over
-its socket. Serve sets the file only for a tier-1 person at a listed decider
-executable (`thalamus_decider_exes`; empty admits nobody for the halt), then sends
+its socket. Serve sets the file for a tier-1 person from any executable, and
+lifts it only from a listed decider (`thalamus_decider_exes`, the GUI apps; so a
+`nos resume` the medulla refuses falls to the break-glass below), then sends
 Wing the act with the same `wing-halt` bearer, read from `~/.nos/secrets.yml` by
 the medulla (same user; no plist holds it). `nos` prints which path took effect:
 "set by the medulla; Wing recorded the act", "set by the medulla; the act is NOT

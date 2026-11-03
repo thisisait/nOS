@@ -1696,8 +1696,9 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
     /// The decider gate before a submit, a decision or a choice reply: a refused peer is told and
     /// recorded (its {pid, exe}, the reason), and nothing pending is consumed or cancelled.
     fn may_decide(&self, o: &Open, out: &mut dyn Write, tool: &str, about: &str, peer: &Value, widget: Option<&str>) -> bool {
-        // The relay's authenticated hello is the decider proof (operator 2026-10-18): only relay.rs builds
-        // a peer with `via`; the exe list keeps governing the socket's peers.
+        // The relay's authenticated hello is the decider proof (operator 2026-10-18): a person in the face,
+        // SSO'd through Authentik, the secret proving the BFF sent it. Only relay.rs builds a peer with `via`;
+        // the exe list keeps governing the socket's peers, and setter_refusal still refuses a face peer.
         if peer["via"] == "face" {
             return true;
         }
@@ -1708,12 +1709,15 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         false
     }
 
-    /// halt / lift_halt (row medulla-settings): a tier-1 person at a listed decider sets the halt file, then
-    /// Wing is sent the act; the answer is the new state. An empty decider list admits nobody here, unlike
-    /// may_decide: a halt has no record-only mode. Refused leaves the file as it was.
+    /// halt / lift_halt (row medulla-settings): a tier-1 person sets the halt file, then Wing is sent the act;
+    /// the answer is the new state. Lifting it needs a listed decider too (setter_refusal). Refused leaves
+    /// the file as it was.
     fn set_halt(&self, who: &Person, out: &mut dyn Write, peer: &Value, on: bool, reason: Option<&str>) {
         let verb = if on { "halt" } else { "lift_halt" };
-        let set = match self.setter_refusal(who, peer, "the halt") {
+        // Ruling B1 (2026-11-03): the halt is the safe direction, so any tier-1 peer sets it (`nos halt`, any
+        // OS); only the GUI deciders lift it. Gate: medulla/tests/halt.rs, the CLI halts and does not resume.
+        let refused = if on && self.is_tier1(who) { None } else { self.setter_refusal(who, peer, "the halt") };
+        let set = match refused {
             Some(why) => Err(why),
             None => crate::state::set_halt(on, &who.username, reason).map_err(|e| format!("the halt file is not writable: {e}")),
         };
