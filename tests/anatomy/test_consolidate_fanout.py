@@ -121,7 +121,7 @@ def rig(tmp_path):
             "CORTEX_AGENT_TOKEN_CAPTURE": "cortex-secret",
             "NOS_CONSOLIDATE_FS_ROOTS": str(root),
             "NOS_MARIADB_ROOT_PASSWORD": "",
-            "NOS_NOTIFY_BIN": "",
+            "NOS_NOTIFY_ACTOR": "",  # report-only: the scripts notify only when a job names itself
         }
         env.update(overrides)
         proc = subprocess.run(

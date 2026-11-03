@@ -77,7 +77,7 @@ def test_the_halt_is_obeyed_by_the_job_it_claims_to_stop(tmp_path):
         "CORTEX_AGENT_TOKEN_RW": "fixture-not-a-real-token",
         # Unreachable on purpose: if the halt is ignored, the script gets here.
         "CORTEX_API_URL": "http://127.0.0.1:1",
-        "NOS_NOTIFY_BIN": "",
+        "NOS_NOTIFY_ACTOR": "",  # report-only: the scripts notify only when a job names itself
     })
     proc = subprocess.run([sys.executable, str(FS_SYNC)], env=env,
                           capture_output=True, text=True, timeout=60)
@@ -103,7 +103,7 @@ def test_an_unhalted_ledger_does_not_refuse(tmp_path):
         "CORTEX_DIFF_STATE": str(ledger),
         "CORTEX_AGENT_TOKEN_RW": "fixture-not-a-real-token",
         "CORTEX_API_URL": "http://127.0.0.1:1",
-        "NOS_NOTIFY_BIN": "",
+        "NOS_NOTIFY_ACTOR": "",  # report-only: the scripts notify only when a job names itself
     })
     proc = subprocess.run([sys.executable, str(FS_SYNC)], env=env,
                           capture_output=True, text=True, timeout=60)
@@ -124,7 +124,7 @@ def test_a_missing_ledger_is_not_a_halt(tmp_path):
         "CORTEX_DIFF_STATE": str(tmp_path / "does-not-exist.json"),
         "CORTEX_AGENT_TOKEN_RW": "fixture-not-a-real-token",
         "CORTEX_API_URL": "http://127.0.0.1:1",
-        "NOS_NOTIFY_BIN": "",
+        "NOS_NOTIFY_ACTOR": "",  # report-only: the scripts notify only when a job names itself
     })
     proc = subprocess.run([sys.executable, str(FS_SYNC)], env=env,
                           capture_output=True, text=True, timeout=60)
