@@ -23,10 +23,12 @@ regress:
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-BACKUP_DEFAULTS = REPO_ROOT / "roles" / "pazny.backup" / "defaults" / "main.yml"
+sys.path.insert(0, str(REPO_ROOT / "tools"))
+import nos_identity as ni  # noqa: E402
 RESTORE_PATH = REPO_ROOT / "tasks" / "restore.yml"
 REMOVAL_SET_PATH = REPO_ROOT / "tasks" / "removal-set.yml"
 MAIN_PATH = REPO_ROOT / "main.yml"
@@ -36,7 +38,7 @@ RUNMODE_PATH = REPO_ROOT / "tasks" / "run-mode.yml"
 
 def test_keap_db_backup_enabled_by_default_with_keap() -> None:
     """backup_keap_db keys off install_keap → the dump runs whenever KEAP does."""
-    txt = BACKUP_DEFAULTS.read_text()
+    txt = ni.default_config_text()
     assert "backup_keap_db:" in txt, "backup_keap_db default missing"
     # default expression must reference install_keap (not a hardcoded false)
     line = next(ln for ln in txt.splitlines() if ln.strip().startswith("backup_keap_db:"))

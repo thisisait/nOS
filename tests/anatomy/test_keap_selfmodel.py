@@ -12,8 +12,11 @@ import importlib.util
 import json
 import pathlib
 import re
+import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "tools"))
+import nos_identity as ni  # noqa: E402
 GEN = ROOT / "files/anatomy/scripts/keap_selfmodel_gen.py"
 MANIFEST = ROOT / "state/manifest.yml"
 PLUGINS = ROOT / "files/anatomy/plugins"
@@ -145,5 +148,5 @@ def test_role_wiring():
     defaults = (ROOT / "roles/pazny.keap/defaults/main.yml").read_text()
     assert re.search(r"^keap_selfmodel:\s*true", defaults, re.M)
     assert "shared/nos-docs" in defaults, "self-model must be class-2 shared, not users/"
-    assert re.search(r"^keap_fs_sync_dirs:.*nOS", defaults, re.M), \
+    assert re.search(r"^keap_fs_sync_dirs:.*nOS", ni.default_config_text(), re.M), \
         "fs-sync top-class allowlist must include nOS"

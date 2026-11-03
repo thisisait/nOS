@@ -23,7 +23,6 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "tools"))
 import nos_identity as ni  # noqa: E402
-ROLE_DEFAULTS = REPO / "roles/pazny.nodered/defaults/main.yml"
 SETTINGS = REPO / "roles/pazny.nodered/templates/settings.js.j2"
 
 
@@ -45,15 +44,6 @@ def test_default_config_follows_install_authentik() -> None:
         f"nodered_native_oidc_enabled is {raw!r}; it must follow "
         "install_authentik so an authentik-off estate does not render a "
         "strategy that cannot complete"
-    )
-
-
-def test_role_default_still_follows_install_authentik() -> None:
-    body = ROLE_DEFAULTS.read_text(encoding="utf-8")
-    m = re.search(r"^nodered_native_oidc_enabled:\s*(.*)$", body, re.M)
-    assert m and "install_authentik" in m.group(1), (
-        "role default stopped following install_authentik — that is the "
-        "backstop if default.config.yml ever drops the var"
     )
 
 

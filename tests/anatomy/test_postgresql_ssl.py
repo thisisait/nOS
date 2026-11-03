@@ -52,17 +52,15 @@ import nos_identity as ni  # noqa: E402
 PG = REPO / "roles/pazny.postgresql"
 COMPOSE = PG / "templates/compose.yml.j2"
 TASKS = PG / "tasks/main.yml"
-DEFAULTS = PG / "defaults/main.yml"
 
 
 def test_ssl_toggle_darwin_gated():
-    src = DEFAULTS.read_text()
-    assert "postgresql_ssl_enabled" in src
+    src = next(ln for ln in ni.default_config_text().splitlines() if ln.startswith("postgresql_ssl_enabled:"))
     # Linux: PG refuses a host-user-owned key (needs postgres-uid or root);
     # the Darwin gate keeps the ubuntu CI wet-test green until the
     # root-chown leg lands. Flipping this to a bare `true` without that leg
     # breaks integration-linux.
-    assert 'ansible_os_family == \'Darwin\'' in src.replace('"', "'")
+    assert re.search(r"os_family'?\]?( \| default\(''\))? == 'Darwin'", src.replace('"', "'")), src
 
 
 def test_cert_generation_is_idempotent_and_gated():

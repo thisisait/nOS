@@ -25,7 +25,8 @@ def test_present_dirs_mount_at_their_path_missing_ones_are_skipped(tmp_path):
          "stacks_shared_network": "n", "stacks_dir": "/s", "jellyfin_lan_access": False}
     play = [{"hosts": "localhost", "gather_facts": True, "connection": "local",
              "vars_files": [str(ROLE / "defaults/main.yml")],
-             "vars": {"jellyfin_extra_media_dirs": [f"{lib}/", str(tmp_path / "unplugged/x")]},
+             "vars": {"jellyfin_extra_media_dirs": [f"{lib}/", str(tmp_path / "unplugged/x")],
+                      **{f"jellyfin_{k}_dir": f"/m/{k}" for k in ("movies", "shows", "music")}},
              "tasks": keep + [{"name": "render", "ansible.builtin.template": {
                  "src": str(ROLE / "templates/compose.yml.j2"), "dest": str(tmp_path / "out.yml")}, "vars": v}]}]
     (tmp_path / "play.yml").write_text(yaml.safe_dump(play))
