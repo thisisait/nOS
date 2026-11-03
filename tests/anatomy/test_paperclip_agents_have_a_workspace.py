@@ -48,7 +48,7 @@ def test_every_paperclip_has_a_workspace_root_on_the_estate_storage():
 
 
 def test_a_declared_host_folder_is_mounted_under_its_name():
-    vols = _svc(paperclip_host_workspaces=[{"name": "hnedweb", "path": f"{HOME}/projects/hnedweb"},
+    vols = _svc(paperclip_host_workspaces=[{"name": "hnedweb", "path": f"{HOME}/projects/hnedweb", "mode": "rw"},
                                            {"name": "ref", "path": f"{HOME}/projects/ref", "mode": "ro"}])["volumes"]
     assert f"{HOME}/projects/hnedweb:/workspaces/hnedweb:rw" in vols, vols
     assert f"{HOME}/projects/ref:/workspaces/ref:ro" in vols, vols
