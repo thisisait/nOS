@@ -252,5 +252,31 @@
   when: _jf_sso_get.json is defined
   failed_when: jellyfin_oidc_provider_name not in (_jf_sso_names.json | default([]))
 
-# Branding login button: still not injected — jellyfin is supports:no /
-# Tier-4, the plugin's own /sso/OID/start/<provider> is the entry point.
+# The login page's "Sign in with Authentik": the plugin adds no button, Jellyfin's branding
+# login disclaimer carries it (11-03: the operator found no way to SSO from the login page).
+# Written once; a disclaimer the operator edited keeps his text, the button is appended.
+- name: "[pazny.jellyfin Post] Read the branding (login page)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ jellyfin_port | default(8096) }}/Branding/Configuration"
+    timeout: 10
+  register: _jf_branding
+  when: _jf_sso_names.json is defined
+
+- name: "[pazny.jellyfin Post] Put the Authentik button on the login page"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ jellyfin_port | default(8096) }}/System/Configuration/branding"
+    method: POST
+    body_format: json
+    body: "{{ _jf_branding.json | combine({'LoginDisclaimer': (_jf_branding.json.LoginDisclaimer | default('')) ~ _jf_sso_button}) }}"
+    headers:
+      Authorization: "MediaBrowser Token=\"{{ _jf_sso_auth.json.AccessToken | default('') }}\""
+    status_code: [200, 204]
+    timeout: 10
+  vars:
+    _jf_sso_button: >-
+      <form action="/sso/OID/start/{{ jellyfin_oidc_provider_name }}"><button type="submit"
+      class="raised block emby-button button-submit">Sign in with {{ jellyfin_oidc_provider_name }}</button></form>
+  when:
+    - _jf_branding.json is defined
+    - ('/sso/OID/start/' ~ jellyfin_oidc_provider_name) not in (_jf_branding.json.LoginDisclaimer | default(''))
+  no_log: true
