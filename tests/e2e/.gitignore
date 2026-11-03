@@ -1,6 +1,5 @@
 node_modules/
 .playwright-out/
 .tsc-out/
-package-lock.json
 playwright-report/
 test-results/

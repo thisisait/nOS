@@ -64,12 +64,14 @@ RECEPTORS = REPO / "state" / "genome" / "advisory-receptors.yml"
 KINDS = ("github", "osv", "tech", "none")
 PIN = re.compile(r"_(version|tag)$")
 
-#: organ -> (lockfile, OSV ecosystem). The organs nOS builds itself.
+#: organ -> (lockfile, OSV ecosystem). The organs nOS builds itself, and its Playwright harnesses.
 LOCKFILES = {
     "thalamus": (REPO / "files/anatomy/thalamus/Cargo.lock", "crates.io"),
     "wing": (REPO / "files/anatomy/wing/composer.lock", "Packagist"),
     "face": (REPO / "files/anatomy/face/package-lock.json", "npm"),
     "cortex": (REPO / "files/anatomy/cortex/package-lock.json", "npm"),
+    "e2e": (REPO / "tests/e2e/package-lock.json", "npm"),
+    "wing-e2e": (REPO / "files/anatomy/wing/tests/package-lock.json", "npm"),
 }
 
 GITHUB = "https://api.github.com/repos/{repo}/security-advisories?per_page=100&page={page}"
