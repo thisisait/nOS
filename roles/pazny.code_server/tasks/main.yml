@@ -19,6 +19,18 @@
     - "{{ code_server_data_dir }}"
     - "{{ code_server_workspace_dir }}"
 
+# A LAN-bound port skips Authentik: an empty HASHED_PASSWORD is a shell for the LAN.
+- name: "[pazny.code_server] Refuse a LAN-bound port without a login"
+  ansible.builtin.assert:
+    that: >-
+      not (services_lan_access | default(false) | bool)
+      or (code_server_hashed_password | default('') | length > 0)
+    fail_msg: >-
+      services_lan_access publishes code-server (a full host shell) on the LAN,
+      bypassing Authentik. Set code_server_hashed_password (argon2 hash) in
+      credentials.yml, or turn services_lan_access off.
+    quiet: true
+
 - name: "[pazny.code_server] Render compose override fragment"
   ansible.builtin.template:
     src: compose.yml.j2

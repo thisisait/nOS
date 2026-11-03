@@ -27,10 +27,10 @@ services:
       PUID: "{{ code_server_puid | default(1000) }}"
       PGID: "{{ code_server_pgid | default(1000) }}"
       TZ: "{{ code_server_tz | default('Europe/Prague') }}"
-      # PASSWORD / HASHED_PASSWORD nechane prazdne — pristup gatuje Authentik
-      # forward_auth v nginx vhostu. Built-in code-server login je tak vypnuty.
+      # Empty = no built-in login; Authentik forward_auth gates the edge. A LAN
+      # port bypasses it, so tasks/main.yml demands a hash then (`$` -> `$$`: compose).
       PASSWORD: ""
-      HASHED_PASSWORD: ""
+      HASHED_PASSWORD: "{{ code_server_hashed_password | default('') | replace('$', '$$') }}"
       SUDO_PASSWORD: ""
       PROXY_DOMAIN: "{{ code_server_domain | default('code' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
       DEFAULT_WORKSPACE: "{{ code_server_default_workspace | default('/config/workspace') }}"
