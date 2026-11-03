@@ -53,6 +53,10 @@ services:
       # Legal values are ["loopback","lan","tailnet","custom"] — there is no
       # "all", and an unrecognised value falls back to the file, i.e. silently
       # back to loopback.
+      # Paperclip's workspace Git scan runs `git status` on every mounted repo and kills it at
+      # ~8.5 s; over VirtioFS it overran and left the host repo's index.lock (hnedweb 11-02
+      # 04:03, the operator could not commit). No optional locks: status then writes nothing.
+      GIT_OPTIONAL_LOCKS: "0"
       PAPERCLIP_BIND: "lan"
       PAPERCLIP_LISTEN_PORT: "3100"
       # The API its agents and MCP servers call. They run in THIS container, so it is the
