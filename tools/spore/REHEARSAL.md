@@ -22,15 +22,20 @@ two rehearsal paths on the external disk; the live estate is only read.
        <(git -C "$r" for-each-ref --format='%(objectname) %(refname)' refs/heads | sort) || echo "DIFF $r"; done
    hdiutil detach "$M"
    ```
-5. **Germinate into a scratch home** (Xcode CLT and Homebrew are already present, so steps 1-2 skip):
+5. **Germinate into a scratch home** (Xcode CLT and Homebrew are already present, so steps 1-2 skip).
+   The scratch home is an encrypted image too: germinate writes the secrets, ~/.ssh and the OpenTofu
+   state there, and the SSD is unencrypted HFS+ with ownership disabled (review 11-03).
    ```bash
-   mkdir -p /Volumes/SSD1TB/rehearse-home
-   HOME=/Volumes/SSD1TB/rehearse-home bash /Volumes/SSD1TB/nos-spore-rehearsal/germinate.sh --confirm
+   hdiutil create -size 20g -type SPARSEBUNDLE -fs APFS -encryption AES-256 -volname rehearse-home \
+     /Volumes/SSD1TB/rehearse-home.sparsebundle
+   R=$(mktemp -d /tmp/rehearse-home.XXXXXX)
+   hdiutil attach /Volumes/SSD1TB/rehearse-home.sparsebundle -mountpoint "$R" -nobrowse
+   HOME="$R" bash /Volumes/SSD1TB/nos-spore-rehearsal/germinate.sh --confirm
    ```
    Stop it before the bootstrap step if it reaches the network you do not want touched.
 6. **Diff** the grown tree against the live one:
    ```bash
-   R=/Volumes/SSD1TB/rehearse-home
+   # R is still the mounted scratch home from step 5
    for f in secrets.yml identity-map.yml state.yml; do cmp ~/.nos/$f $R/.nos/$f; done
    cmp ~/.nos/estate/config.yml $R/.nos/estate/config.yml
    grep -n "$HOME" $R/.nos/nos-cli.env   # expect no hit: every old path was rewritten
@@ -42,7 +47,8 @@ two rehearsal paths on the external disk; the live estate is only read.
    Re-run step 5 once: every line must say `in place` (resumable), and nothing may be overwritten.
 7. **Clean up only the rehearsal paths**:
    ```bash
-   rm -rf /Volumes/SSD1TB/nos-spore-rehearsal /Volumes/SSD1TB/rehearse-home
+   hdiutil detach "$R"
+   rm -rf /Volumes/SSD1TB/nos-spore-rehearsal /Volumes/SSD1TB/rehearse-home.sparsebundle
    ```
    Worktrees grown under the scratch home are registered only in the scratch repos, so the live
    repos hold no entry for them.
