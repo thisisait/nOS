@@ -101,6 +101,10 @@ restore_repo() {  # $1 the repo's tree in the spore, $2 its destination
     [ -e "$d/.git/spore-restoring" ] || [ "$d" = "$EST" ] || refuse "$d exists and was not grown from this spore; move it aside, then re-run"
   elif [ -e "$d" ]; then refuse "$d exists and is not a git repo"
   else mkdir -p "$(dirname "$d")"; git init -q "$d"; : > "$d/.git/spore-restoring"; fi
+  # The repo's own config (core.hooksPath = the pre-push gate, upstreams, nos.estate-ref), old home rewritten.
+  if [ -f "$t/git-config" ]; then
+    OLD="$OLD_HOME" NEW="$HOME" perl -pe 's/\Q$ENV{OLD}\E(?=[\/"\x27\s]|$)/$ENV{NEW}/g' "$t/git-config" > "$d/.git/config"
+  fi
   while read -r name url; do
     if git -C "$d" remote get-url "$name" >/dev/null 2>&1; then git -C "$d" remote set-url "$name" "$url"; else git -C "$d" remote add "$name" "$url"; fi
   done < "$t/remotes"

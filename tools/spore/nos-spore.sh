@@ -88,7 +88,9 @@ repo_facts() {
   dirty="$(git -C "$1" status --porcelain --untracked-files=normal | wc -l | tr -d ' ')"
   untracked="$(git -C "$1" ls-files -o --exclude-standard | wc -l | tr -d ' ')"
 }
-needs_bundle() { [ "$branches" != 0 ] && { [ "$remotes" = 0 ] || [ "$ahead" != 0 ]; }; }
+# Every repo with a branch is bundled: a remote the reset wipes (the estate's own Gitea) or a stale
+# remote-tracking ref looks "pushed" and is not there when germinate runs (review 11-03).
+needs_bundle() { [ "$branches" != 0 ]; }
 # Linked worktrees of repo $1 (the main one, always first, is skipped): path TAB sha TAB branch TAB prunable
 wt_scan() {
   git -C "$1" worktree list --porcelain | awk '
@@ -137,17 +139,24 @@ for g in "$PROJECTS"/*/.git "$EST/.git"; do
   done < <(wt_scan "$r")
   [ "$nwt" = 0 ] || echo "         $nwt worktree(s) recorded, recreated by germinate"
 done
+# A directory under the projects dir that is no git repo is not carried: named, never skipped.
+for d in "$PROJECTS"/*; do
+  [ -e "$d/.git" ] && continue
+  lost+=("${d/#$HOME/~}: not a git repo ($(du -sh "$d" 2>/dev/null | cut -f1)), not carried"); echo "  LOST   ${lost[${#lost[@]}-1]}"
+done
 for r in ${changes[@]+"${changes[@]}"}; do
   kb=$((kb + $( (cd "$r" && git ls-files -o --exclude-standard -z | xargs -0 stat -f %z | awk '{s += $1} END {print int(s / 1024)}') )))
 done
 
 # ── 3. Service data lives in the backup: is it fresh? ──
 echo "== backup (service data is restored from it, not carried here)"
-last="$(python3 -c 'import json,os,time;d=json.load(open(os.path.expanduser("~/.nos/backup-status.json")));print(int((time.time()-d.get("last_run",0))/3600))' 2>/dev/null || echo "?")"
+# last_run is written even when a source failed: every source must have succeeded, and the last
+# backup-verify (a replay of the dumps) must be green and from the last 8 days. "?…" = not fresh.
+last="$(python3 "$(dirname "$0")/backup-fresh.py" 2>/dev/null || echo "?unreadable")"
 repo="$(grep -E '^restic_repo:' "$EST/config.yml" 2>/dev/null | sed 's/^restic_repo: *//; s/"//g' || true)"
 echo "  last backup run: ${last} h ago; restic repo: ${repo:-not set in config.yml}"
 stale=0
-if [ "$last" = "?" ] || [ "$last" -ge 6 ]; then echo "  STALE: the last backup is older than 6 h: run the backup (and backup-verify), then seal"; stale=1; fi
+if [ "${last#\?}" != "$last" ] || [ "$last" -ge 6 ]; then echo "  STALE: the last backup is older than 6 h: run the backup (and backup-verify), then seal"; stale=1; fi
 case "$repo" in
   "") echo "  REFUSE: restic_repo is empty: no service data would survive the reset"; stale=1 ;;
   /*) [ -d "$repo" ] || { echo "  MISSING: the restic repo $repo is not reachable"; stale=1; } ;;
@@ -191,6 +200,7 @@ for r in "${repos[@]}"; do
   t="$MNT/trees/${r#"$HOME"/}"; mkdir -p "$t"
   repo_facts "$r"
   git -C "$r" remote -v | awk '$3=="(fetch)"{print $1, $2}' > "$t/remotes"
+  cp -p "$r/.git/config" "$t/git-config"   # hooksPath, upstreams, nos.estate-ref: germinate restores it
   git -C "$r" for-each-ref --format='%(objectname) %(refname)' refs/heads > "$t/heads"
   if b="$(git -C "$r" symbolic-ref -q --short HEAD)"; then echo "branch $b"; else echo "detached $(git -C "$r" rev-parse HEAD)"; fi > "$t/head"
   wt_scan "$r" | awk -F'\t' -v h="$HOME/" '$4 == 0 && index($1, h) == 1 {
