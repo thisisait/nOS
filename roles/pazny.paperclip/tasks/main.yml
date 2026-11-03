@@ -35,9 +35,10 @@
       - (item.path | realpath) != (ansible_facts['env']['HOME'] | realpath)
       - not ((item.path | realpath) ~ '/').startswith((ansible_facts['env']['HOME'] | realpath) ~ '/.nos/')
       - not (((nos_data_root | realpath) ~ '/').startswith((item.path | realpath) ~ '/'))
+      - not ('/.git/' in ((item.path | realpath) ~ '/'))
     fail_msg: >-
       paperclip_host_workspaces entry {{ item }} is refused: a workspace is a project folder
-      (e.g. ~/projects/<client>), never $HOME, ~/.nos or a folder containing the data root.
+      (e.g. ~/projects/<client>), never $HOME, ~/.nos, a .git dir or a folder containing the data root.
   loop: "{{ paperclip_host_workspaces | default([]) }}"
 
 - name: "[pazny.paperclip] Ensure each host workspace exists"

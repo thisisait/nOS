@@ -12,7 +12,7 @@ services:
     image: ghcr.io/paperclipai/paperclip:{{ paperclip_version }}
     restart: unless-stopped
     ports:
-{% if services_lan_access %}
+{% if services_lan_access | default(false) %}
       - "{{ paperclip_port }}:3100"
 {% else %}
       - "127.0.0.1:{{ paperclip_port }}:3100"
@@ -22,8 +22,12 @@ services:
       # Where agents write files that outlive a run: set a project's workspace under /workspaces
       # (2026-10-23: without one, a company's work stayed in the container's /tmp).
       - {{ paperclip_workspaces_dir }}:/workspaces
+      # Ruling B3 (2026-11-03): agents never commit in a host repo. ro by default, and .git is
+      # overlaid ro even on an rw workspace (no planted hook or config). Gate:
+      # test_paperclip_workspace_git_is_read_only.py.
 {% for w in paperclip_host_workspaces | default([]) %}
-      - {{ w.path }}:/workspaces/{{ w.name }}:{{ w.mode | default('rw') }}
+      - {{ w.path }}:/workspaces/{{ w.name }}:{{ w.mode | default('ro') }}
+      - {{ w.path }}/.git:/workspaces/{{ w.name }}/.git:ro
 {% endfor %}
     environment:
       # A WIZARD-WRITTEN CONFIG FILE OUTRANKS THIS BLOCK (measured 2026-08-11).
