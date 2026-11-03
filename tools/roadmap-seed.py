@@ -13,7 +13,7 @@ NOS_SEED_DIR; commit those in your private repo. Thereafter the files are the
 source of the git-owned half (title/parent/track/refs/body); the table owns
 status/target/occurred_at/verified* (moved by roadmap-update.py / -verify.py).
 
-Usage:  python3 tools/roadmap-seed.py [--dry-run] [--sync] [--only SLUG[,SLUG...]]
+Usage:  python3 tools/roadmap-seed.py [--dry-run] [--sync] [--only SLUG[,SLUG...]] [--restore-from KEAP.db]
   (no flag)  insert rows whose slug is not in the table yet; skip existing.
   --sync     also reconcile the git-owned half of rows that already exist.
   --dry-run  print what would change; write nothing.
@@ -33,7 +33,7 @@ import urllib.error
 import urllib.request
 
 from keap_api import human_base, human_headers, paged, write_row  # noqa: E402 — sibling helper in tools/
-from roadmap_seed_lib import GIT_OWNED, invalid, is_estate_checkout, load_rows, seed_dir, write_index  # noqa: E402
+from roadmap_seed_lib import GIT_OWNED, invalid, is_estate_checkout, load_rows, restore_table_owned, seed_dir, write_index  # noqa: E402
 
 _REPO = __import__("os").path.abspath(__import__("os").path.join(
     __import__("os").path.dirname(__file__), ".."))
@@ -68,7 +68,7 @@ print(f"loaded {len(R)} rows from {seed_dir()} · orphan check: OK · duplicate 
 DRY_RUN = "--dry-run" in sys.argv
 SYNC = "--sync" in sys.argv
 # --only: file chosen rows without the rest (2026-10-28: one new row could not reach the table
-# without 789 stale inserts riding along).
+# without 789 inserts riding along — rows the 10-17 blank had lost, see --restore-from).
 _only_arg = next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--only=")), None)
 if _only_arg is None and "--only" in sys.argv[:-1]:
     _only_arg = sys.argv[sys.argv.index("--only") + 1]
@@ -157,6 +157,10 @@ if SYNC:
                                         else (cur["values"].get(k) or ""))}
         if delta:
             drifted.append((r, delta, cur["id"]))
+
+if _restore := next((sys.argv[i + 1] for i, a in enumerate(sys.argv[:-1]) if a == "--restore-from"), None):
+    n, newer = restore_table_owned(fresh, _restore, TABLE, _live_cols - set(GIT_OWNED) - {"slug", "release", "embedding", "anchor"})
+    print(f"restore-from {_restore}: {n} of {len(fresh)} inserts take the old table-owned half, {newer} keep a newer file")
 
 if ONLY is not None:
     fresh = [r for r in fresh if r["slug"] in ONLY]
