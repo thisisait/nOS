@@ -6,8 +6,9 @@
 # Nedeklaruje top-level networks: — devops_net a {{ stacks_shared_network }}
 # jsou definovane v base templates/stacks/devops/docker-compose.yml.j2.
 #
-# SSO: proxy auth — Authentik forward_auth v nginx.conf. PASSWORD /
-# HASHED_PASSWORD jsou prazdne, takze code-server nevyzaduje built-in login.
+# SSO: Authentik forward_auth gates the edge. HASHED_PASSWORD renders
+# code_server_hashed_password (empty = no built-in login), and the port binds
+# the LAN only when it is set: a LAN port skips Authentik.
 # =============================================================================
 
 services:
@@ -15,7 +16,7 @@ services:
     image: lscr.io/linuxserver/code-server:{{ code_server_version }}
     restart: unless-stopped
     ports:
-{% if services_lan_access | default(false) %}
+{% if services_lan_access | default(false) and code_server_hashed_password | default('') %}
       - "{{ code_server_port | default(3009) }}:8443"
 {% else %}
       - "127.0.0.1:{{ code_server_port | default(3009) }}:8443"
@@ -27,8 +28,7 @@ services:
       PUID: "{{ code_server_puid | default(1000) }}"
       PGID: "{{ code_server_pgid | default(1000) }}"
       TZ: "{{ code_server_tz | default('Europe/Prague') }}"
-      # Empty = no built-in login; Authentik forward_auth gates the edge. A LAN
-      # port bypasses it, so tasks/main.yml demands a hash then (`$` -> `$$`: compose).
+      # `$` -> `$$`: compose would interpolate the hash.
       PASSWORD: ""
       HASHED_PASSWORD: "{{ code_server_hashed_password | default('') | replace('$', '$$') }}"
       SUDO_PASSWORD: ""

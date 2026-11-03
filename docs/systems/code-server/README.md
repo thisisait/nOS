@@ -23,7 +23,7 @@
 
 ## Authentication
 
-- **Built-in login:** disabled. `PASSWORD`, `HASHED_PASSWORD` and `SUDO_PASSWORD` are rendered empty on purpose, so the LinuxServer image serves no password prompt.
+- **Built-in login:** off by default. `PASSWORD` and `SUDO_PASSWORD` render empty; `HASHED_PASSWORD` renders `code_server_hashed_password` (declared in `default.credentials.yml`, empty by default). A LAN port skips Authentik, so `services_lan_access` binds code-server to the LAN only when the hash is set; without it the port stays on 127.0.0.1.
 - **SSO:** Authentik **forward_auth** — access is gated entirely by the `authentik@file` middleware / nginx forward-auth in front of the route. There is no per-user identity inside code-server (pure access gate). RBAC tier **2** per `plugin.yml` + `state/manifest.yml` (`rbac_tier: 2`); the role header notes the intent is admin-only because code-server grants full host-workspace shell access.
 - **Upstream note:** the LSIO image is HTTP-only on `8443` (no internal TLS) — do not add it to `traefik_https_upstream_ids`. Doctrine: `ssot/doctrine/foreign-properties.md` §3 / §3.1; gate `tests/anatomy/test_traefik_https_upstream_binds_tls.py`.
 
