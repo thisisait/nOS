@@ -260,7 +260,7 @@ def knowledge_pack(rows: list[dict], title: str, day: str, settled: bool = False
 def restore_table_owned(rows: list[dict], db_path: str, table_id: str, keep: set[str],
                         seed: str | None = None) -> tuple[int, int]:
     """Give each row an old KEAP copy (keap.db, read-only) still holds its table-owned cells,
-    unless its file was committed after that copy's row last changed (the file is newer then).
+    unless a later commit changed its file's status line (a ruling the lost row never received).
 
     The 10-17 blank came before DataTables survived one: 562 roadmap rows were gone and read
     as "stale inserts" (11-03). The file still owns the text. Returns (restored, file newer)."""
@@ -271,7 +271,7 @@ def restore_table_owned(rows: list[dict], db_path: str, table_id: str, keep: set
     with sqlite3.connect(f"file:{db_path}?immutable=1", uri=True) as db:
         old = {rid: (json.loads(data), ts) for rid, data, ts in db.execute(
             "SELECT row_id, data, updated_at FROM table_rows WHERE table_id = ?", (table_id,))}
-    log = subprocess.run(["git", "-C", seed or seed_dir(), "log", "--format=@%ct", "--name-only"],
+    log = subprocess.run(["git", "-C", seed or seed_dir(), "log", "-G^status:", "--format=@%ct", "--name-only"],
                          capture_output=True, text=True).stdout
     committed: dict[str, int] = {}
     for line in log.splitlines():
@@ -284,7 +284,7 @@ def restore_table_owned(rows: list[dict], db_path: str, table_id: str, keep: set
         if r["slug"] not in old:
             continue
         values, ts = old[r["slug"]]
-        # ponytail: any later commit counts, a text-only edit too; diff the status line if it bites.
+        # Only a status-line change counts: 24 rows had lost their status to a text-only edit (11-03).
         if committed.get(r["slug"], 0) > ts:
             newer += 1
             continue
