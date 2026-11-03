@@ -47,10 +47,9 @@ PUBLIC_CERT_PATTERNS = [
 ]
 
 
-def _enumerate_tasks():
-	"""Walk every YAML file in roles/ + tasks/ + main.yml, find each
-	`ansible.builtin.{copy,template,file}` task block, return tuples of
-	(filepath, lineno, dest_value, mode_value)."""
+def _task_blocks():
+	"""Walk every YAML file in roles/ + tasks/ + main.yml and yield
+	(filepath, rough task block) pairs."""
 	roots = [REPO / "main.yml"]
 	roots += list((REPO / "tasks").rglob("*.yml"))
 	roots += list((REPO / "roles").rglob("tasks/*.yml"))
@@ -59,24 +58,28 @@ def _enumerate_tasks():
 	# Per task: src + dest + mode keys live in a contiguous block. We
 	# slurp the file, then split on lines beginning with `- name:` at
 	# any indent. For each chunk, look for the module name + dest + mode.
-	task_re = re.compile(
-		r"ansible\.builtin\.(copy|template|file)\b",
-	)
-	dest_re = re.compile(r"^\s*dest:\s*[\"']?([^\"'\n]+)[\"']?", re.MULTILINE)
-	mode_re = re.compile(r"^\s*mode:\s*[\"']?([\d]{3,4})[\"']?", re.MULTILINE)
-
-	for path in roots:
+	for path in dict.fromkeys(roots):  # tasks/**/ also matches tasks/*
 		if not path.is_file():
 			continue
-		text = path.read_text()
 		# Split into rough task blocks on `- name:`.
-		for block in re.split(r"\n(?=\s*- name:)", text):
-			if not task_re.search(block):
-				continue
-			d = dest_re.search(block)
-			m = mode_re.search(block)
-			if d and m:
-				yield (path, d.group(1).strip(), m.group(1).strip())
+		for block in re.split(r"\n(?=\s*- name:)", path.read_text()):
+			yield path, block
+
+
+_MODE_RE = re.compile(r"^\s*mode:\s*[\"']?([\d]{3,4})[\"']?", re.MULTILINE)
+
+
+def _enumerate_tasks():
+	"""(filepath, dest_value, mode_value) per copy/template/file task."""
+	task_re = re.compile(r"ansible\.builtin\.(copy|template|file)\b")
+	dest_re = re.compile(r"^\s*dest:\s*[\"']?([^\"'\n]+)[\"']?", re.MULTILINE)
+	for path, block in _task_blocks():
+		if not task_re.search(block):
+			continue
+		d = dest_re.search(block)
+		m = _MODE_RE.search(block)
+		if d and m:
+			yield (path, d.group(1).strip(), m.group(1).strip())
 
 
 def test_secret_files_have_0600_mode():
@@ -100,6 +103,36 @@ def test_secret_files_have_0600_mode():
 		"Secret-like files MUST be mode 0600 (or 0400). Found:\n  "
 		+ "\n  ".join(bad)
 	)
+
+
+# A template that renders an edge token or the KEAP proxy secret into its
+# output (a `{{ }}` expression, not a `{% if %}` guard) carries that secret.
+# Pinned 2026-11-03: traefik dynamic/middlewares.yml rendered three at 0644.
+EDGE_SECRET_RENDER = re.compile(
+	r"\{\{[^}]*\b(\w+_edge_token|keap_proxy_shared_secret)\b[^}]*\}\}"
+)
+
+
+def test_edge_secret_templates_render_0600():
+	"""Every `template:` task whose src renders an edge token / proxy
+	secret must set mode 0600 (or 0400), whatever its dest is named."""
+	src_re = re.compile(r"^\s*src:\s*[\"']?([^\"'\n]+)[\"']?", re.MULTILINE)
+	bad = []
+	for path, block in _task_blocks():
+		if "ansible.builtin.template" not in block:
+			continue
+		s, m = src_re.search(block), _MODE_RE.search(block)
+		if not s:
+			continue
+		role = next((p for p in path.parents if p.parent.name == "roles"), None)
+		base = (role / "templates") if role else (REPO / "templates")
+		tmpl = base / s.group(1).strip()
+		if not tmpl.is_file() or not EDGE_SECRET_RENDER.search(tmpl.read_text()):
+			continue
+		mode = (m.group(1).lstrip("0") or "0") if m else "unset"
+		if mode not in ("600", "400"):
+			bad.append(f"{path.relative_to(REPO)}: src={s.group(1).strip()} mode={mode}")
+	assert not bad, "Templates rendering an edge secret MUST be 0600:\n  " + "\n  ".join(bad)
 
 
 def test_nos_dir_created_at_0700_in_pre_tasks():
