@@ -13,6 +13,8 @@
   become: true
 
 # conf.d is the file provider; labels are the docker provider. Either alone misses names.
+# Only a DNS name leaves the read-back: every container label is read, and a name reaches a
+# bash -c unit and /etc/hosts (review 11-03: a label with ; ran a command as avahi at boot).
 - name: "[mdns] Read back every Host() Traefik routes (conf.d and container labels)"
   ansible.builtin.shell: |
     set -o pipefail
@@ -26,8 +28,6 @@
     } | grep -o 'Host(`[^`]*`)' | sed 's/^Host(`//;s/`)$//' \
       | grep -E '^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$' \
       | grep -E '(^|\.){{ tenant_domain | regex_escape }}$' | sort -u
-    # Only a DNS name leaves: any container's label is read, and a name reaches a bash -c unit
-    # and /etc/hosts (review 11-03: `a;touch …;b.<tenant>` ran as avahi at boot).
   args:
     executable: /bin/bash
   register: _mdns_readback
