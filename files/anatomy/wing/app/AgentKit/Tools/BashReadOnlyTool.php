@@ -75,6 +75,17 @@ final class BashReadOnlyTool implements ToolInterface
         'git', 'sqlite3',
     ];
 
+    /** git subcommands that only read; the first argument must be one of them. */
+    private const GIT_READ_SUBCOMMANDS = [
+        'status', 'log', 'show', 'diff', 'rev-parse', 'ls-files', 'ls-tree', 'blame', 'grep',
+        'cat-file', 'shortlog', 'describe', 'rev-list', 'merge-base', 'name-rev',
+    ];
+
+    /** Under $HOME: what holds the estate's bearers and keys. Resolved, symlinks followed. */
+    private const SECRET_DIRS = ['.nos', '.ssh', '.gnupg'];
+    /** Inside a SECRET_DIRS entry and still readable: the estate checkout agents work from. */
+    private const SECRET_DIR_EXCEPTIONS = ['.nos/estate'];
+
     private const MAX_OUTPUT_BYTES = 8192;
     private const MAX_RUNTIME_SECONDS = 30;
     private const MAX_ARGS = 32;
@@ -230,13 +241,12 @@ final class BashReadOnlyTool implements ToolInterface
         // child has no business seeing those. minimalEnv() whitelists
         // PATH/HOME/LANG/LC_ALL/LC_CTYPE/TZ/PWD/TMPDIR — anything else a
         // legitimate verb needs gets added explicitly here in code review.
-        $argv = array_merge([$verb], $args);
         $descriptors = [
             0 => ['pipe', 'r'],
             1 => ['pipe', 'w'],
             2 => ['pipe', 'w'],
         ];
-        $env = $this->minimalEnv();
+        [$argv, $env] = $this->spawnArgvEnv($verb, $args, $this->minimalEnv());
         // THE REPO, not wherever the daemon happens to live (2026-08-16).
         // cwd was null, so commands inherited Wing's own directory
         // (~/wing/app). Every agent task in this estate is written against the
@@ -328,6 +338,81 @@ final class BashReadOnlyTool implements ToolInterface
     }
 
     /**
+     * The argv and env proc_open gets. For git, a repo-local config (a cloned or mounted repo) may
+     * still name an fsmonitor, a hook or a diff driver: each is switched off on the command line,
+     * which outranks it, and global/system config is never read.
+     *
+     * @param array<int, string> $args
+     * @param array<string, string> $env
+     * @return array{0: array<int, string>, 1: array<string, string>}
+     */
+    private function spawnArgvEnv(string $verb, array $args, array $env): array
+    {
+        if ($verb !== 'git') {
+            return [array_merge([$verb], $args), $env];
+        }
+        return [
+            array_merge(['git', '-c', 'core.fsmonitor=false', '-c', 'core.hooksPath=/dev/null',
+                '-c', 'core.pager=cat', '-c', 'diff.external=', '-c', 'core.sshCommand=false'], $args),
+            $env + ['GIT_CONFIG_GLOBAL' => '/dev/null', 'GIT_CONFIG_NOSYSTEM' => '1',
+                'GIT_PAGER' => 'cat', 'GIT_TERMINAL_PROMPT' => '0'],
+        ];
+    }
+
+    /**
+     * A path argument (bare, `--flag=path` or `~/…`) that resolves into a SECRET_DIRS entry, or for a
+     * recursive search one that contains it. Unresolvable arguments (patterns, SQL) are not paths.
+     *
+     * @param array<int, string> $args
+     */
+    private function secretPathRefusal(string $verb, array $args): ?string
+    {
+        $home = getenv('HOME');
+        if (!is_string($home) || $home === '') {
+            return null;
+        }
+        $secrets = $allowed = [];
+        foreach (self::SECRET_DIRS as $d) {
+            $secrets[] = realpath($home . '/' . $d) ?: $home . '/' . $d;
+        }
+        foreach (self::SECRET_DIR_EXCEPTIONS as $d) {
+            $allowed[] = realpath($home . '/' . $d) ?: $home . '/' . $d;
+        }
+        $inside = static fn (string $p, string $dir): bool => $p === $dir || str_starts_with($p, $dir . '/');
+        $cwd = getenv('NOS_REPO_ROOT');
+        $cwd = (is_string($cwd) && $cwd !== '') ? $cwd : (getcwd() ?: '/');
+        $recursive = in_array($verb, ['grep', 'rg', 'tree'], true);
+        foreach ($args as $i => $a) {
+            if (str_starts_with($a, '-')) {
+                $eq = strpos($a, '=');
+                if ($eq === false) {
+                    continue;
+                }
+                $a = substr($a, $eq + 1);
+            }
+            if (str_starts_with($a, '~/') || $a === '~') {
+                $a = $home . substr($a, 1);
+            }
+            $abs = str_starts_with($a, '/') ? $a : $cwd . '/' . $a;
+            $real = realpath($abs);
+            if ($real === false) {
+                continue;
+            }
+            foreach ($allowed as $ok) {
+                if ($inside($real, $ok)) {
+                    continue 2;
+                }
+            }
+            foreach ($secrets as $s) {
+                if ($inside($real, $s) || ($recursive && str_starts_with($s, rtrim($real, '/') . '/'))) {
+                    return "args[{$i}] reaches {$s}, which holds the estate's secrets; agents do not read it";
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
      * Whitelisted env vars passed to the spawned process. Everything
      * else (incl. secrets like ANTHROPIC_API_KEY / WING_API_TOKEN /
      * BONE_SECRET) is dropped. A14.2 hardening — see proc_open() call
@@ -362,7 +447,61 @@ final class BashReadOnlyTool implements ToolInterface
      */
     private function guardArgs(string $verb, array $args): ?string
     {
+        // 2026-11-03 review: any path argument reached ~/.nos/secrets.yml (every bearer) and a
+        // symlink in the repo did too. Resolved paths into these dirs are refused for every verb;
+        // a recursive search may not start above them either.
+        $secretRefusal = $this->secretPathRefusal($verb, $args);
+        if ($secretRefusal !== null) {
+            return $secretRefusal;
+        }
+        if ($verb === 'rg') {
+            foreach ($args as $i => $a) {
+                foreach (['--pre', '--pre-glob', '-L', '--follow'] as $bad) {
+                    if ($a === $bad || str_starts_with($a, $bad . '=')) {
+                        return "rg: arg #{$i} '{$bad}' is refused (--pre runs a program; --follow leaves the tree)";
+                    }
+                }
+            }
+            return null;
+        }
+        if ($verb === 'grep') {
+            foreach ($args as $i => $a) {
+                if ($a === '-R' || $a === '--dereference-recursive' || (preg_match('/^-[A-Za-z]*R/', $a) === 1 && !str_starts_with($a, '--'))) {
+                    return "grep: arg #{$i} follows symlinks (-R); use -r";
+                }
+            }
+            return null;
+        }
+        if ($verb === 'tree') {
+            foreach ($args as $i => $a) {
+                if ($a === '-o' || str_starts_with($a, '-o') && !str_starts_with($a, '--')) {
+                    return "tree: arg #{$i} '-o' writes a file; refused";
+                }
+            }
+            return null;
+        }
         if ($verb === 'git') {
+            // 2026-11-03: flags alone were guarded and no subcommand: `git config --global
+            // core.fsmonitor <cmd>` wrote ~/.gitconfig and the next `git status` ran <cmd>. Only
+            // read subcommands, first; global/system config is never read (GIT_CONFIG_* in run()).
+            // Leading `--no-pager` and `-C <dir>` (agents read the estate checkout that way); the
+            // dir itself went through secretPathRefusal() above.
+            $k = 0;
+            while (($args[$k] ?? '') === '--no-pager' || ($args[$k] ?? '') === '-C') {
+                $k += ($args[$k] === '-C') ? 2 : 1;
+            }
+            $sub = $args[$k] ?? '';
+            if (!in_array($sub, self::GIT_READ_SUBCOMMANDS, true)) {
+                return "git: subcommand '{$sub}' is not a read subcommand. Allowed (first arg): "
+                    . implode(', ', self::GIT_READ_SUBCOMMANDS);
+            }
+            foreach ($args as $i => $a) {
+                foreach (['--output', '--ext-diff', '--textconv', '-O', '--open-files-in-pager', '--exec'] as $bad) {
+                    if ($a === $bad || str_starts_with($a, $bad . '=') || ($bad === '-O' && str_starts_with($a, '-O'))) {
+                        return "git: arg #{$i} '{$bad}' writes a file or runs a program; refused";
+                    }
+                }
+            }
             // Forbid flags that exec arbitrary commands or change git's
             // exec behavior.
             $forbiddenPrefixes = [
