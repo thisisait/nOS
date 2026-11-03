@@ -59,7 +59,7 @@ Env:
   CORTEX_API_URL          default http://127.0.0.1:8098
   CORTEX_AGENT_TOKEN_RW   required (a pass writes)
   CORTEX_DIFF_STATE       the night ledger read for `halted`
-  NOS_NOTIFY_BIN          nos-notify.sh (optional)
+  NOS_NOTIFY_ACTOR        set = notify via the sibling nos-notify.sh (optional)
 
 Exit: 0 the pass ran (or one was already in flight), 1 config error,
 2 the organ was unreachable, 3 the organ REFUSED the pass,
@@ -77,7 +77,9 @@ from pathlib import Path
 
 BASE = os.environ.get("CORTEX_API_URL", "http://127.0.0.1:8098").rstrip("/")
 TOKEN = os.environ.get("CORTEX_AGENT_TOKEN_RW", "").strip()
-NOTIFY_BIN = os.environ.get("NOS_NOTIFY_BIN", "")
+# The sender beside this file, never an env path: an env-named binary ran anything through
+# this allowed script. Opt-in is the job naming itself (NOS_NOTIFY_ACTOR); unset = report-only.
+NOTIFY_BIN = os.path.join(os.path.dirname(os.path.abspath(__file__)), "nos-notify.sh") if os.environ.get("NOS_NOTIFY_ACTOR") else ""
 TIMEOUT_S = int(os.environ.get("CORTEX_FS_SYNC_TIMEOUT_S", "600"))
 
 #: The harness's night ledger. This default is a COPY of the one in

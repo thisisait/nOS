@@ -16,7 +16,7 @@ Severity routing mirrors keap-base's notification block:
 Env (Pulse-rendered):
   KEAP_API_URL          default http://127.0.0.1:8091
   KEAP_AGENT_TOKEN_RW   required (lint/run is a write — it reconciles state)
-  NOS_NOTIFY_BIN        path to nos-notify.sh (optional; unset = report-only)
+  NOS_NOTIFY_ACTOR      set = notify via the sibling nos-notify.sh (optional; unset = report-only)
 
 Exit codes: 0 ran (with or without findings), 1 config error, 2 KEAP unreachable.
 """
@@ -31,7 +31,9 @@ import urllib.request
 
 KEAP_API_URL = os.environ.get("KEAP_API_URL", "http://127.0.0.1:8091").rstrip("/")
 TOKEN_RW = os.environ.get("KEAP_AGENT_TOKEN_RW", "")
-NOTIFY_BIN = os.environ.get("NOS_NOTIFY_BIN", "")
+# The sender beside this file, never an env path: an env-named binary ran anything through
+# this allowed script. Opt-in is the job naming itself (NOS_NOTIFY_ACTOR); unset = report-only.
+NOTIFY_BIN = os.path.join(os.path.dirname(os.path.abspath(__file__)), "nos-notify.sh") if os.environ.get("NOS_NOTIFY_ACTOR") else ""
 
 
 def notify(severity: str, title: str, body: str, channels: str) -> None:

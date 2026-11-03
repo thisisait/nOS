@@ -119,7 +119,7 @@ prose, and it will stop firing by itself the day the corpus is real.
 Env:
   KEAP_API_URL / KEAP_AGENT_TOKEN_RO        the incumbent
   CORTEX_API_URL / CORTEX_AGENT_TOKEN_RO    the organ
-  NOS_NOTIFY_BIN                            nos-notify.sh (optional)
+  NOS_NOTIFY_ACTOR                          set = notify via the sibling nos-notify.sh (optional)
   CORTEX_DIFF_STATE                         ~/.nos/cortex-corpus-diff.json
   NOS_CONSOLIDATE_STATE                     ~/.nos/keap-consolidate-state.json
 
@@ -1621,7 +1621,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    notify_bin = os.environ.get("NOS_NOTIFY_BIN", "")
+    # The sender beside this file, never an env path: an env-named binary ran anything through
+    # this allowed script. Opt-in is the job naming itself (NOS_NOTIFY_ACTOR); unset = report-only.
+    notify_bin = os.path.join(os.path.dirname(os.path.abspath(__file__)), "nos-notify.sh") if os.environ.get("NOS_NOTIFY_ACTOR") else ""
     state_path = Path(args.state)
 
     if args.clear_halt:

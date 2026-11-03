@@ -15,5 +15,9 @@
    "inherited": [["ſECRET", "1"], ["X_KEY", "2"], ["CREDENTİAL", "3"], ["ı_KEEP", "4"],
                  ["X_KEY\n", "5"], ["X_KEY\n\n", "6"], ["éTOKEN", "7"]],
    "job": [],
-   "expected": [["ı_KEEP", "4"], ["X_KEY\n\n", "6"]]}
+   "expected": [["ı_KEEP", "4"], ["X_KEY\n\n", "6"]]},
+  {"why": "NOS_NOTIFY_BIN is not passed: the scripts executed its value, so a job env ran any binary",
+   "inherited": [["PATH", "/usr/bin"]],
+   "job": [["NOS_NOTIFY_BIN", "/tmp/any-binary"], ["NOS_NOTIFY_ACTOR", "pulse:keap-lint"]],
+   "expected": [["PATH", "/usr/bin"], ["NOS_NOTIFY_ACTOR", "pulse:keap-lint"]]}
 ]

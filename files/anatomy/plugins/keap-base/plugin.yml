@@ -225,7 +225,6 @@ pulse:
         NOS_CONSOLIDATE_FS_ROOTS: "{{ consolidate_fs_roots }}"
         NOS_MARIADB_ROOT_PASSWORD: "{{ mariadb_root_password }}"
         NOS_CONSOLIDATE_DB_EXCLUDE: "{{ consolidate_db_exclude }}"
-        NOS_NOTIFY_BIN: "{{ playbook_dir }}/files/anatomy/scripts/nos-notify.sh"
         # Its OWN identity. nos-notify.sh stamped `os-resume` for every
         # caller until 2026-08-25, so this job's rows landed indistinguishable
         # from an OS-update settle — and bin/reconcile-inbox.php keys a
@@ -260,7 +259,6 @@ pulse:
       env:
         KEAP_API_URL: "http://127.0.0.1:{{ keap_port }}"
         KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw }}"
-        NOS_NOTIFY_BIN: "{{ playbook_dir }}/files/anatomy/scripts/nos-notify.sh"
         # Its OWN identity. nos-notify.sh stamped `os-resume` for every
         # caller until 2026-08-25, so this job's rows landed indistinguishable
         # from an OS-update settle — and bin/reconcile-inbox.php keys a
