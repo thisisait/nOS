@@ -23,10 +23,6 @@
 
 # Tied to install_acme in default.config.yml (auto-derived from tenant_domain).
 # Skip rendering when running on a local TLD (dev.local / lan / test / localhost).
-acme_provider: "cloudflare"
-acme_email: "{{ default_admin_email | default('admin@' + tenant_domain) }}"
-acme_renewal_days: 60                     # Re-issue when cert expires within N days
-acme_staging: false                       # Use LE staging endpoint (testing)
 acme_cloudflare_api_token: ""             # SET IN credentials.yml
 
 # Where acme.sh lives + where it stores certs internally

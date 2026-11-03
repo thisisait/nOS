@@ -15,11 +15,6 @@
 # AT Protocol forbids .local TLD. On dev (tenant_domain=dev.local) we fall back
 # to .dev.lan; on a real public TLD we use bsky.<tenant_domain> directly.
 # Federation only works on the public-TLD path (needs DNS + LE cert).
-bluesky_pds_hostname: "{{ 'bsky.dev.lan' if (tenant_domain_is_local | default(true) | bool) else 'bsky.' + (tenant_domain | default('dev.local')) }}"
-bluesky_pds_port: 2583
-bluesky_pds_invite_required: true                   # Invite-only registrace
-bluesky_pds_email_smtp_url: ""                      # Prazdne = email notifikace vypnute
-bluesky_pds_email_from: ""                          # Default: noreply@bsky.dev.lan
 bluesky_pds_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
 bluesky_pds_cpus: "{{ docker_cpus_light | default('0.5') }}"
 

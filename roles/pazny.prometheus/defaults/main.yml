@@ -7,7 +7,5 @@
 # fragment + handler (same deliberate decision as for grafana provisioning).
 # ==============================================================================
 
-prometheus_port: 9090
-prometheus_retention: "30d"
 prometheus_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 prometheus_cpus: "{{ docker_cpus_standard | default('1.0') }}"

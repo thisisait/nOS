@@ -15,17 +15,6 @@
 #      to the webmail UI. No per-user identity flows into SnappyMail.
 # ==============================================================================
 
-# Toggle — disabled by default. Enable alongside install_smtp_stalwart for
-# a production mail stack, or with install_mailpit for dev capture.
-install_snappymail: false
-
-# Domain — separate from mail.<tld> (which is the SMTP/IMAP server).
-# webmail.<tld> is the webmail UI frontend.
-snappymail_domain: "webmail{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-
-# Host port — 3008 is next in the 3000 range after 3007 (HedgeDoc).
-snappymail_port: 3008
-
 # Data directory — persists admin settings, plugins, and cache.
 # SnappyMail is stateless (no DB); everything is in this directory.
 

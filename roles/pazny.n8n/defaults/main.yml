@@ -7,7 +7,6 @@
 # the role only reads them via Ansible var precedence (vars_files > role defaults).
 # ==============================================================================
 
-n8n_port: 5678
 # SSRF protection (REM-043): block the HTTP Request node + webhooks from reaching
 # internal/private IPs (n8n built-in since 2.12; default-OFF upstream → default-ON
 # here). "default" uses n8n's built-in RFC-1918+loopback block set (covers every nOS
@@ -22,10 +21,5 @@ n8n_ssrf_allowed_ip_ranges: ""          # CSV allowlist of internal CIDRs to re-
 # n8n_host_gateway_cidr lives in default.config.yml (GLOBAL): the plugin
 # loader renders n8n-base's compose extension without this role's defaults in
 # scope — a role-scoped var rendered "" there (measured 2026-09-21).
-n8n_domain: "n8n{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-n8n_data_dir: "{{ ansible_facts['env']['HOME'] }}/n8n"
-n8n_timezone: "{{ nos_timezone | default('Europe/Prague') }}"
-n8n_admin_firstname: "Admin"
-n8n_admin_lastname: "nOS"
 n8n_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 n8n_cpus: "{{ docker_cpus_standard | default('1.0') }}"

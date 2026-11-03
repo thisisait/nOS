@@ -8,11 +8,6 @@
 # Ansible var precedence (vars_files > role defaults).
 # ==============================================================================
 
-mariadb_port: 3306
 mariadb_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 mariadb_cpus: "{{ docker_cpus_standard | default('1.0') }}"
 
-# Seed databaze / users se cte z top-level default.config.yml. Role defaults
-# provide an empty fallback for external consumers.
-mariadb_databases: []
-mariadb_users: []

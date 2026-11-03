@@ -18,7 +18,6 @@
 
 mcpo_version: "main"          # upstream publishes only main/latest (no semver tags)
 mcpo_domain: "mcp{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-mcpo_port: 8765                                         # host port
 mcpo_api_key: "{{ nos_derived_secrets.mcpo }}"    # bearer token for OpenWebUI
 mcpo_image: "ghcr.io/open-webui/mcpo"
 

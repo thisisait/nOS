@@ -38,11 +38,6 @@ watchtower_image: "nickfedor/watchtower:1.16.1"
 # every other watchtower instance pings Docker Hub.
 watchtower_schedule: "0 30 4 * * *"
 
-# Operating mode:
-#   notify  — print available updates, do not pull/recreate (safe default)
-#   apply   — pull + restart containers tagged for it (opt-in per host)
-watchtower_mode: "notify"
-
 # Which containers to watch. Watchtower's default is "everything" which is
 # noisy on a 60-service box. We label-gate by default — only services
 # explicitly opted in via compose-template `labels: {watchtower.enable: true}`

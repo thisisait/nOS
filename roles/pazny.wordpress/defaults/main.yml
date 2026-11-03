@@ -8,14 +8,6 @@
 # Ansible var precedence (vars_files > role defaults).
 # ==============================================================================
 
-wordpress_port: 8084
-wordpress_domain: "wordpress{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-wordpress_dir: "{{ ansible_facts['env']['HOME'] }}/projects/wordpress"
-wordpress_db_name: "wordpress"
-wordpress_db_user: "wordpress"
-wordpress_db_host: "127.0.0.1"  # ignored when install_mariadb=true (network alias 'mariadb' from iiab_net is used)
-wordpress_table_prefix: "wp_"
-wordpress_admin_user: "admin"
 wordpress_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 wordpress_cpus: "{{ docker_cpus_standard | default('1.0') }}"
 # Gated client portal (commons). Idempotent wp post create in post.yml.

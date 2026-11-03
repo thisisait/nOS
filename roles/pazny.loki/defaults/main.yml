@@ -7,7 +7,5 @@
 # fragment + handler (same deliberate decision as for grafana provisioning).
 # ==============================================================================
 
-loki_port: 3100
-loki_retention: "744h"   # 31 days
 loki_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 loki_cpus: "{{ docker_cpus_standard | default('1.0') }}"

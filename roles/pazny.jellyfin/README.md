@@ -35,7 +35,7 @@ Two invocation modes from `tasks/stacks/stack-up.yml`:
 | `jellyfin_version` | `10.10.7` | Pinned for CVE-2025-31499 (FFmpeg argument injection → RCE) |
 | `jellyfin_port` | `8096` | Host port |
 | `jellyfin_domain` | `media.dev.local` | Used by the nginx vhost |
-| `jellyfin_lan_access` | `true` | Expose port on all interfaces instead of `127.0.0.1` |
+| `jellyfin_lan_access` | `false` | Expose port on all interfaces instead of `127.0.0.1` |
 | `jellyfin_config_dir` | `~/jellyfin/config` | Host bind mount |
 | `jellyfin_cache_dir` | `~/jellyfin/cache` | Host bind mount |
 | `jellyfin_movies_dir` | `~/media/movies` | Read-only bind mount |

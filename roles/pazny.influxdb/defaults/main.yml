@@ -12,8 +12,6 @@
 
 # InfluxDB 2.7 is the stable OSS release (3.x is alpha, do not use).
 influxdb_version: "2.7.12"
-influxdb_domain: "influx{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-influxdb_port: 8086
 
 # First-run auto-setup parametry (DOCKER_INFLUXDB_INIT_*).
 influxdb_init_mode: "setup"

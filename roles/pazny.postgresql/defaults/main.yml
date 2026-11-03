@@ -8,26 +8,6 @@
 # (vars_files > role defaults).
 # ==============================================================================
 
-postgresql_port: 5432
-postgresql_root_user: "postgres"
-
-# ── In-transit encryption (REM-009, S3 2026-06-10) ───────────────────────────
-# Server-side ssl=on with a role-generated self-signed cert (10y, CN +
-# SAN postgresql/127.0.0.1). libpq clients default to sslmode=prefer, so
-# every psycopg/libpq consumer upgrades to TLS automatically — no client
-# changes needed; `require` pinning per-client is a follow-up. Self-signed
-# is deliberate: sslmode=require does NOT verify the CA, and it keeps the
-# cert independent of mkcert/LE (works on both local and public TLDs).
-# Live-verified on Docker Desktop (TLSv1.3, key bind-mounted 0600).
-# Linux note: PG requires the key owned by postgres-uid or root — the
-# host-user-owned bind mount fails there; needs the root-chown leg first.
-# NOTE (2026-08-23): this declaration is a FALLBACK so the role stays usable on
-# its own. The value every consumer actually resolves is the one at play scope
-# in default.config.yml — five OTHER roles read this name to pick their client
-# sslmode, and a role default is invisible to them. It rendered `prefer`
-# everywhere for nine weeks; see docs/hidden_fees/23-a-pin-that-never-rendered.md.
-postgresql_ssl_enabled: "{{ ansible_os_family == 'Darwin' }}"
-
 # REM-217 (4). Upstream's 16-line default is `HIGH:MEDIUM:+3DES:!aNULL`, which
 # offers 3DES (SWEET32) and the MEDIUM grade to a downgrade-capable attacker.
 # Nothing observed negotiates them — every session in pg_stat_ssl is TLSv1.3

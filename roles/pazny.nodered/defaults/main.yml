@@ -13,14 +13,6 @@
 # the Node major, so the fix is 4.1.14-20: Node 20 as today (v20.19.0 measured
 # in the running container), node-red alone moves. arm64 confirmed on the tag.
 nodered_version: "4.1.14-20"
-nodered_domain: "nodered{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-nodered_port: 1880                                    # Node-RED default
-nodered_timezone: "{{ nos_timezone | default('Europe/Prague') }}"
-nodered_uid: 1000                                     # default UID v nodered/node-red image
-nodered_gid: 1000
-nodered_enable_safe_mode: "false"
-nodered_enable_projects: "true"                       # git-backed projects
-nodered_flows_file: "flows.json"
 nodered_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 nodered_cpus: "{{ docker_cpus_standard | default('1.0') }}"
 
@@ -32,7 +24,6 @@ nodered_cpus: "{{ docker_cpus_standard | default('1.0') }}"
 # /data/node_modules). Disabling falls back to no adminAuth (open editor;
 # operators relying on the previous Authentik forward_auth gate must set
 # install_nginx=true OR Traefik authentik@file middleware on the route).
-nodered_native_oidc_enabled: "{{ install_authentik | default(false) }}"
 nodered_passport_openidconnect_version: "0.1.2"   # latest stable (npm 2024-11)
 nodered_oidc_username_claim: "preferred_username" # Authentik default sub mode
 

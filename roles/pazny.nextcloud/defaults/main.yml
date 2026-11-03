@@ -15,13 +15,6 @@
 # Bumping the major on an EXISTING install: set this to your CURRENT data major
 # first, then step up ONE major per run (there is no upgrades/nextcloud.yml
 # recipe yet). Fresh blanks are unaffected — any value reinitializes cleanly.
-nextcloud_port: 8085
-nextcloud_domain: "cloud{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-nextcloud_dir: "{{ ansible_facts['env']['HOME'] }}/projects/nextcloud"
-nextcloud_db_name: "nextcloud"
-nextcloud_db_user: "nextcloud"
-nextcloud_db_host: "127.0.0.1"  # ignored when install_mariadb=true (network alias 'mariadb' from iiab_net is used)
-nextcloud_admin_user: "admin"
 nextcloud_mem_limit: "{{ docker_mem_limit_critical | default('2g') }}"
 nextcloud_cpus: "{{ docker_cpus_standard | default('1.0') }}"
 

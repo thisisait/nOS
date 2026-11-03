@@ -7,12 +7,6 @@
 # blank-reset path resolver). Role defaults poskytuji fallback.
 # ==============================================================================
 
-jellyfin_port: 8096
-jellyfin_domain: "media{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-jellyfin_lan_access: true                           # true = port dostupny z LAN
-jellyfin_movies_dir: "{{ ansible_facts['env']['HOME'] }}/media/movies"
-jellyfin_shows_dir: "{{ ansible_facts['env']['HOME'] }}/media/shows"
-jellyfin_music_dir: "{{ ansible_facts['env']['HOME'] }}/media/music"
 # The mounts this role renders: the three defaults, then each of
 # jellyfin_extra_media_dirs at its own path (default.config.yml).
 _jf_media: >-

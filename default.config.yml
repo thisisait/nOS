@@ -421,7 +421,7 @@ install_smtp_stalwart: false
 # ── Watchtower (Docker image freshness watcher) ──────────────────────────────
 # Default ON in NOTIFY-ONLY mode — surfaces stale images in Mailpit without
 # auto-restarting anything. Stateful upgrades stay manual via upgrade
-# recipes. See roles/pazny.watchtower/defaults/main.yml for tuning.
+# recipes. Schedule/label tuning: roles/pazny.watchtower/defaults/main.yml.
 install_watchtower: true                  # Docker image drift watcher
 watchtower_mode: "notify"                 # notify | apply (per-host opt-in)
 
@@ -561,6 +561,7 @@ install_docker: true              # Linux: install Docker CE + compose plugin vi
 install_hardening: true           # Linux: ANSSI baseline (ufw + fail2ban + sysctl + auditd + apparmor + chrony + ssh + unattended). Decision O5: default ON, opt-out via this flag.
 # The two ssh choices a host's USE decides (pazny.linux.hardening, server default
 # off): password logins and TCP forwarding (editor remotes tunnel over ssh).
+# Forwarding on lets any ssh user `ssh -L` to every 127.0.0.1 admin port, past ufw.
 # profiles/workstation.yml turns both on for people who ssh into a shared box.
 hardening_ssh_password_auth: false
 hardening_ssh_tcp_forwarding: false
@@ -1262,8 +1263,8 @@ postgresql_root_password: "{{ nos_derived_secrets.postgresql }}"
 # of 2026-06-14 has never once produced `require` in a render. Its gate reads
 # the template, so it passed for two months.
 #
-# The role default stays as a fallback so the role remains usable alone; this
-# line is what every consumer actually resolves. Linux is still false — the
+# There is no role default any more (test_a_pin_is_declared_once); this line
+# is what every consumer resolves. Linux is still false — the
 # key-ownership leg (PG wants the key owned by postgres-uid or root, the
 # host-user bind mount is not) is genuinely undone, not merely unset.
 postgresql_ssl_enabled: "{{ ansible_facts['os_family'] | default('') == 'Darwin' }}"
@@ -1628,16 +1629,15 @@ blackbox_exporter_version: "v0.28.0"  # [swept 2026-08-06]
 alloy_scrape_postgres_exporter: "{{ install_postgresql | default(false) }}"
 alloy_scrape_mysqld_exporter: "{{ install_mariadb | default(false) }}"
 alloy_scrape_redis_exporter: "{{ redis_docker | default(false) }}"
-# app_secrets is the apps_runner secret-store (its own default is `{}` in
-# roles/pazny.apps_runner/defaults). That role default only materialises during
-# stack-up — AFTER the core-up `template_vars: "{{ vars }}"` loader resolves the
+# app_secrets is the apps_runner secret-store. A role default would only
+# materialise during stack-up — AFTER the core-up `template_vars: "{{ vars }}"` loader resolves the
 # whole namespace — so it MUST also default here, or the eager resolution aborts
 # on an undefined var (the `| default({})` below does not save it). See CLAUDE.md
 # `{{ vars }}` gotcha + test_config_stock_jinja_only.py.
 app_secrets: {}
 # Play-level hoist of the apps_runner skip switch so Art-15/17 maps can
-# `lookup('vars', 'apps_runner_enabled')` outside the role. Role default is
-# the same true; operators set false in config.yml to skip the whole catalog.
+# `lookup('vars', 'apps_runner_enabled')` outside the role. Operators set false
+# in config.yml to skip the whole catalog.
 apps_runner_enabled: true
 # app manifest ids to leave out of this estate (apps/<id>.yml stays
 # committed; the runner just does not discover it). Default: none.
@@ -1933,7 +1933,7 @@ nos_forum_cloudflare_turn_key_id: ""    # Cloudflare dashboard → Realtime → 
 jellyfin_domain: "media{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 jellyfin_port: 8096
 jellyfin_version: "12.2"                # GHSA-6828 (critical traversal) + GHSA-cf3c (high) fixed only in 12; one-way DB migration, cold copy first (one-way-upgrade-guard)
-jellyfin_lan_access: true              # true = port reachable from LAN (for TVs, mobile clients)
+jellyfin_lan_access: false             # TV/mobile clients: set true in config.yml or a profile
 jellyfin_cache_dir: "{{ nos_data_root }}/platform/services/jellyfin/cache"
 jellyfin_movies_dir: "{{ ansible_facts['env']['HOME'] }}/media/movies"   # Override to your library
 jellyfin_shows_dir: "{{ ansible_facts['env']['HOME'] }}/media/shows"
@@ -2231,9 +2231,8 @@ traefik_log_level: "INFO"               # DEBUG / INFO / WARN / ERROR
 # traefik_dynamic_dir / traefik_certs_dir live in roles/pazny.traefik/defaults
 # (referenced only once the role loads). traefik_config_dir is HOISTED here —
 # tasks/stacks/core-up.yml's data-dir loop pre-creates it BEFORE the traefik role
-# loads, so the role default is too late: under ansible-core 2.20.6 the loop-item
-# `| default()` does not save the undefined var. Value matches the role default
-# ({{ stacks_dir }}/infra/traefik) byte-for-byte. See CLAUDE.md `{{ vars }}` gotcha.
+# loads, so a role default is too late: under ansible-core 2.20.6 the loop-item
+# `| default()` does not save the undefined var. See CLAUDE.md `{{ vars }}` gotcha.
 traefik_config_dir: "{{ stacks_dir }}/infra/traefik"
 
 # ── Tier-1 service ports lifted from role defaults ────────────────────────────
@@ -2658,7 +2657,7 @@ keap_extension_surface: true
 # ({{ nos_data_root }}/tenants/<slug>/users) so per-user files (Nextcloud/euro-office
 # documents, library, inbox — class 3) become knowledge objects, per-user attributed.
 # "nOS" = the self-model tree (keap_selfmodel, reserved uid nos-docs) — without
-# it here fs-sync skips the whole digest (this value OVERRIDES the role default).
+# it here fs-sync skips the whole digest.
 keap_fs_sync: true
 keap_fs_sync_dirs: "documents,library,inbox,nOS"
 keap_fs_sync_interval_s: 300
@@ -3414,7 +3413,8 @@ backup_tofu_state_dir: "{{ playbook_dir }}/terraform/authentik"
 # dev target with no PII. The passphrase is the ONLY key to every object —
 # credentials.yml MUST survive off-box (see docs/backup-architecture.md custody).
 backup_encryption_enabled: true
-# P2 key ring. Declared HERE, not only in roles/pazny.backup/defaults, because a
+# P2 key ring, not a key swap: the current key writes, every superseded key here
+# still reads, so existing archives stay decryptable. Declared HERE because a
 # ROLE DEFAULT does not count as "defined before core-up" — main.yml's
 # key-preserving set_fact runs long before pazny.backup is invoked, and the
 # eager `{{ vars }}` resolution has bitten this repo on exactly that shape

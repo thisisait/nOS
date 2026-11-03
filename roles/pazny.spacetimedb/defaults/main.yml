@@ -24,15 +24,12 @@
 # NOT enabled to keep port 5432 free for pazny.postgresql.
 # ==============================================================================
 
-spacetimedb_port: 3030                           # host port → container 3000 (HTTP + WebSocket)
-spacetimedb_domain: "spacetime{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 spacetimedb_mem_limit: "{{ docker_mem_limit_standard | default('2g') }}"
 spacetimedb_cpus: "{{ docker_cpus_standard | default('1.5') }}"
 
 # Optional: install the `spacetime` CLI on the host so the operator can
 # publish modules from their shell. Default true on macOS (Homebrew bin
 # path is in the standard PATH). Set false if you only use docker exec.
-spacetimedb_install_host_cli: true
 spacetimedb_cli_install_url: "https://install.spacetimedb.com"
 
 # Authentik issuer URL — exposed as an env var so client apps + future
@@ -40,8 +37,3 @@ spacetimedb_cli_install_url: "https://install.spacetimedb.com"
 # (validation is per-token, JWKS is fetched on demand).
 spacetimedb_oidc_issuer: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/spacetimedb/"
 
-# Onboarding: dev database name created post-start. Empty string disables.
-# Note: actually publishing a module requires a WASM artifact; the post-start
-# only registers the server alias in the host CLI config and prints a
-# "spacetime publish <module> {{ spacetimedb_dev_db }}" hint.
-spacetimedb_dev_db: "dev"

@@ -9,7 +9,7 @@
 | | |
 |---|---|
 | **URL** | `https://media{host_alias_seg}.{tenant_domain}` (default `https://media.dev.local`) |
-| **Port** | `8096` (`jellyfin_port`). `jellyfin_lan_access: true` is the default, so the port publishes on **all interfaces** (`0.0.0.0:8096`), not loopback — deliberate, for TVs and mobile clients |
+| **Port** | `8096` (`jellyfin_port`). `jellyfin_lan_access: false` is the default (loopback only); set it true in `config.yml` or a profile for TVs and mobile clients, which publishes `0.0.0.0:8096` |
 | **Stack** | `iiab` |
 | **Node id** | `nos.iiab.jellyfin` |
 | **Toggle** | `install_jellyfin: false` (**default OFF**) |

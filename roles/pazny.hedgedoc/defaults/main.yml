@@ -10,8 +10,6 @@
 # ==============================================================================
 
 hedgedoc_version: "1.11.0"                # REM-121: CVE-2026-58486 YAML alias-expansion DoS (CVSS 8.3) fixed 1.11.0
-hedgedoc_domain: "hedgedoc{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-hedgedoc_port: 3012
 hedgedoc_db_name: "hedgedoc"
 hedgedoc_db_user: "hedgedoc"
 # hedgedoc_config_dir is declared at PLAY scope in default.config.yml, beside

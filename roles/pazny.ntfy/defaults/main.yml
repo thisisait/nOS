@@ -9,8 +9,6 @@
 # ==============================================================================
 
 ntfy_version: "v2.28.0"                               # REM-167. Prior REM-132 at v2.26.3.
-ntfy_domain: "ntfy{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-ntfy_port: 2586                                        # unikatni host port (kolize-free)
 ntfy_base_url: "https://{{ ntfy_domain }}"
 ntfy_cache_duration: "12h"
 ntfy_attachment_total_size_limit: "5G"

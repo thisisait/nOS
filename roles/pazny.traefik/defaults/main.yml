@@ -13,23 +13,14 @@
 # {{ traefik_dynamic_dir }}/middlewares.yml — fail-closed (PENTEST-002).
 # ==============================================================================
 
-traefik_http_port: 80
-traefik_https_port: 443
-# Host port for the /ping liveness probe (dedicated `ping` entry point since
-# REM-194). Default 8082 — 8080=cadvisor, 8081=tileserver, 8090=freescout.
-# Container publishes :8080 (ping only; the API is no longer on it).
-traefik_dashboard_port: 8082
-traefik_domain: "traefik{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 # traefik_dashboard_route_enabled lives in default.config.yml: the service
 # registry reads it outside this role, where a role default is out of scope.
 
 # http(s)://<host ip> redirects to the face (face_domain) instead of a 404 —
 # the address a LAN visitor types first. Needs install_face.
 traefik_bare_ip_redirect: true
-traefik_log_level: "INFO"                           # DEBUG / INFO / WARN / ERROR
 
 # Config tree on the host. Bind-mounted into the container.
-traefik_config_dir:  "{{ stacks_dir }}/infra/traefik"
 traefik_dynamic_dir: "{{ traefik_config_dir }}/conf.d"
 traefik_certs_dir:   "{{ tls_cert_dir | default(stacks_dir + '/infra/tls') }}"
 traefik_log_dir:     "{{ traefik_config_dir }}/log"

@@ -8,11 +8,5 @@
 # default.credentials.yml.
 # ==============================================================================
 
-paperclip_domain: "paperclip{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-paperclip_port: 3006                              # 3100 collides with Loki on the host
-paperclip_db_name: "paperclip"
-paperclip_db_user: "paperclip"
-paperclip_deployment_mode: "authenticated"       # Docker binds 0.0.0.0 inside the container
-paperclip_openclaw_url: "http://host.docker.internal:{{ openclaw_gateway_port | default(18789) }}"
 paperclip_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 paperclip_cpus: "{{ docker_cpus_standard | default('1.0') }}"

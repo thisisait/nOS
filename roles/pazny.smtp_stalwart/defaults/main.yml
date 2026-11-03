@@ -24,10 +24,6 @@
 #   993/tcp (IMAP TLS)
 # ==============================================================================
 
-# Toggle — disabled by default until operator switches to a public TLD.
-# Mailpit (install_mailpit: true) handles local-dev capture in the meantime.
-install_smtp_stalwart: false
-
 # Stalwart v0.16.6 (2026-05-20 latest). v0.16.0 (2026-04-20) was a major
 # rewrite: image name changed (mail-server → stalwart), TOML config →
 # config.json, REST management API replaced with JMAP at /jmap, volume

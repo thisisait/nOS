@@ -11,6 +11,5 @@
 # (vars_files > role defaults).
 # ==============================================================================
 
-redis_port: 6379
 redis_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
 redis_cpus: "{{ docker_cpus_light | default('0.5') }}"

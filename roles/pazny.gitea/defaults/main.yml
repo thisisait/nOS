@@ -7,12 +7,6 @@
 # Ansible var precedence (vars_files > role defaults).
 # ==============================================================================
 
-gitea_domain: "git{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-gitea_port: 3003                        # 3000=Grafana, 3001=Uptime Kuma, 3002=reserved
-gitea_ssh_port: 2222
-gitea_admin_user: "{{ ansible_facts['user_id'] }}"
-gitea_admin_email: ""
-gitea_disable_registration: false       # true = only admins can add users
 gitea_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 gitea_cpus: "{{ docker_cpus_standard | default('1.0') }}"
 

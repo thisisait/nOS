@@ -13,8 +13,6 @@
 # ==============================================================================
 
 firefly_version: "version-6.7.6"   # REM-260 + GHSA 2026-09-14 (patched >6.6.6)
-firefly_domain: "firefly{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-firefly_port: 3014
 firefly_db_name: "firefly"
 firefly_db_user: "firefly"
 firefly_db_host: "127.0.0.1"    # ignored when install_mariadb=true (uses 'mariadb' on b2b_net instead)

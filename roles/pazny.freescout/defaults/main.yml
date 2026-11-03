@@ -6,11 +6,5 @@
 # default.credentials.yml — centralized for prefix rotation.
 # ==============================================================================
 
-freescout_domain: "helpdesk{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-freescout_port: 8090
-freescout_db_name: "freescout"
-freescout_db_user: "freescout"
-freescout_admin_email: "{{ default_admin_email }}"
-freescout_timezone: "{{ nos_timezone | default('Europe/Prague') }}"
 freescout_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
 freescout_cpus: "{{ docker_cpus_light | default('0.5') }}"

@@ -2,29 +2,8 @@
 # pazny.backup — default variables
 # Nightly backup orchestration for stateful nOS services, targeting RustFS (S3).
 
-# -- Schedule (launchd StartCalendarInterval) ----------------------------------
-backup_schedule_hour: 3
-backup_schedule_minute: 0
-
 # -- S3 / RustFS target --------------------------------------------------------
-backup_target_bucket: "backups"
-backup_target_endpoint: "http://127.0.0.1:9010"   # RustFS S3 API (nOS default)
 backup_target_region: "us-east-1"                 # RustFS ignores, aws-cli requires a value
-backup_target_access_key: "{{ rustfs_access_key }}"
-backup_target_secret_key: "{{ rustfs_secret_key }}"
-
-# -- Retention (days / weeks / months to keep) ---------------------------------
-backup_retention_daily: 7
-backup_retention_weekly: 4
-backup_retention_monthly: 12
-
-# -- Client-side encryption (GDPR Art. 32 / NIS2 at-rest) ----------------------
-# Every dump is AES-256-CBC/pbkdf2 encrypted BEFORE upload, so personal data
-# never lands in object storage as cleartext-after-gzip. Restore decrypts with
-# the SAME passphrase (tasks/restore.yml). Encrypted objects carry a `.enc`
-# suffix; legacy plaintext objects restore unchanged (per-file auto-detect).
-# Turn OFF only for a throw-away dev target where the bucket holds no PII.
-backup_encryption_enabled: true
 
 # P2 (2026-08-02) — the archive key is NO LONGER derived from the password
 # prefix. It used to be `{{ global_password_prefix }}_pw_backup_encryption`,
@@ -38,25 +17,8 @@ backup_encryption_enabled: true
 # bone_secret and authentik_secret_key.
 backup_encryption_passphrase: ""
 
-# KEY RING, not a key swap. Archives already in the bucket were encrypted with
-# the old derived key; minting a new one without keeping the old would make
-# every existing backup undecryptable — closing a leak by destroying the
-# backups is a worse outcome than the leak. So:
-#   * the CURRENT key above writes,
-#   * every superseded key below still READS, forever.
-# main.yml seeds this with the derived value on the same run that mints the
-# replacement, which is the only moment the old value is still computable.
-backup_encryption_keys_previous: []
-
-# -- Sources -------------------------------------------------------------------
-backup_databases_mariadb: "{{ install_mariadb | default(false) }}"        # the installed set (manifest forced_by applied at run time)
-backup_databases_postgresql: "{{ install_postgresql | default(false) }}"
-backup_authentik_blueprints: "{{ install_authentik | default(false) }}"
-
 # Wing SQLite store (security findings, audit hash-chain, agent sessions, GDPR
 # lineage) — a host file, not a container. sqlite3 .dump → wing-db.sql.gz.
-backup_wing_db: "{{ install_wing | default(true) }}"
-backup_keap_db: "{{ install_keap | default(false) }}"
 backup_keap_db_path: "{{ keap_data_dir | default(ansible_facts['env']['HOME'] + '/keap/data') }}/keap.db"
 # Container that already has keap.db bind-mounted. The backup runs INSIDE it
 # (node:sqlite `backup()`), which is what makes the source work at all: the
@@ -70,11 +32,6 @@ backup_keap_db_path: "{{ keap_data_dir | default(ansible_facts['env']['HOME'] + 
 # backup_tofu_state(_dir) live in default.config.yml: the direct restic path
 # (tasks/backup.yml, no copy #1) reads them too.
 
-# Runtime state side-car: ~/.nos/{secrets,state}.yml → nos-state.tar.gz.
-# Restore of this is GATED behind restore_state=true (it can clobber a NEWER
-# live secrets.yml and brick SSO) — see tasks/restore.yml.
-backup_nos_state: true
-
 # OpenTofu Authentik state artifacts (ADR-0001 Phase 1) → tofu-state.tar.gz.
 # terraform.tfstate (+ its .backup sibling) and the rendered nos.auto.tfvars.json
 # are SECRET-BEARING (provider client_secrets, outpost tokens) and gitignored in
@@ -85,12 +42,6 @@ backup_nos_state: true
 # into the restore workdir; re-seating it into the checkout is a deliberate
 # MANUAL step (never auto-extract over a live git working tree).
 
-# Docker NAMED volumes to tar+upload. mariadb_data was dropped — it is the raw
-# DB datadir, fully covered by the logical mariadb-dump (redundant). Add only
-# genuinely-stateful non-DB named volumes (operator: cross-check `docker volume
-# ls`; e.g. authentik_media if present). DB *_data volumes are NOT needed.
-backup_volumes_to_dump: []
-
 # Embedded EspoCRM MariaDB (apps stack) is NOT infra-mariadb. Dump it when the
 # container is running; skip when praxis/apps is off. Mutables are named volumes
 # (not the mysql datadir — that is the dump). Compose project is `-p apps`.
@@ -99,16 +50,6 @@ backup_espocrm_volumes:
   - apps_espocrm_custom
   - apps_espocrm_data
   - apps_espocrm_client_custom
-
-# Host-bind service data dirs (filesystem state NO DB dump can reconstruct).
-# gitea/gitlab hold git REPOS on disk — covered by NEITHER the DB dumps nor the
-# named-volume list before this. name → restore target path (derived from the
-# role's *_data_dir var so external-storage redirects are honoured).
-backup_dirs_to_dump:
-  - { name: "gitea", path: "{{ gitea_data_dir | default(ansible_facts['env']['HOME'] + '/gitea') }}" }
-  - { name: "gitlab", path: "{{ gitlab_data_dir | default(ansible_facts['env']['HOME'] + '/gitlab') }}" }
-  - { name: "gitlab-config", path: "{{ gitlab_config_dir | default(ansible_facts['env']['HOME'] + '/gitlab-config') }}" }
-  - { name: "tenants", path: "{{ nos_data_root }}/tenants" }
 
 # -- Container names (match the project-wide convention) -----------------------
 backup_mariadb_container: "{{ mariadb_container_name | default('nos-mariadb') }}"
@@ -129,8 +70,6 @@ backup_authentik_token: "{{ authentik_bootstrap_token | default('') }}"
 
 # -- Runtime paths -------------------------------------------------------------
 backup_home_dir: "{{ ansible_facts['env']['HOME'] }}/.nos"
-backup_status_file: "{{ backup_home_dir }}/backup-status.json"
-backup_log_file: "{{ backup_home_dir }}/backup.log"
 backup_script_path: "{{ backup_home_dir }}/backup.sh"
 # backup_staging_dir (plaintext dump staging, the restic source) is declared in
 # default.config.yml: tasks/backup.yml stages there too when copy #1 is off.
@@ -160,8 +99,3 @@ backup_exporter_launchd_label: "eu.thisisait.nos.backup.exporter"
 backup_exporter_launchd_plist: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ backup_exporter_launchd_label }}.plist"
 backup_legacy_launchd_plist: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ backup_legacy_launchd_label }}.plist"
 
-# -- Behavior toggles ----------------------------------------------------------
-# If today's prefix already exists in the bucket, overwrite (true) or skip (false).
-backup_overwrite_same_day: true
-# Run backup immediately after deploying the script (handy for debugging / tests).
-backup_run_now: false

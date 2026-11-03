@@ -18,13 +18,6 @@
 # `-e apps_dir=/path/to/some/dir`.
 apps_dir: "{{ playbook_dir }}/apps"
 
-# Tier-2 hostname pattern: <id>[.<host_alias>].<apps_subdomain>.<tenant_domain>
-# Set apps_subdomain: "" to expose Tier-2 directly under the TLD (rare —
-# would clash with Tier-1 routes). The play-level default.config.yml hoists
-# this same key for operator visibility; this role default is the fallback
-# for direct role invocation outside main.yml.
-apps_subdomain: "apps"
-
 # EU-residency allow-list extension. The parser hard-fails any compose
 # image from gcr.io / public.ecr.aws / mcr.microsoft.com when the manifest
 # declares transfers_outside_eu: false. Operators with a private EU mirror
@@ -35,9 +28,6 @@ apps_eu_registries: []
 # false — collect ALL violations first so the operator sees every issue
 # in one report.
 apps_strict: false
-
-# Override: skip the entire renderer (e.g. while debugging Tier-1).
-apps_runner_enabled: true
 
 # Where to write the merged compose override fragment for the apps stack.
 # Same pattern as every other Tier-1 role.
@@ -53,8 +43,3 @@ apps_traefik_network: "{{ stacks_shared_network | default('shared_net') }}"
 # Disable if you maintain the smoke catalog by hand.
 apps_extend_smoke_catalog: true
 
-# Per-app secret seeds — passed to nos_apps_render so PASSWORD/BASE64 tokens
-# stay stable across runs. Populated from credentials.yml under the
-# `app_secrets:` key. The runner persists newly-generated secrets back into
-# credentials.yml after each run (idempotent).
-app_secrets: {}

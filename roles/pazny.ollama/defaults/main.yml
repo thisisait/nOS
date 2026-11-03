@@ -9,12 +9,6 @@ ollama_launchd_label: "com.ollama.agent"                # templates/ollama-agent
 # replaced. true lets the converge replace its runners, unit and bind (config.yml).
 ollama_linux_take_over: false
 
-# MLX is Ollama's default backend on Apple Silicon since 0.20.
-ollama_max_loaded_models: 1      # 1 for MoE 30B (dense); 2 if you use 20B/14B
-ollama_num_parallel: 2           # Max concurrent inference requests
-ollama_keep_alive: "5m"          # Release model from RAM after this much idle time
-ollama_flash_attention: 1        # Flash attention for MLX (faster, less RAM)
-
 # KV cache quantization — halves context RAM vs f16, negligible quality loss
 # on Qwen3/Gemma/Llama-3.3 (command-r + vanilla llama3 unsupported → falls back to f16).
 # Requires flash_attention=1. Stay <= 256K ctx to avoid crash #11619.

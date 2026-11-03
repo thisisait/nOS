@@ -8,7 +8,6 @@
 # manifest advertises public https://auth.<tld> device/token URLs (handheld).
 # Art-30 row: files/anatomy/plugins/device-gateway-base (policy docs/compliance/devices.md).
 
-device_gateway_port: 8770
 device_gateway_domain: "device{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 device_gateway_launchd_label: "eu.thisisait.nos.device-gateway"
 device_gateway_runtime_dir: "{{ ansible_facts['env']['HOME'] }}/device-gateway"

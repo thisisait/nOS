@@ -10,11 +10,6 @@
 # (each service reads an authentik_oidc_<svc>_client_id derived var).
 # ==============================================================================
 
-authentik_port: 9003                                # 9000=PHP-FPM, 9001=RustFS, 9002=Portainer
-authentik_domain: "auth{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-authentik_db_name: "authentik"
-authentik_db_user: "authentik"
-
 # DB pool tuning — default 0 closes the connection after every request so
 # Authentik does not hold hundreds of idle connections that would otherwise
 # exhaust the shared Postgres pool (Outline / Hedgedoc / Firefly depend on

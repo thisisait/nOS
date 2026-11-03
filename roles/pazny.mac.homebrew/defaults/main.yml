@@ -1,11 +1,8 @@
 ---
 homebrew_repo: https://github.com/Homebrew/brew
 
-homebrew_prefix: "{{ (ansible_facts.machine == 'arm64') | ternary('/opt/homebrew', '/usr/local') }}"
 homebrew_install_path: "{{ homebrew_prefix }}{{ '/Homebrew' if ansible_facts.machine != 'arm64' }}"
 homebrew_brew_bin_path: "{{ homebrew_prefix }}/bin"
-
-homebrew_installed_packages: []
 
 homebrew_uninstalled_packages: []
 
@@ -15,10 +12,6 @@ homebrew_uninstalled_packages: []
 # if a specific tool's behaviour is sensitive to its minor version.
 homebrew_upgrade_all_packages: true
 
-homebrew_taps: []
-
-homebrew_cask_apps: []
-
 homebrew_cask_uninstalled_apps: []
 
 # Run `brew upgrade --cask --greedy` for every cask after install. Default
@@ -26,14 +19,10 @@ homebrew_cask_uninstalled_apps: []
 # current. Without this, casks are pinned to their first-install version
 # forever because the install task short-circuits on Caskroom existence.
 homebrew_cask_auto_upgrade: true
-homebrew_cask_upgrade_ignore: []
-
-homebrew_cask_appdir: /Applications
 
 # Per-item cap (seconds) on `brew install`. Hit = TIMEOUT line, not a failure.
 homebrew_cask_install_timeout: 90
 homebrew_formula_install_timeout: 120
-homebrew_cask_accept_external_apps: false
 
 # Set this to your account password if casks need elevated privileges.
 # ansible_become_password: ''
