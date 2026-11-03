@@ -465,7 +465,9 @@ def mariadb_selftests() -> list[dict]:
                                    user=spec.get("user"), timeout=60)
         answer = (stdout or "").strip().splitlines()[-1:] or [""]
         answer = answer[0].strip()
-        if answer in ("encrypted", "plaintext"):
+        if "No such container" in (stderr or ""):
+            row.update(state="ABSENT", detail=stderr.strip()[:120])
+        elif answer in ("encrypted", "plaintext"):
             row["state"] = answer.upper()
         else:
             row["detail"] = answer or (stderr or f"exit {rc}")[:120]
@@ -603,7 +605,9 @@ def postgres_selftests() -> list[dict]:
         rc, stdout, stderr = _exec(spec["container"], spec["argv"], timeout=60)
         answer = (stdout or "").strip().splitlines()[-1:] or [""]
         answer = answer[0]
-        if rc != 0 or answer.startswith("error:"):
+        if "No such container" in (stderr or ""):
+            row.update(state="ABSENT", detail=stderr.strip()[:120])
+        elif rc != 0 or answer.startswith("error:"):
             row["detail"] = answer or (stderr or f"exit {rc}")[:120]
         elif answer in ("encrypted", "plaintext"):
             row["state"] = answer.upper()

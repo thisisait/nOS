@@ -383,19 +383,25 @@ sec-transport: >-
 # below — the client asked about its own session — and this probe fails if
 # that self-test is anything but ENCRYPTED. Absence still never reads as
 # health; it is answered by a different question, not excused.
+#
+# 2026-11-03: the named set is the part of it that RUNS here. metabase and miniflux were off on
+# the operator estate and read `unsampled` (contradicted) with every running client on TLS. A
+# client with no container is not asked; none running = exit 77 (unverifiable), never green.
 sec-transport-pg: >-
-  v=$(tools/tls-uptake.py --json --window 20 | python3 -c "import json,sys;
-  expected = {'authentik','metabase','miniflux','paperclip'};
+  v=$(tools/tls-uptake.py --json --window 20 | python3 -c "import json,subprocess,sys;
+  names = subprocess.run(['docker', 'ps', '--format', '{{.Names}}'], capture_output=True, text=True).stdout;
+  expected = {u for u in ('authentik','metabase','miniflux','paperclip') if u in names};
   r = json.load(sys.stdin);
   d = next(x for x in r['datastores'] if x['datastore'] == 'postgresql');
   seen = {c['user'] for c in d.get('clients', [])};
   plain = sorted({c['user'] for c in d.get('clients', []) if not c['ssl']});
   missing = sorted(expected - seen);
-  bad = sorted(t['service'] for t in r.get('postgres_selftests', []) if t['state'] != 'ENCRYPTED');
-  print('unsampled:' + ','.join(missing) if missing else
+  bad = sorted(t['service'] for t in r.get('postgres_selftests', []) if t['state'] not in ('ENCRYPTED', 'ABSENT'));
+  print('nothing-runs' if not expected else
+        'unsampled:' + ','.join(missing) if missing else
         'plaintext:' + ','.join(plain) if plain else
         'selftest-failed:' + ','.join(bad) if bad else 'encrypted')");
-  echo "$v"; test "$v" = "encrypted"
+  echo "$v"; test "$v" = "nothing-runs" && exit 77; test "$v" = "encrypted"
 
 # Read from the container's ARGV, the way the redis leg is: mysqld_exporter is
 # a Go binary with no self-test to run, and TLS reaches it only through
@@ -436,11 +442,11 @@ sec-transport-mariadb: >-
 sec-transport-mariadb-clients: >-
   v=$(tools/tls-uptake.py --json | python3 -c "import json,sys;
   r = json.load(sys.stdin);
-  t = r.get('mariadb_selftests', []);
+  t = [x for x in r.get('mariadb_selftests', []) if x['state'] != 'ABSENT'];
   bad = sorted(x['service'] for x in t if x['state'] != 'ENCRYPTED');
-  print('no-selftests' if not t else
+  print('no-client-runs' if not t else
         'not-encrypted:' + ','.join(bad) if bad else 'encrypted')");
-  echo "$v"; test "$v" = "encrypted"
+  echo "$v"; test "$v" = "no-client-runs" && exit 77; test "$v" = "encrypted"
 
 # Reads the LIVE config the daemon owns, not the seed template — the template
 # is `force: false`, so an edit there proves nothing about the running daemon.
@@ -517,12 +523,13 @@ notify-supersede: >-
 #      `select ssl from pg_stat_ssl where pid = pg_backend_pid()`.
 #      Deterministic, and still a read.
 #
-# UNKNOWN is not `encrypted`: a client that cannot be asked fails this.
+# UNKNOWN is not `encrypted`: a client that cannot be asked fails this. ABSENT (no container,
+# hedgedoc not installed here) is exit 77, unverifiable: nothing was asked (2026-11-03).
 sec-transport-hedgedoc: >-
   v=$(tools/tls-uptake.py --json | python3 -c "import json,sys;
   t = [x for x in json.load(sys.stdin).get('postgres_selftests', []) if x['service'] == 'hedgedoc'];
   print(t[0]['state'].lower() if t else 'no-selftest-declared')");
-  echo "$v"; test "$v" = "encrypted"
+  echo "$v"; test "$v" = "absent" && exit 77; test "$v" = "encrypted"
 
 # ── planes, and the control centre (probes written 2026-08-29) ───────────────
 #
