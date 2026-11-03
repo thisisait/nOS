@@ -9,11 +9,11 @@ Versioning is by git tag `v<semver>` cut from `master`. The latest tag is `v0.17
 ## v0.18-beta — DRAFT (not cut)
 
 > **The medulla wakes, and a blank teaches the backup to keep what it was given.**
-> DRAFT 2026-11-02 (first draft 10-29 from `/release-prep v0.18-beta`). 862 commits since
-> `v0.17-beta` (872 files, +60.1k/−8.4k), measured against `origin/dev` at `62eb8832`.
-> CI on dev green at `27390c4b` (one red run before it, `be470983`: a new gate committed before the
-> anatomy graph was regenerated). Lint went red once on 11-02 (`e4d490df` fixed it); integration
-> now runs ansible-lint repo-wide, not only `tests/fast.sh`.
+> DRAFT 2026-11-03 (first draft 10-29 from `/release-prep v0.18-beta`). 877 commits since
+> `v0.17-beta` (874 files, +60.4k/−8.4k), measured against `origin/dev` at `0e6f0921`.
+> CI on dev: red twice on 11-02/03 for a reason the local suite does not run (a gate committed before
+> the graph it reads; an apostrophe in a shell body that broke the playbook parse, `0e6f0921` fixed
+> it); a Linux-only test race (`84940ce4`). Integration now runs ansible-lint repo-wide every time.
 > **Blank 2026-10-30** (`nos --remove=data --confirm`, then `nos`): it found ten defects, written
 > below under "The blank"; `nos-smoke --strict` 31/32 the next day (Kiwix), **32/32 on 2026-11-01**
 > and again on 2026-11-02 after a full converge. A second blank of the Studio is the last step
@@ -177,6 +177,24 @@ The release's blank wiped data and reinstalled; it went green, and the next days
   Verifying provenance instead of bytes is row `frankenphp-nightly-digest`.
 - The telemetry ledger stopped carrying secrets (31 tasks `no_log`, the callback's key rules); the
   Wing bearer was rotated (`-e secrets_rotate=wing_api_token`).
+- **Security day, 11-03.** Four read-only review agents and a pentest of the mini's SSO layer
+  (GET only: ten forward-auth bypass vectors, header injection, enrolment/recovery flows, open
+  redirect — all held). Fixed the same day, each with a gate shown red on dev:
+  - **An agent's read tool could run code.** `bash-read-only` let `git config --global
+    core.fsmonitor <cmd>` through, so the next `git status` anywhere ran `<cmd>` as the operator;
+    `rg --pre` ran a program, `tree -o` / `git diff --output` wrote, and `cat ~/.nos/secrets.yml`
+    returned every bearer. Read subcommands only, no global git config, secret dirs refused after
+    realpath (`ac8b9ed7`; the gate executes the tool).
+  - **mDNS label injection** (introduced 11-01): a container's `Host()` label went unquoted into the
+    publisher's `bash -c` and ran as avahi at boot. Only DNS names leave the read-back (`9cc92a9a`).
+  - **Traefik v3.7.17** (GHSA-xv5x-242w-7hf7, high, Negotiate/NTLM transport leak) (`08f5666d`).
+  - Left on the roadmap under `security-review-1103`: agents still run as the operator's uid and can
+    read job env through `sqlite3`; a decider is a path, not a signature; `services_lan_access` lets
+    Docker publish past ufw on Linux; Traefik's dynamic config with edge tokens is 0644; cortex zod 4.
+- **What the patrol cannot see** (row `advisory-covers-hosts-and-browsers`): the Ubuntu kernel
+  CVE-2026-98432 (remote, fix still in -proposed) and Playwright's bundled Chromium
+  (CVE-2026-118306, no fixed release yet; ours is test-only). It reads pins and lockfiles, not host
+  packages, a pending reboot, or a browser inside an npm package.
 
 ### Agent companies: Paperclip declared in a repo
 - `tools/paperclip-company.py login|plan|apply --confirm`: a company file (`ssot/company.yml` +
@@ -198,6 +216,13 @@ The release's blank wiped data and reinstalled; it went green, and the next days
 - A set-point writer that cannot reach `/var/lib/nos/settings` still falls back to `~/.nos` instead of
   refusing (row `set-point-stray-file`); the ACL closes it for the operator only.
 - ZIM libraries (framework docs especially) have no update path yet (roadmap).
+- On the operator host: sshd accepts passwords from the LAN, the macOS firewall is off, MFA is not
+  enforced, Jellyfin publishes 8096 past the edge. Each is a config.yml / host decision the
+  operator holds; none is changed by this release.
+- Ops found on 11-03: a disk cleanup's `brew cleanup` autoremoved php-zts and every Wing PHP job went
+  rc=127 for 16 h (fixed, `2cbb1a38`); the installed `nos` CLI lagged its estate by a release
+  (`nos update` now moves it, `e2c7f6ff`); the roadmap table had lost 562 rows' status to the 10-17
+  blank and was restored from a 10-09 KEAP copy (`nos dtt seed --restore-from`, `0132ba5c`).
 
 ---
 
