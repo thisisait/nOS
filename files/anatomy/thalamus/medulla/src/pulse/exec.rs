@@ -104,7 +104,11 @@ mod tests {
             let _ = std::fs::remove_dir_all(&self.0);
         }
     }
+    // A fork in a parallel test inherits the fd of a script being written, and exec of that script
+    // fails ETXTBSY (CI 11-03, "Text file busy"). Writes take the lock alone, runs share it.
+    static SPAWN: std::sync::RwLock<()> = std::sync::RwLock::new(());
     fn repo(tag: &str, scripts: &[(&str, &str)]) -> TempRepo {
+        let _w = SPAWN.write().unwrap_or_else(|e| e.into_inner());
         let d = std::env::temp_dir().join(format!("medulla-exec-{tag}-{}", std::process::id()));
         std::fs::create_dir_all(d.join("tools")).unwrap();
         for (name, body) in scripts {
@@ -118,6 +122,7 @@ mod tests {
         let cmd = r.0.join("tools").join(name);
         let path = [("PATH".to_string(), "/usr/bin:/bin".to_string())];
         let env = if env.is_empty() { &path[..] } else { env };
+        let _r = SPAWN.read().unwrap_or_else(|e| e.into_inner());
         execute(cmd.to_str().unwrap(), &[], env, Duration::from_millis(timeout_ms), None, r.0.to_str())
     }
 
