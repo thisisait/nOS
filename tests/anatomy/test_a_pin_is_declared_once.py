@@ -32,6 +32,11 @@ its §5.3 allowed roots. With one declaration, a proposal that bumps the pin
 bumps THE pin. With two, "bump both halves" is a convention, and a convention is
 what a proposer is worst at.
 
+NOT ONLY PINS (2026-11-03). The precedence is the same for every key: 281 role
+defaults (jellyfin_lan_access, traefik_config_dir, kiwix_init_zim_url, ...) sat
+under a config-layer twin and could only mislead. The last test forbids the pair
+for any top-level key.
+
 WHAT IS STILL ALLOWED. A pin that lives ONLY in a role default is fine — 17 do,
 and they are not shadowed by anything. This gate forbids the pair, not the role
 default.
@@ -117,4 +122,24 @@ def test_the_config_comments_do_not_point_at_a_deleted_line():
     assert not dangling, (
         "a pin comment sends the reader to a role default for the rationale, and "
         "that file no longer declares the pin:\n  " + "\n  ".join(dangling)
+    )
+
+
+def test_no_variable_is_declared_in_a_role_default_and_the_config_layers():
+    """The pin rule for every key: roles/*/defaults vs tools/nos_identity.default_layers()."""
+    import yaml
+
+    config = {}
+    for path in ni.default_layers():
+        config.update(dict.fromkeys(yaml.safe_load(path.read_text(encoding="utf-8")) or {}, path.name))
+    assert len(config) > 500, f"only {len(config)} config-layer keys parsed; this gate is blind"
+    shadowed = [
+        f"  {key:36} {path.relative_to(REPO)}  (wins: {config[key]})"
+        for path in sorted(REPO.glob("roles/*/defaults/main.yml"))
+        for key in (yaml.safe_load(path.read_text(encoding="utf-8")) or {})
+        if key in config
+    ]
+    assert not shadowed, (
+        "these role defaults are unreachable (vars_files outrank role defaults); "
+        "delete the role-default line:\n" + "\n".join(shadowed)
     )
