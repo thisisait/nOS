@@ -3,10 +3,10 @@ id: 2026-11-01-release-v0-18-beta
 title: "v0.18-beta — the medulla wakes, and a blank teaches the backup to keep what it was given"
 date: 2026-11-01
 namespace: nos-core
-summary: "DRAFT, not cut. 862 commits after v0.17-beta. One Rust core fires the schedule, holds the halt and the settings, and gets a native face (nOS.app). Iris starts sub-agents and hears them end, live. The 2026-10-30 blank went green and the days after showed what green had hidden; each defect is now pinned by a gate or a drill. A second host, Ubuntu on a small Intel box, was installed from nothing and reached SSO over mDNS, with every defect fixed in the repo. Eight security bumps, and an advisory reader found to be wrong in both directions."
+summary: "887 commits after v0.17-beta, tagged at 3abf3982 on 2026-11-03 after a blank (smoke --strict 32/32). One Rust core fires the schedule, holds the halt and the settings, and gets a native face (nOS.app). Iris starts sub-agents and hears them end, live. The 2026-10-30 blank went green and the days after showed what green had hidden; each defect is now pinned by a gate or a drill. A second host, Ubuntu on a small Intel box, was installed from nothing and reached SSO over mDNS, with every defect fixed in the repo. Eight security bumps, and an advisory reader found to be wrong in both directions."
 tags: [release, medulla, nos-app, iris, backup, blank, restore, advisories, paperclip, linux, mdns]
 release: v0.18-beta
-status: draft
+status: published
 actors: [pazny, claude]
 related: [RELEASE.md, files/anatomy/thalamus/medulla, files/anatomy/thalamus/app, roles/pazny.backup/files/backup-verify.sh, tasks/_restore_postgres_db.yml, tools/advisory-patrol.py, tools/paperclip-company.py, state/genome/advisory-judgements.yml]
 ---
@@ -118,10 +118,21 @@ A Paperclip company is now declared in its own repo (`ssot/company.yml`,
 (`tools/paperclip-company.py`). Its first use rebuilt a ten-agent company that
 had spent $81 in three hours on unlimited Opus.
 
+## The second blank, and the cut
+
+On 3 November, after a day spent on security, the Studio was blanked again at
+the commit that became the tag (`3abf3982`): thirty-two minutes, no failed task,
+`nos-smoke --strict` 32 of 32 in the run's own record, and every one of the 1461
+DataTable rows back on the other side. Before it, the backup ran fresh and a
+spore — the estate's keys, configuration and every repository's work, sealed in
+an encrypted image on the external disk — was taken for the first time.
+
 ## What is not true yet
 
-CI was red on dev from 10-29 to 11-01, and once more on 11-02 (a lint error the
-local suite does not run, then a gate committed before the graph it reads was
-regenerated); green at `27390c4b`. A second blank of the Studio is the last step
-before the cut. The USB installer exists on a branch and stays there until it
-has been reviewed more than once. A loop from Iris is proposed, not yet run.
+CI went red on dev four times in the last week, each for a reason the local
+suite did not run (a gate before the graph it reads, an apostrophe inside a shell
+body, a Linux-only test race, a halt file one test left for another); each was
+fixed the same day, and every blocking lane is green at the tag. The Bonus lanes
+are red and not verified. A loop from Iris is proposed, not yet run, which is why
+this stays `-beta`. The USB installer and the spore stay on branches until they
+have been rehearsed.

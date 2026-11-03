@@ -6,7 +6,7 @@ namespace: nos-core
 summary: "Four read-only review agents, a GET-only pentest of the mini's SSO layer and a CVE sweep, on the day v0.18-beta was to be cut. The SSO layer held. Two holes did not: the read tool every reading agent holds let a prompt-injected agent run code as the operator through git's fsmonitor, and the mDNS publisher written two days earlier put container labels unquoted into a shell. Both fixed with gates that run the real code; the rest went to the roadmap."
 tags: [security, agentkit, mdns, pentest, advisories, immune]
 release: v0.18-beta
-status: draft
+status: published
 actors: [pazny, claude]
 related: [files/anatomy/wing/app/AgentKit/Tools/BashReadOnlyTool.php, tasks/mdns.yml, tests/anatomy/test_an_agent_read_tool_cannot_write_or_exec.py, tools/advisory-status.py]
 ---

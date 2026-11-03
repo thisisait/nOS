@@ -2,30 +2,32 @@
 
 `nOS` is the open-source Ansible engine behind [**This is AIT — Agentic IT**](https://thisisait.eu): one command turns an Apple Silicon Mac or Ubuntu 24.04 host into a reproducible, self-hosted, self-managing cloud of 79 FOSS services behind one SSO.
 
-Versioning is by git tag `v<semver>` cut from `master`. The latest tag is `v0.17-beta`.
+Versioning is by git tag `v<semver>` cut from `master`. The latest tag is `v0.18-beta`.
 
 ---
 
-## v0.18-beta — DRAFT (not cut)
+## v0.18-beta (2026-10-17 … 2026-11-03)
 
 > **The medulla wakes, and a blank teaches the backup to keep what it was given.**
-> DRAFT 2026-11-03 (first draft 10-29 from `/release-prep v0.18-beta`). 877 commits since
-> `v0.17-beta` (874 files, +60.4k/−8.4k), measured against `origin/dev` at `0e6f0921`.
-> CI on dev: red twice on 11-02/03 for a reason the local suite does not run (a gate committed before
-> the graph it reads; an apostrophe in a shell body that broke the playbook parse, `0e6f0921` fixed
-> it); a Linux-only test race (`84940ce4`). Integration now runs ansible-lint repo-wide every time.
-> **Blank 2026-10-30** (`nos --remove=data --confirm`, then `nos`): it found ten defects, written
-> below under "The blank"; `nos-smoke --strict` 31/32 the next day (Kiwix), **32/32 on 2026-11-01**
-> and again on 2026-11-02 after a full converge. A second blank of the Studio is the last step
-> before the cut.
+> Tagged `v0.18-beta` at `3abf3982` (2026-11-03).
+> 887 commits since `v0.17-beta` (889 files, +60.7k/−8.5k), measured with
+> `git log v0.17-beta..3abf3982`. Still `-beta`, as row `rel-018` rules: a loop proposed by Iris is
+> not yet filed, run and analysed (v0.19).
+> **Blank 2026-11-03** (`nos --remove=data --confirm` at `3abf3982`, 14:49–15:21 UTC): failed=false,
+> **`nos-smoke --strict` 32/32** in the run's own record (`~/.nos/blank-runs.jsonl`); 1461 DataTable
+> rows carried across it; the restic snapshot and a sealed spore taken before. The 10-30 blank found
+> ten defects, written below under "The blank". CI on dev green at `3abf3982`; red three times in the
+> last week for reasons the local suite did not run (a gate before the graph it reads, an apostrophe in
+> a shell body, a Linux-only test race), each fixed the same day. Integration runs ansible-lint
+> repo-wide every time now.
 
-Exit criteria, from roadmap row `rel-018` (EXIT, readers), as read on 2026-11-02:
+Exit criteria, from roadmap row `rel-018` (EXIT, readers), as read at the cut, 2026-11-03:
 
-- [ ] estate-status release gate green on a blank converge of the operator host + a second host — the
-  second host is done (the Linux mini, installed from nothing on 11-01..02, below); the operator host's
-  second blank is still to run
-- [ ] CI green on every lane at the release PR with no bypass — dev green at `27390c4b`; Bonus lanes
-  (per-stack converge) red, non-blocking, unverified
+- [x] estate-status release gate green on a blank converge of the operator host + a second host — the
+  Studio's blank on 11-03 (smoke `--strict` 32/32) and the Linux mini installed from nothing on 11-01..02
+- [ ] CI green on every lane at the release PR with no bypass — every blocking lane green at
+  `3abf3982`; Bonus lanes (per-stack converge) red, non-blocking, unverified; the merge to master uses
+  the admin fast-forward (docs/git-and-release.md §Cutting a release)
 - [x] one live Iris journey: approve a sub-agent, its report returns, the tree shows parent and child —
   run `0153c4c7`, parent `thalamus:a03c5f17`, on the Studio 11-02
 - [ ] one loop proposed by Iris, filed by the operator, run by Pulse, analysed by Iris from its runs —
