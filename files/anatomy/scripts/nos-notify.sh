@@ -51,8 +51,8 @@ supersede="${5:-}"
 # arriving mislabelled.
 #
 # The defaults keep the os-update caller working unchanged. Every other caller
-# should set these — a Pulse job does it in its `env:` block beside
-# NOS_NOTIFY_BIN.
+# should set these — a Pulse job does it in its `env:` block, and setting
+# NOS_NOTIFY_ACTOR is what turns its notifying on.
 origin="${NOS_NOTIFY_ORIGIN:-os-resume}"
 actor="${NOS_NOTIFY_ACTOR:-agent:os-resume}"
 

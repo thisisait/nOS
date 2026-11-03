@@ -174,7 +174,6 @@ pulse:
         # guards and the mount sentinel — prunes).
         CORTEX_API_URL: "{{ cortex_fanout_url }}"
         CORTEX_AGENT_TOKEN_RW: "{{ cortex_rw_token }}"
-        NOS_NOTIFY_BIN: "{{ playbook_dir }}/files/anatomy/scripts/nos-notify.sh"
         # Its OWN identity. nos-notify.sh stamped `os-resume` for every
         # caller until 2026-08-25, so this job's rows landed indistinguishable
         # from an OS-update settle — and bin/reconcile-inbox.php keys a
@@ -216,7 +215,6 @@ pulse:
         KEAP_AGENT_TOKEN_RO: "{{ keap_agent_token_ro }}"
         CORTEX_API_URL: "{{ cortex_fanout_url }}"
         CORTEX_AGENT_TOKEN_RO: "{{ cortex_ro_token }}"
-        NOS_NOTIFY_BIN: "{{ playbook_dir }}/files/anatomy/scripts/nos-notify.sh"
         # Its OWN identity. nos-notify.sh stamped `os-resume` for every
         # caller until 2026-08-25, so this job's rows landed indistinguishable
         # from an OS-update settle — and bin/reconcile-inbox.php keys a

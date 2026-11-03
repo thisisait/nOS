@@ -108,7 +108,7 @@ Env:
   NOS_MARIADB_ROOT_PASSWORD   empty = skip the SQL sweep
   NOS_CONSOLIDATE_DB_EXCLUDE  comma list (provisioned service DBs)
   NOS_CONSOLIDATE_MAX         per-run new-datapoint cap (default 200)
-  NOS_NOTIFY_BIN              nos-notify.sh (batch summary; optional)
+  NOS_NOTIFY_ACTOR            set = notify via the sibling nos-notify.sh (batch summary; optional)
 
 Exit: 0 swept (even 0 new), 1 config error, 2 the INCUMBENT was
 unreachable OR went down mid-run. A parallel target being down is
@@ -134,7 +134,9 @@ DB_EXCLUDE = {
     if d.strip()
 } | {"mysql", "information_schema", "performance_schema", "sys"}
 MAX_NEW = int(os.environ.get("NOS_CONSOLIDATE_MAX", "200"))
-NOTIFY_BIN = os.environ.get("NOS_NOTIFY_BIN", "")
+# The sender beside this file, never an env path: an env-named binary ran anything through
+# this allowed script. Opt-in is the job naming itself (NOS_NOTIFY_ACTOR); unset = report-only.
+NOTIFY_BIN = os.path.join(os.path.dirname(os.path.abspath(__file__)), "nos-notify.sh") if os.environ.get("NOS_NOTIFY_ACTOR") else ""
 STATE_PATH = Path.home() / ".nos" / "keap-consolidate-state.json"
 STATE_VERSION = 2
 
