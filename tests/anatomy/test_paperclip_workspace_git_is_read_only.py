@@ -41,17 +41,23 @@ def test_a_workspace_without_git_gets_no_overlay():
 
 
 def _accepted(path):
-    guard = [t for t in yaml.safe_load(TASKS.read_text()) if "ansible.builtin.assert" in t
-             and "paperclip_host_workspaces" in str(t)]
+    tasks = yaml.safe_load(TASKS.read_text())
+    guard = [t for t in tasks if "ansible.builtin.assert" in t and "paperclip_host_workspaces" in str(t)]
     that = [c for t in guard for c in t["ansible.builtin.assert"]["that"]]
     env = jinja2.Environment()
     env.filters["realpath"] = lambda v: str(Path(v)).rstrip("/") or "/"
     env.tests["match"] = lambda v, pat: re.match(pat, str(v)) is not None
-    env.tests["file"] = os.path.isfile
-    env.tests["directory"] = os.path.isdir
+    item = {"name": "w", "path": path}
+    # The role's stat tasks, answered by the real filesystem, as Ansible registers them.
+    stats = {}
+    for t in tasks:
+        if "ansible.builtin.stat" in t and "register" in t:
+            p = env.from_string(t["ansible.builtin.stat"]["path"]).render(item=item)
+            stats[t["register"]] = {"results": [{"item": item, "stat": {
+                "exists": os.path.lexists(p), "isreg": os.path.isfile(p), "isdir": os.path.isdir(p)}}]}
     return all(env.from_string("{{ (" + c + ") | string }}").render(
-        item={"name": "w", "path": path}, nos_data_root="/data",
-        ansible_facts={"env": {"HOME": HOME}}) == "True" for c in that)
+        item=item, _i=0, nos_data_root="/data", ansible_facts={"env": {"HOME": HOME}}, **stats) == "True"
+        for c in that)
 
 
 @pytest.mark.parametrize("path", [f"{HOME}/projects/hnedweb/.git", f"{HOME}/projects/hnedweb/.git/hooks"])
