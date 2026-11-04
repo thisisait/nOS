@@ -65,14 +65,15 @@
   when: _nos_app_build is not skipped
 
 # The medulla's identity, the app's own identifier: one certificate, its own designated requirement.
+# No grep -q under pipefail: it exits early, codesign dies of SIGPIPE, ~1 in 4 runs re-signed a good app.
 - name: "[pazny.medulla] Sign nOS.app with it (same identity every build)"
   ansible.builtin.shell: |
     set -euo pipefail
     H={{ _thalamus_signing.stdout_lines[-1] | quote }}
     want="certificate leaf = H\"$(printf %s "$H" | tr 'A-F' 'a-f')\""
     if codesign --verify --strict {{ thalamus_nos_app | quote }} 2>/dev/null \
-      && codesign -d -r- {{ thalamus_nos_app | quote }} 2>&1 | grep -qF "$want" \
-      && codesign -dv {{ thalamus_nos_app | quote }} 2>&1 | grep -q '^CodeDirectory .*flags=.*runtime'; then echo same; exit 0; fi
+      && codesign -d -r- {{ thalamus_nos_app | quote }} 2>&1 | grep -F "$want" >/dev/null \
+      && codesign -dv {{ thalamus_nos_app | quote }} 2>&1 | grep '^CodeDirectory .*flags=.*runtime' >/dev/null; then echo same; exit 0; fi
     out=$(codesign -f -s "$H" --options runtime -i eu.thisisait.nos.app {{ thalamus_nos_app | quote }} 2>&1) || { echo "$out" >&2; grep -q errSecInternalComponent <<<"$out" && { echo "codesign could not reach the signing key (errSecInternalComponent). Over SSH the keychain cannot ask
       'allow codesign?'. Once, in this session (it asks the login password), then re-run:
         security set-key-partition-list -S apple-tool:,apple:,codesign: -s {{ thalamus_signing_keychain | quote }}" >&2; exit 1; }; exit 1; }
