@@ -98,7 +98,8 @@ def declared_labels() -> set[str] | None:
     labels = {k.split(":", 1)[1] for k, v in nodes.items()
               if isinstance(v, dict) and v.get("kind") == "daemon"}
     labels |= {lb for v in nodes.values() if isinstance(v, dict) for lb in v.get("launchd_labels") or []}
-    for tpl in REPO.glob("**/*.plist.j2"):
+    # A raw REPO glob also read sibling .claude/worktrees checkouts: their stale Labels hid ours.
+    for tpl in (t for t in REPO.glob("**/*.plist.j2") if ".claude" not in t.relative_to(REPO).parts):
         m = re.search(r"<key>Label</key>\s*<string>([^<{]+)</string>", tpl.read_text(encoding="utf-8"))
         if m:
             labels.add(m.group(1).strip())
