@@ -1100,7 +1100,10 @@ MEASURED_WORK = {
     # paperclip workspace/drain/leases). Operator run (vendor): 8859 passed, 177 skipped, 5 failed
     # (4 fixed in the same branch, 1 the apex signature the operator renews), so 8863. NOT re-derived:
     # min_work from a judge-env run: derived from the 10-21 vendor offset instead (judge-sets.yml).
-    "pytest-anatomy": 8863,
+    # RE-DERIVED 2026-11-04 — fired at 9390 collected vs 8863 (the v0.19 wave: 26 branches). Judge-env
+    # run (no wing/vendor): 9061 passed, 366 skipped, 3 failed (all 3 fixed on the same branch), so 9064;
+    # no operator (vendor) reading taken, so this is the lower of the two. min_work 9064-120.
+    "pytest-anatomy": 9064,
     "cortex-corpus-diff": 1,
 }
 
