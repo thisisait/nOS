@@ -907,5 +907,8 @@ fn a_knowledge_search_sends_the_topic_not_the_framing() {
         assert!(q.split(' ').any(|w| w == topic), "{prompt} -> {q}");
     }
     assert_eq!(knowledge_query("Co říká naše znalostní báze o Mpembově jevu?"), "Mpembově jevu");
+    assert_eq!(knowledge_query("What does our knowledge base say about IT?"), "IT", "an acronym is a topic, not framing");
+    assert_eq!(knowledge_query("What does our knowledge base hold on the WHO?"), "WHO");
+    assert_eq!(knowledge_query("Co víme v našich znalostech o Mpembově jevu?"), "víme Mpembově jevu");
     assert_eq!(knowledge_query("our knowledge base?"), "our knowledge base?", "nothing left: the text itself");
 }
