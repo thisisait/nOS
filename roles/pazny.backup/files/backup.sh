@@ -1002,6 +1002,13 @@ run_dirs() {
             log "dir/${name}: service off and ${path} absent — nothing to back up"
             continue
         fi
+        # An empty_ok store an organ has not created yet (thalamus/data/people the night after a
+        # blank, 11-04) is empty, not lost: its parent is there, so the disk is mounted.
+        if [[ ! -d "${path}" && "${DIR_EMPTY_OK[$i]}" == "true" && -d "$(dirname "${path}")" ]]; then
+            log "dir/${name}: ${path} not created yet, its parent is there — nothing to upload (empty_ok)"
+            status_append "dir-${name}" 0 0 1 1
+            continue
+        fi
         if [[ ! -d "${path}" ]]; then
             # Enabled but absent = FAILED, never a silent skip. An unmounted SSD
             # or a moved nos_data_root would otherwise drop gitea/gitlab out of

@@ -20,6 +20,37 @@ exp = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(exp)
 
 
+def _run_dirs_on(tmp_path, path: Path, empty_ok: str) -> str:
+    """Execute backup.sh's run_dirs on one source with log/status_append stubbed; an absent
+    dir returns before docker or aws are reached."""
+    body = (REPO / "roles/pazny.backup/files/backup.sh").read_text(encoding="utf-8")
+    start = body.index("run_dirs() {")
+    fn = body[start:body.index("\n}\n", start) + 3]
+    script = tmp_path / "run.sh"
+    script.write_text(
+        'log() { echo "LOG $*"; }\nstatus_append() { echo "STATUS $*"; }\n'
+        f'DIR_NAMES=("people")\nDIR_PATHS=("{path}")\nDIR_ENABLED=("true")\nDIR_EMPTY_OK=("{empty_ok}")\n'
+        + fn + "run_dirs\n")
+    return subprocess.run(["bash", str(script)], capture_output=True, text=True, timeout=30).stdout
+
+
+def test_an_empty_ok_store_not_created_yet_is_not_a_failure(tmp_path):
+    """11-04, the night after a blank: thalamus/data/people (empty_ok) had not been created again,
+    backup.sh recorded dir-thalamus-people FAILED, and the spore refused a 'failed' backup. Its
+    parent existed, so the disk was mounted: an empty_ok store not made yet is empty, not lost."""
+    parent = tmp_path / "thalamus-data"
+    parent.mkdir()
+    out = _run_dirs_on(tmp_path, parent / "people", "true")
+    assert "STATUS dir-people 0 0 1 1" in out, out
+
+
+def test_an_absent_store_whose_parent_is_gone_still_fails(tmp_path):
+    # An unmounted SSD loses the parent too: that stays FAILED, empty_ok or not.
+    for ok in ("true", "false"):
+        out = _run_dirs_on(tmp_path, tmp_path / "no-mount" / "people", ok)
+        assert "STATUS dir-people 0 0 0" in out and "0 0 1" not in out, (ok, out)
+
+
 def test_the_metric_carries_empty_ok():
     out = exp._render({"last_run": 1, "sources": [
         {"name": "dir-outline", "size_bytes": 0, "success": True, "empty_ok": True},
