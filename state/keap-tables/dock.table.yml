@@ -1,0 +1,27 @@
+# =============================================================================
+# KEAP DataTable definition — "Face Dock" (the nOS-face dock pin order)
+#
+# Which apps sit on the dock bar, left to right. Same SoC → DataTable pattern as
+# layouts/wallpapers/controls: the built-in `system` rows mirror FACE_DOCK in
+# files/anatomy/face/src/lib/server/defaults.ts (the BFF's KEAP-down fallback);
+# roles/pazny.keap/tasks/seed-face-tables.yml creates the table and upserts them.
+# The face reads it via loadTable('face-dock') in src/lib/apps/pinned.ts, which
+# maps rows by `slug` + numeric `order` only.
+# =============================================================================
+
+title: "Face Dock"
+description: >-
+  The pinned apps on the nOS-face dock bar. Each row is a dock key (a native
+  registry slug, or control-panel) and its bar position. Repo seeds the
+  built-in order; users add or reorder rows.
+driver: libsql
+visibility: tier-users            # every authenticated user sees the dock
+client_scope: none
+anchors: ["nos.iiab.face"]
+
+schema:
+  columns:
+    - { key: slug,   label: "App key",      kind: text,    role: dimension, required: true, concept: identity.slug }
+    - { key: order,  label: "Bar position", kind: number,  role: measure,   required: true, concept: ui.sort }
+    - { key: system, label: "System",       kind: boolean, role: dimension, concept: prov.system }
+    - { key: owner,  label: "Owner",        kind: user,    role: attribute, concept: access.owner }
