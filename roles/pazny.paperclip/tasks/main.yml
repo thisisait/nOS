@@ -41,12 +41,33 @@
       (e.g. ~/projects/<client>), never $HOME, ~/.nos, a .git dir or a folder containing the data root.
   loop: "{{ paperclip_host_workspaces | default([]) }}"
 
+# A bare repo (HEAD + objects/ at its root) is a git dir without the .git name. Checked on the
+# controller, which is the host (ansible_connection=local).
+- name: "[pazny.paperclip] A host workspace is not a bare repo"
+  ansible.builtin.assert:
+    that:
+      - not ((((item.path | realpath) ~ '/HEAD') is file) and (((item.path | realpath) ~ '/objects') is directory))
+    fail_msg: "paperclip_host_workspaces entry {{ item.name }} is refused: {{ item.path }} is a bare git repo, not a work tree."
+  loop: "{{ paperclip_host_workspaces | default([]) }}"
+
 - name: "[pazny.paperclip] Ensure each host workspace exists"
   ansible.builtin.file:
     path: "{{ item.path }}"
     state: directory
     mode: '0755'
   loop: "{{ paperclip_host_workspaces | default([]) }}"
+
+# The compose .git overlay only where one exists: a bind mount creates a missing source,
+# so an unconditional overlay planted an empty .git in every non-repo workspace on each up.
+# A .git FILE (linked worktree) is overlaid too. Gate: test_paperclip_workspace_git_is_read_only.py.
+- name: "[pazny.paperclip] Which host workspaces hold a .git"
+  ansible.builtin.stat:
+    path: "{{ item.path }}/.git"
+    get_checksum: false
+  register: _paperclip_ws_git
+  loop: "{{ paperclip_host_workspaces | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"
 
 # `follow: <branch>`: the agents read origin/<branch>, not the day someone cloned it
 # (11-01: an oponent reviewed against a 24-10 clone and flagged shipped fixes as missing).
