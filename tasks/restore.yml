@@ -31,6 +31,17 @@
 
 # ── 0. Guardrails ─────────────────────────────────────────────────────────────
 
+# 11-03: a recalled `--check` run went failed=0 twice and restored nothing, silently.
+- name: "[Restore] Say up front whether this run can restore anything"
+  ansible.builtin.debug:
+    msg: >-
+      {{ 'DRY RUN (--check): nothing will be restored' if ansible_check_mode
+         else 'databases: dry run, pass -e restore_confirm=true' }}
+  when: >-
+    ansible_check_mode or (not (restore_confirm | default(false) | bool)
+    and (([restore_postgres_dbs | default([])] | flatten | join(',') | trim | length > 0)
+         or (restore_sources | default('') | string is search('postgres-'))))
+
 - name: "[Restore] Validate restore_date is provided"
   ansible.builtin.fail:
     msg: |
@@ -966,6 +977,7 @@
 - name: "[Restore] Show summary"
   ansible.builtin.debug:
     msg: |
+      Restored {{ restore_summary | length }} source(s){{ ' (--check)' if ansible_check_mode else '' }}
       ══════════════════════════════════════════════════════════════════════
       {{ 'DRY RUN — NOTHING RESTORED' if (ansible_check_mode or not restore_summary) else 'Restore complete' }} — {{ restore_date }}
       ══════════════════════════════════════════════════════════════════════
