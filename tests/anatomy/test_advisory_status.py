@@ -690,7 +690,7 @@ GITEA = [_adv("GHSA-82f7-87hm-852x", ("<= 1.26.4, >1.27.0", "1.27.0, 28.0.0"))]
 ])
 def test_the_range_forms_of_2026_10_31_match(adv, payload, version, affected):
     _, pin = _github_pin(adv, "o/r", None, version, payload)
-    assert (pin["state"] == "affected") is affected, pin
+    assert pin["state"] == ("affected" if affected else "clear"), pin
 
 
 @pytest.mark.parametrize("vuln", [("x.63.10", "63.10"), ("<= 7.4.0", "TBD")])
