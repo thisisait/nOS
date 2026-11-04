@@ -130,4 +130,11 @@
         enough): nos --tags woodpecker
 
       {% endif %}
+      {% if (install_code_server | default(false)) and (services_lan_access | default(false)) and not (code_server_hashed_password | default('')) %}
+      ── CODE-SERVER STAYS LOCAL ───────────────────────────────────────────────
+
+        code-server stays on 127.0.0.1: services_lan_access is on but code_server_hashed_password
+        is empty (credentials.yml; an argon2 hash). Then: nos --tags code-server
+
+      {% endif %}
       ═══════════════════════════════════════════════════════════════════════════
