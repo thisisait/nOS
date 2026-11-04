@@ -711,12 +711,16 @@ def party_graph(party_slug: str, table_reader, tables_dir: str | pathlib.Path) -
 def merge_plan(loser: str, winner: str, table_reader, tables_dir: str | pathlib.Path) -> dict:
     """{loser, winner, loser_present, cells: [{table, slug, column}], rows: {(table, slug): row}}
     — every rowRef cell that points at the loser party. Raises ValueError on a
-    self-merge or a winner that is not a party row (repointing to it would dangle)."""
+    self-merge, a winner that is not a party row (repointing to it would dangle),
+    or an IČO-slug loser with a non-IČO winner (the importer would re-fork it)."""
     if loser == winner:
         raise ValueError(f"cannot merge {loser} into itself")
     slugs = {r.get("slug") for r in table_reader("party") if isinstance(r, dict)}
     if winner not in slugs:
         raise ValueError(f"winner {winner} is not a party row")
+    if loser.startswith("party-ico-") and not winner.startswith("party-ico-"):
+        # digest-import writes party-ico-<8> without the party index: it would re-fork
+        raise ValueError(f"{loser} is the importer's IČO slug; merge {winner} into it instead")
     rows_by_table, edges = _rowref_closure(loser, table_reader, tables_dir)
     index = {(t, r["slug"]): r for t, rows in rows_by_table.items() for r in rows}
     cells, rows = [], {}
@@ -743,21 +747,28 @@ def merge_party(loser: str, winner: str, table_reader, tables_dir, *, write_row,
            "refused": None}
     if not confirm:
         return out
-    for (table, slug), row in plan["rows"].items():
-        cols = [c["column"] for c in plan["cells"] if (c["table"], c["slug"]) == (table, slug)]
-        write_row(table, {**row, **{c: winner for c in cols}})
-        out["repointed"].append({"table": table, "slug": slug, "columns": cols})
-    if plan["loser_present"]:
-        left = referrers("party", loser)
-        if left:
-            out["refused"] = f"{loser} still has {len(left)} referrer(s); not deleted"
-        else:
-            delete_row("party", loser)
-            out["deleted"] = True
-    if out["repointed"] or out["deleted"]:
-        audit({"action": "party.merge", "loser": loser, "winner": winner,
-               "repointed": out["repointed"], "deleted": out["deleted"],
-               "refused": out["refused"]})
+    try:
+        for (table, slug), row in plan["rows"].items():
+            cols = [c["column"] for c in plan["cells"] if (c["table"], c["slug"]) == (table, slug)]
+            write_row(table, {**row, **{c: winner for c in cols}})
+            out["repointed"].append({"table": table, "slug": slug, "columns": cols})
+        if plan["loser_present"]:
+            left = referrers("party", loser)
+            if left:
+                out["refused"] = f"{loser} still has {len(left)} referrer(s); not deleted"
+            else:
+                delete_row("party", loser)
+                out["deleted"] = True
+    except Exception as exc:
+        # a write/delete failing halfway left repointed rows; they are audited below,
+        # because a re-run finds 0 cells and would never audit them.
+        out["refused"] = f"failed: {exc}"
+        raise
+    finally:
+        if out["repointed"] or out["deleted"]:
+            audit({"action": "party.merge", "loser": loser, "winner": winner,
+                   "repointed": out["repointed"], "deleted": out["deleted"],
+                   "refused": out["refused"]})
     return out
 
 

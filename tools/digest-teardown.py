@@ -145,13 +145,16 @@ def _merge(loser: str, winner: str, H: dict, ro_hdr: dict, confirm: bool) -> int
     print(f"merge {loser} -> {winner}: {len(out['cells'])} cell(s){tag}")
     for c in out["cells"]:
         print(f"  {'[dry] would repoint' if out['dry'] else 'repointed'} {c['table']}/{c['slug']}.{c['column']}")
-    if out["dry"]:
-        print(f"  [dry] would delete party/{loser} once unreferenced" if out["loser_present"]
-              else f"  · party/{loser}: already absent")
+    if not out["loser_present"]:
+        print(f"  · party/{loser}: already absent")
+    elif out["dry"]:
+        print(f"  [dry] would delete party/{loser} once unreferenced")
     elif out["refused"]:
         print(f"  RETAIN party/{loser}: {out['refused']}")
     elif out["deleted"]:
         print(f"  deleted party/{loser}")
+    if out["repointed"]:
+        print("  · geo.party_site catches up at the nightly projection (geo-project-sites.py)")
     return 1 if out["refused"] else 0
 
 

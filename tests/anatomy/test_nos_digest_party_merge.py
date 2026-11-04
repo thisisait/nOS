@@ -130,3 +130,24 @@ def test_self_merge_and_unknown_winner_are_refused():
         ND.merge_plan("party-L", "party-L", s.read, TABLES)
     with pytest.raises(ValueError):
         ND.merge_plan("party-L", "party-nope", s.read, TABLES)
+
+
+def test_a_failed_delete_still_audits_the_repointed_rows():
+    s = Store()
+
+    def deny(table, slug):
+        raise OSError("403 human door")
+    s.delete_row = deny
+    with pytest.raises(OSError):
+        s.merge()
+    assert s.rows["invoice"][0]["seller"] == "party-W"           # writes landed before the failure
+    assert len(s.audits) == 1 and s.audits[0]["repointed"] and not s.audits[0]["deleted"]
+    assert "403" in s.audits[0]["refused"]
+
+
+def test_an_ico_slug_never_loses_to_a_name_slug():
+    s = Store()
+    s.rows["party"].append({"slug": "party-ico-00000112"})
+    with pytest.raises(ValueError, match="importer"):
+        ND.merge_plan("party-ico-00000112", "party-W", s.read, TABLES)
+    ND.merge_plan("party-W", "party-ico-00000112", s.read, TABLES)   # the other way is fine
