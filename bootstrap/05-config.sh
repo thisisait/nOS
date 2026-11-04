@@ -51,10 +51,18 @@ fi
 # ── YAML validation ───────────────────────────────────────────────────────────
 step "YAML validation"
 VALID=true
-PY=python3; [[ -x "$HOME/.local/share/nos/ansible-venv/bin/python" ]] && PY="$HOME/.local/share/nos/ansible-venv/bin/python"
+# The first Python that has PyYAML: the Linux venv, Ansible's own interpreter (Homebrew's ansible
+# on macOS), then python3. A fresh Mac's python3 has none (the spore rehearsal 11-04 read it as
+# "YAML error"): with no PyYAML anywhere the files are not validated, which is not an error.
+PY=""
+for c in "$HOME/.local/share/nos/ansible-venv/bin/python" \
+         "$(head -1 "$(command -v ansible-playbook 2>/dev/null || echo /dev/null)" 2>/dev/null | sed -n 's/^#! *//p' | cut -d' ' -f1)" python3; do
+  [[ -n "$c" ]] && "$c" -c "import yaml" 2>/dev/null && { PY="$c"; break; }
+done
+[[ -n "$PY" ]] || warn "No Python with PyYAML yet: config.yml / credentials.yml not validated (the first nos run parses them)"
 
 for f in config.yml credentials.yml; do
-  if [[ -f "$PLAYBOOK_DIR/$f" ]]; then
+  if [[ -n "$PY" && -f "$PLAYBOOK_DIR/$f" ]]; then
     if "$PY" -c "import yaml,sys; yaml.safe_load(open('$PLAYBOOK_DIR/$f'))" 2>/dev/null; then
       ok "$f – YAML OK"
     else
