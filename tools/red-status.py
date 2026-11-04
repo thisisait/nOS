@@ -64,10 +64,16 @@ SETTINGS_DIR = "/var/lib/nos/settings"
 _SET_POINTS = {"NOS_HALT_FILE": "halt", "NOS_LOOPS_PAUSED_FILE": "loops-paused"}
 
 
+def _settings_claimed() -> bool:
+    up = os.path.dirname(SETTINGS_DIR)
+    return os.path.isdir(SETTINGS_DIR) or os.path.isdir(up) and not os.access(up, os.X_OK)
+
+
 def set_point_file(var: str) -> pathlib.Path:
     """One rule in every reader (test_set_points_resolve_one_path.py): the env var
-    wins; else SETTINGS_DIR/<name> when that dir exists; else ~/.nos/<name>."""
-    base = pathlib.Path(SETTINGS_DIR) if os.path.isdir(SETTINGS_DIR) else pathlib.Path.home() / ".nos"
+    wins; else SETTINGS_DIR/<name> when that dir exists, or its parent bars us (a locked dir
+    is not absent, test_set_point_stray_file.py); else ~/.nos/<name>."""
+    base = pathlib.Path(SETTINGS_DIR) if _settings_claimed() else pathlib.Path.home() / ".nos"
     return pathlib.Path(os.environ.get(var) or base / _SET_POINTS[var])
 
 
@@ -77,7 +83,7 @@ def stray_set_points() -> list[str]:
     out, parent = [], os.path.dirname(SETTINGS_DIR)
     if os.path.isdir(parent) and not os.access(parent, os.X_OK) or \
             os.path.isdir(SETTINGS_DIR) and not os.access(SETTINGS_DIR, os.R_OK | os.X_OK):
-        out.append(f"cannot reach the set-points at {SETTINGS_DIR} — this reader falls back to ~/.nos, Pulse does not")
+        out.append(f"cannot reach the set-points at {SETTINGS_DIR} — a halt or loops pause there is invisible to this user")
     for var, name in _SET_POINTS.items():
         taken = set_point_file(var)
         for cand in (pathlib.Path(SETTINGS_DIR) / name, pathlib.Path.home() / ".nos" / name):
@@ -1185,8 +1191,8 @@ def collect() -> dict:
     # Not a red source: None means "loops running", the healthy default, so it
     # never becomes an UNKNOWN. Its presence is a HOLD, reported by hold_lines().
     report["loops_paused"] = loops_paused()
-    # The emergency halt (one file, tools/nos halt): a HOLD in plain words, never silence.
     report["stray_set_points"] = stray_set_points()
+    # The emergency halt (one file, tools/nos halt): a HOLD in plain words, never silence.
     halt = set_point_file("NOS_HALT_FILE")
     try:
         report["halt"] = halt.read_text(encoding="utf-8").strip() if halt.is_file() else None

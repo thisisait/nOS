@@ -649,12 +649,14 @@ final class PulseRepository
 		return $map instanceof \stdClass ? array_map('strval', array_keys(get_object_vars($map))) : null;
 	}
 
-	/** NOS_HALT_FILE, else <settings>/halt when that dir exists, else ~/.nos/halt (test_set_points_resolve_one_path.py). */
+	/** NOS_HALT_FILE, else <settings>/halt when that dir exists or its parent bars us, else ~/.nos/halt
+	 * (test_set_points_resolve_one_path.py); a locked dir is not absent, so the halt write fails loudly. */
 	public static function haltFile(): string
 	{
 		// ponytail: fixed though nos_system_home is configurable; upgrade = render the path into /etc/nos.
 		$dir = '/var/lib/nos/settings';
-		$dir = is_dir($dir) ? $dir : rtrim((string) getenv('HOME'), '/') . '/.nos';
+		$up = dirname($dir);
+		$dir = is_dir($dir) || (is_dir($up) && !is_executable($up)) ? $dir : rtrim((string) getenv('HOME'), '/') . '/.nos';
 		return (string) (getenv('NOS_HALT_FILE') ?: $dir . '/halt');
 	}
 

@@ -21,10 +21,12 @@ const ORGANS: [(&str, &str); 6] = [
 const SETTINGS_DIR: &str = "/var/lib/nos/settings";
 
 /// One rule in every reader (test_set_points_resolve_one_path.py): the env var wins; else
-/// SETTINGS_DIR/<name> when that dir exists (a system-user host); else ~/.nos/<name>.
+/// SETTINGS_DIR/<name> when that dir exists (a system-user host) or its parent bars us (a
+/// locked dir is not absent, test_set_point_stray_file.py); else ~/.nos/<name>.
 fn resolve(explicit: Option<OsString>, dir: &Path, home: Option<OsString>, name: &str) -> PathBuf {
     explicit.filter(|v| !v.is_empty()).map(PathBuf::from).unwrap_or_else(|| {
-        if dir.is_dir() { dir.join(name) } else { PathBuf::from(home.unwrap_or_default()).join(".nos").join(name) }
+        let barred = matches!(std::fs::metadata(dir), Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied);
+        if dir.is_dir() || barred { dir.join(name) } else { PathBuf::from(home.unwrap_or_default()).join(".nos").join(name) }
     })
 }
 
@@ -237,7 +239,12 @@ mod tests {
         assert_eq!(resolve(None, &dir, home.clone(), "loops-paused"), tmp.join("home/.nos/loops-paused"), "no dir: ~/.nos");
         std::fs::create_dir_all(&dir).unwrap();
         assert_eq!(resolve(None, &dir, home.clone(), "halt"), dir.join("halt"), "the dir exists: it wins over ~/.nos");
-        assert_eq!(resolve(Some("/x/lp".into()), &dir, home, "loops-paused"), PathBuf::from("/x/lp"), "env beats the dir");
+        assert_eq!(resolve(Some("/x/lp".into()), &dir, home.clone(), "loops-paused"), PathBuf::from("/x/lp"), "env beats the dir");
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&tmp, std::fs::Permissions::from_mode(0)).unwrap();
+        let locked = resolve(None, &dir, home, "halt");
+        std::fs::set_permissions(&tmp, std::fs::Permissions::from_mode(0o755)).unwrap();
+        assert_eq!(locked, dir.join("halt"), "a parent that bars us is not an absent dir: never ~/.nos");
         std::fs::remove_dir_all(&tmp).unwrap();
     }
 

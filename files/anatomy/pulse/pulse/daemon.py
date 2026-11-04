@@ -64,10 +64,16 @@ SETTINGS_DIR = "/var/lib/nos/settings"
 _SET_POINTS = {"NOS_HALT_FILE": "halt", "NOS_LOOPS_PAUSED_FILE": "loops-paused"}
 
 
+def _settings_claimed() -> bool:
+    up = os.path.dirname(SETTINGS_DIR)
+    return os.path.isdir(SETTINGS_DIR) or os.path.isdir(up) and not os.access(up, os.X_OK)
+
+
 def set_point_file(var: str) -> str:
     """One rule in every reader (test_set_points_resolve_one_path.py): the env var
-    wins; else SETTINGS_DIR/<name> when that dir exists; else ~/.nos/<name>."""
-    base = SETTINGS_DIR if os.path.isdir(SETTINGS_DIR) else os.path.expanduser("~/.nos")
+    wins; else SETTINGS_DIR/<name> when that dir exists, or its parent bars us (a locked dir
+    is not absent, test_set_point_stray_file.py); else ~/.nos/<name>."""
+    base = SETTINGS_DIR if _settings_claimed() else os.path.expanduser("~/.nos")
     return os.environ.get(var) or os.path.join(base, _SET_POINTS[var])
 
 

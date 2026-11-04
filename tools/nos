@@ -211,10 +211,9 @@ DTT
 fi
 
 # The set-points (halt, loops pause), one rule in every reader (test_set_points_resolve_one_path.py):
-# NOS_*_FILE wins; else the system-user dir the medulla unit reads, when it exists; else ~/.nos.
+# NOS_*_FILE wins; else the system-user dir, when it exists OR its parent bars us; else ~/.nos.
+# A locked dir is not absent (mini 11-02: ~/.nos/halt nobody read); writers refuse (test_set_point_stray_file.py).
 # ponytail: fixed though nos_system_home is configurable; upgrade = render the path into /etc/nos.
-# A dir that exists but this user cannot enter is NOT absent: falling back there wrote
-# ~/.nos/halt while Pulse read settings/halt (mini, 11-02). The writers refuse instead.
 _nos_sp=/var/lib/nos/settings; _nos_sp_err=""
 if [ -d "$_nos_sp" ]; then [ -r "$_nos_sp" ] && [ -x "$_nos_sp" ] || _nos_sp_err="$_nos_sp is not readable by $(id -un)"
 elif [ -d "${_nos_sp%/*}" ] && ! [ -x "${_nos_sp%/*}" ]; then _nos_sp_err="${_nos_sp%/*} is not searchable by $(id -un)"
