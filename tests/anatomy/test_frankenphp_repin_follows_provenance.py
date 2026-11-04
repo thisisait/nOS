@@ -14,6 +14,8 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 TOOL = REPO / "tools/frankenphp-repin.py"
 NEW = b"rebuilt-binary-bytes"
 
@@ -30,8 +32,9 @@ esac
 
 
 def _run(tmp: Path, attest_rc: int, *args: str):
-    cfg = tmp / "default.config.yml"
-    cfg.write_text((REPO / "default.config.yml").read_text(encoding="utf-8"), encoding="utf-8")
+    cfg = tmp / "pins.yml"
+    cfg.write_text(next(t for t in (f.read_text(encoding="utf-8") for f in ni.default_layers())
+                        if "frankenphp_checksums:\n" in t), encoding="utf-8")
     # The unchanged assets serve bytes whose sha IS their pin: make every pin that file's sha.
     old = tmp / "old.bin"
     old.write_bytes(b"pinned-bytes")
