@@ -2,7 +2,8 @@
 in_force: true
 ruled: 2026-10-04
 row: immune-system
-gates: []
+gates:
+  - tests/anatomy/test_every_indicator_is_registered.py
 last_reviewed: 2026-10-06
 review_every_days: 31
 ---

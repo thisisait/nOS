@@ -53,6 +53,18 @@ indicators:
     tolerance: state/genome/advisory-judgements.yml
     verdicts: ~/.nos/advisory/last.json
     definition: none
+  host-patch-status:
+    source: tools/host-patch-status.py
+    kind: sentinel
+    antigen: a Linux host running code it has already replaced (pending reboot, stale kernel, unapplied -security upgrades)
+    receptor: /var/run/reboot-required, uname vs installed kernels, apt's pending upgrade list (read only)
+    effector: report
+    signal: tools/red-status.py (collect()/summary())
+    heartbeat: none (read on every red-status run)
+    lifespan: none
+    tolerance: none
+    verdicts: none
+    definition: none
   identity-status:
     source: tools/identity-status.py
     kind: sentinel
