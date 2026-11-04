@@ -64,8 +64,9 @@ def live_run() -> bool:
 
 #: Credential holders under HOME: the secret store, and the launchd / systemd
 #: unit files whose env blocks carry the organs' tokens (test_hub_url_audit.py
-#: read WING_API_TOKEN out of the wing plist). Each becomes an empty directory.
-HIDDEN = (".nos", "Library/LaunchAgents", ".config/systemd/user")
+#: read WING_API_TOKEN out of the wing plist), and ~/wing (wing.db is the live
+#: estate's record). Each becomes an empty directory.
+HIDDEN = (".nos", "Library/LaunchAgents", ".config/systemd/user", "wing")
 
 
 def _farm(real: pathlib.Path, fake: pathlib.Path, hidden: tuple[str, ...]) -> None:
