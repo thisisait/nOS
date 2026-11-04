@@ -1,0 +1,42 @@
+---
+# php/frankenphp re-uploads its latest tag every night (~01:10 UTC), so frankenphp_checksums go
+# stale and the Linux install fails closed. This re-pins only what upstream's static.yaml signed
+# (tools/frankenphp-repin.py refuses anything else) and opens a PR into dev; the operator merges.
+name: FrankenPHP digest
+'on':
+  schedule:
+    - cron: "40 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  repin:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: dev
+      - name: Re-pin attested assets
+        id: repin
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 tools/frankenphp-repin.py --write
+          if git diff --quiet; then echo "changed=false" >> "$GITHUB_OUTPUT"; else echo "changed=true" >> "$GITHUB_OUTPUT"; fi
+      - name: Open the PR
+        if: steps.repin.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          branch="bot/frankenphp-digest-$(date -u +%Y%m%d)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git commit -am "fix(wing): frankenphp digests of the $(date -u +%m-%d) rebuild"
+          git push origin "$branch"
+          body="Upstream re-uploaded the release assets. tools/frankenphp-repin.py moved each pin only after"
+          body="$body \`gh attestation verify --signer-workflow php/frankenphp/.github/workflows/static.yaml\`."
+          gh pr create --base dev --head "$branch" --title "fix(wing): frankenphp digests of the $(date -u +%m-%d) rebuild" --body "$body"
