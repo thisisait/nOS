@@ -525,6 +525,48 @@ if [ -f "$_NOS_LOG" ]; then
   fi
 fi
 
+# A --tags name no task carries runs nothing and still ends green: 11-02 `--tags device_gateway`
+# (the tag is device-gateway) deployed nothing at failed=0. Every requested tag is checked against
+# `--list-tags`, cached per clean HEAD; an unreadable list warns and proceeds (the run reports it).
+# Gate: test_unknown_tag_is_refused.py.
+_req_tags="" _prev=""
+for a in ${PASSTHRU[@]+"${PASSTHRU[@]}"}; do
+  case "$_prev" in --tags|-t|--skip-tags) _req_tags="$_req_tags,$a" ;; esac
+  case "$a" in --tags=*|--skip-tags=*) _req_tags="$_req_tags,${a#*=}" ;; esac
+  _prev="$a"
+done
+if [ -n "$_req_tags" ]; then
+  _tag_cache="${HOME}/.nos/list-tags.cache"
+  _tag_key="$(git -C "$NOS_SRC" rev-parse HEAD 2>/dev/null || true)"
+  [ -n "$(git -C "$NOS_SRC" status --porcelain 2>/dev/null)" ] && _tag_key=""
+  _known=""
+  if [ -n "$_tag_key" ] && [ "$(head -1 "$_tag_cache" 2>/dev/null)" = "$_tag_key" ]; then
+    _known="$(tail -n +2 "$_tag_cache")"
+  else
+    echo "nos: reading the playbook's declared tags (--list-tags) ..." >&2
+    _known="$(cd "$NOS_SRC" && ANSIBLE_LOG_PATH=/dev/null ansible-playbook main.yml --list-tags 2>/dev/null \
+      | grep -o 'TAGS: \[[^]]*\]' | sed 's/^TAGS: \[//; s/\]$//' | tr ',' '\n' | tr -d ' ' | grep . | sort -u || true)"
+    if [ -n "$_known" ] && [ -n "$_tag_key" ]; then
+      printf '%s\n%s\n' "$_tag_key" "$_known" > "$_tag_cache" 2>/dev/null || true
+    fi
+  fi
+  if [ -z "$_known" ]; then
+    echo "nos: WARNING — could not read the playbook's tags; '${_req_tags#,}' is NOT checked" >&2
+  else
+    _bad=0
+    for t in $(printf '%s' "$_req_tags" | tr ',' ' '); do
+      case "$t" in all|always|never|tagged|untagged) continue ;; esac
+      printf '%s\n' "$_known" | grep -qxF -- "$t" && continue
+      _norm="$(printf '%s' "$t" | tr 'A-Z_' 'a-z-')"
+      _near="$(printf '%s\n' "$_known" | while read -r k; do
+        [ "$(printf '%s' "$k" | tr 'A-Z_' 'a-z-')" = "$_norm" ] && echo "$k"; done | head -1 || true)"
+      echo "nos: no task carries the tag '$t'${_near:+ — did you mean $_near?}" >&2
+      _bad=1
+    done
+    [ "$_bad" -eq 1 ] && { echo "  (declared tags: ansible-playbook main.yml --list-tags)" >&2; exit 64; }
+  fi
+fi
+
 # Ansible prints nothing until it has read the playbook and every config layer (5 s on the
 # Studio, ~20 s on the Linux mini, 11-02): say at once what is about to run.
 _say_tags="" _say_prof=""
