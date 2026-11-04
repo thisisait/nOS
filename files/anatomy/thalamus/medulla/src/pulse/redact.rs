@@ -50,39 +50,65 @@ fn first<'a>(t: &[char], i: usize, kws: &[&'a str]) -> Option<&'a str> {
     kws.iter().copied().find(|k| lit(t, i, k))
 }
 
-/// `\b[A-Z][A-Z0-9_]*(?:TOKEN|…)[A-Z0-9_]*\s*[:=]\s*['"]?[value]{6,256}['"]?`, IGNORECASE.
+fn quoted(t: &[char], i: usize, min: usize) -> Option<usize> {
+    let q = *t.get(i).filter(|c| matches!(c, '\'' | '"'))?;
+    let n = run(t, i + 1, usize::MAX, |c| c != q && c != '\n');
+    (n >= min && t.get(i + 1 + n) == Some(&q)).then_some(i + n + 2)
+}
+
+/// Python's _ENV_ASSIGNMENT: a long keyword anywhere in the key, KEY/AUTH only as a whole `_`
+/// segment (not after SORT_); then `"…"`/`'…'`, or for `:` the rest of the line, for `=` a
+/// `['"]?[^\s'"]{6,}['"]?` run.
 fn env(t: &[char], p: usize) -> Option<(usize, usize)> {
-    const KW: [&str; 10] = ["TOKEN", "SECRET", "PASSWORD", "KEY", "HMAC", "JWT", "BEARER", "CREDENTIAL", "AUTH", "COOKIE"];
+    const KW: [&str; 10] = ["TOKEN", "SECRET", "PASSWORD", "PASSWD", "APIKEY", "HMAC", "JWT", "BEARER", "CREDENTIAL", "COOKIE"];
     if !boundary(t, p) || !fold(t[p]).is_ascii_uppercase() {
         return None;
     }
     let r = p + run(t, p, usize::MAX, |c| matches!(fold(c), 'A'..='Z' | '0'..='9' | '_'));
-    (p + 1..r).find(|&k| KW.iter().any(|kw| k + kw.len() <= r && lit(t, k, kw)))?;
+    let seg = |k: usize, kw: &str| {
+        (k == p || t[k - 1] == '_') && !(k >= 5 && lit(t, k - 5, "SORT_")) && (k + kw.len() == r || t.get(k + kw.len()) == Some(&'_'))
+    };
+    (p..r).find(|&k| {
+        KW.iter().any(|kw| k + kw.len() <= r && lit(t, k, kw)) || ["KEY", "AUTH"].iter().any(|kw| k + kw.len() <= r && lit(t, k, kw) && seg(k, kw))
+    })?;
     let j = spaces(t, r);
-    if !matches!(t.get(j), Some(':' | '=')) {
-        return None;
-    }
+    let colon = match t.get(j) {
+        Some(':') => true,
+        Some('=') => false,
+        _ => return None,
+    };
     let keep = spaces(t, j + 1);
-    let q = keep + matches!(t.get(keep), Some('\'' | '"')) as usize;
-    let n = run(t, q, 256, |c| value(fold(c)));
-    (n >= 6).then(|| (keep, q + n + matches!(t.get(q + n), Some('\'' | '"')) as usize))
+    if let Some(end) = quoted(t, keep, 6) {
+        return Some((keep, end));
+    }
+    if colon {
+        let n = run(t, keep, usize::MAX, |c| c != '\n');
+        return (n >= 6).then_some((keep, keep + n));
+    }
+    let quote = |i: usize| matches!(t.get(i), Some('\'' | '"')) as usize;
+    let q = keep + quote(keep);
+    let n = run(t, q, usize::MAX, |c| !space(c) && c != '\'' && c != '"');
+    (n >= 6).then(|| (keep, q + n + quote(q + n)))
 }
 
-/// `--?(?:password|pass|pwd|token|secret|api[-_]?key|bearer)[ =]` then `[^\s]+`, IGNORECASE.
+/// `--?(?:password|passwd|pass|pwd|token|secret|api[-_]?key|bearer)[ =]` then a quoted value or `[^\s]+`, IGNORECASE.
 fn cli(t: &[char], p: usize) -> Option<(usize, usize)> {
     if t[p] != '-' {
         return None;
     }
     let k = p + 1 + (t.get(p + 1) == Some(&'-')) as usize;
-    const KW: [&str; 9] = ["PASSWORD", "PASS", "PWD", "TOKEN", "SECRET", "API-KEY", "API_KEY", "APIKEY", "BEARER"];
+    const KW: [&str; 10] = ["PASSWORD", "PASSWD", "PASS", "PWD", "TOKEN", "SECRET", "API-KEY", "API_KEY", "APIKEY", "BEARER"];
     KW.iter().filter(|kw| lit(t, k, kw)).find_map(|kw| {
         let s = k + kw.len() + 1;
+        if !matches!(t.get(s - 1), Some(' ' | '=')) {
+            return None;
+        }
         let n = run(t, s, usize::MAX, |c| !space(c));
-        (matches!(t.get(s - 1), Some(' ' | '=')) && n > 0).then_some((s, s + n))
+        quoted(t, s, 0).or((n > 0).then_some(s + n)).map(|end| (s, end))
     })
 }
 
-/// `Authorization\s*:\s*(?:Bearer|Basic|Digest)\s+[value]{8,512}`, IGNORECASE.
+/// `Authorization\s*:\s*(?:Bearer|Basic|Digest|Token)\s+[value]{8,}`, IGNORECASE.
 fn http(t: &[char], p: usize) -> Option<(usize, usize)> {
     if !lit(t, p, "AUTHORIZATION") {
         return None;
@@ -92,19 +118,19 @@ fn http(t: &[char], p: usize) -> Option<(usize, usize)> {
         return None;
     }
     let j = spaces(t, j + 1);
-    let s = j + first(t, j, &["BEARER", "BASIC", "DIGEST"])?.len();
+    let s = j + first(t, j, &["BEARER", "BASIC", "DIGEST", "TOKEN"])?.len();
     let keep = spaces(t, s);
-    let n = run(t, keep, 512, |c| value(fold(c)));
+    let n = run(t, keep, usize::MAX, |c| value(fold(c)));
     (keep > s && n >= 8).then_some((keep, keep + n))
 }
 
-/// `\bBearer\s+[value]{16,512}\b`, case-sensitive; the trailing `\b` backtracks the value.
+/// `\bBearer\s+[value]{16,}\b`, IGNORECASE; the trailing `\b` backtracks the value.
 fn bearer(t: &[char], p: usize) -> Option<(usize, usize)> {
-    if !boundary(t, p) || !t[p..].starts_with(&['B', 'e', 'a', 'r', 'e', 'r']) {
+    if !boundary(t, p) || !lit(t, p, "BEARER") {
         return None;
     }
     let keep = spaces(t, p + 6);
-    let n = run(t, keep, 512, value);
+    let n = run(t, keep, usize::MAX, |c| value(fold(c)));
     (keep > p + 6).then_some(())?;
     (16..=n).rev().find(|l| boundary(t, keep + l)).map(|l| (keep, keep + l))
 }

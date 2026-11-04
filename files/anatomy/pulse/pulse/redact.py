@@ -27,36 +27,37 @@ from __future__ import annotations
 import re
 
 
-# Env-var assignment shape: `<KEY>=<value>` or `<KEY>: <value>` where
-# KEY contains any of: TOKEN, SECRET, PASSWORD, KEY, HMAC, JWT, BEARER,
-# CREDENTIAL, AUTH, COOKIE. Value can be quoted or bare; we capture up
-# to whitespace or the next shell-meta.
+# `<KEY>=<value>` / `<KEY>: <value>`. A long keyword may sit anywhere in KEY (TOKEN=, XTOKEN=);
+# KEY and AUTH only as a whole `_` segment, so MONKEY= and GIT_AUTHOR_NAME= pass, and SORT_KEY is
+# not a secret. Quoted values run to the closing quote, `=` values to whitespace, `:` values to the
+# end of the line (`MY_PASSWORD: p@ss w0rd`). No upper bound on any value length.
 _ENV_ASSIGNMENT = re.compile(
-	r"(?P<prefix>\b[A-Z][A-Z0-9_]*(?:TOKEN|SECRET|PASSWORD|KEY|HMAC|JWT|BEARER|CREDENTIAL|AUTH|COOKIE)[A-Z0-9_]*\s*[:=]\s*)"
-	r"['\"]?(?P<value>[A-Za-z0-9+/=_.\-]{6,256})['\"]?",
+	r"(?P<prefix>\b(?=[A-Z])"
+	r"(?=[A-Z0-9_]*?(?:TOKEN|SECRET|PASSWORD|PASSWD|APIKEY|HMAC|JWT|BEARER|CREDENTIAL|COOKIE"
+	r"|(?<![A-Z0-9])(?<!SORT_)(?:KEY|AUTH)(?![A-Z0-9])))"
+	r"[A-Z0-9_]+\s*(?:=|(?P<colon>:))\s*)"
+	r"(?P<value>\"[^\"\n]{6,}\"|'[^'\n]{6,}'|(?(colon)\S[^\n]{5,}|['\"]?[^\s'\"]{6,}['\"]?))",
 	re.IGNORECASE,
 )
 
-# CLI password flags: `--password=X`, `--password X`, `-p X`. The first
-# group is the flag; everything after is the secret value up to the
-# next whitespace.
+# CLI flags: `--password=X`, `--password X`; a quoted value runs to its closing quote. `-p X` is
+# never matched (port, progress).
 _CLI_PASSWORD_FLAG = re.compile(
-	r"(--?(?:password|pass|pwd|token|secret|api[-_]?key|bearer)(?:[ =])"
-	r")(?P<value>[^\s]+)",
+	r"(--?(?:password|passwd|pass|pwd|token|secret|api[-_]?key|bearer)[ =])"
+	r"(?P<value>\"[^\"\n]*\"|'[^'\n]*'|[^\s]+)",
 	re.IGNORECASE,
 )
 
-# HTTP Authorization header values: `Authorization: Basic <b64>` /
-# `Bearer <token>`. Match anywhere in the line, redact the token.
+# `Authorization: Bearer|Basic|Digest|Token <value>`, anywhere in the line.
 _HTTP_AUTH_HEADER = re.compile(
-	r"(?P<prefix>Authorization\s*:\s*(?:Bearer|Basic|Digest)\s+)(?P<value>[A-Za-z0-9+/=_.\-]{8,512})",
+	r"(?P<prefix>Authorization\s*:\s*(?:Bearer|Basic|Digest|Token)\s+)(?P<value>[A-Za-z0-9+/=_.\-]{8,})",
 	re.IGNORECASE,
 )
 
-# `Bearer <token>` standalone (not in Authorization: header — appears in
-# tracebacks, log lines).
+# `Bearer <token>` outside a header (tracebacks, log lines), any case.
 _BEARER_INLINE = re.compile(
-	r"(?P<prefix>\bBearer\s+)(?P<value>[A-Za-z0-9+/=_.\-]{16,512})\b",
+	r"(?P<prefix>\bBearer\s+)(?P<value>[A-Za-z0-9+/=_.\-]{16,})\b",
+	re.IGNORECASE,
 )
 
 
