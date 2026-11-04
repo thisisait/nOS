@@ -8,7 +8,7 @@ frankenphp-nightly-digest). The install keeps pinning bytes; this moves the pin,
 for a file `gh attestation verify` proves was built by SIGNER — never a digest GitHub merely lists.
 
   tools/frankenphp-repin.py              # report: which pins are stale (needs gh, network)
-  tools/frankenphp-repin.py --write      # rewrite the stale ones in default.config.yml
+  tools/frankenphp-repin.py --write      # rewrite the stale ones in the layer that declares them
 Exit: 0 nothing stale or rewritten, 1 stale (report mode), 2 a changed asset failed attestation
 (nothing written), 3 the release or the pin block could not be read.
 """
@@ -24,6 +24,8 @@ import tempfile
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT / "tools"))
+import nos_identity as ni  # noqa: E402
 UPSTREAM = "php/frankenphp"
 SIGNER = "php/frankenphp/.github/workflows/static.yaml"
 VERSION = re.compile(r'^frankenphp_version:\s*"([^"]+)"', re.M)
@@ -48,9 +50,13 @@ def pin_block(text: str) -> tuple[int, int]:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--write", action="store_true")
-    ap.add_argument("--config", default=str(REPO_ROOT / "default.config.yml"))
+    ap.add_argument("--config", help="default: the committed layer that declares frankenphp_checksums")
     a = ap.parse_args(argv)
-    cfg = Path(a.config)
+    cfg = Path(a.config) if a.config else next(
+        (f for f in ni.default_layers() if "frankenphp_checksums:\n" in f.read_text(encoding="utf-8")), None)
+    if cfg is None:
+        print("no committed layer declares frankenphp_checksums", file=sys.stderr)
+        return 3
     text = cfg.read_text(encoding="utf-8")
     try:
         version = VERSION.search(text).group(1)
