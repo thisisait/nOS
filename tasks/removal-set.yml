@@ -252,6 +252,7 @@
   ansible.builtin.set_fact:
     _removal_keep:
       - { var: agents_libexec_dir, level: never, why: "pazny.mac.agent_user host files (claude copy, launcher); no level removes the agent user or its sudoers rule yet — open" }
+      - { var: nos_estate_dir, level: all, why: "the checkout the estate runs from, with the operator's config.yml; only uninstall (all, which takes ~/.nos) removes it" }
       - { var: artifact_cache_dir, level: never, why: "the verified image cache a rebuild loads from instead of re-pulling — survives every level by design (tools/nos-image-cache.py)" }
       - { var: geo_cache_dir, level: never, why: "under artifact_cache_dir — open-data downloads the monthly loader re-uses (If-Modified-Since)" }
       - { var: vllm_data_dir, level: all, why: "pinned model weights — re-downloadable, but tens of GB on a slow uplink: only uninstall takes them" }

@@ -3332,6 +3332,7 @@ backup_dirs_to_dump:
 #              backup_dirs_to_dump to close it (size/consistency is the operator's call).
 backup_coverage:
   agents_libexec_dir:          { class: derived, why: "root-owned claude copy + launcher, rendered by pazny.mac.agent_user" }
+  nos_estate_dir:              { class: derived, why: "the estate clone, re-made by tools/estate-adopt.sh; its config.yml + credentials.yml travel in the spore" }
   artifact_cache_dir:          { class: derived, why: "verified image tars — re-pullable, checksummed, survives every removal" }
   geo_cache_dir:               { class: derived, why: "RÚIAN/INSPIRE downloads — re-fetchable open data; the loaded tables are in pg_dumpall" }
   maps_cache_dir:              { class: derived, why: "Planetiler PMTiles + OSM sources, glyphs, sprites — rebuildable from open data" }
