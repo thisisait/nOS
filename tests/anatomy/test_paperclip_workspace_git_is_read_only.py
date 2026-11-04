@@ -4,7 +4,8 @@ A host workspace mounts read-only unless declared rw, and its .git is overlaid r
 either way, so even an rw workspace cannot plant a hook or rewrite git config the operator
 then runs on the host. The overlay is emitted only where the role's stat found a .git (dir,
 or file = linked worktree): a bind mount creates a missing source, so an unconditional
-overlay planted an empty .git in every non-repo workspace. A .git dir or bare repo is refused.
+overlay planted an empty .git in every non-repo workspace. A .git dir, a bare repo or a linked
+worktree (.git FILE: its gitdir lies outside the mount, so the overlay protects nothing) is refused.
 """
 from __future__ import annotations
 
@@ -66,9 +67,12 @@ def test_a_git_dir_is_never_a_workspace(path):
 
 
 def test_a_bare_repo_is_never_a_workspace_but_a_clone_is(tmp_path):
-    bare, clone = tmp_path / "site.git", tmp_path / "site"
+    bare, clone, linked = tmp_path / "site.git", tmp_path / "site", tmp_path / "site-wt"
+    linked.mkdir()
+    (linked / ".git").write_text(f"gitdir: {clone}/.git/worktrees/site-wt\n")
     (bare / "objects").mkdir(parents=True)
     (bare / "HEAD").write_text("ref: refs/heads/main\n")
     (clone / ".git" / "objects").mkdir(parents=True)
     assert not _accepted(str(bare)), f"{bare} (bare repo) must be refused as a workspace"
+    assert not _accepted(str(linked)), f"{linked} (linked worktree) must be refused as a workspace"
     assert _accepted(str(clone)), f"{clone} (a clone's work tree) must be accepted"
