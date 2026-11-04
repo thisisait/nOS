@@ -31,15 +31,11 @@ hardcoded `dev.local`.
   - Scopes: `openid`, `profile`, `email`; username claim `preferred_username`
   - Enabled when `install_authentik` AND `nodered_native_oidc_enabled` are true. The
     `passport-openidconnect` npm package installs at first boot via `/data/package.json`.
-- **Break-glass local admin:** a fallback user is kept in `adminAuth.users` so an
-  Authentik outage never locks the operator out:
-  - user `admin`, password `{global_password_prefix}_nodered_admin`
+- **Break-glass:** none. `adminAuth.users` grants only users the Authentik strategy
+  verified (Tier-1 groups get `*`, others `read`); there is no local user, so an
+  Authentik outage closes the editor.
 - **Autologin:** `native_oidc` supports partial autologin — `strategy.autoLogin` redirects,
-  but the local form is not hard-hidden (dormant behind `sso_autologin=false`).
-
-> The `nodered-base` plugin's prose still mentions "forward-auth" in places — that is
-> stale narrative. The authoritative `authentik.mode` is `native_oidc`; pre-β1.B it was
-> forward_auth at the nginx layer.
+  but the "Sign in with Authentik" button page stays (dormant behind `sso_autologin=false`).
 
 ## Health Check
 

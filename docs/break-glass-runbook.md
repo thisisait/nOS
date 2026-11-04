@@ -176,7 +176,7 @@ This table is harvested from the live `authentik.autologin` blocks in
 | superset | 2 | partial | no | `OAUTH_SKIP_PROVIDER_SELECTION=False` | **env-unset + recreate** | form stays; flag controls provider-skip |
 | outline | 3 | partial | no | set `OIDC_DISABLE_REDIRECT=true` + recreate | **env-set + recreate** | re-render to stop auto-redirect |
 | wordpress | 4 | partial | no | `/wp-login.php` (direct) | **URL param** | yes |
-| nodered | 2 | partial | no | local admin fallback user in `adminAuth.users` | **config fallback** | yes (local admin in settings.js) |
+| nodered | 2 | partial | no | none: no local login; Authentik down = editor closed | **none** | **no** — `adminAuth.users` grants only Authentik-verified users |
 | **gitea** | 2 | yes | yes | re-enable `ENABLE_PASSWORD_SIGNIN_FORM` env + recreate | **env-unset + recreate** | **no at runtime** — form is env-hidden |
 | **miniflux** | 3 | partial | yes | unset `DISABLE_LOCAL_AUTH` + recreate | **env-unset + recreate** | **no at runtime** — form is env-hidden |
 | **vaultwarden** | 3 | **no** | no | `/admin` (admin token panel) | **URL param** | button-only build; `SSO_ONLY=false` + recreate to restore master-password |

@@ -90,7 +90,7 @@ authentik:
     break_glass: "none: no local login; Authentik down = editor closed"
 
 # =============================================================================
-# COMPOSE-EXTENSION — Traefik labels (forward-auth middleware)
+# COMPOSE-EXTENSION — OIDC client env + mkcert CA (no Traefik labels)
 # =============================================================================
 compose_extension:
   template: templates/nodered-base.compose.yml.j2
@@ -109,10 +109,10 @@ lifecycle:
     - wait_health:
         url: "http://127.0.0.1:{{ nodered_port }}/"
         timeout: 60
-        accept_any_2xx_3xx_4xx: true   # forward-auth returns 401/302; that's healthy
+        accept_any_2xx_3xx_4xx: true   # editor may answer 401/302 before OIDC login; that's healthy
 
 # =============================================================================
-# OBSERVABILITY — Loki labels (forward-auth has no /metrics natively)
+# OBSERVABILITY — Loki labels (Node-RED has no /metrics natively)
 # =============================================================================
 
 observability:
