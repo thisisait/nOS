@@ -3,6 +3,7 @@
 # stale and the Linux install fails closed. This re-pins only what upstream's static.yaml signed
 # (tools/frankenphp-repin.py refuses anything else) and opens a PR into dev; the operator merges.
 # Push and PR go through the nos-bot GitHub App token: GITHUB_TOKEN events start no CI run.
+# Needs repo secrets NOS_BOT_CLIENT_ID + NOS_BOT_APP_KEY: docs/git-and-release.md §nos-bot.
 name: FrankenPHP digest
 'on':
   schedule:
@@ -38,10 +39,12 @@ jobs:
         if: steps.repin.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
+          APP_SLUG: ${{ steps.app.outputs.app-slug }}
         run: |
           branch="bot/frankenphp-digest-$(date -u +%Y%m%d)"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          uid="$(gh api "users/${APP_SLUG}[bot]" --jq .id)"
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${uid}+${APP_SLUG}[bot]@users.noreply.github.com"
           git switch -c "$branch"
           git commit -am "fix(wing): frankenphp digests of the $(date -u +%m-%d) rebuild"
           git push origin "$branch"

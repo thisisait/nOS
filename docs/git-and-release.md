@@ -53,6 +53,25 @@ gh api repos/:owner/:repo/rulesets/<id>            # expect the five rules above
 
 `git push origin master` from a non-fast-forward state must still be refused.
 
+## nos-bot GitHub App — one-time operator setup
+
+Bot workflows (`frankenphp-digest.yml`) push and open PRs with a GitHub App token, because
+a push or PR made with `GITHUB_TOKEN` starts no workflow run, so the PR would carry no CI
+checks. The org keeps `GITHUB_TOKEN` read-only (Settings → Actions → Workflow permissions
+is greyed out at repo level); that stays as is, the App holds the write rights.
+
+1. Install the App on `thisisait/nOS` with **Contents: read/write** and
+   **Pull requests: read/write**.
+2. Repo Settings → Secrets and variables → Actions → **Repository secrets** (not an
+   environment): `NOS_BOT_CLIENT_ID` = the App's Client ID, `NOS_BOT_APP_KEY` = a private
+   key (`.pem`) generated on the App page.
+3. Run the workflow once by hand (`gh workflow run frankenphp-digest.yml`). When the pins
+   moved, the PR it opens must show CI checks; without the secrets the first step fails.
+
+```bash
+gh api repos/:owner/:repo/actions/secrets --jq '.secrets[].name'   # expect both names
+```
+
 ## Cutting a release
 
 1. **`gh pr merge --rebase` fails on a release-sized PR.** At ~190 commits / ~600 files
