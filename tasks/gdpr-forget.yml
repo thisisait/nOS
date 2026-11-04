@@ -24,13 +24,17 @@
       # Strict RFC-ish email; rejects spaces/;/`/$/&/| etc. forget_subject is
       # interpolated into a container_exec one-liner, so 'a@b; rm -rf / #' must
       # NEVER pass this gate (host-RCE guard on the confirmed-erasure path).
-      - forget_subject | string | regex_search('^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$') is not none
-    fail_msg: "Set -e forget_subject=<plain email> (no shell metacharacters)."
+      # Or an org party slug (party-ico-NNNNNNNN): lowercase, digits, inner hyphens,
+      # \Z so a trailing newline cannot slip past '$'. Routed to the digest closure only.
+      - (forget_subject | string | regex_search('^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$') is not none)
+        or (forget_subject | string | regex_search('^party-[a-z0-9]+(-[a-z0-9]+)*\\Z') is not none)
+    fail_msg: "Set -e forget_subject=<plain email> or <party slug, e.g. party-ico-00000112> (no shell metacharacters)."
     quiet: true
 
 - name: "[GDPR forget] Resolve confirm flag (default dry-run)"
   ansible.builtin.set_fact:
     _forget_confirm: "{{ forget_confirm | default(false) | bool }}"
+    _forget_party: "{{ '@' not in (forget_subject | string) }}"  # validated above: no @ = party slug
 
 - name: "[GDPR forget] Load audited erasure map"
   ansible.builtin.include_vars:
@@ -46,7 +50,7 @@
   # No `default=false`: an UNDECLARED flag is an error, not an absent service.
   # `install_redis` was declared in no config layer, so this row's erasure pass
   # silently dropped out of every plan. Gate: test_no_phantom_flag_branches.py.
-  when: item.flag == 'always' or (lookup('vars', item.flag) | bool)
+  when: not (_forget_party | bool) and (item.flag == 'always' or (lookup('vars', item.flag) | bool))
 
 - name: "[GDPR forget] Erasure plan banner"
   ansible.builtin.debug:
@@ -99,6 +103,24 @@
     # casts to 0 -> the terminal update silently no-ops (row stuck at 'received').
     _dsar_id: "{{ (_dsar_rec.stdout | default('') | regex_search('(?<=#)[0-9]+')) | default('', true) }}"
   when: install_wing | default(true) | bool
+
+# ── Executor: party subject — the digest rowRef closure, no email fan-out ────
+# An org has no Authentik user or email-keyed rows; its footprint is what the
+# digest importers wrote. digest-teardown dry-runs by default; the party row
+# itself is retained (the person-vs-org row ruling is still open).
+- name: "[GDPR forget] Party subject — digest erasure closure (party row retained)"
+  ansible.builtin.command:
+    argv: "{{ ['python3', playbook_dir ~ '/tools/digest-teardown.py', '--erase-party', forget_subject]
+              + (['--confirm'] if _forget_confirm else []) }}"
+  register: _party_erase
+  changed_when: _forget_confirm and _party_erase.rc == 0
+  failed_when: false
+  when: _forget_party | bool
+
+- name: "[GDPR forget] Party subject — closure report"
+  ansible.builtin.debug:
+    msg: "{{ (_party_erase.stdout_lines | default([])) + (_party_erase.stderr_lines | default([])) }}"
+  when: _forget_party | bool
 
 # ── Executor: Authentik (identity anchor) ────────────────────────────────────
 - name: "[GDPR forget] Authentik — look up user by email"
@@ -192,6 +214,7 @@
       {{ 'completed'
          if (
               (_forget_plan | default([]) | selectattr('method', 'eq', 'manual') | list | length) == 0
+              and (not (_forget_party | bool) or (_party_erase.rc | default(1)) == 0)
               and (_cexec.results | default([]) | selectattr('stdout', 'defined')
                    | selectattr('stdout', 'search', 'SKIP') | list | length) == 0
               and (_cexec.results | default([]) | rejectattr('rc', 'eq', 0) | list | length) == 0
