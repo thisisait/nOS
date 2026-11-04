@@ -12,6 +12,7 @@ Importable, not a CLI: `sys.path.insert(0, "<repo>/tools")`.
 
 from __future__ import annotations
 
+import copy
 import json
 import os
 import re
@@ -113,10 +114,18 @@ def is_local_host(name: str, paths: list[Path] | None = None) -> bool:
 
 def resolve_flag(flag: str, paths: list[Path] | None = None) -> list[tuple[str, str]]:
     """Every layer that declares it, in precedence order. The LAST one wins."""
+    return _flag_in(flag, _texts(paths))
+
+
+def _texts(paths: list[Path] | None) -> list[tuple[Path, str]]:
+    return [(p, p.read_text(encoding="utf-8")) for p in (layer_paths() if paths is None else paths)]
+
+
+def _flag_in(flag: str, texts: list[tuple[Path, str]]) -> list[tuple[str, str]]:
     pattern = re.compile(rf"^{re.escape(flag)}:\s*(\S+)", re.MULTILINE)
     seen: list[tuple[str, str]] = []
-    for path in layer_paths() if paths is None else paths:
-        m = pattern.search(path.read_text(encoding="utf-8"))
+    for path, text in texts:
+        m = pattern.search(text) if f"{flag}:" in text else None
         if m:
             label = str(path.relative_to(REPO)) if path.is_relative_to(REPO) else path.name
             seen.append((label, m.group(1).strip().strip('"\'')))
@@ -130,7 +139,7 @@ def resolved(names, paths: list[Path] | None = None) -> dict:
     from jinja2.nativetypes import NativeEnvironment
     merged: dict = {}
     for p in layer_paths() if paths is None else paths:
-        doc = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+        doc = _layer_doc(p.read_text(encoding="utf-8"))
         merged.update(doc if isinstance(doc, dict) else {})
     env = NativeEnvironment()
 
@@ -143,7 +152,13 @@ def resolved(names, paths: list[Path] | None = None) -> dict:
             return env.from_string(v).render({d: value(d, (*seen, name)) for d in deps if d in merged})
         except Exception:  # noqa: BLE001 — an unrenderable default is unknown, not a crash
             return ""
-    return {n: value(n) for n in names}
+    return {n: copy.deepcopy(value(n)) for n in names}  # the cached parse stays unshared
+
+
+@lru_cache(maxsize=256)
+def _layer_doc(text: str):
+    """One parse per layer text: install_flags re-parsed all 96 layers per call (0.8 s)."""
+    return yaml.safe_load(text) or {}
 
 
 def resolve_list(name: str, paths: list[Path] | None = None) -> list:
@@ -172,11 +187,11 @@ def install_flags(paths: list[Path] | None = None) -> dict[str, bool]:
     """Every install_*, *_on_host switch and manifest install_flag (redis_docker) resolved like resolve_flag, then
     the manifest's forced_by applied. A Jinja install_* is omitted, not guessed."""
     paths = layer_paths() if paths is None else paths
-    names = {m for p in paths
-             for m in re.findall(r"^(install_\w+|\w+_on_host):", p.read_text(encoding="utf-8"), re.MULTILINE)}
+    texts = _texts(paths)  # once: per flag it re-read all 96 layers, 2.2 s a call (2026-11-04)
+    names = {m for _, t in texts for m in re.findall(r"^(install_\w+|\w+_on_host):", t, re.MULTILINE)}
     names |= {r["install_flag"] for r in services() if r.get("install_flag")}
     bools = {"true": True, "yes": True, "false": False, "no": False}
-    out = {f: bools.get(seen[-1][1].lower()) for f in sorted(names) if (seen := resolve_flag(f, paths))}
+    out = {f: bools.get(seen[-1][1].lower()) for f in sorted(names) if (seen := _flag_in(f, texts))}
     # A *_on_host switch derives from layer vars only (vlm_on_host <- ollama_vision_model): render it.
     jinja = [f for f, v in out.items() if v is None and f.endswith("_on_host")]
     out |= {f: v for f, v in (resolved(jinja, paths) if jinja else {}).items() if isinstance(v, bool)}

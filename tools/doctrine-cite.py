@@ -635,13 +635,20 @@ def resolve(citations: list[Citation], corpus: dict[str, DocIndex]) -> None:
     decision_docs = {d for d, idx in real.items() if idx.decisions}
     m_docs = {d for d, idx in real.items() if idx.m_ids}
     constraint_docs = {d for d, idx in real.items() if idx.constraints}
-    sec_docs = set()
-    for d in corpus:
-        try:
-            if RE_SEC.search((REPO / d).read_text(encoding="utf-8", errors="replace")):
-                sec_docs.add(d)
-        except OSError:
-            continue  # synthetic corpus in unit tests has no files on disk
+    sec_holder: list = []  # computed on the first sec citation only: the graph calls resolve 221x
+
+    def first_sec_doc() -> str | None:
+        if not sec_holder:
+            for d in sorted(corpus):
+                try:
+                    if RE_SEC.search((REPO / d).read_text(encoding="utf-8", errors="replace")):
+                        sec_holder.append(d)
+                        break
+                except OSError:
+                    continue  # synthetic corpus in unit tests has no files on disk
+            else:
+                sec_holder.append(None)
+        return sec_holder[0]
     def archived_holder(basename: str, sec: str) -> str | None:
         """A same-basename corpus doc that carries the section — the doc
         MOVED, and both destinations are real: docs/archive/ (2026-08-02
@@ -727,7 +734,7 @@ def resolve(citations: list[Citation], corpus: dict[str, DocIndex]) -> None:
             else:
                 c.status, c.doc = "unknown-id", None
         elif c.shape == "sec":
-            holder = next(iter(sorted(sec_docs)), None)
+            holder = first_sec_doc()
             c.status = "resolved" if holder else "unknown-id"
             c.doc = holder
         elif c.shape == "epic":
