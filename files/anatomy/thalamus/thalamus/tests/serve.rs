@@ -4109,7 +4109,7 @@ fn a_turn_that_names_our_knowledge_searches_first() {
     let rig = rig_n("know-first", mapped(), vec![memory(true, serde_json::json!([]))],
         vec![answer("Mpembův jev: horká voda zamrzne dřív."), answer("To v našich znalostech není.")]);
     let (got, _) = tool_turn(&rig, "Co říká naše znalostní báze o Mpembově jevu?");
-    assert!(keap_line(&rig, 0).starts_with("GET /api/search/semantic?q=Co"), "{}", keap_line(&rig, 0));
+    assert!(keap_line(&rig, 0).starts_with("GET /api/search/semantic?q=Mpembov%C4%9B"), "{}", keap_line(&rig, 0));
     let first: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[0].1).unwrap();
     assert!(first["messages"].as_array().unwrap().iter().any(|m| m["role"] == "tool"), "the model hears the search first");
     assert_eq!(told(&got).0, vec!["To v našich znalostech není.".to_string()], "{got:?}");
