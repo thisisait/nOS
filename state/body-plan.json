@@ -11,9 +11,9 @@
     "organ system": 13,
     "organism": 0,
     "habitat": 9,
-    "sense": 84,
-    "limb": 121,
-    "memory": 41,
+    "sense": 85,
+    "limb": 122,
+    "memory": 42,
     "law": 54,
     "reflex": 44,
     "heartbeat": 1,
@@ -722,6 +722,10 @@
       "kind": "effector"
     },
     "effector:forge-sync": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:frankenphp-repin": {
       "level": "limb",
       "kind": "effector"
     },
@@ -1457,6 +1461,10 @@
       "level": "sense",
       "kind": "reader"
     },
+    "reader:host-patch-status": {
+      "level": "sense",
+      "kind": "reader"
+    },
     "reader:identity-status": {
       "level": "sense",
       "kind": "reader"
@@ -2042,6 +2050,10 @@
       "kind": "table"
     },
     "table:device-extraction": {
+      "level": "memory",
+      "kind": "table"
+    },
+    "table:dock": {
       "level": "memory",
       "kind": "table"
     },

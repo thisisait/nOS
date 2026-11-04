@@ -4,7 +4,7 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 566,
+    "nodes": 569,
     "edges": 557,
     "nodes_pulse": 44,
     "nodes_judge": 5,
@@ -21,14 +21,14 @@
     "nodes_repo": 4,
     "nodes_tofu": 1,
     "nodes_authentik": 61,
-    "nodes_table": 41,
+    "nodes_table": 42,
     "nodes_doctrine": 26,
     "nodes_faceapp": 8,
     "nodes_agent": 17,
     "nodes_tasktype": 9,
     "nodes_skill": 13,
-    "nodes_reader": 66,
-    "nodes_effector": 114,
+    "nodes_reader": 67,
+    "nodes_effector": 115,
     "nodes_article": 28,
     "nodes_organ_system": 13,
     "nodes_tissue": 1,
@@ -1770,6 +1770,13 @@
       "title": "The trunk's four holders, and the only tool that moves refs between them.",
       "anchor": "02.02.04",
       "description": "Effector tools/forge-sync.py: The trunk's four holders, and the only tool that moves refs between them."
+    },
+    "effector:frankenphp-repin": {
+      "kind": "effector",
+      "source": "tools/frankenphp-repin.py",
+      "title": "re-pin frankenphp_checksums to upstream's nightly rebuild, only for assets `gh attestation verify` proves its release workflow signed; `--write` rewrites (the nightly frankenphp-digest workflow runs it).",
+      "anchor": "02.02.04",
+      "description": "Effector tools/frankenphp-repin.py: re-pin frankenphp_checksums to upstream's nightly rebuild, only for assets `gh attestation verify` proves its release workflow signed; `--write` rewrites (the nightly frankenphp-digest workflow runs it)."
     },
     "effector:gdpr-dpa-register": {
       "kind": "effector",
@@ -3553,6 +3560,13 @@
       "anchor": "02.02.04",
       "description": "Reader tools/graph-report.py: What the anatomy graph's SHAPE implies: god nodes, isolated nodes, and which measured edges cite a file that has moved since."
     },
+    "reader:host-patch-status": {
+      "kind": "reader",
+      "source": "tools/host-patch-status.py",
+      "title": "READER: does this Linux host run what it installed: `/var/run/reboot-required` older than a day (`reboot pending N days`), a running kernel older than the newest in `/boot`, `-security` upgrades `apt list --upgradable` still lists; red-status lists them; UNKNOWN off Linux or when a source does not answer.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/host-patch-status.py: READER: does this Linux host run what it installed: `/var/run/reboot-required` older than a day (`reboot pending N days`), a running kernel older than the newest in `/boot`, `-security` upgrades `apt list --upgradable` still lists; red-status lists them; UNKNOWN off Linux or when a source does not answer."
+    },
     "reader:identity-status": {
       "kind": "reader",
       "source": "tools/identity-status.py",
@@ -5190,6 +5204,13 @@
       "title": "Device extractions",
       "anchor": "02.02.05",
       "description": "KEAP DataTable definition 'Device extractions' (state/keap-tables/device-extraction.table.yml)"
+    },
+    "table:dock": {
+      "kind": "table",
+      "source": "state/keap-tables/dock.table.yml",
+      "title": "Face Dock",
+      "anchor": "02.02.05",
+      "description": "KEAP DataTable definition 'Face Dock' (state/keap-tables/dock.table.yml)"
     },
     "table:engram": {
       "kind": "table",
@@ -8130,7 +8151,7 @@
       "from": "reader:red-status",
       "to": "doctrine:ssot/doctrine/loop-contract.md#7",
       "kind": "governed_by",
-      "via": "cited at tools/red-status.py:855",
+      "via": "cited at tools/red-status.py:880",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"

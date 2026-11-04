@@ -505,8 +505,8 @@ data. May process end-user uploads.
 - **Security measures:** platform baseline (see above)
 
 #### Nodered — `svc_nodered`
-- **Purpose:** Operator-hosted flow-based programming for IoT and integration. Forward-auth gate ensures only
-Authentik-authenticated principals reach the service.
+- **Purpose:** Operator-hosted flow-based programming for IoT and integration. Native OIDC sign-in ensures only
+Authentik-authenticated principals reach the editor.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
 - **Data categories:** `flow_definitions`; `credential_nodes`; `oauth_session_data`
