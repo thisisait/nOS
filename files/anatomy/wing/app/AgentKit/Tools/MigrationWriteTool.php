@@ -29,7 +29,7 @@ use App\AgentKit\LLMClient\ToolSchema;
  *
  * The escape-refusal gate (execute(), below) is the load-bearing security
  * logic. It is pinned structurally by
- * tests/anatomy/test_security_agentkit_filewrite.py.
+ * tests/anatomy/test_agentkit_write_tool_scope.py.
  *
  * Repo-root injection: the migration dir + default.config.yml live in the
  * nOS playbook CHECKOUT, not the deployed Wing tree (~/wing/app/...). The

@@ -8,9 +8,9 @@
 # `nodered_native_oidc_enabled` toggle in roles/pazny.nodered/defaults.
 #
 # Tier 2 (manager) per CLAUDE.md RBAC. Authentik creates an oauth2
-# provider; users sign in inside Node-RED with their Authentik identity
-# (full admin permissions — RBAC granularity belongs to Authentik
-# group expression policies, not Node-RED).
+# provider; users sign in inside Node-RED with their Authentik identity.
+# settings.js.j2 grants Tier-1 groups '*' and every other group 'read'
+# (gate: test_nodered_admin_is_tier_one.py).
 # =============================================================================
 
 name: nodered-base
@@ -18,8 +18,8 @@ version: 0.1.0
 description: |
   Node-RED — flow-based programming for IoT and integration.
 
-  Wiring layer for proxy-authenticated access via Authentik forward-auth
-  (Traefik middleware `authentik@file`). The role `pazny.nodered` keeps install-
+  Wiring layer for native OIDC sign-in via Authentik (passport-openidconnect
+  adminAuth strategy). The role `pazny.nodered` keeps install-
   only responsibilities (image, ports, volumes); this plugin owns the
   Traefik labels + Authentik tier binding + GDPR Article 30 row + Wing
   /hub deep-link card.
@@ -77,17 +77,17 @@ authentik:
   # Node-RED's adminAuth.strategy supports `autoLogin: true`, which makes
   # Node-RED initiate the passport-openidconnect flow on editor load instead
   # of showing the "Sign in with Authentik" button. This is a REDIRECT, not a
-  # form-hide: the local login form is NOT hard-hidden (supports: partial,
-  # conf 0.70). The break-glass is a local admin fallback user kept in
-  # adminAuth.users (settings.js) — Authentik-down still admits an operator.
+  # form-hide (supports: partial, conf 0.70). The strategy has no local
+  # password login and adminAuth.users only admits names OIDC verified, so
+  # there is no break-glass user: Authentik down = editor closed.
   # The role's settings.js.j2 gates `autoLogin: true` on the SAME enable
   # expression below; stays dormant behind sso_autologin=false default.
   # Tier 2 (manager) per the authentik.tier above → sso_autologin_min_tier_2.
   autologin:
     supports: "partial"      # auto-redirect via strategy.autoLogin; form NOT hard-hidden
     enabled: "{{ (sso_autologin_nodered | default(sso_autologin_min_tier_2 | default(sso_autologin | default(false)))) | bool }}"
-    hides_local_form: false  # autoLogin redirects but the local form/users path stays reachable
-    break_glass: "local admin fallback user in adminAuth.users (Authentik-down escape)"
+    hides_local_form: false  # autoLogin redirects; the "Sign in with Authentik" button stays
+    break_glass: "none: no local login; Authentik down = editor closed"
 
 # =============================================================================
 # COMPOSE-EXTENSION — Traefik labels (forward-auth middleware)
@@ -128,8 +128,8 @@ observability:
 
 gdpr:
   purpose: |
-    Operator-hosted flow-based programming for IoT and integration. Forward-auth gate ensures only
-    Authentik-authenticated principals reach the service.
+    Operator-hosted flow-based programming for IoT and integration. Native OIDC sign-in ensures only
+    Authentik-authenticated principals reach the editor.
   legal_basis: legitimate_interests
   data_categories:
     - flow_definitions
