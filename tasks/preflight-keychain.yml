@@ -1,0 +1,39 @@
+---
+# The keychain's "codesign wants to use the key" dialog stopped a converge about two thirds in
+# (pazny.medulla signs medulla + nOS.app, pazny.thalamus the pupil). Sign a throwaway with the same
+# identity here so the dialog comes at the start. Never fails: a refusal keeps the later
+# errSecInternalComponent message. Gate: tests/anatomy/test_keychain_preflight_order.py.
+- name: "[Preflight] Find the nOS signing identity in the login keychain"
+  ansible.builtin.shell: |
+    set -o pipefail
+    security find-certificate -c {{ _kc_cn | quote }} -Z {{ _kc_keychain | quote }} 2>/dev/null \
+      | awk '/SHA-1 hash/ {print $3; exit}'
+  vars:
+    _kc_cn: "{{ thalamus_signing_cn | default('nOS local code signing') }}"
+    _kc_keychain: "{{ thalamus_signing_keychain | default(ansible_facts['env']['HOME'] ~ '/Library/Keychains/login.keychain-db') }}"
+  args:
+    executable: /bin/bash
+  register: _kc_identity
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "[Preflight] Say what the keychain is about to ask"
+  ansible.builtin.debug:
+    msg: >-
+      {{ 'macOS may ask once to let codesign use the nOS signing key — choose Always Allow'
+         if (_kc_identity.stdout | default('') | length > 0) else
+         'No nOS signing identity yet: first install mints it later (pazny.medulla), and the keychain asks then' }}
+
+- name: "[Preflight] Sign a throwaway with that identity (the keychain asks now, not mid-run)"
+  ansible.builtin.shell: |
+    d=$(mktemp -d); trap 'rm -rf "$d"' EXIT
+    cp /usr/bin/true "$d/probe"
+    codesign -f -s {{ _kc_identity.stdout | trim | quote }} "$d/probe" 2>&1 || true
+  args:
+    executable: /bin/bash
+  changed_when: false
+  failed_when: false
+  when:
+    - _kc_identity.stdout | default('') | length > 0
+    - not ansible_check_mode
