@@ -30,16 +30,18 @@ CATALOG = """<?xml version="1.0" encoding="UTF-8"?>
 """
 
 
-def _run(tmp_path: pathlib.Path, catalog: str) -> dict:
+def _run(tmp_path: pathlib.Path, catalog: str, missing_dir: bool = False) -> dict:
     lib = tmp_path / "data"
     lib.mkdir()
     for name in ("devdocs_en_python_2026-01.zim", "devdocs_en_rust_2026-03.zim",
                  "devdocs_en_gone_2025-05.zim"):
         (lib / name).write_bytes(b"")
-    p = subprocess.run([sys.executable, str(TOOL), "--dir", str(lib), "--catalog", catalog, "--json"],
+    dirs = ["--dir", str(lib)] + (["--dir", str(tmp_path / "unmounted")] if missing_dir else [])
+    p = subprocess.run([sys.executable, str(TOOL), *dirs, "--catalog", catalog, "--json"],
                        capture_output=True, text=True, timeout=30)
     assert p.returncode == 0, p.stderr
-    return {b["file"]: b for b in json.loads(p.stdout)["books"]}
+    report = json.loads(p.stdout)
+    return {"missing": report["sources_missing"], **{b["file"]: b for b in report["books"]}}
 
 
 def test_a_newer_file_is_named_with_its_age(tmp_path: pathlib.Path) -> None:
@@ -55,4 +57,20 @@ def test_a_newer_file_is_named_with_its_age(tmp_path: pathlib.Path) -> None:
 
 def test_an_unreadable_catalog_is_unknown_never_current(tmp_path: pathlib.Path) -> None:
     books = _run(tmp_path, str(tmp_path / "no-such-catalog.xml"))
+    books.pop("missing")
     assert {b["status"] for b in books.values()} == {"UNKNOWN"}
+
+
+def test_a_catalog_with_no_dated_links_is_unknown_not_gone(tmp_path: pathlib.Path) -> None:
+    cat = tmp_path / "catalog.xml"
+    cat.write_text('<feed xmlns="http://www.w3.org/2005/Atom"></feed>', encoding="utf-8")
+    books = _run(tmp_path, str(cat))
+    books.pop("missing")
+    assert {b["status"] for b in books.values()} == {"UNKNOWN"}
+
+
+def test_a_missing_library_dir_is_unknown_not_empty(tmp_path: pathlib.Path) -> None:
+    cat = tmp_path / "catalog.xml"
+    cat.write_text(CATALOG, encoding="utf-8")
+    missing = _run(tmp_path, str(cat), missing_dir=True)["missing"]
+    assert any("unmounted" in m for m in missing), missing

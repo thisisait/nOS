@@ -9,12 +9,13 @@ cannot read makes every book UNKNOWN, never current. Downloads nothing.
 Reads only. Exit 0 always.
 
 Usage:
-    tools/kiwix-status.py                      # library under ~/nos/tenants/*/shared/kiwix/data
+    tools/kiwix-status.py                      # library under {nos_data_root}/tenants/*/shared/kiwix/data
     tools/kiwix-status.py --dir DIR --catalog URL|FILE --json
 """
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import pathlib
 import re
@@ -27,7 +28,12 @@ DATED = re.compile(r"^(?P<book>.+)_(?P<y>\d{4})-(?P<m>\d{2})\.zim$")
 
 
 def _default_dirs() -> list[pathlib.Path]:
-    return sorted(pathlib.Path.home().glob("nos/tenants/*/shared/kiwix/data"))
+    """kiwix_data_dir is {nos_data_root}/tenants/<slug>/shared/kiwix/data; config.yml moves the root."""
+    spec = importlib.util.spec_from_file_location("snapshot_status", pathlib.Path(__file__).with_name("snapshot-status.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    root = mod.data_root()
+    return sorted(root.glob("tenants/*/shared/kiwix/data")) if root else []
 
 
 def _read_catalog(src: str) -> bytes:
@@ -54,16 +60,22 @@ def collect(dirs: list[pathlib.Path], catalog: str) -> dict:
     report: dict = {"sources_missing": [], "catalog": catalog, "dirs": [str(d) for d in dirs], "books": []}
     files: list[pathlib.Path] = []
     for d in dirs:
+        if not d.is_dir():  # glob on a missing dir (unmounted SSD) returns [], not an error
+            report["sources_missing"].append(f"{d} (not a directory)")
+            continue
         try:
             files += sorted(d.glob("*.zim"))
         except OSError as exc:
             report["sources_missing"].append(f"{d} ({exc.strerror or exc})")
     if not dirs:
-        report["sources_missing"].append("no kiwix library dir (~/nos/tenants/*/shared/kiwix/data); pass --dir")
+        report["sources_missing"].append("no kiwix library dir ({nos_data_root}/tenants/*/shared/kiwix/data); pass --dir")
     try:
         newest = newest_by_book(_read_catalog(catalog))
     except (OSError, ET.ParseError, ValueError) as exc:
         report["sources_missing"].append(f"catalog {catalog} ({exc})")
+        newest = None
+    if newest == {}:  # a feed with no dated links (empty, paged, new shape) must not say every book is gone
+        report["sources_missing"].append(f"catalog {catalog} (no dated ZIM links)")
         newest = None
     for f in files:
         row: dict = {"file": f.name, "dir": str(f.parent), "newest": None, "months_behind": None}
