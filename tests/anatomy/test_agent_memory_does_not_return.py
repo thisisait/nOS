@@ -108,6 +108,7 @@ import sqlite3
 WING_DB = pathlib.Path.home() / "wing" / "app" / "data" / "wing.db"
 
 
+@pytest.mark.live
 @pytest.mark.skipif(not WING_DB.is_file(),
                     reason="no wing.db on this host — the live half is UNKNOWN, not green")
 def test_the_table_is_gone_from_the_live_database() -> None:

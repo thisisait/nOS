@@ -34,6 +34,7 @@ def _open(db: pathlib.Path) -> sqlite3.Connection:
     return sqlite3.connect(f"file:{db}?mode=ro", uri=True)
 
 
+@pytest.mark.live
 def test_the_unrestricted_count_never_grows():
     db = pathlib.Path(os.environ.get(
         "WING_DB_PATH", str(pathlib.Path.home() / "wing/app/data/wing.db")))

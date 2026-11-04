@@ -92,6 +92,7 @@ def test_the_token_axis_is_declared_exactly_once() -> None:
     )
 
 
+@pytest.mark.live
 @pytest.mark.skipif(not WING_DB.is_file(),
                     reason="no wing.db on this host — the live half is UNKNOWN, not green")
 def test_the_live_row_matches_what_the_task_mints() -> None:
