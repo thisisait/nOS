@@ -26,6 +26,16 @@
     mode: '0600'
   notify: Restart code_server
 
+# Same condition as the compose port bind: LAN asked for, no login hash, so it stays local.
+- name: "[pazny.code_server] WARN LAN bind refused, no login hash"
+  ansible.builtin.debug:
+    msg: >-
+      code-server stays on 127.0.0.1: services_lan_access is on but code_server_hashed_password
+      is empty (credentials.yml; an argon2 hash)
+  when:
+    - services_lan_access | default(false)
+    - not (code_server_hashed_password | default(''))
+
 # Linux routes via Traefik; host-nginx per-service vhosts are macOS-only.
 - name: "[pazny.code_server] Enable nginx vhost"
   ansible.builtin.file:
