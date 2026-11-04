@@ -25,6 +25,10 @@ pub fn open_questions(agent: Option<&str>) -> Result<Vec<Map<String, Value>>, St
 /// with the wing-answer bearer read per act. Never retried: what Wing said is the outcome.
 pub fn relay(uuid: &str, answer: &str, by: &str, wing_url: &str) -> ToShell {
     let done = |outcome, winning_answer: Option<String>, why: Option<String>| ToShell::AnswerResult { uuid: uuid.into(), outcome, winning_answer, why };
+    // The uuid goes into Wing's URL path: checked here, not only by the wire decoder of today's caller.
+    if !nos_contract::wire::is_uuid(uuid) {
+        return done(AnswerOutcome::Refused, None, Some(format!("{uuid:?} is not a lowercase uuid")));
+    }
     let token = match crate::state::bearer("wing_answer_token") {
         Ok(t) => t,
         Err(why) => return done(AnswerOutcome::Refused, None, Some(why)),
