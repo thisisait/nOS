@@ -7632,6 +7632,20 @@ fn propose_loop_asks_with_the_whole_yaml_and_approve_writes_exactly_it() {
 }
 
 #[test]
+fn propose_loop_card_leads_with_graph_only_when_a_cadence_has_no_run() {
+    // 2026-11-02: a daily draft with no run: was approved without saying Pulse never schedules it.
+    let mut bare = loop_manifest("docs-scout");
+    bare.as_object_mut().unwrap().remove("run");
+    for (name, m, want) in [("loop-graph", bare, true), ("loop-runs", loop_manifest("docs-scout"), false)] {
+        let rig = loop_rig(name, admin(), vec![propose_loop(&m), answer("Proposed.")]);
+        let (got, _) = tool_turn(&rig, "make me a daily loop");
+        let (_, card) = app_card(&got).unwrap_or_else(|| panic!("{name}: no card: {got:?}"));
+        let first = card.lines().next().unwrap_or_default();
+        assert_eq!(first.contains("graph-only: Pulse will not run this"), want, "{name}: {card}");
+    }
+}
+
+#[test]
 fn propose_loop_reject_writes_nothing() {
     let rig = loop_rig("loop-no", admin(), vec![propose_loop(&loop_manifest("docs-scout")), answer("Proposed.")]);
     let s = connect(&rig.sock);

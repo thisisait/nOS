@@ -4892,7 +4892,13 @@ the infra service of the same name), add meta {name, version, summary} and gdpr,
         }
         self.loop_validator(id, &yaml)?;
         let draft = draft.display().to_string();
-        let text = format!("**Loop {id}: a loop draft; the operator copies it into files/anatomy/loops/ and converges.** Approve writes it \
+        // A cadence without run: is drawn, never scheduled; the card says so first (2026-11-02 repo-health draft).
+        let graph_only = if m.get("trigger").and_then(|t| t.get("cadence")).is_some_and(|c| !c.is_null()) && m.get("run").is_none_or(Value::is_null) {
+            "**graph-only: Pulse will not run this** (trigger.cadence is set, run: is absent). "
+        } else {
+            ""
+        };
+        let text = format!("{graph_only}**Loop {id}: a loop draft; the operator copies it into files/anatomy/loops/ and converges.** Approve writes it \
 to {draft}; nothing is scheduled by that.\n\n```yaml\n{yaml}```");
         let max = nos_contract::renderers::MARKDOWN_MAX;
         if text.chars().count() > max {
