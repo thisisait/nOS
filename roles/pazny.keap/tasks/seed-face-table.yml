@@ -7,9 +7,9 @@
 # whose slug is not already present → re-run is changed=0. Tolerant of the
 # /agent/v1/tables route being absent (404) so the converge never blocks on a KEAP
 # build that predates the DataTable agent route.
-# Every uri retries: a starved Docker VM answered in 2-20 s and two converges died
-# on one 30 s timeout (2026-10-10). Both POSTs are slug-keyed upserts, safe to repeat.
-# Gate: tests/anatomy/test_keap_seed_uri_retries.py.
+# Every uri retries a timeout (-1) or 5xx: a starved Docker VM answered in 2-20 s and
+# two converges died on one 30 s timeout (2026-10-10). A 4xx answers at once. All three
+# POSTs are slug-keyed (table reconcile, row upsert), so repeating one is safe.
 # =============================================================================
 
 - name: "[pazny.keap] Probe DataTable {{ _face_tbl.slug }} (exists?)"
@@ -22,7 +22,7 @@
   register: _face_tbl_probe
   retries: 3
   delay: 10
-  until: _face_tbl_probe.status | default(-1) in [200, 401, 404]
+  until: 0 <= _face_tbl_probe.status | default(-1) < 500
   no_log: true   # Bearer keap_agent_token_rw in header
   changed_when: false
   failed_when: false
@@ -82,7 +82,7 @@
   register: _face_tbl_create
   retries: 3
   delay: 10
-  until: _face_tbl_create.status | default(-1) in [200, 201, 400, 404, 409]
+  until: 0 <= _face_tbl_create.status | default(-1) < 500
   no_log: true   # Bearer keap_agent_token_rw in header
   # KEAP answers 200 either way; changed = created, or the stored schema/ACL the
   # probe saw differs from what the reconcile answered (both KEAP-normalized).
@@ -117,7 +117,7 @@
   register: _face_tbl_retry
   retries: 3
   delay: 10
-  until: _face_tbl_retry.status | default(-1) in [200, 201, 404, 409]
+  until: 0 <= _face_tbl_retry.status | default(-1) < 500
   no_log: true
   when: _face_tbl_create.status | default(0) == 400
   changed_when: >-
@@ -161,7 +161,7 @@
   register: _face_rows_probe
   retries: 3
   delay: 10
-  until: _face_rows_probe.status | default(-1) in [200, 401, 404]
+  until: 0 <= _face_rows_probe.status | default(-1) < 500
   no_log: true   # Bearer keap_agent_token_rw in header
   changed_when: false
   failed_when: false
@@ -196,7 +196,7 @@
   register: _face_row_upsert
   retries: 3
   delay: 10
-  until: _face_row_upsert.status | default(-1) in [200, 201, 404]
+  until: 0 <= _face_row_upsert.status | default(-1) < 500
   no_log: true   # Bearer keap_agent_token_rw in header
   changed_when: _face_row_upsert.status | default(0) in [200, 201]
   # Only attempt rows once the table is reachable (probe 200 = pre-existing, or
