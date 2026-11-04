@@ -75,7 +75,8 @@
 
 # The compose .git overlay only where one exists: a bind mount creates a missing source,
 # so an unconditional overlay planted an empty .git in every non-repo workspace on each up.
-# A .git FILE (linked worktree) is overlaid too. Gate: test_paperclip_workspace_git_is_read_only.py.
+# A .git FILE (linked worktree) points at a gitdir outside the mount: the repo is broken in the
+# container and the overlay protects nothing, so it is refused. Gate: test_paperclip_workspace_git_is_read_only.py.
 - name: "[pazny.paperclip] Which host workspaces hold a .git"
   ansible.builtin.stat:
     path: "{{ item.path }}/.git"
@@ -84,6 +85,15 @@
   loop: "{{ paperclip_host_workspaces | default([]) }}"
   loop_control:
     label: "{{ item.name }}"
+
+- name: "[pazny.paperclip] A host workspace is not a linked worktree"
+  ansible.builtin.assert:
+    that:
+      - not (_paperclip_ws_git.results[_i].stat.isreg | default(false))
+    fail_msg: "paperclip_host_workspaces entry {{ item.name }} is refused: {{ item.path }} is a linked git worktree; mount the main clone."
+  loop: "{{ paperclip_host_workspaces | default([]) }}"
+  loop_control:
+    index_var: _i
 
 # `follow: <branch>`: the agents read origin/<branch>, not the day someone cloned it
 # (11-01: an oponent reviewed against a 24-10 clone and flagged shipped fixes as missing).
