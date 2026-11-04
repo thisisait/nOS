@@ -3204,6 +3204,19 @@
         - not (install_backrest | default(false))
       tags: ['backup']
 
+    # backup_run_now: after every role that creates a dir backup.sh reads (medulla, 2026-10-30).
+    - name: "Backup run-now (pazny.backup tasks_from run-now)"
+      ansible.builtin.include_role:
+        name: pazny.backup
+        tasks_from: run-now
+        apply:
+          tags: ['backup', 'ops']
+      when:
+        - install_backup | default(false)
+        - backup_copy1_enabled | bool
+        - backup_run_now | default(false) | bool
+      tags: ['backup', 'ops']
+
     # ──────────────────────────────────────────────────────────────────────────
     # Vulnerability Scanner – dir/state scaffolding only. Scheduling moved to
     # the conductor 'vulnerability-scan' Pulse job (daily; see conductor.yml).

@@ -306,10 +306,3 @@
     su_timer_calendar: "*-*-* {{ '%02d' | format(backup_schedule_hour | int) }}:{{ '%02d' | format(backup_schedule_minute | int) }}:00"
     su_timer_unit: "{{ backup_launchd_label }}.service"
   when: (nos_service_manager | default('launchd')) == 'systemd-user'
-
-- name: "[backup] Optionally run backup.sh immediately (backup_run_now=true)"
-  ansible.builtin.command: "{{ backup_script_path }}"
-  when: backup_run_now | bool
-  register: _backup_run
-  changed_when: _backup_run.rc == 0
-  failed_when: false

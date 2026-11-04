@@ -1,0 +1,9 @@
+---
+# Called from main.yml after every role that creates a backup_dirs_to_dump path
+# (test_backup_run_now_follows_its_sources); inside main.yml it missed the medulla dir.
+- name: "[backup] Optionally run backup.sh immediately (backup_run_now=true)"
+  ansible.builtin.command: "{{ backup_script_path }}"
+  when: backup_run_now | bool
+  register: _backup_run
+  changed_when: _backup_run.rc == 0
+  failed_when: false
