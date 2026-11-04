@@ -871,15 +871,15 @@ docker_bin: /usr/local/bin/docker
 # binary whose `frankenphp --version` does not report it. Bump = new version +
 # all four checksums below, in one commit.
 frankenphp_version: "1.13.4"
-# sha256 per release asset (frankenphp-<key>) of v1.13.4 as rebuilt 2026-11-01 ~01:10 UTC.
+# sha256 per release asset (frankenphp-<key>) of v1.13.4 as rebuilt 2026-11-04 ~01:16 UTC.
 # Upstream's static.yaml rebuilds the LATEST tag every night and re-uploads (--clobber), so these
-# go stale daily (roadmap frankenphp-nightly-digest). mac-arm64 verified with `gh attestation
-# verify` (php/frankenphp static.yaml, run 41257115050); linux ones are GitHub's asset digests.
+# go stale daily (roadmap frankenphp-nightly-digest). linux-x86_64, linux-aarch64 and mac-arm64
+# verified with `gh attestation verify` (php/frankenphp static.yaml@main) before pinning.
 # mac-x86_64 has no asset since 1.13.3: its pin is still 1.13.1's, so an Intel Mac fails closed.
 frankenphp_checksums:
-  linux-aarch64: "8942bc0c1c2876c3cae6bf6a2ae1f7ed3fba750ed3e83654b6c35b12e89d6c02"
-  linux-x86_64: "7a603536acfe3ce04af26230677e7d4fab9a4527ea27eb5f46e38b07d28df32b"
-  mac-arm64: "50812881758de5406481847a508024a888450ea88cc2e6d6edf57e9274f98354"
+  linux-aarch64: "d0b403456083d30887d7d73c46fbc49aba0244d246dd4973a54a6c7b6669e3c4"
+  linux-x86_64: "7397e224700ec8ff299c9a6433e1ae7e2f15ffb15df80fc4535f0f1512760274"
+  mac-arm64: "fa9cd55ea362f3521e9f8a40308bf866e525cdf3b33f5c6c111ebfc7af94e4b4"
   mac-x86_64: "b9123b427cb357eac076b1f316f71589cfe5c3db4ad2449114e243563d794a89"
 
 # ==============================================================================
