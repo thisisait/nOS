@@ -15,6 +15,12 @@
       "type": "object",
       "propertyNames": {"pattern": "^[a-z0-9-]+-status\\.py$"},
       "additionalProperties": {"type": "string", "minLength": 3}
+    },
+    "not_indicator_jobs": {
+      "description": "category-security Pulse jobs (<owner>:<job>) that detect nothing, each with its reason",
+      "type": "object",
+      "propertyNames": {"pattern": "^[a-z0-9-]+:[a-z0-9-]+$"},
+      "additionalProperties": {"type": "string", "minLength": 3}
     }
   },
   "$defs": {

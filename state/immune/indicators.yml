@@ -175,6 +175,30 @@ indicators:
     tolerance: none (any match is a finding)
     verdicts: Wing pulse_runs.exit_code
     definition: none
+  conductor:security-drift-watch:
+    source: files/anatomy/agents/conductor/agent.yml
+    kind: patrol
+    antigen: the vulnerability scan stale past DRIFT_STALE_HOURS (336) or CRITICAL remediations pending
+    receptor: files/anatomy/scripts/drift-watch.sh over hooks/playbook-end.d/20-cve-drift-check.sh and ~/.nos/security
+    effector: report
+    signal: Bone /api/v1/notifications (HMAC) and the Prometheus drift metric
+    heartbeat: "0 6 * * *"
+    lifespan: none
+    tolerance: DRIFT_STALE_HOURS
+    verdicts: Wing pulse_runs.exit_code
+    definition: none
+  conductor:vulnerability-scan:
+    source: files/anatomy/agents/conductor/agent.yml
+    kind: patrol
+    antigen: a CVE a model finds in the oldest-checked components of a batch
+    receptor: files/vuln-scan/scan-runner.sh dispatching claude over scan-state.json (oldest first)
+    effector: files pending rows in ~/.nos/security/remediation-queue.json
+    signal: scan.batch_* events (~/.nos/events/scan.jsonl, HMAC to Wing)
+    heartbeat: "0 2 * * *"
+    lifespan: none
+    tolerance: findings already in remediation-queue.json (the prompt says read them first)
+    verdicts: ~/.nos/security/remediation-queue.json
+    definition: files/vuln-scan/scan-prompt.md and the batch prompt in scan-runner.sh (not hashed in records; §4 rule 4 gap)
 
   # ── checkpoints: at a border, on crossing ───────────────────────────────
   prepush-score:
@@ -189,6 +213,20 @@ indicators:
     tolerance: commits some remote ref already holds
     verdicts: ~/.nos/events/prepush-scores.jsonl
     definition: tools/prepush-score.py and its prompt, SHA-256 in every record
+
+  # ── verdicts integrity: the log the other kinds write into (§3, §5) ──────
+  wing:audit-chain-verify:
+    source: files/anatomy/plugins/wing-base/plugin.yml
+    kind: verdicts
+    antigen: a broken or non-current HMAC chain over Wing's audit rows (exit 2); secret or db unreadable (exit 3)
+    receptor: files/anatomy/wing/bin/verify-audit-chain.php over wing.db (read-only, plus the cached verdict)
+    effector: report
+    signal: Wing header badge (audit_chain_meta) and pulse_runs exit code
+    heartbeat: "17 4 * * *"
+    lifespan: none
+    tolerance: none (any break is a finding)
+    verdicts: wing.db audit_chain_meta
+    definition: none
 
 # Readers under tools/*-status.py that are senses but not immune indicators:
 # they answer a health or bookkeeping question, not "what is foreign here".
@@ -221,3 +259,7 @@ not_indicators:
   tissue-status.py: tissue declarations hold
   usage-status.py: model budget spend
   wing-status.py: Wing's tables
+
+# Pulse jobs filed under category security that detect nothing: no antigen.
+not_indicator_jobs:
+  conductor:scan-state-record: records vulnerability-scan output onto refs/heads/scan-data; judges nothing
