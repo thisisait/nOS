@@ -113,25 +113,55 @@ EDGE_SECRET_RENDER = re.compile(
 )
 
 
+# Deliberate wider modes, by (task file, src). medulla: systemd unit for the
+# nos user, documented 0640 root:nos in docs/systems/thalamus/README.md.
+EDGE_SECRET_MODE_ALLOW = {
+	("roles/pazny.medulla/tasks/linux.yml",
+	 "{{ role_path }}/../pazny.thalamus/templates/thalamus.env.j2"): "640",
+}
+
+
+def _template_candidates(path, src):
+	"""Files a template src can name: Ansible's search path (role templates/,
+	then the playbook's templates/), {{ role_path }}/{{ playbook_dir }}
+	substituted, any other {{ }} (loop items) globbed as *."""
+	role = next((p for p in path.parents if p.parent.name == "roles"), None)
+	src = src.replace("{{ playbook_dir }}", str(REPO))
+	if role:
+		src = src.replace("{{ role_path }}", str(role))
+	pattern = re.sub(r"\{\{.*?\}\}", "*", src)
+	bases = [pathlib.Path("/")] if pattern.startswith("/") else (
+		[role / "templates"] if role else []) + [REPO / "templates"]
+	for base in bases:
+		hits = [f for f in base.glob(pattern.lstrip("/")) if f.is_file()]
+		if hits:
+			return hits
+	return []
+
+
 def test_edge_secret_templates_render_0600():
 	"""Every `template:` task whose src renders an edge token / proxy
-	secret must set mode 0600 (or 0400), whatever its dest is named."""
-	src_re = re.compile(r"^\s*src:\s*[\"']?([^\"'\n]+)[\"']?", re.MULTILINE)
-	bad = []
+	secret must set mode 0600 (or 0400), whatever its dest is named.
+	A src the gate cannot resolve fails: a blind gate is not a green one."""
+	src_re = re.compile(r"^\s*src:\s*(.+?)\s*$", re.MULTILINE)
+	bad, blind = [], []
 	for path, block in _task_blocks():
 		if "ansible.builtin.template" not in block:
 			continue
 		s, m = src_re.search(block), _MODE_RE.search(block)
 		if not s:
 			continue
-		role = next((p for p in path.parents if p.parent.name == "roles"), None)
-		base = (role / "templates") if role else (REPO / "templates")
-		tmpl = base / s.group(1).strip()
-		if not tmpl.is_file() or not EDGE_SECRET_RENDER.search(tmpl.read_text()):
+		src, rel = s.group(1).strip("\"'"), str(path.relative_to(REPO))
+		tmpls = _template_candidates(path, src)
+		if not tmpls:
+			blind.append(f"{rel}: src={src}")
+			continue
+		if not any(EDGE_SECRET_RENDER.search(t.read_text()) for t in tmpls):
 			continue
 		mode = (m.group(1).lstrip("0") or "0") if m else "unset"
-		if mode not in ("600", "400"):
-			bad.append(f"{path.relative_to(REPO)}: src={s.group(1).strip()} mode={mode}")
+		if mode not in ("600", "400") and EDGE_SECRET_MODE_ALLOW.get((rel, src)) != mode:
+			bad.append(f"{rel}: src={src} mode={mode}")
+	assert not blind, "Template src the gate cannot resolve:\n  " + "\n  ".join(blind)
 	assert not bad, "Templates rendering an edge secret MUST be 0600:\n  " + "\n  ".join(bad)
 
 
