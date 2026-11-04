@@ -59,7 +59,7 @@ class _Signers(Walker):
         if path.name == "preflight-keychain.yml" or not isinstance(body, str) or not _KEY_SIGN.search(body):
             return
         sel = set(own | self.inh) if gate is TOP else set(own | self.inh) & set(gate)
-        self.signers[f"{path.relative_to(REPO)}: {task.get('name')}"] = sel - {"always"}
+        self.signers[f"{path.relative_to(REPO)}: {task.get('name')}"] = sel
 
 
 def test_keychain_preflight_tags_are_exactly_the_signing_tags():
@@ -74,3 +74,11 @@ def test_keychain_preflight_tags_are_exactly_the_signing_tags():
         f"preflight tags {sorted(preflight['tags'])} must equal the tags that select a keychain sign "
         f"{sorted(want)}: {walker.signers}"
     )
+
+
+def test_keychain_preflight_asks_only_when_thalamus_installs():
+    # Every keychain sign sits under import_role pazny.thalamus; with it off, `--tags keap` still asked (2026-11-04).
+    play = yaml.safe_load((REPO / "main.yml").read_text())[0]
+    preflight = next(t for t in play["pre_tasks"] if t.get("import_tasks") == "tasks/preflight-keychain.yml")
+    signer = next(t for t in play["tasks"] if (t.get("ansible.builtin.import_role") or {}).get("name") == "pazny.thalamus")
+    assert signer["when"] in preflight["when"], f"preflight `when` lacks the signer's guard {signer['when']!r}"
