@@ -43,6 +43,17 @@ def test_the_secret_store_is_invisible_in_process_and_to_children():
         assert not fake.is_symlink() and (not fake.exists() or not any(fake.iterdir())), holder
 
 
+def test_wing_db_is_not_linked_through(tmp_path):
+    """MEASURED 2026-10-06: HIDDEN had no 'wing', so the fake home linked to ~/wing/app/data/wing.db."""
+    real, fake = tmp_path / "real", tmp_path / "fake"
+    (real / "wing" / "app" / "data").mkdir(parents=True)
+    (real / "wing" / "app" / "data" / "wing.db").write_bytes(b"SQLite format 3\0")
+    fake.mkdir()
+    guard._farm(real, fake, guard.HIDDEN)
+    assert not (fake / "wing" / "app" / "data" / "wing.db").exists()
+    assert not (pathlib.Path.home() / "wing" / "app" / "data" / "wing.db").exists()
+
+
 def test_docker_is_refused_for_children():
     r = subprocess.run(["docker", "inspect", "iiab-rustfs-1"], capture_output=True, text=True)
     assert r.returncode == 125 and "offline" in r.stderr, (r.returncode, r.stderr[:200])
