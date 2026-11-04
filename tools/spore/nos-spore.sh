@@ -12,6 +12,7 @@
 #   tools/spore/nos-spore.sh --to /Volumes/SSD1TB/nos-spore --confirm    # seal it (asks a passphrase)
 #     --accept-loss   seal although LOST rows exist (they are listed in the image's HOST file)
 #
+# Seal again after every blank and right before a reset: a blank re-mints the secret master.
 # EXPERIMENTAL (2026-11-03): review before a reset; it writes only under --to. Rehearsal: REHEARSAL.md.
 # =============================================================================
 set -euo pipefail
@@ -155,6 +156,8 @@ echo "== backup (service data is restored from it, not carried here)"
 last="$(python3 "$(dirname "$0")/backup-fresh.py" 2>/dev/null || echo "?unreadable")"
 repo="$(grep -E '^restic_repo:' "$EST/config.yml" 2>/dev/null | sed 's/^restic_repo: *//; s/"//g' || true)"
 echo "  last backup run: ${last} h ago; restic repo: ${repo:-not set in config.yml}"
+lastblank="$(tail -1 "$NOS_HOME/blank-runs.jsonl" 2>/dev/null | sed -n 's/.*"started": *"\([^"]*\)".*/\1/p')"
+echo "  last blank: ${lastblank:-none recorded} (a spore sealed before it holds a secret master that no longer opens this estate)"
 stale=0
 if [ "${last#\?}" != "$last" ] || [ "$last" -ge 6 ]; then echo "  STALE: the last backup is older than 6 h: run the backup (and backup-verify), then seal"; stale=1; fi
 case "$repo" in
