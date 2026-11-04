@@ -1,6 +1,9 @@
 # Spore rehearsal (no wipe)
 
-Prove a spore grows back before trusting it with a factory reset. Every write goes under
+Prove a spore grows back before trusting it with a factory reset. Seal the spore again after every
+blank and right before the reset: a blank re-mints the secret master, so a spore sealed before it
+carries a key that opens nothing the reinstalled estate holds (rehearsal 11-04). Run these commands
+in bash, or call `/usr/bin/find`: an interactive shell may alias `find` (fd), which broke step 4. Every write goes under
 two rehearsal paths on the external disk; the live estate is only read.
 
 1. **Fresh backup.** Run the backup (and `backup-verify`); `nos-spore.sh` refuses to seal
@@ -15,9 +18,9 @@ two rehearsal paths on the external disk; the live estate is only read.
    M=$(mktemp -d); hdiutil attach /Volumes/SSD1TB/nos-spore-rehearsal/nos-spore.sparsebundle -mountpoint "$M" -nobrowse -readonly
    (cd "$M" && shasum -a 256 -c --quiet MANIFEST.sha256) && echo manifest-ok
    cat "$M/HOST"
-   for b in $(find "$M/trees" -name repo.bundle); do git bundle verify -q "$b" || echo "BAD $b"; done
+   for b in $(/usr/bin/find "$M/trees" -name repo.bundle); do git bundle verify -q "$b" || echo "BAD $b"; done
    # every bundled branch matches the live repo (no output = equal)
-   for b in $(find "$M/trees" -name repo.bundle); do r="$HOME/${b#$M/trees/}"; r="${r%/repo.bundle}"
+   for b in $(/usr/bin/find "$M/trees" -name repo.bundle); do r="$HOME/${b#$M/trees/}"; r="${r%/repo.bundle}"
      [ "$r" = "$HOME/.nos/estate" ] || diff <(git bundle list-heads "$b" | grep refs/heads/ | sort) \
        <(git -C "$r" for-each-ref --format='%(objectname) %(refname)' refs/heads | sort) || echo "DIFF $r"; done
    hdiutil detach "$M"
