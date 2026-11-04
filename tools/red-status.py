@@ -1182,6 +1182,9 @@ def collect() -> dict:
     cl = _sibling("container")  # a crash loop reads healthy between deaths (Loki, 2026-10-29)
     report["crash_loops"] = cl["items"]
     report["sources_missing"] += cl["missing"]
+    hp = _sibling("host-patch")  # a fixed kernel CVE waits on a reboot nobody is told about (2026-11-03)
+    report["host_patch"] = hp["items"]
+    report["sources_missing"] += hp["missing"]
     report["doctrine_reviews"] = doctrine_reviews()
 
     report["pulse"] = pulse_daemon()
@@ -1277,6 +1280,7 @@ def reds(report: dict) -> list[str]:
                    "(tools/advisory-status.py; judge in state/genome/advisory-judgements.yml)")
     if ad and ad["stale"]:
         out.append(f"advisory patrol stale — last run {ad['age']}")
+    out.extend(f"host: {line} — tools/host-patch-status.py" for line in report.get("host_patch") or [])
     bk = report.get("backups")
     absent = (bk or {}).get("absent")
     if absent == "backrest":

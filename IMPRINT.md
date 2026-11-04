@@ -65,7 +65,7 @@ Start with the first one.
 - `tools/identity-status.py` — the declared account roster vs what each realm holds.
 - `tools/plugin-wiring-report.py` — Plugin wiring report — capability matrix + contract checks.
 
-31 more `*-status.py` readers, each with its question, are listed in tools/README.md §Readers: advisory-status.py, workload-digest-status.py, container-status.py, docker-pressure-status.py, caddy-status.py, brew-pin-status.py, cortex-status.py, septum-status.py, tissue-status.py, router-status.py, e2e-status.py, ci-tier-status.py, elsewhere-status.py, services-status.py, rbac-status.py, loop-status.py, geo-status.py, permission-status.py, undeclared-status.py, santa-status.py, openhuman-status.py, thalamus-status.py, tailscale-status.py, managed-status.py, stale-config-status.py, roadmap-status.py, skill-status.py, snapshot-status.py, stuck-status.py, usage-status.py, wing-status.py.
+32 more `*-status.py` readers, each with its question, are listed in tools/README.md §Readers: advisory-status.py, workload-digest-status.py, container-status.py, host-patch-status.py, docker-pressure-status.py, caddy-status.py, brew-pin-status.py, cortex-status.py, septum-status.py, tissue-status.py, router-status.py, e2e-status.py, ci-tier-status.py, elsewhere-status.py, services-status.py, rbac-status.py, loop-status.py, geo-status.py, permission-status.py, undeclared-status.py, santa-status.py, openhuman-status.py, thalamus-status.py, tailscale-status.py, managed-status.py, stale-config-status.py, roadmap-status.py, skill-status.py, snapshot-status.py, stuck-status.py, usage-status.py, wing-status.py.
 
 ## 5. How to act — task types and the two tables
 
