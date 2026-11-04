@@ -148,3 +148,26 @@ def test_dtt_tools_see_the_seed_dir_from_the_env_file(tmp_path):
            "NOS_SRC": str(src), "NOS_PY": sys.executable}
     r = _run("dtt", "status", env=env)
     assert r.stdout.strip() == f"{tmp_path}/seed", (r.stdout, r.stderr)
+
+
+def test_a_piped_run_shows_a_prompt_before_any_input(tmp_path):
+    """`nos ... | tee log` held the pause prompt (no trailing newline) in Python's
+    block buffer until Enter (2026-10-17). The stub prompts like ansible's pause."""
+    import select, sys
+    stub = tmp_path / "ansible-playbook"
+    stub.write_text(f"#!{sys.executable}\nimport sys\nprint('Press ENTER to continue', end='')\nsys.stdin.readline()\n")
+    stub.chmod(stub.stat().st_mode | statmod.S_IEXEC)
+    env = dict(os.environ, PATH=f"{tmp_path}:{os.environ['PATH']}", HOME=str(tmp_path), NOS_SRC=str(REPO))
+    env.pop("PYTHONUNBUFFERED", None)
+    p = subprocess.Popen([NOS, "--tags", "openclaw"], env=env, stdin=subprocess.PIPE,
+                         stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    seen = b""
+    try:
+        while b"Press ENTER" not in seen and select.select([p.stdout], [], [], 10)[0]:
+            chunk = os.read(p.stdout.fileno(), 4096)
+            if not chunk:
+                break
+            seen += chunk
+    finally:
+        p.communicate(b"\n", timeout=30)
+    assert b"Press ENTER" in seen, "the prompt waited in the buffer for input"

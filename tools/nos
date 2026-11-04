@@ -595,6 +595,9 @@ cd "$NOS_SRC"
 # reach: on 2026-09-30 it outlived both. The CLI outlives the playbook, so it
 # removes the file whatever the outcome (not exec: nothing would run after).
 trap 'rm -f "${HOME}/.ansible_askpass"' EXIT
+# Piped (`nos | tee log`), Python block-buffers: a pause prompt with no newline
+# showed only after Enter (2026-10-17). Gate: test_a_piped_run_shows_a_prompt_before_any_input.
+[ -t 1 ] || export PYTHONUNBUFFERED=1
 if [ "$YES" -eq 1 ]; then
   "${ARGS[@]}" </dev/null
 else
