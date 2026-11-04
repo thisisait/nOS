@@ -17,7 +17,12 @@ import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 TABLES = REPO / "state" / "keap-tables"
-CONFIG_TABLES = ["layouts", "wallpapers", "controls"]
+# Read from the BFF, not listed: a hand list missed face-dock (loaded, no def).
+_BFF = REPO / "files" / "anatomy" / "face" / "src" / "routes" / "bff" / "tables" / "+server.ts"
+CONFIG_TABLES = re.findall(
+    r"'face-([a-z0-9-]+)'",
+    re.search(r"KNOWN_CONFIG_TABLES = \[([^\]]*)\]", _BFF.read_text(encoding="utf-8")).group(1),
+)
 
 
 def _load(name: str) -> dict:
@@ -48,12 +53,16 @@ def test_config_table_mirrors_catalog_shape(name):
     assert "slug" in keys, f"{name}.table.yml must have a 'slug' column (row identity)"
 
 
+def test_config_tables_are_read_from_the_bff():
+    assert {"layouts", "wallpapers", "controls"} <= set(CONFIG_TABLES), CONFIG_TABLES
+
+
 def test_config_tables_have_a_seeder():
     seeders = list((REPO / "roles" / "pazny.keap" / "tasks").glob("seed-face-table*.yml"))
     assert seeders, "no KEAP seeder for the face config DataTables"
     blob = "".join(p.read_text(encoding="utf-8") for p in seeders)
     for name in CONFIG_TABLES:
-        assert name in blob, f"seeder does not reference the {name} table"
+        assert f"{name}.table.yml" in blob, f"seeder does not reference the {name} table"
 
 
 def test_seeder_create_body_forwards_the_share_model():
