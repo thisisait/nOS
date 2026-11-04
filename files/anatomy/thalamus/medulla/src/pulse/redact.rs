@@ -56,8 +56,8 @@ fn quoted(t: &[char], i: usize, min: usize) -> Option<usize> {
     (n >= min && t.get(i + 1 + n) == Some(&q)).then_some(i + n + 2)
 }
 
-/// Python's _ENV_ASSIGNMENT: a long keyword anywhere in the key, KEY/AUTH only as a whole `_`
-/// segment (not after SORT_); then `"…"`/`'…'`, or for `:` the rest of the line, for `=` a
+/// Python's _ENV_ASSIGNMENT: a long keyword anywhere in the key, KEY/AUTH ending a `_` segment
+/// (KEY not after MON or SORT_); then `"…"`/`'…'`, or for `:` the rest of the line, for `=` a
 /// `['"]?[^\s'"]{6,}['"]?` run.
 fn env(t: &[char], p: usize) -> Option<(usize, usize)> {
     const KW: [&str; 10] = ["TOKEN", "SECRET", "PASSWORD", "PASSWD", "APIKEY", "HMAC", "JWT", "BEARER", "CREDENTIAL", "COOKIE"];
@@ -66,7 +66,8 @@ fn env(t: &[char], p: usize) -> Option<(usize, usize)> {
     }
     let r = p + run(t, p, usize::MAX, |c| matches!(fold(c), 'A'..='Z' | '0'..='9' | '_'));
     let seg = |k: usize, kw: &str| {
-        (k == p || t[k - 1] == '_') && !(k >= 5 && lit(t, k - 5, "SORT_")) && (k + kw.len() == r || t.get(k + kw.len()) == Some(&'_'))
+        !(kw == "KEY" && (k >= 3 && lit(t, k - 3, "MON") || k >= 5 && lit(t, k - 5, "SORT_")))
+            && (k + kw.len() == r || t.get(k + kw.len()) == Some(&'_'))
     };
     (p..r).find(|&k| {
         KW.iter().any(|kw| k + kw.len() <= r && lit(t, k, kw)) || ["KEY", "AUTH"].iter().any(|kw| k + kw.len() <= r && lit(t, k, kw) && seg(k, kw))

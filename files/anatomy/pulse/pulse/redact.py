@@ -28,13 +28,13 @@ import re
 
 
 # `<KEY>=<value>` / `<KEY>: <value>`. A long keyword may sit anywhere in KEY (TOKEN=, XTOKEN=);
-# KEY and AUTH only as a whole `_` segment, so MONKEY= and GIT_AUTHOR_NAME= pass, and SORT_KEY is
-# not a secret. Quoted values run to the closing quote, `=` values to whitespace, `:` values to the
-# end of the line (`MY_PASSWORD: p@ss w0rd`). No upper bound on any value length.
+# KEY and AUTH must end a `_` segment (PRIVATEKEY, privateKey, OAUTH; not KEYCLOAK_, GIT_AUTHOR_),
+# MONKEY and SORT_KEY excepted. Quoted values run to the quote, `=` values to whitespace, `:` values
+# to end of line, so `Primary key: users_pkey` hides too: diagnostics lose, secrets never leak.
 _ENV_ASSIGNMENT = re.compile(
 	r"(?P<prefix>\b(?=[A-Z])"
 	r"(?=[A-Z0-9_]*?(?:TOKEN|SECRET|PASSWORD|PASSWD|APIKEY|HMAC|JWT|BEARER|CREDENTIAL|COOKIE"
-	r"|(?<![A-Z0-9])(?<!SORT_)(?:KEY|AUTH)(?![A-Z0-9])))"
+	r"|(?<!MON)(?<!SORT_)KEY(?![A-Z0-9])|AUTH(?![A-Z0-9])))"
 	r"[A-Z0-9_]+\s*(?:=|(?P<colon>:))\s*)"
 	r"(?P<value>\"[^\"\n]{6,}\"|'[^'\n]{6,}'|(?(colon)\S[^\n]{5,}|['\"]?[^\s'\"]{6,}['\"]?))",
 	re.IGNORECASE,
