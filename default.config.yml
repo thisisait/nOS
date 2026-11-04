@@ -1439,6 +1439,7 @@ kiwix_zim_files: []
 # Examples (add to config.yml):
 # - url: "https://download.kiwix.org/zim/wikipedia/wikipedia_en_top_mini_2024-11.zim"
 #   dest: "wikipedia_en_top_mini.zim"    # ~315 MB
+#   checksum: "sha256:<hex>"               # optional: <url>.sha256 on the mirror; a mismatch fails the run
 # - url: "https://download.kiwix.org/zim/wikipedia/wikipedia_cs_all_mini_2024-11.zim"
 #   dest: "wikipedia_cs_mini.zim"        # ~500 MB
 

@@ -49,7 +49,7 @@ run reaches a working UI, and leaves the rest to the operator:
 | Source | What it is |
 |--------|------------|
 | `kiwix_init_zim_url` | Alpine Linux docs, saved as `alpinelinux.zim` (`kiwix_init_zim_dest`, ~10 MB) — downloaded only when `/data` holds no `*.zim` at all. Proof-of-life, not a knowledge base. Set to `""` to opt out. |
-| `kiwix_zim_files` | Operator list of `{url, dest}` pairs, downloaded on every run. Empty by default. |
+| `kiwix_zim_files` | Operator list of `{url, dest}` pairs, downloaded on every run; an optional `checksum: sha256:<hex>` (the mirror's `<url>.sha256`) fails a swapped file. Empty by default. |
 | `{{ kiwix_data_dir }}/download-zim.sh` | Helper script the role writes into the data dir: `./download-zim.sh <url>`. Its comments carry the recommended Wikipedia EN/CS and Gutenberg CS URLs. |
 
 The compose `entrypoint` overrides the image CMD so `/bin/sh` can expand `/data/*.zim` (Compose does

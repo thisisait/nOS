@@ -34,7 +34,7 @@ There is no post-start task — Kiwix serves ZIM files statically with no admin/
 | `kiwix_data_dir` | `~/kiwix` | Host bind mount for ZIM files |
 | `kiwix_init_zim_url` | based.cooking ZIM | ~1 MB init download so the container boots |
 | `kiwix_init_zim_dest` | `based-cooking.zim` | Filename on disk |
-| `kiwix_zim_files` | `[]` | Optional list of `{url, dest}` dicts for additional downloads |
+| `kiwix_zim_files` | `[]` | Optional list of `{url, dest, checksum?}` dicts for additional downloads (`checksum: sha256:<hex>`) |
 | `kiwix_mem_limit` | `docker_mem_limit_light` | Defaults to `512m` |
 | `kiwix_cpus` | `docker_cpus_light` | Defaults to `0.5` |
 

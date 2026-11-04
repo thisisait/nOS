@@ -63,6 +63,7 @@
   ansible.builtin.get_url:
     url: "{{ item.url }}"
     dest: "{{ kiwix_data_dir }}/{{ item.dest }}"
+    checksum: "{{ item.checksum | default(omit) }}"  # sha256:<hex> from the mirror's .sha256: a swapped ZIM fails
     mode: '0644'
     timeout: 3600
   loop: "{{ kiwix_zim_files | default([]) }}"
