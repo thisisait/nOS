@@ -552,6 +552,7 @@
 # docker compose stacks start before post.yml runs). B2 fix (2026-05-07).
 
 - name: "[pazny.wing] Wait for Wing API health (hub/health 200, confirms DB init done)"
+  tags: ['pulse']
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ wing_port | default(9000) }}/api/v1/hub/health"
     method: GET
@@ -575,6 +576,7 @@
 #   3. POST each to /api/v1/pulse_jobs (idempotent on plugin_name+job_name).
 # pulse-base/plugin.yml pins the long-term contract (aggregator decl).
 - name: "[pazny.wing] Discover Pulse job catalog from plugin manifests + agent profiles"
+  tags: ['pulse']
   # Standalone Python script lives at files/anatomy/scripts/discover-pulse-catalog.py.
   # We deliberately avoid inline-Python-in-heredoc here: Ansible Jinja-templates
   # the entire shell body before bash sees it, and Jinja braces inside a Python
@@ -676,10 +678,12 @@
   no_log: true
 
 - name: "[pazny.wing] Parse Pulse job catalog"
+  tags: ['pulse']
   ansible.builtin.set_fact:
     _pulse_catalog: "{{ _pulse_catalog_raw.stdout | from_json }}"
 
 - name: "[pazny.wing] Say which loops the validator refused (their jobs are dropped below)"
+  tags: ['pulse']
   # The discovery task is no_log (secrets ride its env); the refusal reasons are
   # the validator's words about a manifest, so they can be said here.
   ansible.builtin.debug:
@@ -689,6 +693,7 @@
     label: "{{ item.source }}"
 
 - name: "[pazny.wing] Drop Pulse jobs of retired agents"
+  tags: ['pulse']
   no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
   # Runs BEFORE the upsert, so an id that is still declared wins.
   ansible.builtin.uri:
@@ -701,6 +706,7 @@
   changed_when: false
 
 - name: "[pazny.wing] Drop Pulse jobs of services not installed"
+  tags: ['pulse']
   # A converge that switches a service off removes its jobs here; switching it
   # back on re-upserts them. Before the upsert, so a shared id is registered.
   # Gate: tests/anatomy/test_pulse_jobs_only_for_installed.py
@@ -718,6 +724,7 @@
   no_log: true
 
 - name: "[pazny.wing] Register discovered Pulse jobs (idempotent upsert)"
+  tags: ['pulse']
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ wing_port | default(9000) }}/api/v1/pulse_jobs"
     method: POST

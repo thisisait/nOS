@@ -484,7 +484,9 @@
 - { name: "[Stacks] pazny.keap post", ansible.builtin.include_role: { name: pazny.keap, tasks_from: post.yml, apply: { tags: ['keap'] } }, when: "install_keap | default(false)", tags: ['keap'] }
 - { name: "[Stacks] pazny.nos_forum post", ansible.builtin.include_role: { name: pazny.nos_forum, tasks_from: post.yml, apply: { tags: ['nos_forum', 'iiab'] } }, when: "install_nos_forum | default(false)", tags: ['nos_forum', 'iiab'] }
 - { name: "[Stacks] pazny.ntfy post", ansible.builtin.include_role: { name: pazny.ntfy, tasks_from: post.yml, apply: { tags: ['ntfy'] } }, when: "install_ntfy | default(false)", tags: ['ntfy'] }
-- { name: "[Stacks] pazny.wing post", ansible.builtin.include_role: { name: pazny.wing, tasks_from: post.yml, apply: { tags: ['wing', 'security'] } }, when: "install_wing | default(true) and 'iiab' in (_remaining_stacks | default([]))", tags: ['wing', 'security'] }
+# 'pulse' on the include only: --tags pulse enters and runs just the tasks tagged pulse inside
+# (the job drop/upsert), not all of wing post. Gate: test_the_pulse_tag_registers_jobs.py.
+- { name: "[Stacks] pazny.wing post", ansible.builtin.include_role: { name: pazny.wing, tasks_from: post.yml, apply: { tags: ['wing', 'security'] } }, when: "install_wing | default(true) and 'iiab' in (_remaining_stacks | default([]))", tags: ['wing', 'security', 'pulse'] }
 # Kuma's monitors are Tier-1 state derived from state/manifest.yml, but until
 # now their ONLY caller was the Tier-2 apps hook in apps_runner/tasks/post.yml,
 # four gates deep (a manifest rendered, compose rc=0, reconverge enabled). So an
