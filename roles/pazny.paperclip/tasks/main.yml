@@ -43,12 +43,28 @@
 
 # A bare repo (HEAD + objects/ at its root) is a git dir without the .git name. Checked on the
 # controller, which is the host (ansible_connection=local).
+# stat, not the `is file` test: the profile builder evaluates role conditions with stock Jinja,
+# which has no file tests (11-04: every profile-builder gate went red on it).
+- name: "[pazny.paperclip] Stat each host workspace's HEAD (bare-repo check)"
+  ansible.builtin.stat:
+    path: "{{ item.path }}/HEAD"
+  loop: "{{ paperclip_host_workspaces | default([]) }}"
+  register: _pc_ws_head
+
+- name: "[pazny.paperclip] Stat each host workspace's objects/ (bare-repo check)"
+  ansible.builtin.stat:
+    path: "{{ item.path }}/objects"
+  loop: "{{ paperclip_host_workspaces | default([]) }}"
+  register: _pc_ws_objects
+
 - name: "[pazny.paperclip] A host workspace is not a bare repo"
   ansible.builtin.assert:
     that:
-      - not ((((item.path | realpath) ~ '/HEAD') is file) and (((item.path | realpath) ~ '/objects') is directory))
+      - not ((_pc_ws_head.results[_i].stat.isreg | default(false)) and (_pc_ws_objects.results[_i].stat.isdir | default(false)))
     fail_msg: "paperclip_host_workspaces entry {{ item.name }} is refused: {{ item.path }} is a bare git repo, not a work tree."
   loop: "{{ paperclip_host_workspaces | default([]) }}"
+  loop_control:
+    index_var: _i
 
 - name: "[pazny.paperclip] Ensure each host workspace exists"
   ansible.builtin.file:
