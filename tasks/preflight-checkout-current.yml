@@ -74,12 +74,17 @@
       2026-08-05 exactly this cost a full run: seventeen commits behind, an hour
       spent, everything green, nothing of the work validated.
 
-      {% if (playbook_dir | realpath) == ((nos_estate_dir | default(ansible_facts['env']['HOME'] ~ '/.nos/estate')) | realpath) %}
+      {% set _is_estate = (playbook_dir | realpath) == ((nos_estate_dir | default(ansible_facts['env']['HOME'] ~ '/.nos/estate')) | realpath) %}
+      {% if _is_estate %}
       This is the estate checkout; it moves only by `nos update`:
         nos update     (fetches, refuses an unsigned or non-fast-forward ref)
+      {% if _ckt[4] | int > 0 %}
 
-      For a development checkout instead:
+      NOTE: it is also {{ _ckt[4] }} commit(s) AHEAD, so `nos update` refuses
+      the move (not a fast-forward). The estate takes no local commits: rebuild
+      it with tools/estate-adopt.sh from your development checkout.
       {% endif %}
+      {% else %}
         cd {{ playbook_dir }} && tools/deploy-sync.sh
 
       deploy-sync makes this checkout a clean mirror of {{ _ckt[2] }}: it
@@ -87,12 +92,13 @@
       {{ _ckt[2] }} already carries it, and fast-forwards — the manual
       stash/pull/pop, done safely and once. Preview with `--dry-run`. Plain
       `git pull --ff-only` still works when the tree is clean.
-
       {% if _ckt[4] | int > 0 %}
+
       NOTE: you are also {{ _ckt[4] }} commit(s) AHEAD. If that is only the
       nightly scan's own output, deploy-sync resets past it (preserved on
       scan-data); if it is real work, deploy-sync REFUSES — push or rebase
       first. Either way, do not merge blindly into a converge.
+      {% endif %}
       {% endif %}
       {% if _ckt_fetch.rc | default(1) != 0 %}
       NOTE: `git fetch` did not succeed ({{ _ckt_fetch.rc | default('n/a') }}),
