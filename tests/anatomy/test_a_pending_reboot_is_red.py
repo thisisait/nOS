@@ -42,7 +42,8 @@ def _lines():
 
 
 def test_a_reboot_pending_three_days_and_a_stale_kernel_are_named(tmp_path, monkeypatch):
-    _host(tmp_path, monkeypatch, apt_out="openssl/noble-updates,noble-security 3.0.13-0ubuntu3.6 amd64\n")
+    _host(tmp_path, monkeypatch, apt_out="openssl/noble-updates,noble-security 3.0.13-0ubuntu3.6 amd64\n"
+          "libapache2-mod-security2/noble-updates 2.9.7-1ubuntu0.1 amd64\n")
     flag = tmp_path / "var/run/reboot-required"
     flag.write_text("*** System restart required ***\n")
     (tmp_path / "var/run/reboot-required.pkgs").write_text("linux-image-6.8.0-149-generic\n")
@@ -54,6 +55,13 @@ def test_a_reboot_pending_three_days_and_a_stale_kernel_are_named(tmp_path, monk
     assert "reboot pending 3 days (linux-image-6.8.0-149-generic)" in text
     assert "running kernel 6.8.0-140-generic but 6.8.0-149-generic is installed" in text
     assert "1 -security update(s) pending: openssl" in text
+
+
+def test_a_same_day_reboot_flag_is_quiet(tmp_path, monkeypatch):
+    _host(tmp_path, monkeypatch)
+    (tmp_path / "var/run/reboot-required").write_text("*** System restart required ***\n")
+    lines, missing = _lines()
+    assert missing == [] and not any(ln.startswith("host:") for ln in lines)
 
 
 def test_a_patched_host_is_quiet(tmp_path, monkeypatch):

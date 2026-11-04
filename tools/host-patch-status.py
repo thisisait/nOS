@@ -59,7 +59,8 @@ def collect(now: float | None = None) -> dict:
                              capture_output=True, text=True, timeout=60)
         if out.returncode:
             raise OSError(out.returncode, "rc")
-        report["security"] = [ln.split("/")[0] for ln in out.stdout.splitlines() if "-security" in ln]
+        report["security"] = [ln.split("/")[0] for ln in out.stdout.splitlines()
+                              if "-security" in ln.split()[0].partition("/")[2]]  # suite, not name
     except (OSError, subprocess.TimeoutExpired):
         report["sources_missing"].append("apt list --upgradable (no answer)")
     return report
@@ -71,7 +72,7 @@ def summary(report: dict) -> list[str]:
     if rb and rb["days"] >= REBOOT_GRACE_DAYS:
         out.append(f"reboot pending {rb['days']} days ({', '.join(rb['pkgs'][:4]) or 'no package list'})")
     k = report.get("kernel")
-    if k and k["stale"]:
+    if k and k["stale"] and not (rb and rb["days"] < REBOOT_GRACE_DAYS):  # same grace as the flag
         out.append(f"running kernel {k['running']} but {k['newest']} is installed — the fix loads on reboot")
     sec = report.get("security")
     if sec:
