@@ -15,10 +15,7 @@ _COMMENT = re.compile(r"^\s*(?:\*|//|/\*|#)")
 _CITE = re.compile(r"\btest_[a-z0-9_]+(?:\.py)?")
 # Dead citations in files this gate's row does not own. Each must stay dead:
 # once fixed, the entry fails and is deleted.
-_KNOWN_DEAD = {
-    # renamed to test_agentkit_write_tool_scope.py; fix belongs to its owner
-    ("files/anatomy/wing/app/AgentKit/Tools/MigrationWriteTool.php", "test_security_agentkit_filewrite.py"),
-}
+_KNOWN_DEAD: set[tuple[str, str]] = set()
 
 
 def _known() -> set[str]:
