@@ -554,7 +554,7 @@ if [ -n "$_req_tags" ]; then
     _known="$(tail -n +2 "$_tag_cache")"
   else
     echo "nos: reading the playbook's declared tags (--list-tags) ..." >&2
-    _known="$(cd "$NOS_SRC" && ANSIBLE_LOG_PATH=/dev/null ansible-playbook main.yml --list-tags 2>/dev/null \
+    _known="$(cd "$NOS_SRC" && ANSIBLE_LOG_PATH=/dev/null ansible-playbook main.yml --list-tags </dev/null 2>/dev/null \
       | grep -o 'TAGS: \[[^]]*\]' | sed 's/^TAGS: \[//; s/\]$//' | tr ',' '\n' | tr -d ' ' | grep . | sort -u || true)"
     if [ -n "$_known" ] && [ -n "$_tag_key" ]; then
       printf '%s\n%s\n' "$_tag_key" "$_known" > "$_tag_cache" 2>/dev/null || true
