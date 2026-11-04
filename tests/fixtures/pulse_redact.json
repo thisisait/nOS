@@ -103,11 +103,11 @@
   ],
   [
    "API_KEY=fakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEX",
-   "API_KEY=<REDACTED>X"
+   "API_KEY=<REDACTED>"
   ],
   [
    "API_KEY=fakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEXY tail",
-   "API_KEY=<REDACTED>XY tail"
+   "API_KEY=<REDACTED> tail"
   ],
   [
    "API_KEY = spaced_fake_value",
@@ -127,11 +127,11 @@
   ],
   [
    "TOKEN=fake_token_1",
-   "TOKEN=fake_token_1"
+   "TOKEN=<REDACTED>"
   ],
   [
    "PASSWORD=hunter2hunter2",
-   "PASSWORD=hunter2hunter2"
+   "PASSWORD=<REDACTED>"
   ],
   [
    "XTOKEN=fake_tok_1",
@@ -159,11 +159,11 @@
   ],
   [
    "API_KEY=fake$val!",
-   "API_KEY=fake$val!"
+   "API_KEY=<REDACTED>"
   ],
   [
    "MY_PASSWORD: p@ss w0rd",
-   "MY_PASSWORD: p@ss w0rd"
+   "MY_PASSWORD: <REDACTED>"
   ],
   [
    "API_KEY=fakevalue1",
@@ -183,15 +183,15 @@
   ],
   [
    "GIT_AUTHOR_NAME=Operator1",
-   "GIT_AUTHOR_NAME=<REDACTED>"
+   "GIT_AUTHOR_NAME=Operator1"
   ],
   [
    "MONKEY=banana",
-   "MONKEY=<REDACTED>"
+   "MONKEY=banana"
   ],
   [
    "SORT_KEY: created_at",
-   "SORT_KEY: <REDACTED>"
+   "SORT_KEY: created_at"
   ],
   [
    "API_KEY=",
@@ -239,7 +239,7 @@
   ],
   [
    "--passwd fake",
-   "--passwd fake"
+   "--passwd <REDACTED>"
   ],
   [
    "--password  fake",
@@ -271,7 +271,7 @@
   ],
   [
    "--password=\"quoted fake\" end",
-   "--password=<REDACTED> fake\" end"
+   "--password=<REDACTED> end"
   ],
   [
    "-token fake",
@@ -299,11 +299,11 @@
   ],
   [
    "Authorization: Basic fakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEZ",
-   "Authorization: Basic <REDACTED>Z"
+   "Authorization: Basic <REDACTED>"
   ],
   [
    "Authorization: Token fakefakefake",
-   "Authorization: Token fakefakefake"
+   "Authorization: Token <REDACTED>"
   ],
   [
    "Proxy-Authorization: Basic ZmFrZTpmYWtl",
@@ -319,7 +319,7 @@
   ],
   [
    "bearer fakefakefakefake12",
-   "bearer fakefakefakefake12"
+   "bearer <REDACTED>"
   ],
   [
    "Bearer fakefakefakefake==",
@@ -335,7 +335,7 @@
   ],
   [
    "Bearer fakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEZ",
-   "Bearer fakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEZ"
+   "Bearer <REDACTED>"
   ],
   [
    "Bearer fake.fakefake.fakefake-_ ok",
@@ -368,6 +368,66 @@
   [
    "🔒 --token=fakeéé 🔑",
    "🔒 --token=<REDACTED> 🔑"
+  ],
+  [
+   "AUTH=fakevalue1",
+   "AUTH=<REDACTED>"
+  ],
+  [
+   "BASIC_AUTH=fakeuser:fakepw",
+   "BASIC_AUTH=<REDACTED>"
+  ],
+  [
+   "OPENAI_APIKEY=fakevalue1",
+   "OPENAI_APIKEY=<REDACTED>"
+  ],
+  [
+   "DB_PASSWD=fakevalue1",
+   "DB_PASSWD=<REDACTED>"
+  ],
+  [
+   "API_KEY=\"fake quoted value\" tail",
+   "API_KEY=<REDACTED> tail"
+  ],
+  [
+   "sort_key=created_at",
+   "sort_key=created_at"
+  ],
+  [
+   "refresh token: expired at 10:00",
+   "refresh token: <REDACTED>"
+  ],
+  [
+   "X_TOKEN:      ab",
+   "X_TOKEN:      ab"
+  ],
+  [
+   "X_TOKEN:  \nfakevalue1",
+   "X_TOKEN:  \n<REDACTED>"
+  ],
+  [
+   "--password='fake two' end",
+   "--password=<REDACTED> end"
+  ],
+  [
+   "--password=\"\" end",
+   "--password=<REDACTED> end"
+  ],
+  [
+   "--password=\"unclosed fake end",
+   "--password=<REDACTED> fake end"
+  ],
+  [
+   "BEARER fakefakefakefake12",
+   "BEARER <REDACTED>"
+  ],
+  [
+   "authorization: token fakefakefake",
+   "authorization: token <REDACTED>"
+  ],
+  [
+   "PASSWORD=fake$val!@ x",
+   "PASSWORD=<REDACTED> x"
   ]
  ]
 }
