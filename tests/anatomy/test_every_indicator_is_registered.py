@@ -4,9 +4,9 @@ WHY. ssot/doctrine/immune-system.md §2: a detector that cannot fill the indicat
 contract is not an indicator yet. Heartbeats and apoptosis read this registry,
 so a reader or security patrol missing from it would go unwatched.
 
-HOW. Enumerate tools/*-status.py and every plugin Pulse job with
-`category: security`; each must be an `indicators` entry (or, for a reader,
-a reasoned `not_indicators` line). The file validates against the schema next
+HOW. Enumerate tools/*-status.py and every plugin or agent-profile Pulse job
+with `category: security`; each must be an `indicators` entry (or a reasoned
+`not_indicators` / `not_indicator_jobs` line). The file validates against the schema next
 to it, and every entry's `source` exists.
 """
 
@@ -35,6 +35,13 @@ def _security_jobs() -> set[str]:
         for job in ((doc.get("pulse") or {}).get("jobs") or []):
             if job.get("category") == "security":
                 jobs.add(f"{plugin}:{job['name']}")
+    # Agent profiles declare Pulse jobs too; conductor's three security jobs went unseen.
+    for path in sorted(REPO.glob("files/anatomy/agents/*/agent.yml")):
+        doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        agent = str(doc.get("name") or path.parent.name)
+        for job in ((doc.get("pulse") or {}).get("jobs") or []):
+            if job.get("category") == "security":
+                jobs.add(f"{agent}:{job['name']}")
     return jobs
 
 
@@ -55,7 +62,8 @@ def test_every_status_reader_is_accounted_for():
 
 
 def test_every_security_patrol_is_registered():
-    missing = sorted(_security_jobs() - set(_registry()["indicators"]))
+    reg = _registry()
+    missing = sorted(_security_jobs() - set(reg["indicators"]) - set(reg.get("not_indicator_jobs") or {}))
     assert not missing, ("Pulse jobs with category security and no indicators entry: "
                          + ", ".join(missing))
 
