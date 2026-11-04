@@ -29,6 +29,7 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "files/anatomy/module_utils"))
 
 import nos_secret_derive as d  # noqa: E402
+from _repo_walk import repo_files  # noqa: E402
 
 REGISTRY = REPO / "files/anatomy/secrets/registry.yml"
 FIXTURE_MASTER = bytes(range(32, 64))
@@ -78,19 +79,14 @@ _MASTER_NAME_ALLOWED = {
 
 def test_master_name_is_referenced_only_where_designed():
     offenders = []
-    for path in REPO.rglob("*"):
-        if not path.is_file() or path.suffix not in {
+    for path in repo_files(REPO):
+        if path.suffix not in {
             ".yml", ".yaml", ".j2", ".py", ".sh", ".cfg", ".conf", ".js", ".php", ".md"
         }:
             continue
         rel = str(path.relative_to(REPO))
-        # `.claude/worktrees/` is a CHECKOUT OF THIS REPO, created by isolated
-        # agents. Scanning it re-reports the main tree's own files under a second
-        # path and makes the verdict depend on which worktrees happen to be left
-        # lying about — this gate went red on 2026-08-28 for exactly that, with
-        # nine hits that were all one agent's sibling checkout.
-        if rel.startswith((".git/", ".ci-venv/", "tests/", "docs/devlog/",
-                           ".claude/worktrees/")):
+        # Went red 2026-08-28 on nine hits from one sibling worktree; repo_files prunes those.
+        if rel.startswith(("tests/", "docs/devlog/")):
             continue
         if rel in _MASTER_NAME_ALLOWED:
             continue

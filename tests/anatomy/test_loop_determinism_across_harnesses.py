@@ -86,6 +86,7 @@ from pathlib import Path
 
 import pytest
 import yaml
+from _repo_walk import repo_files
 from fastapi import Depends, FastAPI
 from starlette.testclient import TestClient
 
@@ -603,7 +604,7 @@ _NOT_SOURCE = {"node_modules", "__pycache__", "vendor", "site-packages", "tests"
 
 def _repo_python_sources() -> list[Path]:
     out = []
-    for path in REPO.rglob("*.py"):
+    for path in repo_files(REPO, "*.py", skip=_NOT_SOURCE):
         rel = path.relative_to(REPO)
         if any(p.startswith(".") or p in _NOT_SOURCE for p in rel.parts):
             continue

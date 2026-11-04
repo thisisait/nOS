@@ -37,6 +37,8 @@ from __future__ import annotations
 
 import pathlib
 
+from _repo_walk import repo_files
+
 REPO = pathlib.Path(__file__).resolve().parents[2]
 DOC = REPO / "docs/idea/02-cortex-lang.md"
 LOOP_DOC = REPO / "docs/idea/11-agentic-loop.md"
@@ -123,11 +125,7 @@ def test_the_loop_doc_credits_the_schema_not_the_implementation() -> None:
 
 def test_a_vendored_copy_honors_the_declared_conditions() -> None:
     """Vacuous until the file lands; red the day it lands unedited."""
-    copies = [
-        p
-        for p in REPO.rglob("datalog_reasoner.py")
-        if "node_modules" not in p.parts and ".git" not in p.parts
-    ]
+    copies = list(repo_files(REPO, "datalog_reasoner.py"))
     for copy in copies:
         text = copy.read_text(encoding="utf-8")
         for token in BUDGET_TOKENS:

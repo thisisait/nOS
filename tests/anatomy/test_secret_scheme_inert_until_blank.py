@@ -34,6 +34,7 @@ import nos_identity as ni  # noqa: E402
 sys.path.insert(0, str(REPO / "files/anatomy/module_utils"))
 
 import nos_secret_derive as d  # noqa: E402
+from _repo_walk import repo_files  # noqa: E402
 
 REGISTRY = REPO / "files/anatomy/secrets/registry.yml"
 
@@ -269,11 +270,11 @@ _REF = re.compile(r"nos_derived_secrets\.([a-z0-9_]+)")
 #: still collected (rglob over the repo's yml/j2 surface).
 def _references() -> dict[str, set[str]]:
     refs: dict[str, set[str]] = {}
-    for path in REPO.rglob("*"):
-        if not path.is_file() or path.suffix not in {".yml", ".yaml", ".j2"}:
+    for path in repo_files(REPO):
+        if path.suffix not in {".yml", ".yaml", ".j2"}:
             continue
         rel = str(path.relative_to(REPO))
-        if rel.startswith((".git/", ".ci-venv/", ".claude/", "tests/")):  # .claude/ holds sibling worktrees
+        if rel.startswith((".claude/", "tests/")):
             continue
         try:
             text = path.read_text(encoding="utf-8")

@@ -21,6 +21,7 @@ import sys
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "tools"))
 import nos_identity as ni  # noqa: E402
+from _repo_walk import repo_files  # noqa: E402
 
 SKIP_DIRS = {".git", "node_modules", "docs", "tests", ".ci-venv", "dist", "config.d",
              "vendor", ".svelte-kit", ".pytest_cache", "__pycache__"}
@@ -38,10 +39,8 @@ def _flags() -> list[str]:
 def _consumers() -> collections.Counter:
     flags = _flags()
     seen = collections.Counter()
-    for p in REPO.rglob("*"):
-        if not p.is_file() or p.suffix not in READ_SUFFIXES:
-            continue
-        if p.name in SKIP_FILES or any(s in p.parts for s in SKIP_DIRS):
+    for p in repo_files(REPO, skip=SKIP_DIRS):
+        if p.suffix not in READ_SUFFIXES or p.name in SKIP_FILES:
             continue
         try:
             text = p.read_text(encoding="utf-8", errors="ignore")

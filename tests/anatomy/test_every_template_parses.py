@@ -12,19 +12,10 @@ from pathlib import Path
 
 import jinja2
 import pytest
+from _repo_walk import repo_files
 
 REPO = Path(__file__).resolve().parents[2]
-SKIP = ("node_modules", ".ci-venv", ".git", ".claude/worktrees")
-
-
-def _skipped(path: Path) -> bool:
-    # Path components relative to REPO: a substring of the absolute path hid every
-    # template inside an agent worktree, and `.git` hid roles/pazny.gitea + gitlab.
-    rel = "/" + path.relative_to(REPO).as_posix() + "/"
-    return any(f"/{s}/" in rel for s in SKIP)
-
-
-TEMPLATES = sorted(p for p in REPO.rglob("*.j2") if not _skipped(p))
+TEMPLATES = list(repo_files(REPO, "*.j2"))
 ENV = jinja2.Environment(extensions=["jinja2.ext.do", "jinja2.ext.loopcontrols"])
 
 
@@ -33,9 +24,8 @@ def test_there_are_templates_to_check():
 
 
 def test_the_skip_matches_components_not_substrings():
-    assert not _skipped(REPO / "roles/pazny.gitea/templates/compose.yml.j2")
-    assert _skipped(REPO / ".claude/worktrees/agent-x/roles/a.j2")
-    assert _skipped(REPO / "files/anatomy/face/node_modules/a.j2")
+    # `.git` as a substring once hid roles/pazny.gitea + gitlab.
+    assert REPO / "roles/pazny.gitea/templates/compose.yml.j2" in TEMPLATES
 
 
 @pytest.mark.parametrize("path", TEMPLATES, ids=[str(p.relative_to(REPO)) for p in TEMPLATES])

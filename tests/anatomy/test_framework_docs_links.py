@@ -20,6 +20,8 @@ from __future__ import annotations
 import pathlib
 import re
 
+from _repo_walk import repo_files
+
 REPO = pathlib.Path(__file__).resolve().parents[2]
 
 # The six framework guides relocated in anatomy A1.
@@ -61,12 +63,7 @@ def test_framework_guides_live_at_new_location():
 
 
 def _tracked_markdown() -> list[pathlib.Path]:
-    out: list[pathlib.Path] = []
-    for path in REPO.rglob("*.md"):
-        if any(part in _SKIP_DIRS for part in path.relative_to(REPO).parts):
-            continue
-        out.append(path)
-    return out
+    return list(repo_files(REPO, "*.md", skip=_SKIP_DIRS))
 
 
 def test_no_stale_framework_doc_references():

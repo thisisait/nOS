@@ -18,6 +18,7 @@ import time
 from pathlib import Path
 
 import pytest
+from _repo_walk import repo_files
 
 REPO = Path(__file__).resolve().parents[2]
 TOOL = REPO / "tools" / "worktree-lease.py"
@@ -125,7 +126,7 @@ def test_the_lease_lives_outside_the_tree_it_guards():
     holder = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
     try:
         _run("acquire", "--kind", "workflow", "--label", "outside", "--pid", str(holder.pid))
-        stray = [p for p in REPO.rglob("*.lease") if ".git" not in str(p)]
+        stray = list(repo_files(REPO, "*.lease"))
         assert not stray, f"lease artefacts inside the worktree: {stray}"
     finally:
         holder.kill()

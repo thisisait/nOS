@@ -9,12 +9,14 @@ from __future__ import annotations
 import pathlib
 import re
 
+from _repo_walk import repo_files
+
 ROOT = pathlib.Path(__file__).resolve().parents[2] / "files/anatomy/plugins"
 
 
 def test_no_plugin_template_is_dead():
     dead = []
-    for tpl in sorted(ROOT.rglob("*.j2")):
+    for tpl in repo_files(ROOT, "*.j2"):
         plugin = ROOT / tpl.relative_to(ROOT).parts[0]
         rel = str(tpl.relative_to(plugin))
         manifest = (plugin / "plugin.yml").read_text(encoding="utf-8") if (plugin / "plugin.yml").is_file() else ""
