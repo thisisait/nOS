@@ -17,6 +17,7 @@ can't silently regress to partial coverage:
 
 from __future__ import annotations
 
+import functools
 import pathlib
 
 import pytest
@@ -34,6 +35,7 @@ ARTICLE6_BASES = {
 }
 
 
+@functools.cache  # parametrize + ids re-walked it per use at collection
 def _core_records() -> list[dict]:
     return nos_gdpr.records_from_plugins(PLUGINS_ROOT)
 

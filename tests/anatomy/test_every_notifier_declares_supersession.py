@@ -32,6 +32,7 @@ that. This checks that somebody decided, not that they decided well.
 
 from __future__ import annotations
 
+import functools
 import ast
 import pathlib
 import re
@@ -50,6 +51,7 @@ ROOTS = ["files/anatomy/scripts", "files/anatomy/plugins", "tasks", "tools", "ro
 KEY = re.compile(r"^[a-z0-9][a-z0-9_.:-]{0,62}[a-z0-9]$")
 
 
+@functools.cache  # parametrize + ids re-walked it per use at collection
 def _shell_sites() -> list[tuple[pathlib.Path, int, str]]:
     """Every shell/YAML invocation of the notifier, with its full command."""
     out = []
@@ -146,6 +148,7 @@ def _args(cmd: str) -> list[str]:
     return args
 
 
+@functools.cache  # parametrize + ids re-walked it per use at collection
 def _python_sites() -> list[tuple[pathlib.Path, int, list[str]]]:
     """subprocess argv lists whose head is the notifier binary.
 

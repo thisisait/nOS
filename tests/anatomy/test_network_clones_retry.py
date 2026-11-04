@@ -24,6 +24,7 @@ truth.
 
 from __future__ import annotations
 
+import functools
 import re
 from pathlib import Path
 
@@ -53,6 +54,7 @@ def _task_files() -> list[Path]:
     return sorted(out)
 
 
+@functools.cache  # parametrize + ids re-walked it per use at collection
 def _clone_tasks() -> list[tuple[Path, dict]]:
     """Every task using the git module, in a file that parses as a task list."""
     found: list[tuple[Path, dict]] = []

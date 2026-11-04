@@ -28,6 +28,7 @@ honest way to hold it is to run the tool. This gate holds the declaration.
 
 from __future__ import annotations
 
+import functools
 import re
 from pathlib import Path
 
@@ -44,6 +45,7 @@ CATEGORIES = {"security", "compliance", "knowledge", "platform", "notification",
 SOURCES = ("files/anatomy/plugins/*/plugin.yml", "files/anatomy/agents/*/agent.yml")
 
 
+@functools.cache  # parametrize + ids re-walked it per use at collection
 def _jobs() -> list[tuple[str, str, dict]]:
     """(source file, job id, job block) for every declared pulse job.
 

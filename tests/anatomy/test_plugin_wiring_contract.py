@@ -21,6 +21,7 @@ re-introduce the drift:
 
 from __future__ import annotations
 
+import functools
 import pathlib
 import sys
 import re
@@ -47,6 +48,7 @@ def _known_toggles() -> set[str]:
     return set((yaml.safe_load(raw) or {}).keys())
 
 
+@functools.cache  # parametrize + ids re-walked it per use at collection
 def _all_plugins() -> list[load_plugins.Plugin]:
     return load_plugins.discover(PLUGINS_ROOT)
 
