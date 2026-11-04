@@ -342,8 +342,8 @@ def check_fixture_seed(seed: dict, tables_dir: str | pathlib.Path) -> list[str]:
 # This module is the PURE core (normalize + checksum + slug + 3-outcome resolve)
 # against an explicit index. compose_party_review is the __visibility:system
 # review rung: proposed spine rows, not /ingest/v1/capture. KEAP peels the
-# meta key on POST and appends table_row_history; ARES verify and merge_party
-# stay later.
+# meta key on POST and appends table_row_history; merge_party (after the
+# erasure walk) folds a duplicate party into its winner; ARES verify stays later.
 
 #: IČO reserved for synthetic fixtures (docs/idea/15): (CZ)?000001\d\d. A real
 #: document carrying this range is a data error, not a match — refused outside
@@ -702,6 +702,63 @@ def party_graph(party_slug: str, table_reader, tables_dir: str | pathlib.Path) -
             nid = f"{tbl}:{r['slug']}"
             nodes[nid] = {"id": nid, "table": tbl, "slug": r["slug"], "label": _row_label(r)}
     return {"nodes": list(nodes.values()), "edges": edges}
+
+
+# ── merge: fold a duplicate party into its winner (party-merge) ──────────────
+# Under-matching forks a party; onDelete:restrict keeps the loser undeletable until
+# every rowRef cell pointing at it is repointed, so the store enforces completeness.
+# Same edge walk as erasure_plan; only the loser's DIRECT referrers move.
+def merge_plan(loser: str, winner: str, table_reader, tables_dir: str | pathlib.Path) -> dict:
+    """{loser, winner, loser_present, cells: [{table, slug, column}], rows: {(table, slug): row}}
+    — every rowRef cell that points at the loser party. Raises ValueError on a
+    self-merge or a winner that is not a party row (repointing to it would dangle)."""
+    if loser == winner:
+        raise ValueError(f"cannot merge {loser} into itself")
+    slugs = {r.get("slug") for r in table_reader("party") if isinstance(r, dict)}
+    if winner not in slugs:
+        raise ValueError(f"winner {winner} is not a party row")
+    rows_by_table, edges = _rowref_closure(loser, table_reader, tables_dir)
+    index = {(t, r["slug"]): r for t, rows in rows_by_table.items() for r in rows}
+    cells, rows = [], {}
+    for e in edges:
+        if e["to"] != f"party:{loser}":
+            continue
+        table, slug = e["from"].split(":", 1)
+        cells.append({"table": table, "slug": slug, "column": e["column"]})
+        rows[(table, slug)] = index[(table, slug)]
+    return {"loser": loser, "winner": winner, "loser_present": loser in slugs,
+            "cells": cells, "rows": rows}
+
+
+def merge_party(loser: str, winner: str, table_reader, tables_dir, *, write_row,
+                delete_row, referrers, audit, confirm: bool = False) -> dict:
+    """Execute merge_plan: repoint each referencing row (all its loser cells in ONE
+    write), delete the loser only when the store's referrers probe says nothing
+    points at it, then audit. Dry run unless confirm. A re-run finds no cells and no
+    loser, so it writes nothing. write_row(table, row) / delete_row(table, slug) /
+    referrers(table, slug) -> list / audit(entry) are injected (the CLI wires KEAP)."""
+    plan = merge_plan(loser, winner, table_reader, tables_dir)
+    out = {"loser": loser, "winner": winner, "dry": not confirm, "cells": plan["cells"],
+           "loser_present": plan["loser_present"], "repointed": [], "deleted": False,
+           "refused": None}
+    if not confirm:
+        return out
+    for (table, slug), row in plan["rows"].items():
+        cols = [c["column"] for c in plan["cells"] if (c["table"], c["slug"]) == (table, slug)]
+        write_row(table, {**row, **{c: winner for c in cols}})
+        out["repointed"].append({"table": table, "slug": slug, "columns": cols})
+    if plan["loser_present"]:
+        left = referrers("party", loser)
+        if left:
+            out["refused"] = f"{loser} still has {len(left)} referrer(s); not deleted"
+        else:
+            delete_row("party", loser)
+            out["deleted"] = True
+    if out["repointed"] or out["deleted"]:
+        audit({"action": "party.merge", "loser": loser, "winner": winner,
+               "repointed": out["repointed"], "deleted": out["deleted"],
+               "refused": out["refused"]})
+    return out
 
 
 # ── importer-spine: parse → normalize → compose → GATE (the harness) ─────────

@@ -18,6 +18,8 @@ a shared party row survives even under --confirm.
   tools/digest-teardown.py --erase-party party-ico-00000112 --confirm   # erase it (party row retained, referrers-gated)
                                                                         # + its PostGIS projection (geo.party_site)
   tools/digest-teardown.py --tables invoice,invoice-line,journal-entry,posting   # from-blank: the money rows, whatever wrote them
+  tools/digest-teardown.py --merge-party LOSER WINNER           # a forked party: cells to repoint, no writes
+  tools/digest-teardown.py --merge-party LOSER WINNER --confirm # repoint, delete the loser once unreferenced, audit
 
 The third mode exists because a seed file can only tear down what a seed file
 WROTE: half the live ledger is importer output and derive-postings entries that
@@ -34,6 +36,7 @@ import os
 import pathlib
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.request
 
@@ -96,6 +99,62 @@ def _table_rows(table: str, ro_hdr: dict) -> list:
     return (d.get("data") or {}).get("rows") or d.get("rows") or []
 
 
+def _merge(loser: str, winner: str, H: dict, ro_hdr: dict, confirm: bool) -> int:
+    """--merge-party: nos_digest.merge_party wired to KEAP (row upsert by slug, the
+    referrers probe as the delete gate) and to a Bone audit event."""
+    import importlib.util
+    import digest_absorb
+    spec = importlib.util.spec_from_file_location("invoice_verify", REPO / "tools" / "invoice-verify.py")
+    iv = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(iv)
+    rw_hdr = {"Authorization": f"Bearer {digest_absorb.rw_token()}", **proxy_header()} if confirm else {}
+
+    def audit(entry: dict) -> None:
+        secret = iv.hmac_secret()
+        body = json.dumps({"ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                           "type": "table.upsert", "run_id": f"party-merge-{loser}",
+                           "source": "digest-teardown", "actor_action_id": loser,
+                           "result": entry}, separators=(",", ":"), sort_keys=True).encode()
+        print(f"  audit {body.decode()}")
+        if not secret:
+            print("WARN: WING_EVENTS_HMAC_SECRET unset — merge has no Bone audit", file=sys.stderr)
+            return
+        try:
+            urllib.request.urlopen(urllib.request.Request(
+                iv.bone_events_url(), data=body, headers=iv.hmac_headers(secret, body),
+                method="POST"), timeout=10)
+        except (urllib.error.URLError, OSError) as exc:
+            print(f"WARN: Bone audit missed ({exc})", file=sys.stderr)
+
+    try:
+        out = nos_digest.merge_party(
+            loser, winner, lambda t: _table_rows(t, ro_hdr), REPO / "state" / "keap-tables",
+            write_row=lambda t, r: digest_absorb._post_row(t, r, rw_hdr),
+            delete_row=lambda t, s: _json(f"{API}/{t}/rows/{s}", H, method="DELETE"),
+            referrers=lambda t, s: _referrers(t, s, ro_hdr), audit=audit, confirm=confirm)
+    except ValueError as exc:
+        print(f"REFUSING: {exc}", file=sys.stderr)
+        return 1
+    except urllib.error.HTTPError as exc:
+        print(f"FAILED: {exc.code} {exc.read().decode()[:160]}", file=sys.stderr)
+        return 1
+    except (urllib.error.URLError, OSError) as exc:
+        print(f"REFUSING: KEAP unreadable ({exc})", file=sys.stderr)
+        return 2
+    tag = "  (DRY RUN)" if out["dry"] else ""
+    print(f"merge {loser} -> {winner}: {len(out['cells'])} cell(s){tag}")
+    for c in out["cells"]:
+        print(f"  {'[dry] would repoint' if out['dry'] else 'repointed'} {c['table']}/{c['slug']}.{c['column']}")
+    if out["dry"]:
+        print(f"  [dry] would delete party/{loser} once unreferenced" if out["loser_present"]
+              else f"  · party/{loser}: already absent")
+    elif out["refused"]:
+        print(f"  RETAIN party/{loser}: {out['refused']}")
+    elif out["deleted"]:
+        print(f"  deleted party/{loser}")
+    return 1 if out["refused"] else 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("bundle", nargs="?", help="path to a state/fixtures/<name>.seed.yml (or any bundle)")
@@ -106,14 +165,21 @@ def main() -> int:
                     help="every LIVE row of these tables, named in DEPENDENCY order "
                          "(the plan reverses it): the from-blank reset for rows no seed "
                          "file lists — importer output, derived ledger")
+    ap.add_argument("--merge-party", nargs=2, metavar=("LOSER", "WINNER"),
+                    help="fold a duplicate party into its winner: repoint every rowRef cell, "
+                         "then delete the loser once nothing references it")
     ap.add_argument("--confirm", action="store_true", help="delete (default is dry-run)")
     args = ap.parse_args()
-    modes = [bool(args.bundle), bool(args.erase_party), bool(args.tables)]
+    modes = [bool(args.bundle), bool(args.erase_party), bool(args.tables), bool(args.merge_party)]
     if sum(modes) != 1:
-        ap.error("give exactly one of: a bundle path, --erase-party SLUG, or --tables T1,T2")
+        ap.error("give exactly one of: a bundle path, --erase-party SLUG, --tables T1,T2, "
+                 "or --merge-party LOSER WINNER")
 
     H = human_headers()
     ro_hdr = {"Authorization": f"Bearer {_ro_token()}", **proxy_header()}
+
+    if args.merge_party:
+        return _merge(*args.merge_party, H, ro_hdr, args.confirm)
 
     if args.erase_party:
         try:
