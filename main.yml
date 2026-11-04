@@ -157,9 +157,10 @@
 
     # ── The codesign keychain dialog, asked first (2026-11-03) ────────────
     # Headless (SSH, CI, -y) cannot show it: skipped, the later sign explains.
-    # Only the tags that select a keychain sign, so `--tags backrest` never asks (ruling 2026-11-04).
+    # Only when thalamus installs and the tags select its keychain sign: `--tags backrest` never asks (ruling 2026-11-04).
     - import_tasks: tasks/preflight-keychain.yml
       when:
+        - install_thalamus | default(false) | bool
         - ansible_os_family == 'Darwin'
         - lookup('env', 'SSH_CONNECTION') | length == 0
         - lookup('env', 'CI') | length == 0
