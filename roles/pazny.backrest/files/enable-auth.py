@@ -49,6 +49,16 @@ def main() -> None:
             if fresh:
                 cfg[key] = (cfg.get(key) or []) + fresh
                 seeded += len(fresh)
+        # The keys nOS declares follow the seed on an existing daemon too: prune on a fixed clock
+        # (maxFrequencyDays restarted with every daemon start and never fired — 159 GiB, 11-04)
+        # and the retention numbers the operator set. Everything else stays the daemon's.
+        for key, owned in (("repos", ("prunePolicy", "checkPolicy")), ("plans", ("retention",))):
+            want = {x.get("id"): x for x in seed.get(key) or []}
+            for x in cfg.get(key) or []:
+                for k in owned:
+                    if x.get("id") in want and k in want[x["id"]] and x.get(k) != want[x["id"]][k]:
+                        x[k] = want[x["id"]][k]
+                        seeded += 1
     auth = cfg.get("auth") or {}
     users = auth.get("users") or []
     if not seeded and not auth.get("disabled", False) and any(u.get("name") == args.user for u in users):

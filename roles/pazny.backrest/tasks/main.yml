@@ -116,15 +116,20 @@
     src: backrest.plist.j2
     dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ backrest_launchd_label }}.plist"
     mode: "0644"
+  register: _backrest_plist
   when: ansible_facts['os_family'] == 'Darwin'
 
+# A restart only when the config or the plist changed: every converge kickstarted it, and the
+# daemon counts its schedules from its own start (prune never fired in 35 days, 11-04).
 - name: "[pazny.backrest] Bootstrap launchd job (idempotent)"
   ansible.builtin.shell: |
     PLIST=~/Library/LaunchAgents/{{ backrest_launchd_label }}.plist
     UID_NUM=$(id -u)
     set -e
     if launchctl print "gui/${UID_NUM}/{{ backrest_launchd_label }}" >/dev/null 2>&1; then
-      launchctl kickstart -k "gui/${UID_NUM}/{{ backrest_launchd_label }}"
+      if [ "{{ (_backrest_auth is changed) or (_backrest_plist is changed) }}" = "True" ]; then
+        launchctl kickstart -k "gui/${UID_NUM}/{{ backrest_launchd_label }}"
+      fi
       echo "already-loaded"
     else
       # A label left DISABLED (launchctl disable / unload -w, measured 2026-09-28

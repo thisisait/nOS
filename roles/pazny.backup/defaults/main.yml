@@ -16,7 +16,7 @@ backup_target_secret_key: "{{ rustfs_secret_key }}"
 # -- Retention (days / weeks / months to keep) ---------------------------------
 backup_retention_daily: 7
 backup_retention_weekly: 4
-backup_retention_monthly: 12
+backup_retention_monthly: 3
 
 # -- Client-side encryption (GDPR Art. 32 / NIS2 at-rest) ----------------------
 # Every dump is AES-256-CBC/pbkdf2 encrypted BEFORE upload, so personal data

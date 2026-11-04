@@ -3250,7 +3250,7 @@ backup_target_access_key: "{{ rustfs_access_key }}"
 backup_target_secret_key: "{{ rustfs_secret_key }}"
 backup_retention_daily: 7                        # last-N dailies
 backup_retention_weekly: 4                       # last-N Sundays
-backup_retention_monthly: 12                     # last-N month-firsts
+backup_retention_monthly: 3                      # last-N month-firsts (12 kept ~110 GB of undeduplicated dumps; operator 11-04)
 # Docker NAMED volumes to tar. Empty by default: DB *_data volumes are redundant
 # (the logical dumps below cover them) and a hot-volume tar is an inconsistent
 # datadir. Add only genuinely-stateful NON-DB volumes you confirm via

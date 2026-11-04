@@ -14,8 +14,8 @@
       "env": ["AWS_ACCESS_KEY_ID={{ restic_s3_access_key }}", "AWS_SECRET_ACCESS_KEY={{ restic_s3_secret_key }}"],
 {% endif %}
       "autoInitialize": true,
-      "prunePolicy": { "schedule": { "maxFrequencyDays": 7 }, "maxUnusedPercent": 10 },
-      "checkPolicy": { "schedule": { "maxFrequencyDays": 30 }, "readDataSubsetPercent": 5 },
+      "prunePolicy": { "schedule": { "cron": "0 6 * * 0", "clock": "CLOCK_LOCAL" }, "maxUnusedPercent": 10 },
+      "checkPolicy": { "schedule": { "cron": "0 7 1 * *", "clock": "CLOCK_LOCAL" }, "readDataSubsetPercent": 5 },
       "hooks": [
         {
           "conditions": ["CONDITION_ANY_ERROR"],
@@ -30,7 +30,7 @@
       "repo": "offsite",
       "paths": ["{{ rustfs_data_dir | default(ansible_facts['env']['HOME'] + '/rustfs') }}"],
       "schedule": { "cron": "0 4 * * *", "clock": "CLOCK_LOCAL" },
-      "retention": { "policyTimeBucketed": { "daily": {{ backup_retention_daily | default(7) }}, "weekly": {{ backup_retention_weekly | default(4) }}, "monthly": {{ backup_retention_monthly | default(12) }} } }
+      "retention": { "policyTimeBucketed": { "daily": {{ backup_retention_daily | default(7) }}, "weekly": {{ backup_retention_weekly | default(4) }}, "monthly": {{ backup_retention_monthly | default(3) }} } }
     },
     {
       "id": "nos-dumps",
@@ -40,7 +40,7 @@
       "excludes": ["*.part"],
       "backup_flags": ["--tag", "run=nightly"],
       "schedule": { "cron": "30 4 * * *", "clock": "CLOCK_LOCAL" },
-      "retention": { "policyTimeBucketed": { "daily": {{ backup_retention_daily | default(7) }}, "weekly": {{ backup_retention_weekly | default(4) }}, "monthly": {{ backup_retention_monthly | default(12) }} } }
+      "retention": { "policyTimeBucketed": { "daily": {{ backup_retention_daily | default(7) }}, "weekly": {{ backup_retention_weekly | default(4) }}, "monthly": {{ backup_retention_monthly | default(3) }} } }
     }
   ]
 {% endif %}
