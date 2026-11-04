@@ -1,10 +1,11 @@
 #!/bin/bash
 # build-app.sh <out-dir> [signing-identity-hash]: swift build -c release, assemble <out-dir>/nOS.app,
-# sign it ad-hoc, or with the hash pazny.medulla mints (_thalamus_signing). FACE_URL sets NOSFaceURL.
+# sign it ad-hoc, or with the hash pazny.medulla mints (_thalamus_signing). FACE_URL/AUTH_URL set NOSFaceURL/NOSAuthURL.
 set -euo pipefail
 OUT=${1:?usage: build-app.sh <out-dir> [identity-hash]}
 IDENTITY=${2:--}
 FACE_URL=${FACE_URL:-https://os.dev.local/}  # face_domain's default; the role passes the resolved one
+AUTH_URL=${AUTH_URL:-https://auth.dev.local/}  # authentik_domain's default: the face window keeps only these two origins
 HERE=$(cd "$(dirname "$0")" && pwd)
 SCRATCH=${SWIFT_SCRATCH:-$HERE/.build}  # the role keeps it off the checkout
 
@@ -30,9 +31,10 @@ cat > "$APP/Contents/Info.plist" <<EOF
   <key>LSMinimumSystemVersion</key><string>14.0</string>
   <key>LSUIElement</key><true/>
   <key>NOSFaceURL</key><string>${FACE_URL}</string>
+  <key>NOSAuthURL</key><string>${AUTH_URL}</string>
 </dict>
 </plist>
 EOF
 plutil -lint "$APP/Contents/Info.plist"
-codesign -f -s "$IDENTITY" -i eu.thisisait.nos.app "$APP"
+codesign -f -s "$IDENTITY" --options runtime -i eu.thisisait.nos.app "$APP"  # hardened: no DYLD_INSERT_LIBRARIES
 echo "$APP"

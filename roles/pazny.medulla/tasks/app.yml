@@ -1,13 +1,14 @@
 ---
 # nOS.app (files/anatomy/thalamus/app): the menu-bar face of the medulla, built from this checkout,
 # installed at thalamus_nos_app and signed like the medulla. Listed in thalamus_decider_exes.
-# Not a daemon: a rebuild needs no thalamus restart. The face URL is in the hash: it is baked in.
+# Not a daemon: a rebuild needs no thalamus restart. The face and Authentik URLs are in the hash: baked in.
 
 - name: "[pazny.medulla] Hash the nOS.app source"
   ansible.builtin.shell: |
     set -o pipefail
     cd {{ (playbook_dir ~ '/files/anatomy/thalamus/app') | quote }}
-    { find Package.swift build-app.sh Sources -type f | LC_ALL=C sort | xargs cat; echo {{ ('https://' ~ face_domain ~ '/') | quote }}; } \
+    { find Package.swift build-app.sh Sources -type f | LC_ALL=C sort | xargs cat
+      echo {{ ('https://' ~ face_domain ~ '/') | quote }} {{ ('https://' ~ authentik_domain ~ '/') | quote }}; } \
       | shasum -a 256 | cut -d' ' -f1
   args:
     executable: /bin/bash
@@ -30,6 +31,7 @@
     set -euo pipefail
     export SWIFT_SCRATCH={{ (thalamus_home ~ '/app-target') | quote }}
     export FACE_URL={{ ('https://' ~ face_domain ~ '/') | quote }}
+    export AUTH_URL={{ ('https://' ~ authentik_domain ~ '/') | quote }}
     stage={{ (thalamus_home ~ '/app-stage') | quote }}
     mkdir -p "$stage"
     {{ (playbook_dir ~ '/files/anatomy/thalamus/app/build-app.sh') | quote }} "$stage"
@@ -69,8 +71,9 @@
     H={{ _thalamus_signing.stdout_lines[-1] | quote }}
     want="certificate leaf = H\"$(printf %s "$H" | tr 'A-F' 'a-f')\""
     if codesign --verify --strict {{ thalamus_nos_app | quote }} 2>/dev/null \
-      && codesign -d -r- {{ thalamus_nos_app | quote }} 2>&1 | grep -qF "$want"; then echo same; exit 0; fi
-    out=$(codesign -f -s "$H" -i eu.thisisait.nos.app {{ thalamus_nos_app | quote }} 2>&1) || { echo "$out" >&2; grep -q errSecInternalComponent <<<"$out" && { echo "codesign could not reach the signing key (errSecInternalComponent). Over SSH the keychain cannot ask
+      && codesign -d -r- {{ thalamus_nos_app | quote }} 2>&1 | grep -qF "$want" \
+      && codesign -dv {{ thalamus_nos_app | quote }} 2>&1 | grep -q '^CodeDirectory .*flags=.*runtime'; then echo same; exit 0; fi
+    out=$(codesign -f -s "$H" --options runtime -i eu.thisisait.nos.app {{ thalamus_nos_app | quote }} 2>&1) || { echo "$out" >&2; grep -q errSecInternalComponent <<<"$out" && { echo "codesign could not reach the signing key (errSecInternalComponent). Over SSH the keychain cannot ask
       'allow codesign?'. Once, in this session (it asks the login password), then re-run:
         security set-key-partition-list -S apple-tool:,apple:,codesign: -s {{ thalamus_signing_keychain | quote }}" >&2; exit 1; }; exit 1; }
     /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f {{ thalamus_nos_app | quote }} || true

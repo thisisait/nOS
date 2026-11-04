@@ -270,6 +270,12 @@ func faceURL() -> URL? {
     return s.flatMap(URL.init(string:))
 }
 
+/// Authentik, the face's login: the `NOSAuthURL` default, else Info.plist's. Unset: the face origin only.
+func authURL() -> URL? {
+    let s = UserDefaults.standard.string(forKey: "NOSAuthURL") ?? Bundle.main.object(forInfoDictionaryKey: "NOSAuthURL") as? String
+    return s.flatMap(URL.init(string:))
+}
+
 struct WebView: NSViewRepresentable {
     let url: URL
     func makeCoordinator() -> Failure { Failure() }
@@ -283,6 +289,12 @@ struct WebView: NSViewRepresentable {
 
     /// A load that fails is said in the window, never a blank page (2026-10-28: a wrong host showed white).
     final class Failure: NSObject, WKNavigationDelegate {
+        func webView(_ v: WKWebView, decidePolicyFor a: WKNavigationAction, decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void) {
+            guard a.targetFrame?.isMainFrame != false, let url = a.request.url else { return decisionHandler(.allow) }
+            if faceKeeps(url, origins: [faceURL(), authURL()].compactMap { $0 }) { return decisionHandler(.allow) }
+            if ["http", "https", "mailto"].contains(url.scheme?.lowercased() ?? "") { NSWorkspace.shared.open(url) }
+            decisionHandler(.cancel)
+        }
         func webView(_ v: WKWebView, didFailProvisionalNavigation _: WKNavigation!, withError e: Error) { say(v, e) }
         func webView(_ v: WKWebView, didFail _: WKNavigation!, withError e: Error) { say(v, e) }
         private func say(_ v: WKWebView, _ e: Error) {

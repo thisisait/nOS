@@ -184,3 +184,15 @@ public func answer(_ uuid: String, _ text: String) -> Data {
     let line: JSONValue = .object(["t": .string("answer"), "uuid": .string(uuid), "answer": .string(text)])
     return (try? JSONEncoder().encode(line)) ?? Data()
 }
+
+/// The face window's main frame stays on these origins (face, Authentik); any other page goes to the browser,
+/// which shows its URL: a redirect here could draw a look-alike login with no URL bar (review 11-03).
+public func faceKeeps(_ url: URL, origins: [URL]) -> Bool {
+    if url.absoluteString == "about:blank" { return true }  // the window's own failure page (loadHTMLString)
+    let key = { (u: URL) -> String? in
+        guard let s = u.scheme?.lowercased(), s == "http" || s == "https", let h = u.host?.lowercased() else { return nil }
+        return "\(s)://\(h):\(u.port ?? (s == "http" ? 80 : 443))"
+    }
+    guard let k = key(url) else { return false }
+    return origins.contains { key($0) == k }
+}
