@@ -1,8 +1,8 @@
 """The estate path is computed once per language: NOS_ESTATE_DIR, else ~/.nos/estate.
 
 WHY (operator ruling 2026-11-04, row estate-dir-one-source): the default was
-spelled at nine sites (five in one preflight file, three readers, the CLI, two
-spore scripts), and germinate.sh ignored NOS_ESTATE_DIR. Two names stay
+spelled at ten sites (five in one preflight file, two Python readers, the CLI,
+two spore scripts), and germinate.sh ignored NOS_ESTATE_DIR. Two names stay
 (NOS_ESTATE_DIR in shell, nos_estate_dir in Ansible); the fallback lives only in
 the declaring sites below. Comments are prose and not scanned.
 """
@@ -15,10 +15,17 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity  # noqa: E402
+
+DECLARES = re.compile(r"^nos_estate_dir: .*NOS_ESTATE_DIR", re.M)
+# The default layer that declares nos_estate_dir, wherever default_layers() puts it.
+LAYER = next((str(p.relative_to(REPO)) for p in nos_identity.default_layers()
+              if DECLARES.search(p.read_text(encoding="utf-8"))), None)
 SPELLING = re.compile(r"""\.nos['"]?\s*[/,]\s*['"]?estate\b""")
 COMMENT = re.compile(r"^\s*(#|//|\*|/\*)")
 DECLARING = {
-    "default.config.yml": "nos_estate_dir, for Ansible",
+    LAYER: "nos_estate_dir, for Ansible",
     "tools/nos_identity.py": "estate_dir(), for every Python reader",
     "tools/nos": "the CLI; shell cannot import Python",
     "tools/spore/nos-spore.sh": "runs from a spore image, without the repo",
@@ -49,13 +56,10 @@ def test_the_declaring_sites_honour_nos_estate_dir():
         lines = [ln for ln in (REPO / rel).read_text(encoding="utf-8").splitlines()
                  if SPELLING.search(ln) and not COMMENT.match(ln)]
         assert lines and all("${NOS_ESTATE_DIR:-$HOME/.nos/estate}" in ln for ln in lines), (rel, lines)
-    cfg = (REPO / "default.config.yml").read_text(encoding="utf-8")
-    assert re.search(r"^nos_estate_dir: .*NOS_ESTATE_DIR", cfg, re.M), "nos_estate_dir must derive from NOS_ESTATE_DIR"
+    assert DECLARES.search(nos_identity.default_config_text()), "nos_estate_dir must derive from NOS_ESTATE_DIR"
 
 
 def test_the_python_reader_honours_the_env(monkeypatch, tmp_path):
-    sys.path.insert(0, str(REPO / "tools"))
-    import nos_identity
     monkeypatch.setenv("NOS_ESTATE_DIR", str(tmp_path))
     assert nos_identity.estate_dir() == tmp_path
     monkeypatch.delenv("NOS_ESTATE_DIR")
