@@ -11,7 +11,7 @@
     "organ system": 13,
     "organism": 0,
     "habitat": 9,
-    "sense": 85,
+    "sense": 86,
     "limb": 122,
     "memory": 42,
     "law": 54,
@@ -1474,6 +1474,10 @@
       "kind": "reader"
     },
     "reader:keap-semantic-search": {
+      "level": "sense",
+      "kind": "reader"
+    },
+    "reader:kiwix-status": {
       "level": "sense",
       "kind": "reader"
     },

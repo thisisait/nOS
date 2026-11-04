@@ -4,7 +4,7 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 569,
+    "nodes": 570,
     "edges": 557,
     "nodes_pulse": 44,
     "nodes_judge": 5,
@@ -27,7 +27,7 @@
     "nodes_agent": 17,
     "nodes_tasktype": 9,
     "nodes_skill": 13,
-    "nodes_reader": 67,
+    "nodes_reader": 68,
     "nodes_effector": 115,
     "nodes_article": 28,
     "nodes_organ_system": 13,
@@ -3587,6 +3587,13 @@
       "title": "Semantic search over the estate's knowledge from the shell: a thin reader over KEAP's hybrid /agent/v1/search/semantic (query embedded + vector_top_k over the libsql embeddings + lexical + graph). Reader only; adds no vectors (no drift). Covers taxonomy/capture/note/object — DataTable rows once KEAP embeds them.",
       "anchor": "02.02.04",
       "description": "Reader tools/keap-semantic-search.py: Semantic search over the estate's knowledge from the shell: a thin reader over KEAP's hybrid /agent/v1/search/semantic (query embedded + vector_top_k over the libsql embeddings + lexical + graph). Reader only; adds no vectors (no drift). Covers taxonomy/capture/note/object — DataTable rows once KEAP embeds them."
+    },
+    "reader:kiwix-status": {
+      "kind": "reader",
+      "source": "tools/kiwix-status.py",
+      "title": "READER: per local ZIM, the newest dated file of the same book in the Kiwix OPDS catalog: current, behind N months (naming the file) or gone upstream; downloads nothing; an unreadable catalog makes every book UNKNOWN; a missing library dir is UNKNOWN. Files the role saves under a fixed name (`kiwix_init_zim_dest`) carry no date and read `undated`.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/kiwix-status.py: READER: per local ZIM, the newest dated file of the same book in the Kiwix OPDS catalog: current, behind N months (naming the file) or gone upstream; downloads nothing; an unreadable catalog makes every book UNKNOWN; a missing library dir is UNKNOWN. Files the role saves under a fixed name (`kiwix_init_zim_dest`) carry no date and read `undated`."
     },
     "reader:loader-vars-report": {
       "kind": "reader",
