@@ -880,3 +880,32 @@ fn a_json_schema_server_is_planned_constrained() {
     assert_eq!(Engine::of("vllm"), Engine::JsonSchema);
     assert_eq!(Engine::of("mistral-eu"), Engine::Free);
 }
+
+/// spark1 2026-10-22: noether-cs and rust-cs said absent; the search carried the framing, not the topic.
+/// The six nos-assay knowledge-fact prompts and their English twins: framing gone, topic kept.
+#[test]
+fn a_knowledge_search_sends_the_topic_not_the_framing() {
+    use thalamus::cortex_plan::knowledge_query;
+    let cases = [
+        ("Který blok naší znalostní báze je aritmetickým domovem Langlandsova programu a k jakým grupám jsou v něm připojeny automorfní formy?", "Langlandsova"),
+        ("Co podle naší znalostní báze spojuje spojité symetrie se zachovávajícími se veličinami v částicové fyzice?", "symetrie"),
+        ("Jaké fázové sloučeniny pokrývá podle naší znalostní báze chemie hlavních skupin, kromě hydridů, oxidů a halogenidů?", "fázové"),
+        ("Který systémový jazyk popisuje naše znalostní báze jako paměťově bezpečný díky vlastnictví a výpůjčkám, a bez čeho se obejde?", "vlastnictví"),
+        ("Jakou rovnováhu jmenuje naše znalostní báze v matematickém rámci populační a evoluční genetiky?", "genetiky"),
+        ("Co podle naší znalostní báze pohání kolísající kosmologickou konstantu v Sorkinově předpovědi 'everpresent Lambda'?", "Lambda"),
+        ("In our knowledge base, which block is the arithmetic home of the Langlands program, and to what kind of groups are its automorphic forms attached?", "Langlands"),
+        ("What does our knowledge base say links continuous symmetries to conserved quantities in particle physics?", "symmetries"),
+        ("According to our knowledge base, which kind of phase compounds does main-group chemistry cover besides hydrides, oxides and halides?", "compounds"),
+        ("Which systems language does our knowledge base describe as memory-safe through ownership and borrowing, and what does it do without?", "ownership"),
+        ("Which equilibrium does our knowledge base name in the mathematical framework of population and evolutionary genetics?", "equilibrium"),
+        ("In our knowledge base, what drives the fluctuating cosmological constant in Sorkin's 'everpresent Lambda' prediction?", "Sorkin"),
+    ];
+    let framing = ["knowledge", "base", "our", "per", "in", "what", "which", "znalostní", "báze", "podle", "naší", "naše", "co", "který", "jaké", "jakou"];
+    for (prompt, topic) in cases {
+        let q = knowledge_query(prompt);
+        assert!(q.split(' ').all(|w| !framing.contains(&w.to_lowercase().as_str())), "{prompt} -> {q}");
+        assert!(q.split(' ').any(|w| w == topic), "{prompt} -> {q}");
+    }
+    assert_eq!(knowledge_query("Co říká naše znalostní báze o Mpembově jevu?"), "Mpembově jevu");
+    assert_eq!(knowledge_query("our knowledge base?"), "our knowledge base?", "nothing left: the text itself");
+}

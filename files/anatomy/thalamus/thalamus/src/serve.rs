@@ -2365,7 +2365,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
         let planned = planned.or_else(|| (!named.is_empty()).then(|| {
             let _ = self.record(o, Kind::ToolResult, Some("route"), json!({"route": "knowledge", "matched": named}));
             json!({"role": "assistant", "content": null, "tool_calls": [{"id": "knowledge-1", "type": "function",
-                "function": {"name": "search_knowledge", "arguments": json!({"q": text}).to_string()}}]})
+                "function": {"name": "search_knowledge", "arguments": json!({"q": cortex_plan::knowledge_query(text)}).to_string()}}]})
         }));
         self.think_from(who, out, o, planned, face);
     }

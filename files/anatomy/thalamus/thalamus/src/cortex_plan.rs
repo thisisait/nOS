@@ -70,6 +70,23 @@ pub fn names_knowledge(text: &str) -> Vec<String> {
         .filter(|w| w.starts_with("knowledge") || w.starts_with("znalost")).collect()
 }
 
+/// Framing and question words a knowledge search drops (folded): what is left is the topic.
+const FRAMING: &[&str] = &["knowledge*", "znalost*", "base", "baze", "bazi", "our", "nas", "nase", "nasi", "naseho", "nasem",
+    "podle", "per", "according", "using", "in", "say", "says", "hold", "holds", "rika", "what", "which", "who", "whose",
+    "how", "where", "when", "why", "does", "do", "is", "are", "the", "a", "an", "to", "of", "and", "it", "its", "co",
+    "ktery", "ktera", "ktere", "kterou", "jaky", "jaka", "jake", "jakou", "kdo", "jak", "kde", "kdy", "proc", "v", "ve",
+    "se", "s", "z", "na", "k", "o", "je", "jsou"];
+
+/// spark1 2026-10-22: the whole prompt as q ranked the hit low (noether-cs, rust-cs said absent).
+/// The topic terms of a knowledge turn; the text itself when nothing is left.
+pub fn knowledge_query(text: &str) -> String {
+    let kept: Vec<&str> = text.split(|c: char| !c.is_alphanumeric()).filter(|w| !w.is_empty()).filter(|w| {
+        let f = nos_contract::uid::fold(w);
+        !FRAMING.iter().any(|s| s.strip_suffix('*').map_or(f == *s, |p| f.starts_with(p)))
+    }).collect();
+    if kept.is_empty() { text.to_string() } else { kept.join(" ") }
+}
+
 /// One stage of the flat AST: what the JSON-schema engine emits and the organ's AST is read into.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Stage {
