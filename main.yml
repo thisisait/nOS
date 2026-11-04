@@ -157,13 +157,14 @@
 
     # ── The codesign keychain dialog, asked first (2026-11-03) ────────────
     # Headless (SSH, CI, -y) cannot show it: skipped, the later sign explains.
+    # Only the tags that select a keychain sign, so `--tags backrest` never asks (ruling 2026-11-04).
     - import_tasks: tasks/preflight-keychain.yml
       when:
         - ansible_os_family == 'Darwin'
         - lookup('env', 'SSH_CONNECTION') | length == 0
         - lookup('env', 'CI') | length == 0
         - assume_yes | default(false) not in [true, 'true', 'True', 'yes', 'y', '1', 1]
-      tags: ['always', 'preflight', 'macos']
+      tags: ['thalamus', 'keap', 'medulla']
 
     # ── Preflight: ensure host Python interpreter has plugin loader deps ───
     # Anatomy P0.13 (2026-05-04): the plugin loader (nos_plugin_loader
