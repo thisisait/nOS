@@ -74,6 +74,12 @@
       2026-08-05 exactly this cost a full run: seventeen commits behind, an hour
       spent, everything green, nothing of the work validated.
 
+      {% if (playbook_dir | realpath) == ((nos_estate_dir | default(ansible_facts['env']['HOME'] ~ '/.nos/estate')) | realpath) %}
+      This is the estate checkout; it moves only by `nos update`:
+        nos update     (fetches, refuses an unsigned or non-fast-forward ref)
+
+      For a development checkout instead:
+      {% endif %}
         cd {{ playbook_dir }} && tools/deploy-sync.sh
 
       deploy-sync makes this checkout a clean mirror of {{ _ckt[2] }}: it
