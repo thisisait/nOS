@@ -41,13 +41,18 @@ SYNTHETIC_PROFILE = REPO / "profiles" / "test-users.yml"
 SYNTHETIC_FLAG = "nos_test_users_enabled"
 
 
+def estate_dir() -> Path:
+    """The estate clone: NOS_ESTATE_DIR, else ~/.nos/estate (Ansible: nos_estate_dir)."""
+    return Path(os.environ.get("NOS_ESTATE_DIR") or Path.home() / ".nos" / "estate")
+
+
 def operator_file(name: str, repo: Path | None = None) -> Path:
     """A gitignored operator file (config.yml, credentials.yml) as the converge
     reads it: the estate clone's (NOS_ESTATE_DIR, default ~/.nos/estate, since
     2026-10-23), else the main checkout's (a worktree has none), else this one's.
     Reads files only, never runs git (a reader may precede a forge check)."""
     repo = REPO if repo is None else repo
-    est = Path(os.environ.get("NOS_ESTATE_DIR") or Path.home() / ".nos" / "estate")
+    est = estate_dir()
     if (est / ".git").exists() and (est / name).is_file():
         return est / name
     main = None

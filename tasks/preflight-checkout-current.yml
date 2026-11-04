@@ -74,7 +74,7 @@
       2026-08-05 exactly this cost a full run: seventeen commits behind, an hour
       spent, everything green, nothing of the work validated.
 
-      {% set _is_estate = (playbook_dir | realpath) == ((nos_estate_dir | default(ansible_facts['env']['HOME'] ~ '/.nos/estate')) | realpath) %}
+      {% set _is_estate = (playbook_dir | realpath) == (nos_estate_dir | realpath) %}
       {% if _is_estate %}
       This is the estate checkout; it moves only by `nos update`:
         nos update     (fetches, refuses an unsigned or non-fast-forward ref)
@@ -168,14 +168,14 @@
 # cloud session) is not refused, only told. Gate: test_a_converge_runs_from_the_estate_checkout.py.
 - name: "[preflight] Stat the estate checkout"
   ansible.builtin.stat:
-    path: "{{ nos_estate_dir | default(ansible_facts['env']['HOME'] ~ '/.nos/estate') }}/.git"
+    path: "{{ nos_estate_dir }}/.git"
   register: _ckt_estate
   tags: ['always', 'preflight']
 
 - name: "[preflight] REFUSE: the estate converges from its own checkout"
   ansible.builtin.fail:
     msg: |
-      This host's estate runs from {{ nos_estate_dir | default(ansible_facts['env']['HOME'] ~ '/.nos/estate') }},
+      This host's estate runs from {{ nos_estate_dir }},
       but you are converging {{ playbook_dir }}. Everything this run persists (launchd plists,
       Pulse jobs, the thalamus's NOS_REPO_ROOT) would point back at this tree.
 
@@ -186,7 +186,7 @@
       Override for a deliberate one-off:  -e allow_non_estate_checkout=true
   when:
     - _ckt_estate.stat.exists
-    - (playbook_dir | realpath) != ((nos_estate_dir | default(ansible_facts['env']['HOME'] ~ '/.nos/estate')) | realpath)
+    - (playbook_dir | realpath) != (nos_estate_dir | realpath)
     - not (allow_non_estate_checkout | default(false) | bool)
   tags: ['always', 'preflight']
 
@@ -195,7 +195,7 @@
     msg: >-
       This host has no estate checkout, so it converges from {{ playbook_dir }}.
       Give the estate its own clone (dry-run first):
-      tools/estate-adopt.sh --dir {{ nos_estate_dir | default(ansible_facts['env']['HOME'] ~ '/.nos/estate') }} --from {{ playbook_dir }}
+      tools/estate-adopt.sh --dir {{ nos_estate_dir }} --from {{ playbook_dir }}
   when: not _ckt_estate.stat.exists
   tags: ['always', 'preflight']
 

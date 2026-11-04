@@ -19,7 +19,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SELF="$HERE/$(basename "${BASH_SOURCE[0]}")"
 IMG="$HERE/nos-spore.sparsebundle"
 SRC="${NOS_SRC_DIR:-$HOME/projects/nOS}"
-EST="$HOME/.nos/estate"
+EST="${NOS_ESTATE_DIR:-$HOME/.nos/estate}"
 UPSTREAM="https://github.com/thisisait/nOS.git"
 CONFIRM=0
 while [ $# -gt 0 ]; do

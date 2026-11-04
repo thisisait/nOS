@@ -247,7 +247,7 @@ def axis_repos(res: Result, do_fetch: bool) -> None:
 
 def axis_estate(res: Result, do_fetch: bool) -> None:
     """The clone the converge runs from (row estate-dev-split), at the ref `nos update` recorded."""
-    est = Path(os.environ.get("NOS_ESTATE_DIR") or Path.home() / ".nos" / "estate")
+    est = estate_dir()
     if not (est / ".git").exists():
         res.add("repo", "estate", f"{est} absent — the converge runs from a dev tree (tools/estate-adopt.sh)", UNREADABLE)
         return
@@ -423,7 +423,7 @@ def axis_toolchain(res: Result) -> None:
 
 # Layer resolution lives in nos_identity — the same reader discovery-scan and
 # nos-smoke use, so three tools cannot disagree about one flag.
-from nos_identity import UNKNOWN, default_config_text, install_flags, ran, resolve_flag, services  # noqa: E402
+from nos_identity import UNKNOWN, default_config_text, estate_dir, install_flags, ran, resolve_flag, services  # noqa: E402
 
 
 def axis_config(res: Result, flag: str) -> None:
