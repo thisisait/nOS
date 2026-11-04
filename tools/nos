@@ -527,8 +527,8 @@ fi
 
 # A --tags name no task carries runs nothing and still ends green: 11-02 `--tags device_gateway`
 # (the tag is device-gateway) deployed nothing at failed=0. Every requested tag is checked against
-# `--list-tags`, cached per clean HEAD; an unreadable list warns and proceeds (the run reports it).
-# Gate: test_unknown_tag_is_refused.py.
+# `--list-tags`, cached per clean HEAD; an unreadable list warns and proceeds. introspect/persist
+# hide behind a dynamic include (state-report.yml), so are allowed by name. Gate: test_unknown_tag_is_refused.py.
 _req_tags="" _prev=""
 for a in ${PASSTHRU[@]+"${PASSTHRU[@]}"}; do
   case "$_prev" in --tags|-t|--skip-tags) _req_tags="$_req_tags,$a" ;; esac
@@ -555,7 +555,7 @@ if [ -n "$_req_tags" ]; then
   else
     _bad=0
     for t in $(printf '%s' "$_req_tags" | tr ',' ' '); do
-      case "$t" in all|always|never|tagged|untagged) continue ;; esac
+      case "$t" in all|always|never|tagged|untagged|introspect|persist) continue ;; esac
       printf '%s\n' "$_known" | grep -qxF -- "$t" && continue
       _norm="$(printf '%s' "$t" | tr 'A-Z_' 'a-z-')"
       _near="$(printf '%s\n' "$_known" | while read -r k; do

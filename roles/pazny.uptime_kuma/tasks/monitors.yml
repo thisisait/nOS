@@ -92,7 +92,7 @@
 
       Expected cause: the container predates the `UPTIME_KUMA_DB_TYPE=sqlite`
       env var (roles/pazny.uptime_kuma/templates/compose.yml.j2) and was not
-      recreated. Fix with `nos --tags uptime_kuma`, which
+      recreated. Fix with `nos --tags uptime-kuma`, which
       re-renders the override and recreates the container in one pass.
 
       If it persists AFTER a recreate, check `docker exec iiab-uptime-kuma-1

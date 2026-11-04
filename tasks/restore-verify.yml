@@ -88,5 +88,5 @@
 
       If any floor failed above, the restore did NOT fully replay — re-run
       `--tags restore` for the missing source (restore is idempotent per-source).
-      Then run service health:  nos --tags health
+      Then run service health:  nos --tags verify
       ══════════════════════════════════════════════════════════════════════
