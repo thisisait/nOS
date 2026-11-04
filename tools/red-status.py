@@ -71,6 +71,25 @@ def set_point_file(var: str) -> pathlib.Path:
     return pathlib.Path(os.environ.get(var) or base / _SET_POINTS[var])
 
 
+def stray_set_points() -> list[str]:
+    """A halt or pause in the path the rule did not take holds nothing anyone reads;
+    a settings dir this user cannot enter made the rule fall back unseen (mini, 11-02)."""
+    out, parent = [], os.path.dirname(SETTINGS_DIR)
+    if os.path.isdir(parent) and not os.access(parent, os.X_OK) or \
+            os.path.isdir(SETTINGS_DIR) and not os.access(SETTINGS_DIR, os.R_OK | os.X_OK):
+        out.append(f"cannot reach the set-points at {SETTINGS_DIR} — this reader falls back to ~/.nos, Pulse does not")
+    for var, name in _SET_POINTS.items():
+        taken = set_point_file(var)
+        for cand in (pathlib.Path(SETTINGS_DIR) / name, pathlib.Path.home() / ".nos" / name):
+            try:
+                stray = cand != taken and cand.is_file()
+            except OSError:
+                continue
+            if stray:
+                out.append(f"stray set-point {cand} — nothing reads it; the rule reads {taken} (move or remove it)")
+    return out
+
+
 LOOPS_PAUSED_FILE = set_point_file("NOS_LOOPS_PAUSED_FILE")
 #: The exit code agent-run-lock.sh returns when the loops are paused; a pulse
 #: run recorded with it is a hold, never a failure.
@@ -1167,6 +1186,7 @@ def collect() -> dict:
     # never becomes an UNKNOWN. Its presence is a HOLD, reported by hold_lines().
     report["loops_paused"] = loops_paused()
     # The emergency halt (one file, tools/nos halt): a HOLD in plain words, never silence.
+    report["stray_set_points"] = stray_set_points()
     halt = set_point_file("NOS_HALT_FILE")
     try:
         report["halt"] = halt.read_text(encoding="utf-8").strip() if halt.is_file() else None
@@ -1187,6 +1207,7 @@ def reds(report: dict) -> list[str]:
     # First: a starved VM is the cause of every timeout below it.
     out.extend(report.get("docker_pressure") or [])
     out.extend(report.get("crash_loops") or [])
+    out.extend(report.get("stray_set_points") or [])
     chain = report.get("audit_chain")
     chain_broken = bool(chain and chain.get("ok") is False)
     if chain_broken:

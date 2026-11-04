@@ -213,7 +213,16 @@ fi
 # The set-points (halt, loops pause), one rule in every reader (test_set_points_resolve_one_path.py):
 # NOS_*_FILE wins; else the system-user dir the medulla unit reads, when it exists; else ~/.nos.
 # ponytail: fixed though nos_system_home is configurable; upgrade = render the path into /etc/nos.
-_nos_sp=/var/lib/nos/settings; [ -d "$_nos_sp" ] || _nos_sp="$HOME/.nos"
+# A dir that exists but this user cannot enter is NOT absent: falling back there wrote
+# ~/.nos/halt while Pulse read settings/halt (mini, 11-02). The writers refuse instead.
+_nos_sp=/var/lib/nos/settings; _nos_sp_err=""
+if [ -d "$_nos_sp" ]; then [ -r "$_nos_sp" ] && [ -x "$_nos_sp" ] || _nos_sp_err="$_nos_sp is not readable by $(id -un)"
+elif [ -d "${_nos_sp%/*}" ] && ! [ -x "${_nos_sp%/*}" ]; then _nos_sp_err="${_nos_sp%/*} is not searchable by $(id -un)"
+else _nos_sp="$HOME/.nos"; fi
+_nos_sp_reach() {  # <var> <who> — refuse when the rule would pick a dir we cannot reach
+  [ -n "${!1:-}" ] || [ -z "$_nos_sp_err" ] && return 0
+  echo "$2: cannot reach the set-points ($_nos_sp_err) — refusing to fall back to ~/.nos" >&2; exit 77
+}
 
 # ── `nos loops <pause|resume|status>` — live SERE-loop pause switch ───────────
 # Pause the AGENT RUNTIME at its single chokepoint (agent-run-lock.sh) so the
@@ -284,6 +293,7 @@ if [ "${1:-}" = "loops" ]; then
   shift
   _lp="${NOS_LOOPS_PAUSED_FILE:-$_nos_sp/loops-paused}"
   sub="${1:-status}"; [ $# -gt 0 ] && shift
+  case "$sub" in pause|resume|status) _nos_sp_reach NOS_LOOPS_PAUSED_FILE "nos loops $sub" ;; esac
   case "$sub" in
     pause)
       reason=""
@@ -356,6 +366,7 @@ if [ "${1:-}" = "halt" ] || [ "${1:-}" = "resume" ]; then
   elif [ "$verb" != "state" ]; then
     echo "nos $verb: no medulla at $_med — the shell writes the file itself" >&2
   fi
+  _nos_sp_reach NOS_HALT_FILE "nos $verb"
   case "$verb" in
     halt)
       mkdir -p "$(dirname "$_halt")" || exit 1
