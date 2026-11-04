@@ -152,7 +152,7 @@
   ansible.builtin.file:
     path: "{{ _keap_traefik_confd }}"
     state: directory
-    mode: '0755'
+    mode: '0700'  # same mode pazny.traefik sets: no flip-flop between roles
 
 # Public bearer-only ingest route (DEVICE entry point — AR glasses etc.).
 # A 4th file in Traefik's watched conf.d next to the traefik-role-rendered

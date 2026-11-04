@@ -40,13 +40,13 @@
 # ── Host directory tree ──────────────────────────────────────────────────────
 - name: "[pazny.traefik] Ensure config + dynamic + log directories exist"
   ansible.builtin.file:
-    path: "{{ item }}"
+    path: "{{ item.path }}"
     state: directory
-    mode: '0755'
+    mode: "{{ item.mode }}"
   loop:
-    - "{{ traefik_config_dir }}"
-    - "{{ traefik_dynamic_dir }}"
-    - "{{ traefik_log_dir }}"
+    - { path: "{{ traefik_config_dir }}", mode: '0755' }
+    - { path: "{{ traefik_dynamic_dir }}", mode: '0700' }  # middlewares.yml holds edge secrets; Traefik reads as root
+    - { path: "{{ traefik_log_dir }}", mode: '0755' }
 
 # Manifest catalog is loaded per-task via `vars:` scope on the services
 # template render below (NOT include_vars at the role level). Loading it

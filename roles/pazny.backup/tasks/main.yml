@@ -13,6 +13,14 @@
     state: directory
     mode: '0700'
 
+# backup.sh `mkdir -p` makes staging's parent at umask 0755; tasks/backup.yml
+# declares ~/backups 0700 but is skipped whenever Backrest is on.
+- name: "[backup] Ensure ~/backups is 0700"
+  ansible.builtin.file:
+    path: "{{ ansible_facts['env']['HOME'] }}/backups"
+    state: directory
+    mode: '0700'
+
 # Platform-split, because this was an UNGATED brew call and Linux has Linuxbrew
 # on $PATH — so `community.general.homebrew` did not skip, it ran, and the estate
 # built awscli from a Linuxbrew formula whose post-install crashed inside
