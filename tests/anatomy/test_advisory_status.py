@@ -676,6 +676,9 @@ N8N = [  # patched written ">= fix": read as unreadable, n8n 2.37.10 showed only
 ]
 JELLYFIN = [_adv("GHSA-jg92-mrxq-vv75", ("< 10.11.10, > 10.9.0", "10.11.10"), sev="medium")]
 GITEA = [_adv("GHSA-82f7-87hm-852x", ("<= 1.26.4, >1.27.0", "1.27.0, 28.0.0"))]
+# A patch below an open group's floor belongs to the other group and closes nothing.
+REOPENED = [_adv("GHSA-x1", ("<= 1.26.4, >1.27.0", "1.27.0"))]
+SPLIT = [_adv("GHSA-x2", ("< 1.5.0, >= 2.0.0", "1.5.0"))]
 
 
 @pytest.mark.parametrize("payload, version, affected", [
@@ -687,6 +690,8 @@ GITEA = [_adv("GHSA-82f7-87hm-852x", ("<= 1.26.4, >1.27.0", "1.27.0, 28.0.0"))]
     (GITEA, "28.2.0", False),    # the open '>1.27.0' branch is closed by its patch 28.0.0
     (GITEA, "1.26.4", True),
     (GITEA, "1.27.0", False),
+    (REOPENED, "28.2.0", True),
+    (SPLIT, "2.1.0", True),
 ])
 def test_the_range_forms_of_2026_10_31_match(adv, payload, version, affected):
     _, pin = _github_pin(adv, "o/r", None, version, payload)

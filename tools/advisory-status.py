@@ -416,9 +416,11 @@ def _match_github(version: str, advisories: list[dict]) -> tuple[list[dict], lis
                 # n8n writes patched as ">= 2.42.1": the fix is the version after ">=".
                 patched = [parse_version(p) for p in re.split(r"[,\s]+|>=", str(v.get("patched_versions") or ""))
                            if p.strip()]
-                # An open group (gitea ">1.27.0") is closed by its patches, one group at a time.
+                # An open group (gitea ">1.27.0") is closed only by patches inside it: 1.27.0
+                # sits under its floor and belongs to "<= 1.26.4", so it clears no 28.x.
                 rows.append((v, any(_holds(key, g) and (any(op in _UPPER for op, _ in g)
-                                                        or not _closed_by_patches(key, patched))
+                                                        or not _closed_by_patches(
+                                                            key, [p for p in patched if _holds(p, g)]))
                                     for g in range_groups(v["vulnerable_version_range"])), patched))
         except ValueError:
             unreadable.append(a.get("ghsa_id"))
