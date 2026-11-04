@@ -28,13 +28,10 @@
   ansible.builtin.assert:
     that:
       - export_subject is defined
-      # Strict RFC-ish email; rejects shell metacharacters. export_subject may be
-      # interpolated into a container_exec one-liner (none today, but the gate
-      # mandates the bare token), so harden the input here — the same host-RCE
-      # guard the erasure sibling carries.
-      # Or an org party slug (party-ico-NNNNNNNN): lowercase, digits, inner hyphens,
-      # \Z so a trailing newline cannot slip past '$'. Routed to the digest closure only.
-      - (export_subject | string | regex_search('^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$') is not none)
+      # Plain email or org party slug (party-ico-NNNNNNNN); \Z, not $, so a trailing
+      # newline cannot pass. Same host-RCE guard as the erasure sibling (no one-liner
+      # takes export_subject today; the gate mandates the bare token). Slugs: digest only.
+      - (export_subject | string | regex_search('^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\\Z') is not none)
         or (export_subject | string | regex_search('^party-[a-z0-9]+(-[a-z0-9]+)*\\Z') is not none)
     fail_msg: "Set -e export_subject=<plain email> or <party slug, e.g. party-ico-00000112> (no shell metacharacters)."
     quiet: true

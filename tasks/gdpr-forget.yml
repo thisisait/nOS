@@ -21,12 +21,10 @@
   ansible.builtin.assert:
     that:
       - forget_subject is defined
-      # Strict RFC-ish email; rejects spaces/;/`/$/&/| etc. forget_subject is
-      # interpolated into a container_exec one-liner, so 'a@b; rm -rf / #' must
-      # NEVER pass this gate (host-RCE guard on the confirmed-erasure path).
-      # Or an org party slug (party-ico-NNNNNNNN): lowercase, digits, inner hyphens,
-      # \Z so a trailing newline cannot slip past '$'. Routed to the digest closure only.
-      - (forget_subject | string | regex_search('^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$') is not none)
+      # Plain email or org party slug (party-ico-NNNNNNNN); \Z, not $, so a trailing
+      # newline cannot pass. forget_subject goes into a container_exec one-liner:
+      # 'a@b; rm -rf / #' must never pass (host-RCE guard). Slugs go to the digest closure only.
+      - (forget_subject | string | regex_search('^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\\Z') is not none)
         or (forget_subject | string | regex_search('^party-[a-z0-9]+(-[a-z0-9]+)*\\Z') is not none)
     fail_msg: "Set -e forget_subject=<plain email> or <party slug, e.g. party-ico-00000112> (no shell metacharacters)."
     quiet: true

@@ -22,7 +22,7 @@ ENV.filters["bool"] = bool
 FILES = {"forget": REPO / "tasks" / "gdpr-forget.yml", "export": REPO / "tasks" / "gdpr-export.yml"}
 GOOD_PARTY = "party-ico-00000112"
 BAD = ["a@b; rm -rf / #", "party-ico-1; x", "Party-ICO-00000112", "party ico 1",
-       "party-ico-1 ", "", "party-", "party-$(id)", "party-ico-1\nx", "party-ico-1\n", "-party-ico-1"]
+       "party-ico-1 ", "", "party-", "party-$(id)", "party-ico-1\nx", "party-ico-1\n", "-party-ico-1", "a@b.co\n"]
 
 
 def _tasks(kind):
