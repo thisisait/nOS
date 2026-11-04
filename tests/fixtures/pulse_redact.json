@@ -428,6 +428,46 @@
   [
    "PASSWORD=fake$val!@ x",
    "PASSWORD=<REDACTED> x"
+  ],
+  [
+   "PRIVATEKEY=abcdef123456",
+   "PRIVATEKEY=<REDACTED>"
+  ],
+  [
+   "privateKey: abcdefghij",
+   "privateKey: <REDACTED>"
+  ],
+  [
+   "accessKey=AKIAabcdef12",
+   "accessKey=<REDACTED>"
+  ],
+  [
+   "AUTHKEY=abcdef123456",
+   "AUTHKEY=<REDACTED>"
+  ],
+  [
+   "SSHKEY=abcdef123456",
+   "SSHKEY=<REDACTED>"
+  ],
+  [
+   "encryptionKey=abcdef123456",
+   "encryptionKey=<REDACTED>"
+  ],
+  [
+   "OAUTH=abcdef123456",
+   "OAUTH=<REDACTED>"
+  ],
+  [
+   "KEYCLOAK_URL=https://sso.example",
+   "KEYCLOAK_URL=https://sso.example"
+  ],
+  [
+   "Primary key: users_pkey (id)",
+   "Primary key: <REDACTED>"
+  ],
+  [
+   "TokenError: refresh failed for host",
+   "TokenError: <REDACTED>"
   ]
  ]
 }
