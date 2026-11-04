@@ -158,11 +158,11 @@ def range_groups(rng: str) -> list[list[tuple[str, tuple]]]:
                 raise ValueError(f"not a range: {rng!r}")
             op = {"=<": "<=", "=>": ">="}.get(pre, pre) if pre else _POSTFIX.get(post, "=")
             bound = parse_version(ver)
-            # A lower bound after a single upper starts a new pair (">=9.2.0 <9.2.10 >=9.3.0");
-            # after a list of uppers it is the list's floor (grafana "< 9.0.3, < 8.5.9, >= 5.3").
-            uppers_so_far = sum(o in _UPPER for o, _ in cur)
-            if cur and op in (*_LOWER, "=") and any(o in (*_UPPER, "=") for o, _ in cur) \
-                    and not (op in _LOWER and uppers_so_far >= 2 and all(o in _UPPER for o, _ in cur)):
+            # A lower bound after a closed pair or above the uppers starts a new range
+            # (">=9.2.0 <9.2.10 >=9.3.0", gitea "<= 1.26.4, >1.27.0"); below uppers only it is
+            # their floor (jellyfin "< 10.11.10, > 10.9.0", grafana "< 9.0.3, < 8.5.9, >= 5.3").
+            floor = op in _LOWER and all(o in _UPPER and bound < b for o, b in cur)
+            if cur and op in (*_LOWER, "=") and any(o in (*_UPPER, "=") for o, _ in cur) and not floor:
                 groups.append(cur)
                 cur = []
             cur.append((op, bound))
@@ -404,7 +404,6 @@ def _match_github(version: str, advisories: list[dict]) -> tuple[list[dict], lis
     no patch of its own (an older line) stays affected.
     """
     key, hits, unreadable = parse_version(version), [], []
-    own = release_line(key)
     for a in advisories:
         if a.get("withdrawn_at"):
             continue
@@ -414,21 +413,25 @@ def _match_github(version: str, advisories: list[dict]) -> tuple[list[dict], lis
                 raise ValueError("no range")
             rows = []
             for v in vulns:
-                patched = [parse_version(p) for p in re.split(r"[,\s]+", str(v.get("patched_versions") or ""))
+                # n8n writes patched as ">= 2.42.1": the fix is the version after ">=".
+                patched = [parse_version(p) for p in re.split(r"[,\s]+|>=", str(v.get("patched_versions") or ""))
                            if p.strip()]
-                rows.append((v, any(_holds(key, g) for g in range_groups(v["vulnerable_version_range"])),
-                             patched))
+                # An open group (gitea ">1.27.0") is closed by its patches, one group at a time.
+                rows.append((v, any(_holds(key, g) and (any(op in _UPPER for op, _ in g)
+                                                        or not _closed_by_patches(key, patched))
+                                    for g in range_groups(v["vulnerable_version_range"])), patched))
         except ValueError:
             unreadable.append(a.get("ghsa_id"))
             continue
-        own_patched = any(release_line(p) == own for _, _, ps in rows for p in ps)
+        # Patches sharing a major make the line major.minor (n8n 2.45.5, 2.46.1: 2.45.7 is fixed).
+        width = max(len(release_line(key)), _line_width([p for _, _, ps in rows for p in ps]))
+        own = key[0][:width]
+        own_patched = any(p[0][:width] == own for _, _, ps in rows for p in ps)
         for v, holds, patched in rows:
             if not holds:
                 continue
-            if own_patched and patched and all(release_line(p) != own for p in patched):
+            if own_patched and patched and all(p[0][:width] != own for p in patched):
                 continue  # this range is another line's; ours has its own patch
-            if _closed_by_patches(key, v["vulnerable_version_range"], patched):
-                continue
             pkg = v.get("package") or {}
             # A repo advisory can cover several packages: the hit names the
             # one whose range matched, so a cross-package match is visible.
@@ -442,13 +445,13 @@ def _match_github(version: str, advisories: list[dict]) -> tuple[list[dict], lis
     return hits, unreadable
 
 
-def _closed_by_patches(key: tuple, rng: str, patched: list[tuple]) -> bool:
+def _closed_by_patches(key: tuple, patched: list[tuple]) -> bool:
     """A range with no upper bound is closed by its patched versions (redis ">= 2.8.18",
     patched "6.2.16, 7.2.6, 7.4.1" does not reach 8.10.1): fixed when a patch on the
     version's own line is at or below it, or when the version is above every patch.
     The line is major.minor when two patches share a major (7.2.6 and 7.4.1), else major,
     so 7.3.0, between two patched lines, stays affected."""
-    if not patched or any(op in _UPPER for g in range_groups(rng) for op, _ in g):
+    if not patched:
         return False
     majors = [p[0][0] for p in patched]
     width = 2 if len(majors) != len(set(majors)) else 1
@@ -467,7 +470,8 @@ def _judge(row: dict, hits: list[dict], unreadable: list) -> None:
         row["state"] = "affected"
     elif hits:
         row["state"] = "UNKNOWN"
-        row["reason"] = f"{len(hits)} open-ended advisories (no fixed version published): judge them"
+        row["reason"] = f"{len(hits)} open-ended advisories (no fixed version published): judge them" \
+            + (f"; {len(unreadable)} advisories unreadable" if unreadable else "")
     elif unreadable:
         row["state"] = "UNKNOWN"
         row["reason"] = f"{len(unreadable)} advisories unreadable"

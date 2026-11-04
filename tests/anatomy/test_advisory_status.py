@@ -660,3 +660,42 @@ def test_github_pages_follow_the_cursor_not_the_page_number():
         return pages.get(url, pages[first])  # an ignored `page` answers page 1 again
     rows = adv._github_advisories("go-gitea/gitea", get)
     assert len(rows) == 101 and rows[-1]["ghsa_id"] == "B0", len(rows)
+
+
+# --- advisory-range-parse (live 2026-10-31, transcribed from the GitHub API 2026-11-04) ---
+
+def _adv(ghsa, *vulns, sev="high"):
+    return {"ghsa_id": ghsa, "severity": sev, "vulnerabilities": [
+        {"package": {"name": "p"}, "vulnerable_version_range": r, "patched_versions": p} for r, p in vulns]}
+
+
+N8N = [  # patched written ">= fix": read as unreadable, n8n 2.37.10 showed only an open-ended advisory
+    _adv("GHSA-5qpp-pqww-h7fp", ("< 2.42.1", ">= 2.42.1"), ("< 2.41.4", ">= 2.41.4")),
+    _adv("GHSA-f2cw-9483-7vcp", ("< 1.123.89", ">= 1.123.89"), ("< 2.46.1", ">= 2.46.1"),
+         ("< 2.45.5", ">= 2.45.5"), ("< 3.0.1", ">= 3.0.1")),
+]
+JELLYFIN = [_adv("GHSA-jg92-mrxq-vv75", ("< 10.11.10, > 10.9.0", "10.11.10"), sev="medium")]
+GITEA = [_adv("GHSA-82f7-87hm-852x", ("<= 1.26.4, >1.27.0", "1.27.0, 28.0.0"))]
+
+
+@pytest.mark.parametrize("payload, version, affected", [
+    (N8N, "2.37.10", True),
+    (N8N, "2.46.1", False),
+    (N8N, "2.45.7", False),      # 2.45.5 patches its own minor line; '< 2.46.1' is 2.46's range
+    (JELLYFIN, "12.2", False),   # a lower bound written after its upper is the same range
+    (JELLYFIN, "10.10.0", True),
+    (GITEA, "28.2.0", False),    # the open '>1.27.0' branch is closed by its patch 28.0.0
+    (GITEA, "1.26.4", True),
+    (GITEA, "1.27.0", False),
+])
+def test_the_range_forms_of_2026_10_31_match(adv, payload, version, affected):
+    _, pin = _github_pin(adv, "o/r", None, version, payload)
+    assert (pin["state"] == "affected") is affected, pin
+
+
+@pytest.mark.parametrize("vuln", [("x.63.10", "63.10"), ("<= 7.4.0", "TBD")])
+def test_an_unreadable_form_is_unknown_never_a_silent_miss(adv, vuln):
+    payload = [_adv("GHSA-open", (">= 1.0", "")), _adv("GHSA-bad", vuln)]
+    _, pin = _github_pin(adv, "o/r", None, "7.3.0", payload)
+    assert pin["state"] == "UNKNOWN" and pin["unreadable"] == ["GHSA-bad"], pin
+    assert "1 advisories unreadable" in pin["reason"], pin
