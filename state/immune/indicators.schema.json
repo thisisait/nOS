@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Immune indicator registry (ssot/doctrine/immune-system.md §2)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["indicators", "not_indicators"],
+  "properties": {
+    "indicators": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {"$ref": "#/$defs/indicator"}
+    },
+    "not_indicators": {
+      "description": "tools/*-status.py readers that are senses but not indicators, each with its reason",
+      "type": "object",
+      "propertyNames": {"pattern": "^[a-z0-9-]+-status\\.py$"},
+      "additionalProperties": {"type": "string", "minLength": 3}
+    }
+  },
+  "$defs": {
+    "field": {"type": "string", "minLength": 1},
+    "indicator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "kind", "antigen", "receptor", "effector", "signal",
+                   "heartbeat", "lifespan", "tolerance", "verdicts", "definition"],
+      "properties": {
+        "source": {"$ref": "#/$defs/field"},
+        "kind": {"enum": ["sentinel", "patrol", "crawler", "checkpoint", "regulator", "apoptosis", "verdicts"]},
+        "antigen": {"$ref": "#/$defs/field"},
+        "receptor": {"$ref": "#/$defs/field"},
+        "effector": {"type": "string", "pattern": "^(report|files |refuses |quarantine|stops )"},
+        "signal": {"$ref": "#/$defs/field"},
+        "heartbeat": {"$ref": "#/$defs/field"},
+        "lifespan": {"$ref": "#/$defs/field"},
+        "tolerance": {"$ref": "#/$defs/field"},
+        "verdicts": {"$ref": "#/$defs/field"},
+        "definition": {"$ref": "#/$defs/field"}
+      }
+    }
+  }
+}

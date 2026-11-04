@@ -1,0 +1,223 @@
+# The indicator registry: every immune indicator, its contract filled in.
+# Contract and kinds: ssot/doctrine/immune-system.md §2-§3; shape: indicators.schema.json.
+# "none" is an honest gap, not a pass: the heartbeat/apoptosis rows enforce them.
+# Gate: tests/anatomy/test_every_indicator_is_registered.py.
+
+indicators:
+  # ── sentinels: fixed place, read on demand ──────────────────────────────
+  undeclared-status:
+    source: tools/undeclared-status.py
+    kind: sentinel
+    antigen: a launchd label, listening port or crontab line no declaration explains
+    receptor: launchctl list, listening sockets, crontab, rendered compose (read-only)
+    effector: report
+    signal: tools/red-status.py
+    heartbeat: each red-status run
+    lifespan: none
+    tolerance: graph daemons, manifest host_programs, rendered compose, config.yml habitat_processes
+    verdicts: none
+    definition: none
+  workload-digest-status:
+    source: tools/workload-digest-status.py
+    kind: sentinel
+    antigen: a running container whose image ID differs from the converge's record
+    receptor: docker inspect, ~/.nos/workload-digests.json (read-only)
+    effector: report
+    signal: tools/red-status.py
+    heartbeat: each red-status run
+    lifespan: none
+    tolerance: the image IDs the last converge recorded
+    verdicts: none
+    definition: none
+  santa-status:
+    source: tools/santa-status.py
+    kind: sentinel
+    antigen: an exec outside the declared trees, any DENY, a mode other than Monitor
+    receptor: the Santa log and santactl (read-only)
+    effector: report
+    signal: tools/red-status.py
+    heartbeat: each red-status run
+    lifespan: none
+    tolerance: the Pulse runner trees plus OS, Homebrew and /Applications
+    verdicts: none
+    definition: none
+  advisory-status:
+    source: tools/advisory-status.py
+    kind: sentinel
+    antigen: a version pin or organ lockfile inside a published advisory range (OSV semantics)
+    receptor: committed pins and lockfiles; GitHub advisories, OSV, cve.now (GET only)
+    effector: report
+    signal: tools/red-status.py (via ~/.nos/advisory/last.json)
+    heartbeat: nightly, through the advisory-patrol:nightly patrol
+    lifespan: none
+    tolerance: state/genome/advisory-judgements.yml
+    verdicts: ~/.nos/advisory/last.json
+    definition: none
+  identity-status:
+    source: tools/identity-status.py
+    kind: sentinel
+    antigen: a realm account nobody declared, or a declared one the realm does not hold
+    receptor: Authentik, Gitea, Woodpecker, Wing api_tokens (GET / read-only sqlite)
+    effector: report
+    signal: none (operator runs it)
+    heartbeat: none
+    lifespan: none
+    tolerance: nos_identities, nos_synthetic_identities, nos_extra_identities
+    verdicts: none
+    definition: none
+  rbac-status:
+    source: tools/rbac-status.py
+    kind: sentinel
+    antigen: an enforcement point whose literal disagrees with the permission genome
+    receptor: the repo (Wing, face, cortex consts, Jinja tiers, agent and Bone scopes)
+    effector: report
+    signal: none (operator runs it)
+    heartbeat: none
+    lifespan: none
+    tolerance: state/genome/permissions.yml
+    verdicts: none
+    definition: none
+  septum-status:
+    source: tools/septum-status.py
+    kind: sentinel
+    antigen: a KEAP table def without client_scope, or rows walking to no client
+    receptor: state/keap-tables defs, KEAP rows (RO token)
+    effector: report
+    signal: none (operator runs it)
+    heartbeat: none
+    lifespan: none
+    tolerance: client_scope declared per table def
+    verdicts: none
+    definition: none
+  openhuman-status:
+    source: tools/openhuman-status.py
+    kind: sentinel
+    antigen: the RW token in an MCP server, a non-loopback socket, analytics or updaters on
+    receptor: OpenHuman profile configs, lsof, the process table (read-only)
+    effector: report
+    signal: none (operator runs it)
+    heartbeat: none
+    lifespan: none
+    tolerance: loopback and the declared Ollama on 11434
+    verdicts: none
+    definition: none
+  tailscale-status:
+    source: tools/tailscale-status.py
+    kind: sentinel
+    antigen: Funnel on (the estate published past the tailnet)
+    receptor: the tailscale CLI, dig (read-only)
+    effector: report
+    signal: none (operator runs it)
+    heartbeat: none
+    lifespan: none
+    tolerance: nos_edge lan_tailscale and the nos_lan_ip/32 route
+    verdicts: none
+    definition: none
+
+  # ── patrols: Pulse sweeps on a schedule (category security) ─────────────
+  advisory-patrol:nightly:
+    source: files/anatomy/plugins/advisory-patrol/plugin.yml
+    kind: patrol
+    antigen: an unjudged HIGH, CRITICAL or KEV match against a pin (exit 10); a source unread (exit 11)
+    receptor: tools/advisory-status.py
+    effector: report
+    signal: wing-inbox (pulse_runs findings exit code)
+    heartbeat: "50 3 * * *"
+    lifespan: none
+    tolerance: state/genome/advisory-judgements.yml
+    verdicts: Wing pulse_runs.exit_code
+    definition: none
+  authentik-tofu-drift:tofu-drift-plan:
+    source: files/anatomy/plugins/authentik-tofu-drift-base/plugin.yml
+    kind: patrol
+    antigen: a tofu plan over terraform/authentik/ that is not empty
+    receptor: tofu plan against Authentik (no apply)
+    effector: report
+    signal: wing-inbox (the plugin's notification block)
+    heartbeat: "30 5 * * *"
+    lifespan: none
+    tolerance: the committed terraform/authentik/ state
+    verdicts: Wing pulse_runs.exit_code
+    definition: none
+  discovery:contradiction-scan:
+    source: files/anatomy/plugins/discovery/plugin.yml
+    kind: patrol
+    antigen: two representations of one fact that disagree (exit 10)
+    receptor: tools/discovery-scan.py over the repo and the estate (GET only)
+    effector: files a roadmap row in KEAP (--file); never edits the fact
+    signal: wing-inbox (pulse_runs findings exit code) and the roadmap row
+    heartbeat: "40 6 * * *"
+    lifespan: none
+    tolerance: none declared (a filed row closes only after the pair is re-judged)
+    verdicts: Wing pulse_runs.exit_code
+    definition: none
+  gitleaks:nightly-scan:
+    source: files/anatomy/plugins/gitleaks/plugin.yml
+    kind: patrol
+    antigen: a secret pattern in the git history (exit 10)
+    receptor: gitleaks git over the repo history
+    effector: report
+    signal: wing-inbox (the plugin's notification block)
+    heartbeat: "0 3 * * *"
+    lifespan: none
+    tolerance: .gitleaksignore and .gitleaks.toml
+    verdicts: Wing pulse_runs.exit_code
+    definition: none
+  npm-supply-chain:daily-ioc-scan:
+    source: files/anatomy/plugins/npm-supply-chain/plugin.yml
+    kind: patrol
+    antigen: an installed name@version on the fetched IOC list (exit 1); the list unfetched (exit 2)
+    receptor: tools/npm-ioc-scan.py over every node_modules tree
+    effector: report
+    signal: wing-inbox (the plugin's notification block)
+    heartbeat: "20 4 * * *"
+    lifespan: none
+    tolerance: none (any match is a finding)
+    verdicts: Wing pulse_runs.exit_code
+    definition: none
+
+  # ── checkpoints: at a border, on crossing ───────────────────────────────
+  prepush-score:
+    source: tools/prepush-score.py
+    kind: checkpoint
+    antigen: deterministic signals in the push range, each with file:line; a local model scores beside them
+    receptor: git log and diff of the push range; a local Ollama model
+    effector: report (--strict refuses the push)
+    signal: the terminal at tools/nos-push
+    heartbeat: every push
+    lifespan: none
+    tolerance: commits some remote ref already holds
+    verdicts: ~/.nos/events/prepush-scores.jsonl
+    definition: tools/prepush-score.py and its prompt, SHA-256 in every record
+
+# Readers under tools/*-status.py that are senses but not immune indicators:
+# they answer a health or bookkeeping question, not "what is foreign here".
+not_indicators:
+  agent-status.py: agent runs and how they ended
+  agent-token-status.py: whether declared agent clients can mint a token
+  brew-pin-status.py: brew version age
+  caddy-status.py: the operator's assistant is up
+  ci-tier-status.py: CI lane freshness
+  container-status.py: crash loops (health)
+  cortex-status.py: the cortex organ's shape
+  docker-pressure-status.py: Docker VM memory pressure (health)
+  e2e-status.py: the last e2e run
+  elsewhere-status.py: work outside the control centre
+  estate-status.py: host vs repo vs origin
+  geo-status.py: geo layer row counts
+  loop-status.py: loop proposals and verdicts
+  managed-status.py: blank and backup coverage per dir
+  permission-status.py: what macOS lets the estate do
+  red-status.py: the aggregator the sentinels signal into
+  rem-status.py: the remediation queue
+  roadmap-status.py: the roadmap
+  router-status.py: the WAN router's presence
+  services-status.py: the service catalogue
+  skill-status.py: skill holders
+  snapshot-status.py: the pre-converge snapshot
+  stale-config-status.py: containers on replaced config (drift of its own, not foreign)
+  stuck-status.py: what stopped moving
+  thalamus-status.py: the thalamus is up
+  tissue-status.py: tissue declarations hold
+  usage-status.py: model budget spend
+  wing-status.py: Wing's tables
