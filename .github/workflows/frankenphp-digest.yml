@@ -2,6 +2,7 @@
 # php/frankenphp re-uploads its latest tag every night (~01:10 UTC), so frankenphp_checksums go
 # stale and the Linux install fails closed. This re-pins only what upstream's static.yaml signed
 # (tools/frankenphp-repin.py refuses anything else) and opens a PR into dev; the operator merges.
+# Push and PR go through the nos-bot GitHub App token: GITHUB_TOKEN events start no CI run.
 name: FrankenPHP digest
 'on':
   schedule:
@@ -9,16 +10,23 @@ name: FrankenPHP digest
   workflow_dispatch:
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   repin:
     runs-on: ubuntu-24.04
     steps:
+      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510  # v3.3.0
+        id: app
+        with:
+          client-id: ${{ secrets.NOS_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.NOS_BOT_APP_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
       - uses: actions/checkout@v7
         with:
           ref: dev
+          token: ${{ steps.app.outputs.token }}
       - name: Re-pin attested assets
         id: repin
         env:
@@ -29,7 +37,7 @@ jobs:
       - name: Open the PR
         if: steps.repin.outputs.changed == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app.outputs.token }}
         run: |
           branch="bot/frankenphp-digest-$(date -u +%Y%m%d)"
           git config user.name "github-actions[bot]"
