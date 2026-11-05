@@ -443,7 +443,7 @@ def heartbeats(path: pathlib.Path = REGISTRY) -> dict[str, dict] | None:
 
 
 def silent_cells(conn: sqlite3.Connection, beats: dict[str, dict]) -> list[dict]:
-    """Immune cells whose last Pulse run is older than their heartbeat (immune-system.md §4.1).
+    """Immune cells whose last Pulse run is older than their heartbeat (ssot/doctrine/immune-system.md §4.1).
     Not installed (no job, or one soft-deleted by plugin removal) is absent, not silent;
     a paused one is held_cells()'s line, not hidden."""
     jobs = {r["id"]: r["created_at"] for r in conn.execute(
