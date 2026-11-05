@@ -4,8 +4,8 @@
 Doctrine: ssot/doctrine/session-threat-model.md (the attacker is the assistant
 session). Aspects are docs/review/threat-checklist.md sections 1-6.
 
-  1. Deterministic signals from the exact push range (commits on HEAD that no
-     `<remote>/*` ref has yet), each with file:line. Never the line itself.
+  1. Deterministic signals from the exact push range (commits on --ref that
+     `<remote>/<dst>` lacks, or no `<remote>/*` ref without --dst), each with file:line. Never the line itself.
   2. A small LOCAL Ollama model reads the signals plus a bounded, redacted diff
      excerpt and returns per-aspect scores 0-100 in strict JSON. Anything else
      is UNAVAILABLE — never a guessed number. keep_alive 0: unloaded at once.
@@ -131,9 +131,14 @@ def _git(repo: Path, *args: str, check: bool = True) -> str:
     return out.stdout
 
 
-def push_range(repo: Path, remote: str, ref: str = "HEAD") -> tuple[str, str, int] | None:
-    """(base, head, commits) of what `git push <remote> <ref>:...` would carry; None if nothing."""
-    commits = _git(repo, "rev-list", "--reverse", ref, "--not", f"--remotes={remote}").split()
+def push_range(repo: Path, remote: str, ref: str = "HEAD", dst: str | None = None) -> tuple[str, str, int] | None:
+    """(base, head, commits) of what `git push <remote> <ref>:<dst>` lands on dst; None if nothing."""
+    # --not --remotes hid a pushed source: origin/<b>:dev scored empty while dev moved (review-v015).
+    # ponytail: a dst with no tracking ref (new branch) falls back to --remotes.
+    tracked = f"refs/remotes/{remote}/{(dst or '').removeprefix('refs/heads/')}"
+    known = dst and _git(repo, "rev-parse", "--verify", "-q", tracked, check=False).strip()
+    exclude = tracked if known else f"--remotes={remote}"
+    commits = _git(repo, "rev-list", "--reverse", ref, "--not", exclude).split()
     if not commits:
         return None
     parent = _git(repo, "rev-parse", "--verify", "-q", f"{commits[0]}^", check=False).strip()
@@ -386,6 +391,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--remote", default="origin")
     ap.add_argument("--range", help="BASE..HEAD instead of the push range")
     ap.add_argument("--ref", default="HEAD", help="the source ref the push carries (refspec left side)")
+    ap.add_argument("--dst", help="the branch it lands on (refspec right side); default: every remote ref")
     ap.add_argument("--model", default=DEFAULT_MODEL, help="Ollama model, or 'off'")
     ap.add_argument("--strict", action="store_true", help="exit 3 when any aspect reaches --threshold")
     ap.add_argument("--threshold", type=int, default=70)
@@ -398,9 +404,9 @@ def main(argv: list[str] | None = None) -> int:
         base, head = (_git(repo, "rev-parse", r).strip() for r in (base, head))
         commits = len(_git(repo, "rev-list", f"{base}..{head}").split())
     else:
-        found = push_range(repo, args.remote, args.ref)
+        found = push_range(repo, args.remote, args.ref, args.dst)
         if not found:
-            print(f"prepush-score: nothing to push from {args.ref} vs {args.remote}")
+            print(f"prepush-score: nothing to push from {args.ref} to {args.remote}/{args.dst or '*'}")
             return 0
         base, head, commits = found
     report = collect(repo, base, head)

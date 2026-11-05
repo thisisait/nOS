@@ -77,14 +77,17 @@ fi
 
 # 0. Score what each refspec carries, from its source ref (ssot/doctrine/session-threat-model.md).
 #    Scoring HEAD scored the checkout while `origin/<b>:dev` landed <b> (review-v015).
+#    The range is src minus <remote>/<dst>: minus every remote ref, a pushed src scored empty.
 for spec in "${REFSPECS[@]}"; do
-	src="${spec#+}"; src="${src%%:*}"
+	src="${spec#+}"; dst="${src#*:}"; src="${src%%:*}"
 	[ -n "$src" ] || continue  # `:branch` is a delete, it carries nothing
+	[ "$dst" = HEAD ] && dst="$BRANCH"
+	[ -n "$dst" ] || dst="$src"
 	if [ "$STRICT" -eq 1 ]; then
-		python3 "$SCRIPT_DIR/prepush-score.py" --repo "$PUSH_DIR" --remote "$REMOTE" --ref "$src" --strict \
+		python3 "$SCRIPT_DIR/prepush-score.py" --repo "$PUSH_DIR" --remote "$REMOTE" --ref "$src" --dst "$dst" --strict \
 			|| { echo "→ push refused by prepush-score --strict"; exit 3; }
 	else
-		python3 "$SCRIPT_DIR/prepush-score.py" --repo "$PUSH_DIR" --remote "$REMOTE" --ref "$src" \
+		python3 "$SCRIPT_DIR/prepush-score.py" --repo "$PUSH_DIR" --remote "$REMOTE" --ref "$src" --dst "$dst" \
 			|| echo "→ prepush-score failed (advisory) — pushing anyway"
 	fi
 done
