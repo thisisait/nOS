@@ -14,7 +14,6 @@ import re
 import sqlite3
 import subprocess
 import sys
-import time
 
 import yaml
 
@@ -83,22 +82,20 @@ def test_an_unknown_reader_rings_nothing_and_says_so(tmp_path):
 
 
 def test_the_spore_reseal_reader(tmp_path):
+    # Due = a blank newer than the last seal, nothing else: a backup-age term made it true only
+    # 03:00-09:00, so it closed by day and rang again every night (review 11-05).
     nos = tmp_path / ".nos"
     nos.mkdir()
     env = {**os.environ, "HOME": str(tmp_path)}
     run = lambda *a: subprocess.run([sys.executable, str(RESEAL), *a], env=env,  # noqa: E731
                                     capture_output=True, text=True, timeout=60).returncode
-    assert run() == 2, "no backup record must read UNKNOWN, not 'not due'"
-    now = time.time()
-    (nos / "backup-status.json").write_text(json.dumps({"last_run": now - 3600, "sources": [{"name": "a", "success": True}]}))
-    (nos / "backup-verify.json").write_text(json.dumps({"checked_at": now, "artifacts": []}))
+    assert run() == 1 and run("--done") == 1, "no blank, no backup record: 'not due', not UNKNOWN"
     (nos / "blank-runs.jsonl").write_text('{"started": "2026-11-01T10:00:00Z"}\n')
-    assert run() == 0 and run("--done") == 1, "a blank after no seal, fresh backup: due"
+    assert run() == 0 and run("--done") == 1, "a blank after no seal: due, whatever the backup says"
     (nos / "spore-seals.log").write_text("2026-11-02T10:00:00Z\n")
     assert run() == 1 and run("--done") == 0, "sealed after the blank: done"
-    (nos / "backup-status.json").write_text(json.dumps({"last_run": now - 7 * 3600, "sources": []}))
-    (nos / "spore-seals.log").write_text("")
-    assert run() == 1, "a stale backup is no ground to seal on"
+    (nos / "blank-runs.jsonl").write_text("not json\n")
+    assert run() == 2, "an unreadable blank record must read UNKNOWN"
 
 
 def test_the_first_task_is_declared():
