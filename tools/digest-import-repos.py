@@ -128,6 +128,7 @@ _MANIFESTS = {"package.json": _parse_package_json,
               "composer.json": _parse_composer_json,
               "Cargo.toml": _parse_cargo_toml,
               ".csproj": _parse_csproj}
+_VENDORED = {"vendor", "node_modules"}
 
 
 class RepoImporter:
@@ -164,11 +165,13 @@ class RepoImporter:
             apps = []
             for manifest in sorted(repo_dir.rglob("*")):
                 parser = _MANIFESTS.get(manifest.name) or _MANIFESTS.get(manifest.suffix)
-                if parser is None or not manifest.is_file():
+                # a committed vendor/ or node_modules/ is third-party code, not an app of this repo
+                if (parser is None or not manifest.is_file()
+                        or _VENDORED & set(manifest.relative_to(repo_dir).parts)):
                     continue
                 try:
                     pkgs = parser(manifest.read_text(encoding="utf-8"))
-                except (ValueError, OSError, ET.ParseError) as exc:
+                except (ValueError, OSError, ET.ParseError, AttributeError, TypeError) as exc:
                     self.skipped.append(f"{repo_dir.name}/{manifest.name}: unparsable ({exc})")
                     continue
                 apps.append({"path": str(manifest.parent.relative_to(repo_dir)),
@@ -209,10 +212,17 @@ class RepoImporter:
             repos.append({"slug": repo_slug, "name": r["repo_name"], "party": r["owner_slug"],
                           "remote": r["meta"].get("remote", ""), "head_sha": r["meta"].get("head", "")})
             for a in r["apps"]:
-                app_slug = _slug("app", repo_slug, a["path"] or "root")
+                # one dir may hold several manifests (composer.json + package.json): the
+                # manifest is part of the app's identity, or the gate refuses a duplicate slug
+                app_slug = _slug("app", repo_slug, a["path"] or "root", a["manifest"])
                 apps.append({"slug": app_slug, "name": f"{r['repo_name']}/{a['path'] or '.'}",
                              "repo": repo_slug, "path": a["path"], "archetype": a["manifest"]})
+                seen = set()
                 for (pname, pver, eco) in a["packages"]:
+                    # a crate in [dependencies] and [dev-dependencies] is one package; first wins
+                    if (eco, pname) in seen:
+                        continue
+                    seen.add((eco, pname))
                     packages.append({"slug": _slug("pkg", app_slug, eco, pname),
                                      "name": pname, "application": app_slug, "version": pver,
                                      "ecosystem": eco, "is_direct": "direct"})
