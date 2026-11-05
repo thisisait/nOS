@@ -30,13 +30,18 @@
   ansible.builtin.shell: |
     set -o pipefail
     {{ docker_bin }} compose -p devops \
-      exec -T -u git gitea gitea admin user list --admin 2>/dev/null \
+      exec -T -u git gitea gitea admin user list --admin \
       | grep -q "{{ gitea_admin_user | default(ansible_facts['user_id']) }}"
   args:
     executable: /bin/bash
   register: _gitea_admin_exists
   changed_when: false
   failed_when: false
+  # 11-05: one converge got rc >1 with no output (stderr went to /dev/null), the same call
+  # answered rc 0 minutes later. Retry a transient exec; keep stderr for the fail below.
+  until: _gitea_admin_exists.rc | default(0) in [0, 1]
+  retries: 5
+  delay: 6
   check_mode: false
   when: _gitea_container.stdout | default('') | length > 0
 
