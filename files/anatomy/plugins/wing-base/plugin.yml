@@ -315,6 +315,20 @@ pulse:
       max_concurrent: 1
       env:
         WING_DB_PATH: "{{ wing_home }}/app/data/wing.db"
+    # Operator tasks (2026-11-05): a declared task rings once when its condition
+    # reader turns true; the row closes on its `done` reader. Declarations:
+    # state/operator-tasks.yml. Gate: tests/anatomy/test_an_operator_task_rings_once.py.
+    - name: operator-tasks
+      category: notification
+      runner: subprocess
+      command: "{{ playbook_dir }}/tools/operator-tasks.py"
+      args: ["--apply"]
+      schedule: "*/15 * * * *"
+      jitter_min: 2
+      max_runtime_s: 300
+      max_concurrent: 1
+      env:
+        WING_DB_PATH: "{{ wing_home }}/app/data/wing.db"
     # ── Daily agent-cost tally (readiness item 2, 2026-08-12) ─────────────
     # pulse-run-agent.sh persists cost_usd + cost_basis into every
     # agent_run_end event; this job is the reader that makes the number seen.

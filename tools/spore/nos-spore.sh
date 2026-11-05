@@ -13,7 +13,8 @@
 #     --accept-loss   seal although LOST rows exist (they are listed in the image's HOST file)
 #
 # Seal again after every blank and right before a reset: a blank re-mints the secret master.
-# EXPERIMENTAL (2026-11-03): review before a reset; it writes only under --to. Rehearsal: REHEARSAL.md.
+# EXPERIMENTAL (2026-11-03): review before a reset; it writes under --to, plus one line to
+# ~/.nos/spore-seals.log (read by reseal-due.py, the operator task). Rehearsal: REHEARSAL.md.
 # =============================================================================
 set -euo pipefail
 export GIT_OPTIONAL_LOCKS=0  # the scan reads: git status must not refresh (write) any index
@@ -239,4 +240,5 @@ mkdir -p "$MNT"
 hdiutil attach "$IMG" -mountpoint "$MNT" -nobrowse -readonly >/dev/null; attached="$MNT"
 (cd "$MNT" && shasum -a 256 -c --quiet MANIFEST.sha256) || { echo "FAILED: the image does not read back" >&2; exit 4; }
 detach "$MNT"; attached=""
+date -u +%Y-%m-%dT%H:%M:%SZ >> "$NOS_HOME/spore-seals.log"
 echo "Sealed: $IMG (${n_files} files, read back OK, detached). On the new Mac: bash $TO/germinate.sh"

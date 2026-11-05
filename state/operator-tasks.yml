@@ -1,0 +1,10 @@
+# Operator tasks: a step only the operator can take, rung once when its condition comes true.
+# Read by tools/operator-tasks.py (Pulse job wing-base:operator-tasks). `condition` and `done`
+# are repo-relative readers: exit 0 = true, 1 = false, anything else = UNKNOWN, never a date.
+tasks:
+  - id: spore-reseal-after-backup
+    title: "Re-seal the spore: a blank re-minted the secret master"
+    command: tools/spore/nos-spore.sh --to /Volumes/<disk>/nos-spore --confirm
+    condition: [tools/spore/reseal-due.py]
+    done: [tools/spore/reseal-due.py, --done]
+    severity: high

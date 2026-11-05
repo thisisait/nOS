@@ -12,13 +12,13 @@
     "organism": 0,
     "habitat": 9,
     "sense": 86,
-    "limb": 122,
+    "limb": 123,
     "memory": 42,
     "law": 54,
-    "reflex": 44,
+    "reflex": 45,
     "heartbeat": 1,
     "internal": 76,
-    "edges": 438
+    "edges": 440
   },
   "nodes": {
     "agent:conductor": {
@@ -893,6 +893,10 @@
       "level": "limb",
       "kind": "effector"
     },
+    "effector:operator-tasks": {
+      "level": "limb",
+      "kind": "effector"
+    },
     "effector:outline-roles": {
       "level": "limb",
       "kind": "effector"
@@ -1350,6 +1354,10 @@
       "kind": "pulse"
     },
     "pulse:wing:inbox-reconcile": {
+      "level": "reflex",
+      "kind": "pulse"
+    },
+    "pulse:wing:operator-tasks": {
       "level": "reflex",
       "kind": "pulse"
     },
@@ -3174,6 +3182,11 @@
       "kind": "trigger"
     },
     {
+      "from": "pulse:wing:operator-tasks",
+      "to": "effector:operator-tasks",
+      "kind": "trigger"
+    },
+    {
       "from": "reader:loop-status",
       "to": "doctrine:ssot/doctrine/loop-contract.md#3.4",
       "kind": "governed_by"
@@ -3876,6 +3889,11 @@
     {
       "from": "service:pulse",
       "to": "pulse:wing:inbox-reconcile",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:wing:operator-tasks",
       "kind": "trigger"
     },
     {
