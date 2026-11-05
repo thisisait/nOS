@@ -1,0 +1,6 @@
+# Synthetic repo fixture (docs/idea/15): the composer/cargo/nuget manifests,
+# kept apart from repos-fixture so its package counts stay as they are.
+owner: { ico: "00000112", name: "Mesto Lipno (synthetic)" }
+remote: "https://git.kolben.invalid/mesto/backoffice.git"
+head: "5a5b5c5d5e5f5a5b5c5d5e5f5a5b5c5d5e5f5a5b"
+country: CZ

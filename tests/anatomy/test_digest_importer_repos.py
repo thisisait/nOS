@@ -72,3 +72,16 @@ def test_every_row_carries_provenance_and_teardown_is_leaf_first():
     order = [t for t, _ in plan]
     # package deleted before application before repo before party (leaf-first)
     assert order.index("package") < order.index("application") < order.index("repo") < order.index("party")
+
+
+def test_composer_cargo_and_csproj_yield_package_rows():
+    nd, mod = _load()
+    imp = mod.RepoImporter("repos-fixture-ecosystems", INDEX, fixture_mode=True)
+    bundle, errors = nd.run_importer(imp, str(FIXTURE.with_name("repos-fixture-ecosystems")), TABLES)
+    assert errors == [], errors
+    got = {(p["ecosystem"], p["name"], p["version"]) for p in bundle["deterministic"]["package"]}
+    # composer platform reqs (php, ext-*) are not packages; a path dep has no version
+    assert got == {("composer", "nette/application", "^3.2"), ("composer", "phpunit/phpunit", "^11.0"),
+                   ("cargo", "anyhow", "1.0"), ("cargo", "serde", "1.0.200"),
+                   ("cargo", "local-util", ""), ("cargo", "tempfile", "3"),
+                   ("nuget", "Newtonsoft.Json", "13.0.3"), ("nuget", "Serilog", "4.0.0")}
