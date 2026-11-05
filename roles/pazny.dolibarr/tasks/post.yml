@@ -38,14 +38,14 @@
     - (_doli_tables.rc | default(1)) == 0
     - (_doli_tables.stdout | default('') | trim) == '0'
 
-- name: "[pazny.dolibarr Post] Wait for the installer to create llx_const"
-  ansible.builtin.command:
-    argv: [docker, exec, "{{ mariadb_container | default('infra-mariadb-1') }}", sh, -c,
-           'exec mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" -N -e "$0"',
-           "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='{{ dolibarr_db_name }}' AND table_name='llx_const'"]
-  register: _doli_const_table
+# The entrypoint writes install.lock only once the install is done; llx_const alone came
+# early (11-05: const upserts passed, llx_user did not exist yet), so wait for the lock.
+- name: "[pazny.dolibarr Post] Wait for the installer to finish (install.lock back)"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p b2b exec -T dolibarr test -f /var/www/documents/install.lock
+  register: _doli_installed
   changed_when: false
-  until: (_doli_const_table.stdout | default('') | trim) == '1'
+  until: _doli_installed.rc == 0
   retries: 36
   delay: 5
   when: install_dolibarr | default(false) | bool
