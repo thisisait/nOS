@@ -222,6 +222,7 @@ def apply_detached(service: str, recipe_id: str) -> dict[str, Any]:
         "service": service,
         "recipe_id": recipe_id,
         "detached": True,
+        "actor": migrate_mod.ACTOR.get(),
         "returncode": proc.returncode,
         "output": out,
     }

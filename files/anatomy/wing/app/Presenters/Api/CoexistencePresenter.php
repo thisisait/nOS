@@ -42,7 +42,7 @@ final class CoexistencePresenter extends BaseApiPresenter
 		if (empty($body['tag']) || empty($body['version'])) {
 			$this->sendError('tag and version are required');
 		}
-		$this->proxyBoxApi($this->coexistence->provision($service, $body));
+		$this->proxyBoxApi($this->coexistence->provision($service, $body, $this->getActorId()));
 	}
 
 	/**
@@ -87,7 +87,7 @@ final class CoexistencePresenter extends BaseApiPresenter
 		if (empty($body['target_tag'])) {
 			$this->sendError('target_tag is required');
 		}
-		$this->proxyBoxApi($this->coexistence->cutover($service, (string) $body['target_tag']));
+		$this->proxyBoxApi($this->coexistence->cutover($service, (string) $body['target_tag'], $this->getActorId()));
 	}
 
 	/**
@@ -109,7 +109,7 @@ final class CoexistencePresenter extends BaseApiPresenter
 		$tag = (string) $body['tag'];
 		$dryRun = array_key_exists('dry_run', $body) ? (bool) $body['dry_run'] : true;
 		$ttlSeconds = (isset($body['ttl_seconds']) && is_int($body['ttl_seconds'])) ? $body['ttl_seconds'] : null;
-		$resp = $this->coexistence->promote($service, $tag, $dryRun, $ttlSeconds);
+		$resp = $this->coexistence->promote($service, $tag, $dryRun, $ttlSeconds, $this->getActorId());
 		if (!$dryRun && (int) ($resp['status'] ?? 502) < 400) {
 			$this->emit('coexistence_promote', $service, $tag, [
 				'coexistence_service' => $service,
@@ -139,7 +139,7 @@ final class CoexistencePresenter extends BaseApiPresenter
 		$tag = (string) $body['tag'];
 		$force = !empty($body['force']);
 		$dryRun = array_key_exists('dry_run', $body) ? (bool) $body['dry_run'] : true;
-		$resp = $this->coexistence->deactivate($service, $tag, $force, $dryRun);
+		$resp = $this->coexistence->deactivate($service, $tag, $force, $dryRun, $this->getActorId());
 		if (!$dryRun && (int) ($resp['status'] ?? 502) < 400) {
 			$this->emit('coexistence_demote', $service, $tag, [
 				'coexistence_service' => $service,
@@ -173,7 +173,7 @@ final class CoexistencePresenter extends BaseApiPresenter
 		}
 		$tag = (string) $body['tag'];
 		$dryRun = array_key_exists('dry_run', $body) ? (bool) $body['dry_run'] : true;
-		$resp = $this->coexistence->copyData($service, $tag, $dryRun);
+		$resp = $this->coexistence->copyData($service, $tag, $dryRun, $this->getActorId());
 		if (!$dryRun && (int) ($resp['status'] ?? 502) < 400) {
 			$respBody = is_array($resp['body'] ?? null) ? $resp['body'] : [];
 			$this->emit('coexistence_copy_data', $service, $tag, [
@@ -226,7 +226,7 @@ final class CoexistencePresenter extends BaseApiPresenter
 		$this->requireMethod('POST');
 		$body = $this->getJsonBody();
 		$force = !empty($body['force']);
-		$this->proxyBoxApi($this->coexistence->cleanup($service, $tag, $force));
+		$this->proxyBoxApi($this->coexistence->cleanup($service, $tag, $force, $this->getActorId()));
 	}
 
 	/**

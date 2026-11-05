@@ -66,7 +66,7 @@ final class UpgradesPresenter extends BaseApiPresenter
 	public function actionApply(string $service, string $recipe): void
 	{
 		$this->requireMethod('POST');
-		$this->proxyBoxApi($this->upgrades->apply($service, $recipe));
+		$this->proxyBoxApi($this->upgrades->apply($service, $recipe, $this->getActorId()));
 	}
 
 	/**
@@ -78,7 +78,7 @@ final class UpgradesPresenter extends BaseApiPresenter
 	public function actionApplyDetached(string $service, string $recipe): void
 	{
 		$this->requireMethod('POST');
-		$this->proxyBoxApi($this->upgrades->applyDetached($service, $recipe));
+		$this->proxyBoxApi($this->upgrades->applyDetached($service, $recipe, $this->getActorId()));
 	}
 
 	/**

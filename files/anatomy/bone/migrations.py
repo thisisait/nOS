@@ -12,6 +12,7 @@ from __future__ import annotations
 import os
 import re
 import subprocess
+from contextvars import ContextVar
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +29,13 @@ PLAYBOOK_DIR = Path(os.getenv("PLAYBOOK_DIR", os.path.expanduser("~/nOS")))
 # Migration ids look like "2026-04-22-rebrand-foo". Restrict to keep shell
 # invocations safe — ansible extra-vars are always shell-parsed.
 _ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$")
+
+# Who asked, as Wing forwarded it (X-Nos-Actor, set per request in main.py).
+# 2026-10-07: the person stopped at Wing; every mutating verb runs through
+# invoke_playbook, so the run and its reply name them here. Gate:
+# tests/anatomy/test_a_forwarded_verb_names_its_actor.py.
+ACTOR: ContextVar[str | None] = ContextVar("nos_actor", default=None)
+ACTOR_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 
 
 def _load_migration_file(path: Path) -> dict[str, Any] | None:
@@ -98,6 +106,9 @@ def invoke_playbook(tag: str, extra_vars: dict[str, str], timeout: int = 1800
     # Build extra-vars safely: only allow [A-Za-z0-9_.-] in keys/values since
     # this goes onto the ansible CLI. Keys may include underscores; values
     # should already be pre-validated migration ids / recipe ids.
+    actor = ACTOR.get()
+    if actor:
+        extra_vars = {**extra_vars, "nos_actor": actor}
     safe_pairs: list[str] = []
     for k, v in extra_vars.items():
         if not re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", k):
@@ -124,9 +135,10 @@ def invoke_playbook(tag: str, extra_vars: dict[str, str], timeout: int = 1800
         stdout, _ = proc.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
         proc.kill()
-        return {"returncode": -1, "timeout": True, "output": ""}
+        return {"returncode": -1, "timeout": True, "output": "", "actor": actor}
 
     return {
+        "actor": actor,
         "returncode": proc.returncode,
         "output": stdout[-8000:] if len(stdout) > 8000 else stdout,
     }

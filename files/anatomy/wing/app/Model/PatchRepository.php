@@ -187,9 +187,9 @@ final class PatchRepository
 
 
 	/** BoxAPI passthrough — real apply. */
-	public function apply(string $id): array
+	public function apply(string $id, ?string $actor = null): array
 	{
-		return $this->box->post('/api/patches/' . rawurlencode($id) . '/apply');
+		return $this->box->post('/api/patches/' . rawurlencode($id) . '/apply', null, $actor);
 	}
 
 

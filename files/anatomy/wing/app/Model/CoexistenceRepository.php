@@ -218,24 +218,26 @@ final class CoexistenceRepository
 
 	// BoxAPI passthroughs.
 
-	public function provision(string $service, array $body): array
+	public function provision(string $service, array $body, ?string $actor = null): array
 	{
-		return $this->box->post('/api/coexistence/' . rawurlencode($service) . '/provision', $body);
+		return $this->box->post('/api/coexistence/' . rawurlencode($service) . '/provision', $body, $actor);
 	}
 
-	public function cutover(string $service, string $targetTag): array
+	public function cutover(string $service, string $targetTag, ?string $actor = null): array
 	{
 		return $this->box->post(
 			'/api/coexistence/' . rawurlencode($service) . '/cutover',
 			['target_tag' => $targetTag],
+			$actor,
 		);
 	}
 
-	public function cleanup(string $service, string $tag, bool $force = false): array
+	public function cleanup(string $service, string $tag, bool $force = false, ?string $actor = null): array
 	{
 		return $this->box->post(
 			'/api/coexistence/' . rawurlencode($service) . '/cleanup/' . rawurlencode($tag),
 			['force' => $force],
+			$actor,
 		);
 	}
 
@@ -245,7 +247,7 @@ final class CoexistenceRepository
 	 * commits. Bone's promote_track flips active_track + role atomically (demotes
 	 * the prior primary in the same txn → the single-primary index never trips).
 	 */
-	public function promote(string $service, string $tag, bool $dryRun = true, ?int $ttlSeconds = null): array
+	public function promote(string $service, string $tag, bool $dryRun = true, ?int $ttlSeconds = null, ?string $actor = null): array
 	{
 		$body = ['dry_run' => $dryRun];
 		if ($ttlSeconds !== null) {
@@ -254,6 +256,7 @@ final class CoexistenceRepository
 		return $this->box->post(
 			'/api/coexistence/' . rawurlencode($service) . '/promote/' . rawurlencode($tag),
 			$body,
+			$actor,
 		);
 	}
 
@@ -263,11 +266,12 @@ final class CoexistenceRepository
 	 * TRUE. Bone's deactivate_track refuses the active primary unless force AND a
 	 * failover target exists (G-DEACTIVATE-NOT-PRIMARY).
 	 */
-	public function deactivate(string $service, string $tag, bool $force = false, bool $dryRun = true): array
+	public function deactivate(string $service, string $tag, bool $force = false, bool $dryRun = true, ?string $actor = null): array
 	{
 		return $this->box->post(
 			'/api/coexistence/' . rawurlencode($service) . '/deactivate/' . rawurlencode($tag),
 			['dry_run' => $dryRun, 'force' => $force],
+			$actor,
 		);
 	}
 
@@ -281,11 +285,12 @@ final class CoexistenceRepository
 	 * refuses a track with no source_migration_id (G-COPY-HAS-MIGRATION) and
 	 * refuses copying INTO the active primary (G-COPY-NOT-PRIMARY).
 	 */
-	public function copyData(string $service, string $tag, bool $dryRun = true): array
+	public function copyData(string $service, string $tag, bool $dryRun = true, ?string $actor = null): array
 	{
 		return $this->box->post(
 			'/api/coexistence/' . rawurlencode($service) . '/copy-data/' . rawurlencode($tag),
 			['dry_run' => $dryRun],
+			$actor,
 		);
 	}
 }

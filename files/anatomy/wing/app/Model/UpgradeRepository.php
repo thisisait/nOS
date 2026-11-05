@@ -943,10 +943,12 @@ final class UpgradeRepository
 		);
 	}
 
-	public function apply(string $service, string $recipeId): array
+	public function apply(string $service, string $recipeId, ?string $actor = null): array
 	{
 		return $this->box->post(
 			'/api/upgrades/' . rawurlencode($service) . '/' . rawurlencode($recipeId) . '/apply',
+			null,
+			$actor,
 		);
 	}
 
@@ -955,10 +957,12 @@ final class UpgradeRepository
 	 * that plain apply() refuses with 409). Bone shells to nos-upgrade-detached.sh
 	 * so the run survives the operator's session dying. Phase-4 plan->detached.
 	 */
-	public function applyDetached(string $service, string $recipeId): array
+	public function applyDetached(string $service, string $recipeId, ?string $actor = null): array
 	{
 		return $this->box->post(
 			'/api/upgrades/' . rawurlencode($service) . '/' . rawurlencode($recipeId) . '/apply-detached',
+			null,
+			$actor,
 		);
 	}
 }

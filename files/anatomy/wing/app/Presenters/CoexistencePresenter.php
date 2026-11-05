@@ -123,7 +123,7 @@ final class CoexistencePresenter extends BasePresenter
 			$this->flashMessage('Refused — target_tag is required to toggle the primary track.', 'error');
 			$this->redirect('Coexistence:default');
 		}
-		$resp = $this->coexistence->promote($service, $tag, false);
+		$resp = $this->coexistence->promote($service, $tag, false, null, $this->boneActor());
 		[$msg, $type] = $this->classify(
 			$resp,
 			"Toggled {$service} primary → {$tag}.",
@@ -149,7 +149,7 @@ final class CoexistencePresenter extends BasePresenter
 			$this->redirect('Coexistence:default');
 		}
 		$force = (bool) $this->getHttpRequest()->getPost('force');
-		$resp = $this->coexistence->deactivate($service, $tag, $force, false);
+		$resp = $this->coexistence->deactivate($service, $tag, $force, false, $this->boneActor());
 		[$msg, $type] = $this->classify(
 			$resp,
 			"Deactivated {$service}/{$tag} (data kept).",
@@ -177,7 +177,7 @@ final class CoexistencePresenter extends BasePresenter
 			$this->flashMessage('Refused — tag is required to copy data into a track.', 'error');
 			$this->redirect('Coexistence:default');
 		}
-		$resp = $this->coexistence->copyData($service, $tag, false);
+		$resp = $this->coexistence->copyData($service, $tag, false, $this->boneActor());
 		[$msg, $type] = $this->classify(
 			$resp,
 			"Copied data into {$service}/{$tag} (re-run before Promote for freshness).",
@@ -208,6 +208,12 @@ final class CoexistencePresenter extends BasePresenter
 			: ["Refused — {$result['detail']}.", 'error'];
 		$this->flashMessage($msg, $type);
 		$this->redirect('Coexistence:default');
+	}
+
+	/** The forward-auth operator as Bone records it: user:<canonical uid>, the BFF's spelling. */
+	private function boneActor(): string
+	{
+		return 'user:' . \App\Security\CanonicalUid::fold($this->requireActor());
 	}
 
 	/**

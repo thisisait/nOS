@@ -44,16 +44,19 @@ class BoneClient
 		return $this->send('GET', $url, null);
 	}
 
-	/** @return array{status:int,body:mixed} */
-	public function post(string $path, ?array $body = null): array
+	/**
+	 * $actor names the person Wing decided for (user:<uid>); Bone hands it to the run.
+	 * @return array{status:int,body:mixed}
+	 */
+	public function post(string $path, ?array $body = null, ?string $actor = null): array
 	{
-		return $this->send('POST', $this->baseUrl . $path, $body);
+		return $this->send('POST', $this->baseUrl . $path, $body, $actor);
 	}
 
 	/**
 	 * @return array{status:int,body:mixed}
 	 */
-	private function send(string $method, string $url, ?array $body): array
+	private function send(string $method, string $url, ?array $body, ?string $actor = null): array
 	{
 		try {
 			$token = ($this->identity ??= \App\Core\AgentIdentity::fromEnv())->getToken();
@@ -72,11 +75,11 @@ class BoneClient
 			CURLOPT_RETURNTRANSFER => true,
 			CURLOPT_TIMEOUT        => $this->timeout,
 			CURLOPT_CONNECTTIMEOUT => 5,
-			CURLOPT_HTTPHEADER     => [
+			CURLOPT_HTTPHEADER     => array_merge([
 				'Content-Type: application/json',
 				'Accept: application/json',
 				'Authorization: Bearer ' . $token,
-			],
+			], $actor !== null ? ['X-Nos-Actor: ' . $actor] : []),
 		]);
 		if ($body !== null) {
 			curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));

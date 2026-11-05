@@ -56,7 +56,7 @@ final class PatchesPresenter extends BaseApiPresenter
 		if ($this->patches->getById($id) === null) {
 			$this->sendError('Patch not found', 404);
 		}
-		$this->proxyBoxApi($this->patches->apply($id));
+		$this->proxyBoxApi($this->patches->apply($id, $this->getActorId()));
 	}
 
 	public function actionEvents(string $id): void

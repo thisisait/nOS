@@ -143,14 +143,14 @@ final class MigrationsPresenter extends BaseApiPresenter
 		$this->requireMethod('POST');
 		$body = $this->getJsonBody();
 		$dryRun = !empty($body['dry_run']);
-		$resp = $this->migrations->apply($id, $dryRun);
+		$resp = $this->migrations->apply($id, $dryRun, $this->getActorId());
 		$this->proxyBoxApi($resp);
 	}
 
 	public function actionRollback(string $id): void
 	{
 		$this->requireMethod('POST');
-		$resp = $this->migrations->rollback($id);
+		$resp = $this->migrations->rollback($id, $this->getActorId());
 		$this->proxyBoxApi($resp);
 	}
 

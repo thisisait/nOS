@@ -13,6 +13,7 @@ from pathlib import Path
 
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Header
+from fastapi.responses import JSONResponse
 
 import otel
 
@@ -303,6 +304,19 @@ try:  # noqa: SIM105
 except Exception as _framework_err:  # noqa: BLE001
     _FRAMEWORK_READY = False
     _FRAMEWORK_IMPORT_ERROR = str(_framework_err)
+
+if _FRAMEWORK_READY:
+    @app.middleware("http")
+    async def _forwarded_actor(request, call_next):  # noqa: ANN001
+        """X-Nos-Actor: the person Wing decided for (user:<uid>), read by invoke_playbook."""
+        actor = request.headers.get("x-nos-actor")
+        if actor is not None and not _nos_migrations.ACTOR_RE.match(actor):
+            return JSONResponse({"detail": "invalid X-Nos-Actor"}, status_code=400)
+        token = _nos_migrations.ACTOR.set(actor)
+        try:
+            return await call_next(request)
+        finally:
+            _nos_migrations.ACTOR.reset(token)
 
 
 # ---- VFS (nOS face file backend) — isolated deferred import ----------------

@@ -134,17 +134,18 @@ final class MigrationRepository
 	}
 
 	/** Delegates to BoxAPI for apply. */
-	public function apply(string $id, bool $dryRun = false): array
+	public function apply(string $id, bool $dryRun = false, ?string $actor = null): array
 	{
 		return $this->box->post(
 			'/api/migrations/' . rawurlencode($id) . '/apply',
 			['dry_run' => $dryRun],
+			$actor,
 		);
 	}
 
 	/** Delegates to BoxAPI for rollback. */
-	public function rollback(string $id): array
+	public function rollback(string $id, ?string $actor = null): array
 	{
-		return $this->box->post('/api/migrations/' . rawurlencode($id) . '/rollback');
+		return $this->box->post('/api/migrations/' . rawurlencode($id) . '/rollback', null, $actor);
 	}
 }
