@@ -344,7 +344,10 @@
     status_code: 200
     return_content: false
   register: _cortex_health
-  retries: 12
+  # The daemon materialises the store and tunes the ANN index BEFORE it listens: 11-05, 12420
+  # vectors (243 MB), ~70 s while a converge restarted bone and hermes beside it; 60 s failed.
+  # ponytail: a longer wait, not readiness-after-listen; grows with the store, move ANN after listen if it does.
+  retries: 36
   delay: 5
   until: _cortex_health.status | default(0) == 200
 
