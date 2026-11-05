@@ -37,7 +37,11 @@
         "receptor": {"$ref": "#/$defs/field"},
         "effector": {"type": "string", "pattern": "^(report|files |refuses |quarantine|stops )"},
         "signal": {"$ref": "#/$defs/field"},
-        "heartbeat": {"$ref": "#/$defs/field"},
+        "heartbeat": {"oneOf": [
+          {"type": "string", "pattern": "^none( \\(.+\\))?$"},
+          {"type": "object", "additionalProperties": false, "required": ["every_hours", "last_report"],
+           "properties": {"every_hours": {"type": "integer", "minimum": 1},
+                          "last_report": {"type": "string", "pattern": "^pulse:[a-z0-9-]+:[a-z0-9-]+$"}}}]},
         "lifespan": {"$ref": "#/$defs/field"},
         "tolerance": {"$ref": "#/$defs/field"},
         "verdicts": {"$ref": "#/$defs/field"},

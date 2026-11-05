@@ -425,6 +425,41 @@ def overdue_jobs(conn: sqlite3.Connection) -> list[dict]:
     return sorted(out, key=lambda item: item["due_at"])
 
 
+REGISTRY = REPO / "state" / "immune" / "indicators.yml"
+
+
+def heartbeats(path: pathlib.Path = REGISTRY) -> dict[str, dict] | None:
+    """{cell: {every_hours, last_report}} from the immune registry; None (UNKNOWN) if unreadable or malformed."""
+    import yaml  # noqa: PLC0415
+
+    try:
+        cells = yaml.safe_load(path.read_text(encoding="utf-8"))["indicators"]
+        beats = {k: v["heartbeat"] for k, v in cells.items() if isinstance(v["heartbeat"], dict)}
+        if not all(int(hb["every_hours"]) > 0 and hb["last_report"].startswith("pulse:") for hb in beats.values()):
+            return None
+        return beats
+    except Exception:  # noqa: BLE001 — absent or malformed is the same answer: cannot ask
+        return None
+
+
+def silent_cells(conn: sqlite3.Connection, beats: dict[str, dict]) -> list[dict]:
+    """Immune cells whose last Pulse run is older than their heartbeat (immune-system.md §4.1).
+    Not installed or paused is skipped: absent is not silent, a pause is a hold."""
+    jobs = {r["id"]: r["created_at"] for r in conn.execute(
+        "SELECT id, created_at FROM pulse_jobs WHERE paused = 0 AND removed_at IS NULL")}
+    out = []
+    for cell, hb in sorted(beats.items()):
+        job = hb["last_report"].removeprefix("pulse:")
+        if job not in jobs:
+            continue
+        last = conn.execute("SELECT MAX(fired_at) FROM pulse_runs WHERE job_id = ?", (job,)).fetchone()[0]
+        since = _parse_iso(last) or _parse_iso(jobs[job])  # never ran: count from its birth
+        if since is None or since < _now() - timedelta(hours=int(hb["every_hours"])):
+            out.append({"cell": cell, "every_hours": int(hb["every_hours"]), "last_report": last,
+                        "age": _age(_parse_iso(last)) if last else "never"})
+    return out
+
+
 #: The two pulse.run holders provision-token.php allows: the Python daemon's bearer and the medulla's.
 SCHEDULERS = ("ansible-provisioned", "medulla")
 
@@ -1127,6 +1162,11 @@ def collect() -> dict:
                 report["schedulers"] = schedulers(conn)
                 report["inbox"] = unread_inbox(conn)
                 report["audit_chain"] = audit_chain(conn)
+                beats = heartbeats()
+                if beats is None:
+                    report["sources_missing"].append(f"{REGISTRY} (heartbeats: silent cells UNKNOWN)")
+                else:
+                    report["silent_cells"] = silent_cells(conn, beats)
                 orphans = orphaned_sessions(conn)
                 report["orphaned_sessions"] = orphans or []
             report["sources_read"].append(str(WING_DB))
@@ -1418,6 +1458,9 @@ def reds(report: dict) -> list[str]:
             line += (f" (+{dep['fixture_alerts']} against {FIXTURE_MANIFEST_PREFIX}"
                      "** — test input, not shipped)")
         out.append(line)
+    for c in report.get("silent_cells", []):
+        out.append(f"immune cell {c['cell']} silent past its {c['every_hours']} h heartbeat "
+                   f"(last report {c['age']}) — a killed or rewritten cell reads exactly like this")
     for missing in report.get("sources_missing", []):
         out.append(f"source unreadable, so its state is UNKNOWN not green: {missing}")
     return out

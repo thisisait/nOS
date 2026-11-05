@@ -44,7 +44,7 @@ A detector that cannot fill one in is not an indicator yet.
 | `receptor` | what it reads; read-only, always |
 | `effector` | what it may do: `report` by default; anything stronger (quarantine, stop, refuse) is an operator-approved escalation named in its contract |
 | `signal` | where it reports and at which severity (the A9 routing: wing-inbox / ntfy / mail) |
-| `heartbeat` | how often the nervous system must hear from it; silence past it is itself a red |
+| `heartbeat` | how often the nervous system must hear from it: `{every_hours, last_report: pulse:<job>}`, or `none (why)`; `tools/red-status.py` names a cell silent past it |
 | `lifespan` | for crawlers: a TTL or step budget, after which it is retired |
 | `tolerance` | how it avoids attacking what is declared: the generated allow-list it consults |
 | `verdicts` | where each verdict is recorded for calibration (JSONL, no content, no secrets) |

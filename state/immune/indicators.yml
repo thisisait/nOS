@@ -12,7 +12,7 @@ indicators:
     receptor: launchctl list, listening sockets, crontab, rendered compose (read-only)
     effector: report
     signal: tools/red-status.py
-    heartbeat: each red-status run
+    heartbeat: none (read on every red-status run)
     lifespan: none
     tolerance: graph daemons, manifest host_programs, rendered compose, config.yml habitat_processes
     verdicts: none
@@ -24,7 +24,7 @@ indicators:
     receptor: docker inspect, ~/.nos/workload-digests.json (read-only)
     effector: report
     signal: tools/red-status.py
-    heartbeat: each red-status run
+    heartbeat: none (read on every red-status run)
     lifespan: none
     tolerance: the image IDs the last converge recorded
     verdicts: none
@@ -36,7 +36,7 @@ indicators:
     receptor: the Santa log and santactl (read-only)
     effector: report
     signal: tools/red-status.py
-    heartbeat: each red-status run
+    heartbeat: none (read on every red-status run)
     lifespan: none
     tolerance: the Pulse runner trees plus OS, Homebrew and /Applications
     verdicts: none
@@ -48,7 +48,7 @@ indicators:
     receptor: committed pins and lockfiles; GitHub advisories, OSV, cve.now (GET only)
     effector: report
     signal: tools/red-status.py (via ~/.nos/advisory/last.json)
-    heartbeat: nightly, through the advisory-patrol:nightly patrol
+    heartbeat: none (its patrol advisory-patrol:nightly carries the heartbeat)
     lifespan: none
     tolerance: state/genome/advisory-judgements.yml
     verdicts: ~/.nos/advisory/last.json
@@ -134,7 +134,7 @@ indicators:
     receptor: tools/advisory-status.py
     effector: report
     signal: wing-inbox (pulse_runs findings exit code)
-    heartbeat: "50 3 * * *"
+    heartbeat: {every_hours: 26, last_report: "pulse:advisory-patrol:nightly"}  # 50 3 * * *
     lifespan: none
     tolerance: state/genome/advisory-judgements.yml
     verdicts: Wing pulse_runs.exit_code
@@ -146,7 +146,7 @@ indicators:
     receptor: tofu plan against Authentik (no apply)
     effector: report
     signal: wing-inbox (the plugin's notification block)
-    heartbeat: "30 5 * * *"
+    heartbeat: {every_hours: 26, last_report: "pulse:authentik-tofu-drift:tofu-drift-plan"}  # 30 5 * * *
     lifespan: none
     tolerance: the committed terraform/authentik/ state
     verdicts: Wing pulse_runs.exit_code
@@ -158,7 +158,7 @@ indicators:
     receptor: tools/discovery-scan.py over the repo and the estate (GET only)
     effector: files a roadmap row in KEAP (--file); never edits the fact
     signal: wing-inbox (pulse_runs findings exit code) and the roadmap row
-    heartbeat: "40 6 * * *"
+    heartbeat: {every_hours: 26, last_report: "pulse:discovery:contradiction-scan"}  # 40 6 * * *
     lifespan: none
     tolerance: none declared (a filed row closes only after the pair is re-judged)
     verdicts: Wing pulse_runs.exit_code
@@ -170,7 +170,7 @@ indicators:
     receptor: gitleaks git over the repo history
     effector: report
     signal: wing-inbox (the plugin's notification block)
-    heartbeat: "0 3 * * *"
+    heartbeat: {every_hours: 26, last_report: "pulse:gitleaks:nightly-scan"}  # 0 3 * * *
     lifespan: none
     tolerance: .gitleaksignore and .gitleaks.toml
     verdicts: Wing pulse_runs.exit_code
@@ -182,7 +182,7 @@ indicators:
     receptor: tools/npm-ioc-scan.py over every node_modules tree
     effector: report
     signal: wing-inbox (the plugin's notification block)
-    heartbeat: "20 4 * * *"
+    heartbeat: {every_hours: 26, last_report: "pulse:npm-supply-chain:daily-ioc-scan"}  # 20 4 * * *
     lifespan: none
     tolerance: none (any match is a finding)
     verdicts: Wing pulse_runs.exit_code
@@ -194,7 +194,7 @@ indicators:
     receptor: files/anatomy/scripts/drift-watch.sh over hooks/playbook-end.d/20-cve-drift-check.sh and ~/.nos/security
     effector: report
     signal: Bone /api/v1/notifications (HMAC) and the Prometheus drift metric
-    heartbeat: "0 6 * * *"
+    heartbeat: {every_hours: 26, last_report: "pulse:conductor:security-drift-watch"}  # 0 6 * * *
     lifespan: none
     tolerance: DRIFT_STALE_HOURS
     verdicts: Wing pulse_runs.exit_code
@@ -206,7 +206,7 @@ indicators:
     receptor: files/vuln-scan/scan-runner.sh dispatching claude over scan-state.json (oldest first)
     effector: files pending rows in ~/.nos/security/remediation-queue.json
     signal: scan.batch_* events (~/.nos/events/scan.jsonl, HMAC to Wing)
-    heartbeat: "0 2 * * *"
+    heartbeat: {every_hours: 26, last_report: "pulse:conductor:vulnerability-scan"}  # 0 2 * * *
     lifespan: none
     tolerance: findings already in remediation-queue.json (the prompt says read them first)
     verdicts: ~/.nos/security/remediation-queue.json
@@ -220,7 +220,7 @@ indicators:
     receptor: git log and diff of the push range; a local Ollama model
     effector: report (--strict refuses the push)
     signal: the terminal at tools/nos-push
-    heartbeat: every push
+    heartbeat: none (event-driven, on every push)
     lifespan: none
     tolerance: commits some remote ref already holds
     verdicts: ~/.nos/events/prepush-scores.jsonl
@@ -234,7 +234,7 @@ indicators:
     receptor: files/anatomy/wing/bin/verify-audit-chain.php over wing.db (read-only, plus the cached verdict)
     effector: report
     signal: Wing header badge (audit_chain_meta) and pulse_runs exit code
-    heartbeat: "17 4 * * *"
+    heartbeat: {every_hours: 26, last_report: "pulse:wing:audit-chain-verify"}  # 17 4 * * *
     lifespan: none
     tolerance: none (any break is a finding)
     verdicts: wing.db audit_chain_meta
