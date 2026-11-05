@@ -26,6 +26,8 @@ _DOC_HOLDERS = (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
 
 def reads_store(path: str) -> bool:
     """Code in this script, not a comment or a docstring, names the secret store."""
+    # ponytail: scans only the scripts on the command line, never a `source`d lib (pulse-env.sh
+    # included), so an indirect reader passes; follow source/import lines if a job ever needs it.
     try:
         with open(path, "rb") as fh:
             raw = fh.read()
