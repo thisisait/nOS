@@ -55,3 +55,28 @@ def test_a_reconciled_config_is_left_alone(tmp_path):
     (tmp_path / "seed.json").write_text(json.dumps(_seed()))
     _run(tmp_path)
     assert "UNCHANGED" in _run(tmp_path), "a second run rewrote an already reconciled config"
+
+
+def test_a_retired_plan_leaves_the_live_config(tmp_path):
+    """11-05 (fat and eggs): nos-offsite snapshotted the RustFS ciphertext of the same dumps
+    nos-dumps already holds, a fresh salt each night, so nothing deduped (~2.4 GB/night)."""
+    live = _live()
+    live["plans"].insert(0, {"id": "nos-offsite", "repo": "offsite", "paths": ["/rustfs"]})
+    (tmp_path / "config.json").write_text(json.dumps(live))
+    (tmp_path / "seed.json").write_text(json.dumps(_seed()))
+    out = subprocess.run([sys.executable, str(TOOL), "--config", str(tmp_path / "config.json"), "--user", "admin",
+                          "--seed", str(tmp_path / "seed.json"), "--retire-plan", "nos-offsite"],
+                         input="not-a-real-password\n", capture_output=True, text=True, timeout=30)
+    assert "CHANGED" in out.stdout, out.stderr
+    assert [p["id"] for p in json.loads((tmp_path / "config.json").read_text())["plans"]] == ["nos-dumps"]
+
+
+def test_the_seed_backs_up_nothing_twice():
+    import jinja2
+    tpl = (REPO / "roles/pazny.backrest/templates/config.json.j2").read_text()
+    seed = json.loads(jinja2.Environment().from_string(tpl).render(
+        restic_repo="/r", restic_password="x", backrest_instance="i", backrest_home="/h",
+        rustfs_data_dir="/data/rustfs", backup_staging_dir="/h/backups/staging", ansible_facts={"env": {"HOME": "/h"}}))
+    paths = [p for plan in seed["plans"] for p in plan["paths"]]
+    assert [p["id"] for p in seed["plans"]] == ["nos-dumps"], seed["plans"]
+    assert not any(p.startswith("/data/rustfs") for p in paths), paths
