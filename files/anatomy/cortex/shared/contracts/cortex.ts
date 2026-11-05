@@ -36,12 +36,9 @@ function clampTtl(seconds: number | undefined): number {
 export const cortexValidateRequestSchema = z
   .object({
     source: z.string({
-      required_error: 'source required',
-      invalid_type_error: 'source must be a string',
+      error: (iss) => (iss.input === undefined ? 'source required' : 'source must be a string'),
     }),
-    ttlSeconds: z
-      .number({ invalid_type_error: 'ttlSeconds must be a number' })
-      .optional(),
+    ttlSeconds: z.number({ error: 'ttlSeconds must be a number' }).optional(),
   })
   .transform((body) => ({ source: body.source, ttlSeconds: clampTtl(body.ttlSeconds) }));
 
