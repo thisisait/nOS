@@ -444,7 +444,8 @@ def heartbeats(path: pathlib.Path = REGISTRY) -> dict[str, dict] | None:
 
 def silent_cells(conn: sqlite3.Connection, beats: dict[str, dict]) -> list[dict]:
     """Immune cells whose last Pulse run is older than their heartbeat (immune-system.md §4.1).
-    Not installed or paused is skipped: absent is not silent, a pause is a hold."""
+    Not installed (no job, or one soft-deleted by plugin removal) is absent, not silent;
+    a paused one is held_cells()'s line, not hidden."""
     jobs = {r["id"]: r["created_at"] for r in conn.execute(
         "SELECT id, created_at FROM pulse_jobs WHERE paused = 0 AND removed_at IS NULL")}
     out = []
@@ -455,9 +456,17 @@ def silent_cells(conn: sqlite3.Connection, beats: dict[str, dict]) -> list[dict]
         last = conn.execute("SELECT MAX(fired_at) FROM pulse_runs WHERE job_id = ?", (job,)).fetchone()[0]
         since = _parse_iso(last) or _parse_iso(jobs[job])  # never ran: count from its birth
         if since is None or since < _now() - timedelta(hours=int(hb["every_hours"])):
-            out.append({"cell": cell, "every_hours": int(hb["every_hours"]), "last_report": last,
+            out.append({"cell": cell, "job": job, "every_hours": int(hb["every_hours"]), "last_report": last,
                         "age": _age(_parse_iso(last)) if last else "never"})
     return out
+
+
+def held_cells(conn: sqlite3.Connection, beats: dict[str, dict]) -> list[dict]:
+    """Immune cells whose Pulse job is paused: a stopped cell, named with the pause's reason."""
+    jobs = {r["id"]: r["paused_reason"] for r in conn.execute(
+        "SELECT id, paused_reason FROM pulse_jobs WHERE paused != 0 AND removed_at IS NULL")}
+    return [{"cell": cell, "reason": jobs[hb["last_report"].removeprefix("pulse:")] or "no reason given"}
+            for cell, hb in sorted(beats.items()) if hb["last_report"].removeprefix("pulse:") in jobs]
 
 
 #: The two pulse.run holders provision-token.php allows: the Python daemon's bearer and the medulla's.
@@ -1167,6 +1176,7 @@ def collect() -> dict:
                     report["sources_missing"].append(f"{REGISTRY} (heartbeats: silent cells UNKNOWN)")
                 else:
                     report["silent_cells"] = silent_cells(conn, beats)
+                    report["held_cells"] = held_cells(conn, beats)
                 orphans = orphaned_sessions(conn)
                 report["orphaned_sessions"] = orphans or []
             report["sources_read"].append(str(WING_DB))
@@ -1361,11 +1371,13 @@ def reds(report: dict) -> list[str]:
                    f"{doc['last_reviewed']}, due {doc['due']} — review it, then move last_reviewed")
     pulse = report.get("pulse") or {}
     overdue = report.get("overdue_jobs") or []
-    if pulse.get("running") is False and overdue:
+    # A stuck job is overdue at ~25.5 h and silent at 26 h: one cause, one line (measured 2026-11-05).
+    silent = [c for c in report.get("silent_cells") or [] if c["job"] not in {j["job"] for j in overdue}]
+    if pulse.get("running") is False and (overdue or silent):
         # One cause, one line; the per-job lines return once Pulse runs.
         out.append(f"Pulse is not running ({pulse['how']}) — {len(overdue)} job(s) due "
-                   "and not fired; each is listed again once it runs")
-        overdue = []
+                   f"and not fired, {len(silent)} more immune cell(s) silent; each is listed again once it runs")
+        overdue, silent = [], []
     for job in overdue:
         out.append(
             f"{job['job']} was due {job['due_at']} and did not fire "
@@ -1458,9 +1470,11 @@ def reds(report: dict) -> list[str]:
             line += (f" (+{dep['fixture_alerts']} against {FIXTURE_MANIFEST_PREFIX}"
                      "** — test input, not shipped)")
         out.append(line)
-    for c in report.get("silent_cells", []):
+    for c in silent:
         out.append(f"immune cell {c['cell']} silent past its {c['every_hours']} h heartbeat "
                    f"(last report {c['age']}) — a killed or rewritten cell reads exactly like this")
+    for c in report.get("held_cells", []):
+        out.append(f"immune cell {c['cell']} is paused ({c['reason']}) — it reports nothing while held")
     for missing in report.get("sources_missing", []):
         out.append(f"source unreadable, so its state is UNKNOWN not green: {missing}")
     return out

@@ -75,8 +75,10 @@ A detector that cannot fill one in is not an indicator yet.
 ## 4. Rules
 
 1. **Absence is a signal.** Every indicator has a heartbeat; a killed or
-   stalled one turns red by its silence. This is the one defence that survives
-   an attacker who can rewrite an indicator (§6).
+   stalled one turns red by its silence, and a paused one is named as a hold.
+   An uninstalled one (no job, or one removed with its plugin) is absent, not
+   silent. This is the one defence that survives an attacker who can rewrite
+   an indicator (§6).
 2. **Deterministic antigen first, model second.** A model's score is shown
    beside the evidence, never instead of it; a model scoring 0 against strong
    evidence is no score (prepush-score, 2026-10-04).
@@ -93,14 +95,14 @@ A detector that cannot fill one in is not an indicator yet.
 | Indicator | Kind | Heartbeat | Lifespan | Regulated |
 |---|---|---|---|---|
 | undeclared-status, workload-digest-status, santa-status | sentinel | red-status run | — | no |
-| discovery, gitleaks, npm-ioc, tofu-drift, security-drift | patrol | Pulse schedule | — | no |
+| discovery, gitleaks, npm-ioc, tofu-drift, security-drift, advisory, vulnerability-scan | patrol | 26 h, its Pulse job's last run | — | no |
 | prepush-score, CodeRabbit + checklist | checkpoint | per push / PR | — | no |
-| audit-chain-verify | verdicts integrity | nightly | — | — |
+| audit-chain-verify | verdicts integrity | 26 h, its Pulse job's last run | — | — |
 | crawler | — | **none exists** | — | — |
 | apoptosis, regulator | — | **none exists** | — | — |
 
 The gaps are the roadmap children of `immune-system`: an indicator registry
-with the contract as schema, heartbeats for every indicator, the first crawler,
+with the contract as schema, the first crawler,
 apoptosis, and the regulator.
 
 ## 6. Ceilings
