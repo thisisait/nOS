@@ -75,14 +75,19 @@ if [ "${#REFSPECS[@]}" -eq 0 ]; then
 	REFSPECS=("$BRANCH")
 fi
 
-# 0. Score what this push carries (ssot/doctrine/session-threat-model.md).
-if [ "$STRICT" -eq 1 ]; then
-	python3 "$SCRIPT_DIR/prepush-score.py" --repo "$PUSH_DIR" --remote "$REMOTE" --strict \
-		|| { echo "→ push refused by prepush-score --strict"; exit 3; }
-else
-	python3 "$SCRIPT_DIR/prepush-score.py" --repo "$PUSH_DIR" --remote "$REMOTE" \
-		|| echo "→ prepush-score failed (advisory) — pushing anyway"
-fi
+# 0. Score what each refspec carries, from its source ref (ssot/doctrine/session-threat-model.md).
+#    Scoring HEAD scored the checkout while `origin/<b>:dev` landed <b> (review-v015).
+for spec in "${REFSPECS[@]}"; do
+	src="${spec#+}"; src="${src%%:*}"
+	[ -n "$src" ] || continue  # `:branch` is a delete, it carries nothing
+	if [ "$STRICT" -eq 1 ]; then
+		python3 "$SCRIPT_DIR/prepush-score.py" --repo "$PUSH_DIR" --remote "$REMOTE" --ref "$src" --strict \
+			|| { echo "→ push refused by prepush-score --strict"; exit 3; }
+	else
+		python3 "$SCRIPT_DIR/prepush-score.py" --repo "$PUSH_DIR" --remote "$REMOTE" --ref "$src" \
+			|| echo "→ prepush-score failed (advisory) — pushing anyway"
+	fi
+done
 
 # 1. Run the git push; abort everything if it fails.
 #    Empty array expansion in bash produces a literal '' arg, which git

@@ -131,13 +131,13 @@ def _git(repo: Path, *args: str, check: bool = True) -> str:
     return out.stdout
 
 
-def push_range(repo: Path, remote: str) -> tuple[str, str, int] | None:
-    """(base, head, commits) of what `git push <remote>` would carry; None if nothing."""
-    commits = _git(repo, "rev-list", "--reverse", "HEAD", "--not", f"--remotes={remote}").split()
+def push_range(repo: Path, remote: str, ref: str = "HEAD") -> tuple[str, str, int] | None:
+    """(base, head, commits) of what `git push <remote> <ref>:...` would carry; None if nothing."""
+    commits = _git(repo, "rev-list", "--reverse", ref, "--not", f"--remotes={remote}").split()
     if not commits:
         return None
     parent = _git(repo, "rev-parse", "--verify", "-q", f"{commits[0]}^", check=False).strip()
-    return parent or EMPTY_TREE, _git(repo, "rev-parse", "HEAD").strip(), len(commits)
+    return parent or EMPTY_TREE, _git(repo, "rev-parse", ref).strip(), len(commits)
 
 
 def _diff(repo: Path, base: str, head: str) -> dict[str, dict]:
@@ -385,6 +385,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--repo", default=str(HERE.parents[1]))
     ap.add_argument("--remote", default="origin")
     ap.add_argument("--range", help="BASE..HEAD instead of the push range")
+    ap.add_argument("--ref", default="HEAD", help="the source ref the push carries (refspec left side)")
     ap.add_argument("--model", default=DEFAULT_MODEL, help="Ollama model, or 'off'")
     ap.add_argument("--strict", action="store_true", help="exit 3 when any aspect reaches --threshold")
     ap.add_argument("--threshold", type=int, default=70)
@@ -397,9 +398,9 @@ def main(argv: list[str] | None = None) -> int:
         base, head = (_git(repo, "rev-parse", r).strip() for r in (base, head))
         commits = len(_git(repo, "rev-list", f"{base}..{head}").split())
     else:
-        found = push_range(repo, args.remote)
+        found = push_range(repo, args.remote, args.ref)
         if not found:
-            print(f"prepush-score: nothing to push vs {args.remote}")
+            print(f"prepush-score: nothing to push from {args.ref} vs {args.remote}")
             return 0
         base, head, commits = found
     report = collect(repo, base, head)
