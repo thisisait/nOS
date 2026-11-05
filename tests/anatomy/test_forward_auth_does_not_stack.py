@@ -1,6 +1,6 @@
 """Anatomy gate — a service with its own Authentik button is not gated twice.
 
-Plan: docs/idea/13-relations.md §R5, row "Forward-auth ≠ native-OIDC
+Plan: docs/archive/idea/13-relations.md §R5, row "Forward-auth ≠ native-OIDC
       double-protection" ("ours, derivable").
 Doctrine: ssot/doctrine/sso.md §3 (never gated twice).
 

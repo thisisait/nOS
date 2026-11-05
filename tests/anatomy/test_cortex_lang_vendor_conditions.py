@@ -24,7 +24,7 @@ THREE DEFECTS IN THE DECISION, all measured on the chosen upstream
      byte-identical.
 
 The fix is the vendor-contract pattern (commit 606046e6: compare DECLARATIONS,
-not bytes): docs/idea/02-cortex-lang.md now declares the divergence set —
+not bytes): docs/archive/idea/02-cortex-lang.md now declares the divergence set —
 stripped imports, hard budgets (`max_derived_facts` / `max_iterations` /
 `max_seconds`, failing closed), strict fail-closed parsing — and this gate
 holds both ends: the doc must keep declaring the conditions, and a vendored
@@ -40,8 +40,8 @@ import pathlib
 from _repo_walk import repo_files
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-DOC = REPO / "docs/idea/02-cortex-lang.md"
-LOOP_DOC = REPO / "docs/idea/11-agentic-loop.md"
+DOC = REPO / "docs/archive/idea/02-cortex-lang.md"
+LOOP_DOC = REPO / "docs/archive/idea/11-agentic-loop.md"
 
 # The budget parameters the doc commits the vendored copy to. Declared here
 # and in the doc; the vendored file must define all three.
@@ -131,7 +131,7 @@ def test_a_vendored_copy_honors_the_declared_conditions() -> None:
         for token in BUDGET_TOKENS:
             assert token in text, (
                 f"{copy.relative_to(REPO)} was vendored without the declared "
-                f"budget cap `{token}` (docs/idea/02-cortex-lang.md). An "
+                f"budget cap `{token}` (docs/archive/idea/02-cortex-lang.md). An "
                 "unbudgeted derive_all() at 790-node scale is minutes of CPU "
                 "from one well-formed rule."
             )

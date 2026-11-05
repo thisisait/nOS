@@ -1,6 +1,6 @@
 """The label-printer fixture: real structure, synthetic people — by measurement.
 
-WHAT THIS GUARDS (w-fixture increment 1, docs/idea/15-business-fixture.md).
+WHAT THIS GUARDS (w-fixture increment 1, docs/archive/idea/15-business-fixture.md).
 Nine DataTable definitions in state/keap-tables/ plus one seed file in
 state/fixtures/ become a live tenant only at a converge — so every rule a
 converge would enforce with a 400 three seconds too late is refereed here,
@@ -244,7 +244,7 @@ def test_the_people_are_synthetic_by_measurement():
     assert not problems, (
         "a seeded value stopped looking synthetic. Real people require the "
         "fixture's own Article-30 register entry AND the company's written "
-        "yes (docs/idea/15-business-fixture.md) — neither exists, and the "
+        "yes (docs/archive/idea/15-business-fixture.md) — neither exists, and the "
         "agent-processor register entries of 2026-08-13 do not cover this "
         "data:\n  " + "\n  ".join(problems)
     )

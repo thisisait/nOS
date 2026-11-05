@@ -1,6 +1,6 @@
 """Service→service dependency edges — declared, and equal to what runs.
 
-Plan: docs/idea/13-relations.md §R1/§R2
+Plan: docs/archive/idea/13-relations.md §R1/§R2
 Doctrine: ssot/doctrine/layers.md §4 — layer is derived, repair before declare.
 
 THE MEASUREMENT THAT MOTIVATES THIS FILE. On 2026-08-07 the anatomy graph held

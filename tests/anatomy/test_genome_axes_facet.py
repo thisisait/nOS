@@ -1,6 +1,6 @@
 """Anatomy gate — `form`, `build` and `layer` are one facet, declared once.
 
-R4 (`docs/idea/13-relations.md`). R1–R3 each added an adjective to the estate's
+R4 (`docs/archive/idea/13-relations.md`). R1–R3 each added an adjective to the estate's
 nodes and each added it in its own place. Measured at 44c90677, before this
 file existed:
 

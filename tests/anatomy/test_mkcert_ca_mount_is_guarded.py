@@ -1,6 +1,6 @@
 """Anatomy gate — the mkcert root CA may only reach a container behind ONE guard.
 
-Plan: docs/idea/13-relations.md §R5, row "Mkcert CA mount must be guarded"
+Plan: docs/archive/idea/13-relations.md §R5, row "Mkcert CA mount must be guarded"
       ("ours, fixable — make it structural, so the rule stops being a thing to
       remember").
 

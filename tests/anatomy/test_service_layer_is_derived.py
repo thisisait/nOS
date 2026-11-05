@@ -1,6 +1,6 @@
 """`layer` — derived from the edges, and refused where the edges are not there.
 
-Plan: docs/idea/13-relations.md §R2
+Plan: docs/archive/idea/13-relations.md §R2
 Doctrine: ssot/doctrine/layers.md §3 (the four layers), §4.1 (repair before
 declare), §5 (where the derivation will disagree with intuition).
 

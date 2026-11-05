@@ -6,7 +6,7 @@ all PER ITERATION, and they multiply:
     600s per SDK request  ×  30 calls/iteration  ×  10 iterations  ≈  15 hours
 
 for a single stuck agent — and nothing counted tokens at all. The design doc
-the agentic loop hangs on (`docs/idea/11-agentic-loop.md` §5) is titled
+the agentic loop hangs on (`docs/archive/idea/11-agentic-loop.md` §5) is titled
 "Bounded, because unbounded is the failure mode"; the SESSION was the level
 with no bound, which is the level the operator pays for.
 

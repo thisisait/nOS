@@ -1,6 +1,6 @@
 """REM-217 rung 3 — the MariaDB clients, and their different knobs.
 
-WHAT THIS IS FOR. `docs/idea/21-mariadb-tls-ladder.md` scoped rung 3 as
+WHAT THIS IS FOR. `docs/archive/idea/21-mariadb-tls-ladder.md` scoped rung 3 as
 "`MYSQL_ATTR_SSL_CA` per Laravel client (freescout, firefly, bookstack), and the
 equivalents for WordPress and Nextcloud". Read in the running images on
 2026-08-23, that is true of exactly ONE of the three Laravel apps:

@@ -1,6 +1,6 @@
 """Anatomy gate — the `nos-loop` plugin holds no logic the engine could hold.
 
-`docs/idea/11-agentic-loop.md` §4 says the skills "contain **no logic** — they
+`docs/archive/idea/11-agentic-loop.md` §4 says the skills "contain **no logic** — they
 call the engine. That is what makes the same loop reproducible from Hermes, which
 will speak to the same endpoints with no Claude in the picture."
 

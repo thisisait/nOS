@@ -1,6 +1,6 @@
 """The Kolben IT fixture: real structure, synthetic people — by measurement.
 
-The SECOND business fixture (docs/idea/15-business-fixture.md), a synthetic
+The SECOND business fixture (docs/archive/idea/15-business-fixture.md), a synthetic
 Czech IT-services shop. Same referee as the label printer
 (test_fixture_tables_declare_the_business.py) — that gate is hardcoded to the
 label-printer ORDER, so a new fixture is a CLONE with its own ORDER/SEED/SEEDER,
@@ -205,7 +205,7 @@ def test_the_people_are_synthetic_by_measurement():
     assert not problems, (
         "a seeded value stopped looking synthetic. Real people require the "
         "fixture's own Article-30 register entry AND the company's written yes "
-        "(docs/idea/15-business-fixture.md):\n  " + "\n  ".join(problems)
+        "(docs/archive/idea/15-business-fixture.md):\n  " + "\n  ".join(problems)
     )
     # Positive controls — the loops above must have had subjects.
     assert any(r["party_kind"] == "person" for r in seed["party"])

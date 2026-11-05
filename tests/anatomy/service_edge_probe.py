@@ -1,6 +1,6 @@
 """Does the estate's CODE perform a service→service dependency? — the probe.
 
-Plan: docs/idea/13-relations.md §R1/§R2
+Plan: docs/archive/idea/13-relations.md §R1/§R2
 Doctrine: ssot/doctrine/layers.md §4.1 — repair before declare.
 
 WHY THIS IS A MODULE AND NOT A HELPER INSIDE ONE TEST FILE. It is the single
