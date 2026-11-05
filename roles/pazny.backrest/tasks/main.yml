@@ -88,7 +88,9 @@
     argv: ["python3", "{{ role_path }}/files/enable-auth.py",
            "--config", "{{ backrest_config_path }}",
            "--user", "{{ backrest_admin_username }}",
-           "--seed", "{{ backrest_config_path }}.seed"]
+           "--seed", "{{ backrest_config_path }}.seed",
+           # nos-offsite snapshotted RustFS's ciphertext of the dumps nos-dumps holds (11-05, no dedup)
+           "--retire-plan", "nos-offsite"]
     # Over stdin, not argv — the password must not be visible in `ps`.
     stdin: "{{ backrest_admin_password }}"
   register: _backrest_auth

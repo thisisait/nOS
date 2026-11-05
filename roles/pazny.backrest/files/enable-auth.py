@@ -31,6 +31,8 @@ def main() -> None:
     # daemon-owned, so a seed-once template never reaches an existing daemon;
     # this adds each repo/plan whose id is ABSENT and touches nothing else.
     ap.add_argument("--seed", help="rendered config.json.j2 to merge absent repos/plans from")
+    # A plan nOS stopped declaring: removed from the live config (its snapshots stay; forgetting is the operator's).
+    ap.add_argument("--retire-plan", action="append", default=[])
     args = ap.parse_args()
 
     password = sys.stdin.read().strip()
@@ -59,6 +61,10 @@ def main() -> None:
                     if x.get("id") in want and k in want[x["id"]] and x.get(k) != want[x["id"]][k]:
                         x[k] = want[x["id"]][k]
                         seeded += 1
+    kept = [p for p in cfg.get("plans") or [] if p.get("id") not in args.retire_plan]
+    if len(kept) != len(cfg.get("plans") or []):
+        seeded += len(cfg["plans"]) - len(kept)
+        cfg["plans"] = kept
     auth = cfg.get("auth") or {}
     users = auth.get("users") or []
     if not seeded and not auth.get("disabled", False) and any(u.get("name") == args.user for u in users):
