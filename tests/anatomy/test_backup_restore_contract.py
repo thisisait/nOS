@@ -305,10 +305,9 @@ def test_tofu_state_source_in_backup_script():
 
 
 def test_tofu_state_backup_defaults_declared():
-    """The toggle + dir var must exist in the role defaults and point at the
-    repo's terraform/authentik dir. NOTE the default.config.yml shadow trap:
-    backup_* vars there WIN over role defaults — if someone later shadows
-    backup_tofu_state_dir, it must still target terraform/authentik."""
+    """The toggle + dir var must exist and follow tofu_authentik_state_dir, where
+    tasks/tofu-authentik.yml keeps the state (~/.nos/tofu/authentik since 2026-11-05,
+    the checkout's terraform/authentik before). Any other dir backs up nothing."""
     # Declared in the default layers since 2026-10-16: the direct restic path reads it too.
     text = BACKUP_DEFAULTS.read_text() + "\n" + ni.default_config_text()
     assert re.search(r"^backup_tofu_state:", text, re.M), (
@@ -316,16 +315,16 @@ def test_tofu_state_backup_defaults_declared():
     )
     m = re.search(r'^backup_tofu_state_dir:\s*"([^"]+)"', text, re.M)
     assert m, "backup_tofu_state_dir not declared in pazny.backup defaults / default layers"
-    assert m.group(1).endswith("/terraform/authentik"), (
-        f"backup_tofu_state_dir must point at terraform/authentik, got: {m.group(1)}"
+    assert m.group(1) == "{{ tofu_authentik_state_dir }}", (
+        f"backup_tofu_state_dir must follow tofu_authentik_state_dir, got: {m.group(1)}"
     )
     # Shadow guard (version-pin trap, see memory): a default.config.yml override
     # with a DIFFERENT dir would silently back up nothing (path-missing skip).
     cfg = ni.default_config_text()
     shadow = re.search(r'^backup_tofu_state_dir:\s*"([^"]+)"', cfg, re.M)
     if shadow:
-        assert shadow.group(1).endswith("/terraform/authentik"), (
-            "default.config.yml shadows backup_tofu_state_dir with a non-"
-            f"terraform/authentik path ({shadow.group(1)}) — role default is dead, "
+        assert shadow.group(1) == "{{ tofu_authentik_state_dir }}", (
+            "default.config.yml shadows backup_tofu_state_dir with a path other than "
+            f"the tofu state dir ({shadow.group(1)}) — role default is dead, "
             "backup.sh would skip-on-missing forever"
         )

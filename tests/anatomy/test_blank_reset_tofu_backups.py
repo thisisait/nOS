@@ -67,11 +67,11 @@ def test_find_task_discovers_timestamped_backups():
     matching = [
         t for t in find_tasks
         if str(t["ansible.builtin.find"].get("patterns", "")) == BACKUP_GLOB
-        and "terraform/authentik" in str(t["ansible.builtin.find"].get("paths", ""))
+        and "{{ tofu_authentik_state_dir }}" in str(t["ansible.builtin.find"].get("paths", ""))
     ]
     assert matching, (
         "no find task globs 'terraform.tfstate.*.backup' under "
-        "terraform/authentik — timestamped backups would survive a blank"
+        "tofu_authentik_state_dir — timestamped backups would survive a blank"
     )
     # The find must register a result for the removal loop to consume.
     assert matching[0].get("register"), "find task does not register a result var"

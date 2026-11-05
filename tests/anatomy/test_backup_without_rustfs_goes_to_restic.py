@@ -103,8 +103,8 @@ def core(tmp_path_factory):
     (tmp / ".nos").mkdir()
     (tmp / ".nos/secrets.yml").write_text("k: v\n")
     (tmp / ".nos/state.yml").write_text("s: 1\n")
-    (tmp / "terraform/authentik").mkdir(parents=True)
-    (tmp / "terraform/authentik/terraform.tfstate").write_text("{}")
+    (tmp / ".nos/tofu/authentik").mkdir(parents=True)
+    (tmp / ".nos/tofu/authentik/terraform.tfstate").write_text("{}")
     script = render(tmp, "profiles/core.yml")
     return tmp, script, execute(tmp, script)
 
@@ -177,7 +177,7 @@ def test_the_core_snapshot_holds_keap_wing_state_and_tofu(core):
     assert gzip.decompress((staging / "keap-db.gz").read_bytes()) == b"KEAP-SNAPSHOT", run.stderr
     assert b"insert into" in gzip.decompress((staging / "wing-db.sql.gz").read_bytes()).lower()
     for f in (staging / "keap-db.gz", staging / "wing-db.sql.gz", tmp / ".nos/secrets.yml",
-              tmp / ".nos/state.yml", tmp / "terraform/authentik/terraform.tfstate"):
+              tmp / ".nos/state.yml", tmp / ".nos/tofu/authentik/terraform.tfstate"):
         assert str(f) in snap, f"{f} is not in the snapshot"
     assert not list(staging.glob("*secrets*")) and not list(staging.glob("nos-state*")), (
         "~/.nos state must reach restic in place, never as a second plaintext copy")

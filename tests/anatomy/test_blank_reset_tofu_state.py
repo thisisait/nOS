@@ -144,8 +144,8 @@ def test_method_is_file_absent():
     )
     # The path must target the tofu authentik working dir, parameterized by item.
     path = str(fmod.get("path", ""))
-    assert "terraform/authentik" in path, (
-        "reset path no longer targets terraform/authentik — wrong state dir"
+    assert "{{ tofu_authentik_state_dir }}" in path, (
+        "reset path no longer targets tofu_authentik_state_dir (~/.nos/tofu) — wrong state dir"
     )
     assert "{{ item }}" in path, (
         "reset path no longer interpolates the loop item — only one file wiped"
