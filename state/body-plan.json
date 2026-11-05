@@ -14,11 +14,11 @@
     "sense": 86,
     "limb": 124,
     "memory": 42,
-    "law": 54,
+    "law": 56,
     "reflex": 45,
     "heartbeat": 1,
     "internal": 76,
-    "edges": 440
+    "edges": 443
   },
   "nodes": {
     "agent:conductor": {
@@ -502,6 +502,14 @@
       "kind": "doctrine"
     },
     "doctrine:ssot/doctrine/foreign-properties.md#5.1": {
+      "level": "law",
+      "kind": "doctrine"
+    },
+    "doctrine:ssot/doctrine/immune-system.md#4.1": {
+      "level": "law",
+      "kind": "doctrine"
+    },
+    "doctrine:ssot/doctrine/immune-system.md#7": {
       "level": "law",
       "kind": "doctrine"
     },
@@ -2551,6 +2559,16 @@
       "kind": "part_of"
     },
     {
+      "from": "doctrine:ssot/doctrine/immune-system.md#4.1",
+      "to": "article:immune-system",
+      "kind": "part_of"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/immune-system.md#7",
+      "to": "article:immune-system",
+      "kind": "part_of"
+    },
+    {
       "from": "doctrine:ssot/doctrine/layers.md#3",
       "to": "article:layers",
       "kind": "part_of"
@@ -3212,7 +3230,12 @@
     },
     {
       "from": "reader:red-status",
-      "to": "doctrine:ssot/doctrine/loop-contract.md#7",
+      "to": "doctrine:ssot/doctrine/immune-system.md#4.1",
+      "kind": "governed_by"
+    },
+    {
+      "from": "reader:red-status",
+      "to": "doctrine:ssot/doctrine/immune-system.md#7",
       "kind": "governed_by"
     },
     {

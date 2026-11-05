@@ -47,7 +47,7 @@ Each line: level (count) — what it means (the lexicon's words), then the most 
 - **sense** (86) — A reader or judge that only reads; an immune indicator is a sense with an indicator contract. Most connected: tool_ro:mcp-wing-read (10), tool_ro:bash-read-only (8), judge:cortex-corpus-diff (5)
 - **limb** (124) — A tool that acts. Most connected: effector:loop-pr (6), effector:run-agent (6), effector:loop-propose (5)
 - **memory** (42) — What nOS has learned, kept in KEAP; RAM stays plain English. Most connected: table:party (15), table:invoice (5), table:journal-entry (4)
-- **law** (54) — The rules in force, kept in ssot/doctrine/ and kept apart from the genome. Most connected: article:loop-contract (19), doctrine:ssot/doctrine/loop-contract.md#5.1 (6), doctrine:ssot/doctrine/loop-contract.md#3.4 (5)
+- **law** (56) — The rules in force, kept in ssot/doctrine/ and kept apart from the genome. Most connected: article:loop-contract (19), doctrine:ssot/doctrine/loop-contract.md#5.1 (6), doctrine:ssot/doctrine/loop-contract.md#3.4 (5)
 - **reflex** (45) — An automatic, scheduled response of an organ; Pulse runs each one on its clock. Most connected: pulse:conductor:self-test-001 (9), pulse:librarian:brief-taxonomy (9), pulse:librarian:describe-taxonomy (9)
 - **heartbeat** (1) — A periodic signal that proves something is still alive. Most connected: daemon:eu.thisisait.nos.heartbeat (0)
 
