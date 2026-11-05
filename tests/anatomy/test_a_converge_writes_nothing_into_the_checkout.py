@@ -94,15 +94,16 @@ def test_tofu_state_lives_under_nos_home_not_the_checkout():
     assert "-backend-config=path={{ tofu_authentik_state_dir }}/terraform.tfstate" in init, init
 
 
-def _move(tmp_path, src_files, dst_files):
+def _move(tmp_path, src_files, dst_files, here=None, estate=None):
     src, dst = tmp_path / "src", tmp_path / "dst"
     for d, files in ((src, src_files), (dst, dst_files)):
         d.mkdir()
         for name, body in files.items():
             (d / name).write_text(body)
     script = _tofu_task(lambda t: "SRC" in (t.get("environment") or {}))["ansible.builtin.shell"]
-    return src, dst, subprocess.run(["bash", "-c", script], capture_output=True, text=True,
-                                    env={"PATH": "/usr/bin:/bin", "SRC": str(src), "DST": str(dst)})
+    env = {"PATH": "/usr/bin:/bin", "SRC": str(src), "DST": str(dst),
+           "HERE": str(here or tmp_path), "ESTATE": str(estate or tmp_path / "no-estate")}
+    return src, dst, subprocess.run(["bash", "-c", script], capture_output=True, text=True, env=env)
 
 
 def test_tofu_state_is_moved_never_copied(tmp_path):
@@ -122,3 +123,40 @@ def test_tofu_state_move_refuses_two_different_states(tmp_path):
     src, dst, r = _move(tmp_path, {"terraform.tfstate": "old"}, {"terraform.tfstate": "new"})
     assert r.returncode != 0 and "REFUSE" in (r.stdout + r.stderr)
     assert (src / "terraform.tfstate").read_text() == "old" and (dst / "terraform.tfstate").read_text() == "new"
+
+
+def test_tofu_state_refusal_names_serial_and_mtime_of_both(tmp_path):
+    """Which one is live is the operator's call; the message must give him the numbers."""
+    _, _, r = _move(tmp_path, {"terraform.tfstate": '{"serial": 7}'}, {"terraform.tfstate": '{"serial": 9}'})
+    assert r.returncode != 0 and "serial=7" in r.stderr and "serial=9" in r.stderr, r.stderr
+    assert r.stderr.count("mtime=") == 2, r.stderr
+
+
+def _git(*a):
+    subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *a], check=True, capture_output=True)
+
+
+def test_tofu_state_moves_only_from_the_estate_checkout(tmp_path):
+    """2026-11-05: dev held a 10-22 state, the estate clone an 11-05 one; dev converging
+    first would have seeded ~/.nos with the stale one."""
+    estate = tmp_path / "estate"
+    _git("init", "-q", str(estate))
+    src, dst, r = _move(tmp_path, {"terraform.tfstate": "stale"}, {}, here=tmp_path, estate=estate)
+    assert r.returncode == 0, r.stderr
+    assert (src / "terraform.tfstate").exists() and not (dst / "terraform.tfstate").exists()
+
+
+def test_tofu_state_never_moves_from_a_worktree(tmp_path):
+    main, wt = tmp_path / "main", tmp_path / "wt"
+    _git("init", "-q", str(main))
+    _git("-C", str(main), "commit", "-q", "--allow-empty", "-m", "x")
+    _git("-C", str(main), "worktree", "add", "-q", str(wt))
+    src, dst, r = _move(tmp_path, {"terraform.tfstate": "branch"}, {}, here=wt)
+    assert r.returncode == 0, r.stderr
+    assert (src / "terraform.tfstate").exists() and not (dst / "terraform.tfstate").exists()
+
+
+def test_tofu_state_moves_after_the_worktree_guard():
+    names = [t.get("name", "") for t in _tasks(yaml.safe_load(TOFU_TASKS.read_text()))]
+    move = names.index("[tofu-authentik] Move tofu state out of the checkout")
+    assert move > names.index("[tofu-authentik] Refuse to own Authentik state from a worktree"), names

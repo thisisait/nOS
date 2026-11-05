@@ -105,6 +105,8 @@ def core(tmp_path_factory):
     (tmp / ".nos/state.yml").write_text("s: 1\n")
     (tmp / ".nos/tofu/authentik").mkdir(parents=True)
     (tmp / ".nos/tofu/authentik/terraform.tfstate").write_text("{}")
+    (tmp / "terraform/authentik").mkdir(parents=True)
+    (tmp / "terraform/authentik/nos.auto.tfvars.json").write_text("{}")
     script = render(tmp, "profiles/core.yml")
     return tmp, script, execute(tmp, script)
 
@@ -177,7 +179,8 @@ def test_the_core_snapshot_holds_keap_wing_state_and_tofu(core):
     assert gzip.decompress((staging / "keap-db.gz").read_bytes()) == b"KEAP-SNAPSHOT", run.stderr
     assert b"insert into" in gzip.decompress((staging / "wing-db.sql.gz").read_bytes()).lower()
     for f in (staging / "keap-db.gz", staging / "wing-db.sql.gz", tmp / ".nos/secrets.yml",
-              tmp / ".nos/state.yml", tmp / ".nos/tofu/authentik/terraform.tfstate"):
+              tmp / ".nos/state.yml", tmp / ".nos/tofu/authentik/terraform.tfstate",
+              tmp / "terraform/authentik/nos.auto.tfvars.json"):
         assert str(f) in snap, f"{f} is not in the snapshot"
     assert not list(staging.glob("*secrets*")) and not list(staging.glob("nos-state*")), (
         "~/.nos state must reach restic in place, never as a second plaintext copy")
@@ -202,3 +205,17 @@ def test_rustfs_on_without_install_backup_does_not_mirror_the_bucket(tmp_path):
     execute(tmp_path, script)
     assert str(bucket) not in (tmp_path / "restic.calls").read_text()
     assert (tmp_path / "backups/staging/postgres.sql.gz").is_file()
+
+
+@pytest.mark.parametrize("managed", [False, True])
+def test_no_tofu_state_dir_fails_only_when_tofu_is_managed(tmp_path, managed):
+    """2026-11-05: ~/.nos/tofu/authentik is born only by the tofu block, so with
+    manage_authentik_with_tofu off every nightly run reported tofu-state FAILED."""
+    script = render(tmp_path, "profiles/core.yml",
+                    {"manage_authentik_with_tofu": managed, "install_authentik": True})
+    execute(tmp_path, script)
+    by = {s["name"]: s for s in json.loads((tmp_path / ".nos/backup-restic-status.json").read_text())["sources"]}
+    if managed:
+        assert by["tofu-state"]["success"] is False, by
+    else:
+        assert "tofu-state" not in by, by
