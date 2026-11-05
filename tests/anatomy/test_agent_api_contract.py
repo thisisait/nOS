@@ -178,7 +178,7 @@ def test_pulse_catalog_points_at_agent_wing_tokens():
 
 def test_upgrade_architect_agent_wired():
     """W5-B5: the upgrade-architect agent (drafts recipes for coverage gaps in
-    its report + queues coexistence for breaking) must be fully wired with the
+    its report + recommends coexistence for breaking) must be fully wired with the
     complete new-agent provisioning checklist (contract, profile, wrapper,
     Authentik client, wing token: credentials + catalog substitution + post
     provision + env). Propose-only — never writes files or provisions."""
@@ -198,7 +198,9 @@ def test_upgrade_architect_agent_wired():
     assert "--name=upgrade-architect" in post
     assert "--token={{ upgrade_architect_wing_api_token }}" in post
     prof = (base / "upgrade-architect/agent.yml").read_text()
-    assert "/coexistence/" in prof and "queue" in prof, "architect must queue coexistence"
+    # Queueing coexistence is an operator verb (wing.operator); the architect's token is wing.read.
+    assert "recommend coexistence" in prof.lower() and "/coexistence/<svc>/queue" not in prof, (
+        "architect must recommend coexistence, not POST the operator-only queue")
     assert "never write" in prof.lower() or "propose-only" in prof.lower() or "never write/commit" in prof.lower()
 
 
