@@ -244,6 +244,7 @@ posts, restarts or renders something.
 - `forge-sync.py` — The trunk's four holders, and the only tool that moves refs between them.
 - `migration-pr.sh` — tools/migration-pr.sh — validate an authored migration record + its version
 - `recipe-pr.sh` — tools/recipe-pr.sh — validate an upgrade recipe and (optionally) open a PR/MR
+- `worktree-prune.py` — Every worktree of a repo: branch, state (merged-clean / dirty / unmerged / locked / holds-kept-child), size; dry run by default, `--confirm` runs a plain worktree remove on the merged clean ones only (never dirty, unlanded, or a parent of a kept nested worktree). Base ref unresolvable = UNKNOWN. Operator-run.
 - `worktree-lease.py` — A lease over a worktree's SHAPE, so a long agent run cannot be cut from under.
 - `ci-local.sh` — tools/ci-local.sh — run a command inside a FROZEN venv that reproduces the CI
 - `deploy-from-ci.sh` — host-side deploy wrapper invoked by Wing's
