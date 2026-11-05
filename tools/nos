@@ -532,6 +532,24 @@ fi
 [ "$LEAVE" -eq 1 ] && ARGS+=(-e leave=true)
 ARGS+=(-e "nos_cli_version=${NOS_CLI_VERSION}")
 
+# An -e @profile outranks config.yml without a word: config.yml install_kiwix: true lost to
+# profiles/core.yml's false and only 'profile: core.yml' was printed (profile-outranks-config). Name every install_/configure_
+# key the two disagree on before anything runs, --print-cmd included. Gate: test_profile_conflict_is_named.py.
+_prev=""
+for a in ${PASSTHRU[@]+"${PASSTHRU[@]}"}; do
+  case "$_prev" in -e|--extra-vars) case "$a" in @*)
+    _pf="${a#@}"; case "$_pf" in /*) ;; *) _pf="$NOS_SRC/$_pf" ;; esac
+    [ -f "$_pf" ] && [ -f "$NOS_SRC/config.yml" ] && awk -v prof="${a#@}" '
+      { sub(/[ \t]+#.*/, ""); sub(/[ \t]+$/, "") }
+      !/^(install|configure)_[A-Za-z0-9_]+:/ { next }
+      { k = $0; sub(/:.*/, "", k); v = $0; sub(/^[^:]*:[ \t]*/, "", v); v = tolower(v) }
+      FNR == NR { cfg[k] = v; next }
+      (k in cfg) && cfg[k] != v { printf "nos: %s: config.yml says %s, %s says %s — profile wins\n", k, cfg[k], prof, v }
+    ' "$NOS_SRC/config.yml" "$_pf" >&2 ;;
+  esac ;; esac
+  _prev="$a"
+done
+
 if [ "$PRINT_CMD" -eq 1 ]; then
   printf '%s\n' "${ARGS[*]}"
   exit 0
