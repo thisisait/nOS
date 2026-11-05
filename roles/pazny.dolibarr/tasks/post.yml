@@ -16,6 +16,40 @@
 # actually offer the OIDC entry URL (no silent green — the n8n owner lesson).
 # ==============================================================================
 
+# 11-05: install.lock (documents dir, 10-09) outlived a blank that emptied MariaDB while
+# install_dolibarr was off, so DOLI_INSTALL_AUTO skipped init and every llx_const upsert
+# failed. A lock over an EMPTY schema holds nothing: drop it and let the entrypoint install.
+- name: "[pazny.dolibarr Post] How many tables the Dolibarr schema holds"
+  ansible.builtin.command:
+    argv: [docker, exec, "{{ mariadb_container | default('infra-mariadb-1') }}", sh, -c,
+           'exec mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" -N -e "$0"',
+           "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='{{ dolibarr_db_name }}'"]
+  register: _doli_tables
+  changed_when: false
+  failed_when: false
+  when: install_dolibarr | default(false) | bool
+
+- name: "[pazny.dolibarr Post] A lock over an empty schema: unlock and re-run the installer"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p b2b exec -T dolibarr rm -f /var/www/documents/install.lock
+    && {{ docker_bin }} compose -p b2b restart dolibarr
+  when:
+    - install_dolibarr | default(false) | bool
+    - (_doli_tables.rc | default(1)) == 0
+    - (_doli_tables.stdout | default('') | trim) == '0'
+
+- name: "[pazny.dolibarr Post] Wait for the installer to create llx_const"
+  ansible.builtin.command:
+    argv: [docker, exec, "{{ mariadb_container | default('infra-mariadb-1') }}", sh, -c,
+           'exec mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" -N -e "$0"',
+           "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='{{ dolibarr_db_name }}' AND table_name='llx_const'"]
+  register: _doli_const_table
+  changed_when: false
+  until: (_doli_const_table.stdout | default('') | trim) == '1'
+  retries: 36
+  delay: 5
+  when: install_dolibarr | default(false) | bool
+
 - name: "[pazny.dolibarr Post] Upsert OpenID Connect constants (llx_const)"
   ansible.builtin.command:
     argv:
