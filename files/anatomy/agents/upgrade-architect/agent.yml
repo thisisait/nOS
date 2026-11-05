@@ -7,8 +7,8 @@ description: |
   NO existing recipe (coverage gap), or whose recipe target is behind, or a
   major/breaking jump, it DRAFTS a recipe (YAML) in its report for operator
   review — it never writes or commits files. For a breaking / whole-new-version
-  upgrade it also QUEUES a coexistence provision (parallel track) for the
-  operator to apply under --tags coexistence. Distinct from:
+  upgrade it also RECOMMENDS a coexistence provision (parallel track); queueing
+  it is the operator's decision (an operator verb in Wing). Distinct from:
     - upgrade-advisor: queues upgrades from EXISTING recipes.
     - upgrade-architect: proposes the recipes that don't exist yet + the
       coexistence prep for breaking changes.
@@ -56,7 +56,7 @@ metadata:
 exit_code_semantics:
   emits_sentinel: true
   exit_0: "Full recipe coverage; nothing needed drafting for the running version matrix."
-  exit_1: "Drafted recipe(s) / queued coexistence prep pending operator review in the report body. Operator-review, not a failure. Fires a HIGH A9 notification."
+  exit_1: "Drafted recipe(s) / recommended coexistence prep pending operator review in the report body. Operator-review, not a failure. Fires a HIGH A9 notification."
   exit_2: "Environment / auth / Wing error inside the runner. Fires a CRITICAL A9 notification."
 # ── Article 30 ────────────────────────────────────────────────────────────────
 gdpr:
@@ -121,7 +121,7 @@ pulse:
         NOS_AGENT_CLIENT_SECRET: "secret:agent_upgrade_architect_client_secret"  # pointer into ~/.nos/secrets.yml — the ONE spelling; never re-derive from the prefix (gate: test_agent_secret_single_spelling.py)
         NOS_AGENT_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/upgrade-architect/agent.yml"
         NOS_AGENT_TASK: |
-          Author missing upgrade recipes + queue coexistence for breaking ones:
+          Author missing upgrade recipes + recommend coexistence for breaking ones:
           1. GET /api/v1/upgrades — the matrix (rows carry security:
              {pending_ids, max_severity, floor, below_floor}).
           2. Find gaps: installed matches no recipe from_pattern, or installed
@@ -129,11 +129,12 @@ pulse:
              security.below_floor is true (draft toward security.floor —
              never target a version below it, even when "at target").
           3. DRAFT a recipe (```yaml) per gap in your report (operator commits).
-          4. For breaking/whole-new-version: POST /api/v1/coexistence/<svc>/queue.
+          4. For breaking/whole-new-version: recommend coexistence in the report
+             (queueing it is an operator verb; your token cannot).
           5. POST "## Upgrade architect report" via /api/v1/events
              type=conductor_report source=upgrade-architect.
           End the report with a final line `NOS_AGENT_EXIT: 0` (full coverage)
-          or `NOS_AGENT_EXIT: 1` (you drafted recipes / queued coexistence).
+          or `NOS_AGENT_EXIT: 1` (you drafted recipes / recommended coexistence).
         WING_API_URL: "http://127.0.0.1:9000"
         WING_API_TOKEN: "{{ upgrade_architect_wing_api_token }}"
         WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"

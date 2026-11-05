@@ -25,9 +25,10 @@ and analyzing their output:
    (Tooling pending.)
 5. **OS-level checks** — lynis against the host. (Tooling pending.)
 
-After running a scan, write findings via Wing API
-(`POST /api/v1/pentest/findings`), then emit a markdown `## Pentest
-survey report` event.
+After running a scan, write each finding under its target via Wing API
+(`POST /api/v1/pentest/targets/<id>/findings`, body needs `severity` +
+`title`; create the target first with `POST /api/v1/pentest/targets`),
+then emit a markdown `## Pentest survey report` event.
 
 Distinct from remediator + scout:
 - **Inspektor** surfaces findings (initiates scans, writes findings).
