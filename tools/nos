@@ -55,7 +55,7 @@ NOS_SRC="${NOS_SRC:-$HOME/projects/nOS}"
 # config.yml, credentials.yml and the galaxy roles git does not track); this
 # only MOVES it: fetches `ref` (a branch of origin or a tag; default: the ref
 # the estate follows), refuses a dirty clone (3), an unsigned apex ruling at the
-# target (4) and a move that is not a fast-forward (5), checks the target out as
+# target (4; on a branch it first offers the signature, one yes) and a move that is not a fast-forward (5), checks the target out as
 # branch `estate` and points NOS_SRC at the clone. Gate: test_nos_update_moves_the_estate.py.
 if [ "${1:-}" = "update" ]; then
   shift
@@ -92,7 +92,27 @@ have = next((l.split(":", 1)[1].strip() for l in t.splitlines() if l.startswith(
 body = "".join(l for l in t.splitlines(keepends=True) if not l.startswith("signed_digest:"))
 sys.exit(0 if have == hashlib.sha256(body.encode()).hexdigest() else 1)'; then
     echo "nos update: the apex ruling at $_ref (${_new:0:9}) is not signed — the operator signs it (tools/apex-sign.py --confirm) before it ships" >&2
-    exit 4
+    # 10-29: signing took a worktree, two apex-sign calls and a push. Offer it here, on this commit,
+    # behind one explicit yes (the signer is the CLI's own apex-sign, never the unsigned commit's).
+    [ "$_branch" = 1 ] || exit 4
+    _sign="$(dirname "$0")/apex-sign.py"; [ -f "$_sign" ] || _sign="$NOS_SRC/tools/apex-sign.py"
+    [ -f "$_sign" ] || exit 4
+    git -C "$_est" --no-pager diff HEAD "$_new" -- files/anatomy/apex/ruling.yml >&2 || true
+    printf 'Sign this ruling as the operator and push the signature to origin/%s? [y/N] ' "$_ref" >&2
+    _ans=""; read -r _ans || true
+    case "$_ans" in y|Y|yes) ;; *) exit 4 ;; esac
+    _tmp="$(mktemp -d)"; _wt="$_tmp/sign"
+    git -C "$_est" worktree add -q --detach "$_wt" "$_new" || exit 4
+    python3 "$_sign" --repo "$_wt" --confirm >&2 || true
+    _signed="$(git -C "$_wt" rev-parse HEAD)"
+    # origin's push URL is DISABLED on the estate (estate-adopt.sh); this explicit yes pushes by fetch URL
+    _pushed=0
+    [ "$_signed" != "$_new" ] && git -C "$_wt" push -q "$(git -C "$_est" remote get-url origin)" \
+      "$_signed:refs/heads/$_ref" && _pushed=1
+    git -C "$_est" worktree remove --force "$_wt" || true; rm -rf "$_tmp"
+    [ "$_pushed" = 1 ] || { echo "nos update: the signature was not pushed; the estate stays where it is" >&2; exit 4; }
+    git -C "$_est" fetch -q origin || { echo "nos update: fetch failed" >&2; exit 6; }
+    _new="$_signed"
   fi
   if git -C "$_est" rev-parse -q --verify refs/heads/estate >/dev/null; then
     git -C "$_est" merge-base --is-ancestor estate "$_new" || {

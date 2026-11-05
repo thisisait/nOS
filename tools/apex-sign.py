@@ -14,9 +14,11 @@ flag again under a longer name.
 Usage:
     tools/apex-sign.py            # what changed since the last signature
     tools/apex-sign.py --confirm  # record the new digest and commit ruling.yml (only that file)
+    tools/apex-sign.py --show     # the same diff, exit 0: read-only, safe to chain in scripts
+    tools/apex-sign.py --repo DIR --confirm   # sign the ruling of another checkout (nos update)
 
-Exit 0 when the ruling already matches its digest, 1 when it does not and no
---confirm was given, 2 on a usage error.
+Exit 0 when the ruling already matches its digest (or --show), 1 when it does
+not and no --confirm was given, 2 on a usage error.
 """
 
 from __future__ import annotations
@@ -46,10 +48,18 @@ def recorded(text: str) -> str | None:
 
 
 def main() -> int:
+    global REPO, RULING
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--confirm", action="store_true",
-                    help="record the digest — do this after reading the diff")
+    mode = ap.add_mutually_exclusive_group()
+    mode.add_argument("--confirm", action="store_true",
+                      help="record the digest — do this after reading the diff")
+    # 10-29: `apex-sign.py && apex-sign.py --confirm` never reached --confirm (the read exits 1)
+    mode.add_argument("--show", action="store_true", help="print the diff and exit 0; never writes")
+    ap.add_argument("--repo", type=pathlib.Path, help="the checkout whose ruling to sign")
     args = ap.parse_args()
+    if args.repo:
+        REPO = args.repo.resolve()
+        RULING = REPO / "files/anatomy/apex/ruling.yml"
 
     if not RULING.is_file():
         print(f"apex-sign: no ruling at {RULING}", file=sys.stderr)
@@ -81,6 +91,8 @@ def main() -> int:
     else:
         print("(no committed version to diff against — read the file itself)")
 
+    if args.show:
+        return 0
     if not args.confirm:
         print(f"\nrecorded {have[:16]}…\ncomputed {want[:16]}…\n"
               "Read the change above. Then: tools/apex-sign.py --confirm")
