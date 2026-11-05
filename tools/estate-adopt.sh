@@ -10,7 +10,8 @@
 #
 #   <dir>            main clone, branch `estate` tracking origin/<branch>; holds config.yml and
 #                    credentials.yml; NOS_SRC in ~/.nos/nos-cli.env points here. Converge here.
-#   origin           the upstream (fetch only; push disabled)
+#   origin           the upstream (fetch only; push disabled — nos update signs and pushes a ruling
+#                    only through the operator's dev checkout, git config nos.sign-checkout)
 #   fork             the contributor's fork, if given: fix branches are pushed here, PRs go upstream
 #   fix worktrees    git -C <dir> worktree add ../<dir>-fix-<x> -b fix/<x> origin/<branch>
 #
