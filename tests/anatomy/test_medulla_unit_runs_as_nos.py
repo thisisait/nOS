@@ -157,13 +157,14 @@ def _task(tasks, pred, what):
     return hit[0]
 
 
-def test_the_medulla_renders_its_env_0640_root_nos_and_its_system_unit():
+def test_the_medulla_renders_its_env_0600_root_and_its_system_unit():
     tasks = _tasks(MEDULLA_LINUX)
     env = _task(tasks, lambda t: (t.get("ansible.builtin.template") or {}).get("dest") == "/etc/nos/medulla.env",
                 "pazny.medulla linux.yml renders no /etc/nos/medulla.env")
     tpl = env["ansible.builtin.template"]
     assert tpl["src"].endswith("pazny.thalamus/templates/thalamus.env.j2"), "one env template, not a second"
-    assert (str(tpl.get("mode")), tpl.get("owner"), tpl.get("group")) == ("0640", "root", "{{ nos_system_user }}"), tpl
+    # only systemd's EnvironmentFile reads it, as root, before the unit drops to nos (11-05)
+    assert (str(tpl.get("mode")), tpl.get("owner"), tpl.get("group")) == ("0600", "root", "root"), tpl
     assert env.get("no_log") is True, "the env holds the KEAP proxy secret"
     unit = _task(tasks, lambda t: "nos-medulla.service.j2" in str((t.get("ansible.builtin.template") or {}).get("src")),
                  "pazny.medulla linux.yml renders no nos-medulla.service.j2")
