@@ -258,10 +258,8 @@ def extract_tagged_id(task_name, pattern):
     return token or None
 
 
-def leaving_estate(extra_vars=None) -> bool:
-    """True for `nos --remove=all … --leave`: the run deletes ~/.nos and must
-    not write it back. The 2026-09-30 leave recreated ~/.nos with this
-    callback's JSONL and SQLite fallback after the removal had taken it."""
+def _cli_extra_vars(extra_vars=None) -> dict:
+    """The -e key=value / JSON pairs of this run (an @file is not read)."""
     if extra_vars is None:
         try:
             from ansible import context
@@ -281,8 +279,26 @@ def leaving_estate(extra_vars=None) -> bool:
                 if "=" in tok:
                     k, v = tok.split("=", 1)
                     kv[k] = v.strip("'\"")
+    return kv
+
+
+def leaving_estate(extra_vars=None) -> bool:
+    """True for `nos --remove=all … --leave`: the run deletes ~/.nos and must
+    not write it back. The 2026-09-30 leave recreated ~/.nos with this
+    callback's JSONL and SQLite fallback after the removal had taken it."""
+    kv = _cli_extra_vars(extra_vars)
     truthy = str(kv.get("leave", "")).lower() in ("true", "yes", "y", "1")
     return str(kv.get("remove", "")) == "all" and truthy
+
+
+_ACTOR_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")  # = bone/migrations.ACTOR_RE
+
+
+def run_actor(extra_vars=None) -> str:
+    """Who the run is for: nos_actor (Bone passes the person Wing decided for),
+    else "operator". A malformed value is not trusted onto the record."""
+    actor = str(_cli_extra_vars(extra_vars).get("nos_actor", ""))
+    return actor if _ACTOR_RE.match(actor) else "operator"
 
 
 def recap_from_stats(stats) -> dict:
@@ -1355,7 +1371,7 @@ class CallbackModule(CallbackBase):
             "body": "playbook: {}\nrun_id: {}\nduration: {} min\nrecap: {}".format(
                 self._playbook_name, self._run_id, mins,
                 json.dumps(recap, sort_keys=True)),
-            "actor_id": "operator",
+            "actor_id": run_actor(),
             "actor_action_id": self._run_id,
             "origin_plugin": "playbook-run",
             "supersede_key": run_supersede_key(),

@@ -503,12 +503,13 @@
         --arg rid {{ item.recipe_id | default('unknown') | quote }} \
         --arg uid {{ item.upgrade_id | default('') | quote }} \
         --arg scope {{ item.reset_scope | default('host_reboot') | quote }} \
+        --arg actor {{ nos_actor | default('engine:upgrade') | quote }} \
         '{severity: "high",
           title: ("Reboot pending to finish " + $svc + " upgrade"),
           body: ("A host_reboot-class upgrade (" + $rid + ") was applied for " + $svc + ". The host must be restarted to finish settling — nOS never restarts the machine for you."),
           channels: ["wing-inbox", "ntfy"],
           origin_plugin: "upgrade-engine",
-          actor_id: "engine:upgrade",
+          actor_id: $actor,
           actor_action_id: $uid,
           metadata: {service: $svc, recipe_id: $rid, scope: $scope}}')
       compact=$(echo "$body" | jq --sort-keys -c .)

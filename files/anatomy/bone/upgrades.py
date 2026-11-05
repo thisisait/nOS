@@ -200,12 +200,14 @@ def apply_detached(service: str, recipe_id: str) -> dict[str, Any]:
         return {"error": err, "status": 400 if err != "recipe not found" else 404}
     repo = Path(str(migrate_mod.PLAYBOOK_DIR))
     launcher = repo / "tools" / "nos-upgrade-detached.sh"
+    actor = migrate_mod.ACTOR.get()
     if not launcher.is_file():
         return {"error": "detached launcher not found", "status": 500}
     try:
         proc = subprocess.Popen(
             ["/bin/bash", str(launcher), service, recipe_id],
             cwd=str(repo),
+            env={**os.environ, **({"NOS_ACTOR": actor} if actor else {})},
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
@@ -222,7 +224,7 @@ def apply_detached(service: str, recipe_id: str) -> dict[str, Any]:
         "service": service,
         "recipe_id": recipe_id,
         "detached": True,
-        "actor": migrate_mod.ACTOR.get(),
+        "actor": actor,
         "returncode": proc.returncode,
         "output": out,
     }

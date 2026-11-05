@@ -111,6 +111,12 @@ PLAY_ARGS=(
 if [[ -n "$RECIPE_ID" ]]; then
   PLAY_ARGS+=(-e "upgrade_recipe_id=${RECIPE_ID}")
 fi
+# NOS_ACTOR: the person Wing decided for (Bone sets it); the run's records name them.
+if [[ -n "${NOS_ACTOR:-}" ]]; then
+  [[ "$NOS_ACTOR" =~ ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$ ]] \
+    || { echo "nos-upgrade-detached.sh: refusing malformed NOS_ACTOR" >&2; exit 2; }
+  PLAY_ARGS+=(-e "nos_actor=${NOS_ACTOR}")
+fi
 
 echo "[nos-upgrade-detached] launching upgrade for '${SERVICE}'${RECIPE_ID:+ (recipe ${RECIPE_ID})} — DETACHED"
 echo "[nos-upgrade-detached] log:     ${LOG}"

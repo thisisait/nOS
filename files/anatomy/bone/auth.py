@@ -58,6 +58,7 @@ JWT_LEEWAY_SECONDS = int(os.getenv("BONE_JWT_LEEWAY_SECONDS", "30"))
 # Optional: refuse to start if no issuer is configured. Set to "0" to allow
 # Bone to boot in HMAC-only mode (telemetry pipeline still works).
 REQUIRE_JWT_AUTH = os.getenv("BONE_REQUIRE_JWT_AUTH", "1") == "1"
+WING_CLIENT_ID = "nos-wing"  # default.config.yml authentik agent client
 
 
 # ── JWKS cache ───────────────────────────────────────────────────────────────
@@ -201,6 +202,10 @@ def require_scope(*scopes: str):
         # Stash on request state so handlers can read claims if they need to
         # (e.g. for audit logging the agent's client_id).
         request.state.jwt_claims = claims
+        # X-Nos-Actor names a person; only Wing (which saw them) may say who.
+        if request.headers.get("x-nos-actor") is not None and WING_CLIENT_ID not in (
+                claims.get("azp"), claims.get("client_id")):
+            raise HTTPException(status_code=403, detail="X-Nos-Actor is Wing's to send")
         return claims
 
     return _dep

@@ -31,9 +31,9 @@ PLAYBOOK_DIR = Path(os.getenv("PLAYBOOK_DIR", os.path.expanduser("~/nOS")))
 _ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$")
 
 # Who asked, as Wing forwarded it (X-Nos-Actor, set per request in main.py).
-# 2026-10-07: the person stopped at Wing; every mutating verb runs through
-# invoke_playbook, so the run and its reply name them here. Gate:
-# tests/anatomy/test_a_forwarded_verb_names_its_actor.py.
+# 2026-10-07: the person stopped at Wing. invoke_playbook and apply_detached
+# pass it on as nos_actor; wing_telemetry and the engine write it on the record.
+# Gate: tests/anatomy/test_a_forwarded_verb_names_its_actor.py.
 ACTOR: ContextVar[str | None] = ContextVar("nos_actor", default=None)
 ACTOR_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 
