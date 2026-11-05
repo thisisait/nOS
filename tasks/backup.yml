@@ -316,7 +316,12 @@
       add_files nos-state "{{ ansible_facts['env']['HOME'] }}/.nos" secrets.yml state.yml
       {% endif %}
       {% if backup_tofu_state | bool %}
-      add_files tofu-state "{{ backup_tofu_state_dir }}" terraform.tfstate terraform.tfstate.backup nos.auto.tfvars.json
+      # Only the tofu block makes ~/.nos/tofu: absent is FAILED only when tofu is managed (2026-11-05).
+      if [[ "{{ (manage_authentik_with_tofu | default(false) | bool and install_authentik | default(false) | bool) | lower }}" == true || -d "{{ backup_tofu_state_dir }}" ]]; then
+        add_files tofu-state "{{ backup_tofu_state_dir }}" terraform.tfstate terraform.tfstate.backup
+      fi
+      # The tfvars stays where tofu reads it, the checkout's terraform/authentik.
+      if [[ -f "{{ playbook_dir }}/terraform/authentik/nos.auto.tfvars.json" ]]; then PATHS+=("{{ playbook_dir }}/terraform/authentik/nos.auto.tfvars.json"); fi
       {% endif %}
       {% for d in backup_dirs_to_dump %}
       {% set on = d.flag is not defined or (lookup('vars', d.flag, default=false) | bool) %}

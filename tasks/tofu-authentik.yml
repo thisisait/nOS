@@ -87,34 +87,13 @@
         state: directory
         mode: '0700'
 
-    # One-time: state a checkout still holds MOVES to ~/.nos (a copy would diverge).
-    # Both present and different = two histories; refuse, the operator picks one.
-    # Gate: test_a_converge_writes_nothing_into_the_checkout runs this script.
-    - name: "[tofu-authentik] Move tofu state out of the checkout"
-      ansible.builtin.shell: |
-        set -eu
-        for f in "$SRC"/terraform.tfstate*; do
-          [ -f "$f" ] || continue
-          d="$DST/$(basename "$f")"
-          if [ ! -e "$d" ]; then mv "$f" "$d"; echo "moved $f"
-          elif cmp -s "$f" "$d"; then rm "$f"; echo "dropped identical $f"
-          else echo "REFUSE: $f and $d differ: keep the live one, delete the other, re-run" >&2; exit 1
-          fi
-        done
-      args:
-        executable: /bin/bash
-      environment:
-        SRC: "{{ _tf_dir }}"
-        DST: "{{ tofu_authentik_state_dir }}"
-      register: _tofu_state_move
-      changed_when: _tofu_state_move.stdout | length > 0
-
     # ── WORKTREE GUARD (2026-08-31) ─────────────────────────────────────────
-    # The tofu state is gitignored, so it exists ONLY in the checkout that
-    # created it. A linked git worktree therefore starts with no state at all,
+    # Until 2026-11-05 the tofu state sat gitignored in the checkout that
+    # created it, so a linked git worktree started with no state at all,
     # and `tofu plan` in a stateless dir does not read that as "someone else
     # owns this" — it reads it as "nothing exists yet" and plans to CREATE the
-    # entire Authentik surface.
+    # entire Authentik surface. The state now lives in ~/.nos, shared by every
+    # checkout, so a worktree would instead apply a branch's HCL over the live state.
     #
     # Measured 2026-08-31, running `--tags anatomy,authentik` from a worktree:
     # the self-reconcile printed "no state yet — nothing to reconcile" (it has
@@ -163,6 +142,36 @@
         # answers absolutely whenever the two differ, which is the only case
         # this needs to detect.
         - _tofu_git_dirs.stdout_lines[0] != _tofu_git_dirs.stdout_lines[1]
+
+    # One-time: the estate checkout's state MOVES to ~/.nos (a copy would diverge). Any
+    # other checkout's is stale (dev 10-22 vs estate 11-05, measured 2026-11-05) and stays.
+    # Both present and different = two histories; refuse. Gate: test_a_converge_writes_nothing_into_the_checkout.
+    - name: "[tofu-authentik] Move tofu state out of the checkout"
+      ansible.builtin.shell: |
+        set -euo pipefail
+        here=$(cd "$HERE" && pwd -P)
+        if [ "$(git -C "$here" rev-parse --git-dir --git-common-dir 2>/dev/null | sort -u | wc -l)" -gt 1 ] \
+           || { [ -d "$ESTATE/.git" ] && [ "$here" != "$(cd "$ESTATE" && pwd -P)" ]; }; then
+          echo "kept: $here is not the estate checkout, its tofu state is not moved" >&2; exit 0
+        fi
+        info() { echo "$1 serial=$(sed -n 's/.*"serial": *\([0-9]*\).*/\1/p' "$1" | head -1) mtime=$(date -r "$1" '+%F %T')"; }
+        for f in "$SRC"/terraform.tfstate*; do
+          [ -f "$f" ] || continue
+          d="$DST/$(basename "$f")"
+          if [ ! -e "$d" ]; then mv "$f" "$d"; echo "moved $f"
+          elif cmp -s "$f" "$d"; then rm "$f"; echo "dropped identical $f"
+          else echo "REFUSE: two different states: $(info "$f") vs live $(info "$d"); keep the newer, delete the other, re-run" >&2; exit 1
+          fi
+        done
+      args:
+        executable: /bin/bash
+      environment:
+        SRC: "{{ _tf_dir }}"
+        DST: "{{ tofu_authentik_state_dir }}"
+        HERE: "{{ playbook_dir }}"
+        ESTATE: "{{ nos_estate_dir }}"
+      register: _tofu_state_move
+      changed_when: _tofu_state_move.stdout | length > 0
 
     - name: "[tofu-authentik] tofu init"
       # -reconfigure: the state was moved above, so there is nothing to migrate.

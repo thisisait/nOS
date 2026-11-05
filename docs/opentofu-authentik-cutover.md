@@ -120,8 +120,8 @@ Punch list items #1–#3 (extracted 2026-06-12) **shipped the same day**:
 - ~~Secrets custody (P1)~~ — `run_tofu_state()` in `backup.sh` puts
   `terraform.tfstate` (+`.backup`) + `nos.auto.tfvars.json` into the nightly
   AES-256 set (Restic off-site copy #2 rides the bucket mirror); the generic
-  restore stage recovers them to the restore workdir (re-seating into the git
-  checkout is deliberately manual). Gate: `test_backup_restore_contract.py`.
+  restore stage recovers them to the restore workdir (re-seating the state into
+  `~/.nos/tofu/authentik` is deliberately manual). Gate: `test_backup_restore_contract.py`.
   Infisical custody skipped deliberately — no playbook-level infra-secret push
   precedent exists, and tfstate is a rotating document, not a KV secret.
 - ~~Disabled-service filtering (P2)~~ — the registry carries each client's
@@ -152,14 +152,21 @@ Still open:
   attachments in state instead of planning them as `N to add`. Gate:
   `test_tofu_registry_bridge.py::test_adopt_emits_attachment_imports`.
 
-## State files in `terraform/authentik/` — which is live
+## State files in `~/.nos/tofu/authentik/` — which is live
 
-The active state is **`terraform.tfstate`** (the most recently mtime'd one).
+Since 2026-11-05 the state lives outside every checkout, in
+`tofu_authentik_state_dir` (`~/.nos/tofu/authentik`, 0700); `tofu init` points
+the `local` backend there (`-backend-config=path=`). A converge from the estate
+checkout moves a state its `terraform/authentik/` still holds there once, never
+from a worktree or a non-estate checkout, and refuses two different states
+with the serial and mtime of both: keep the newer, delete the other, re-run.
+`terraform/authentik/` keeps only the HCL and the rendered `nos.auto.tfvars.json`.
+
+The active state is **`terraform.tfstate`**.
 OpenTofu writes a `terraform.tfstate.<epoch>.backup` on every apply, so the
 directory accumulates dozens of timestamped `*.backup` files over a working
 session. **They are transient and safe to delete** — read-only snapshots that no
-apply ever reads back; only `terraform.tfstate` is authoritative. They are
-gitignored (`terraform/**/terraform.tfstate.*`), so they never reach git, and a
+apply ever reads back; only `terraform.tfstate` is authoritative. A
 `blank=true` run wipes them all (`tasks/blank-reset.yml` now globs
 `terraform.tfstate.*.backup` alongside the singular `.backup`, pinned by
 `test_blank_reset_tofu_backups.py`). Nightly custody captures only the live

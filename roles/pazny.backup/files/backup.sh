@@ -73,10 +73,13 @@ NOS_STATE_DIR="{{ backup_home_dir }}"
 DO_STATE="{{ 'true' if backup_nos_state else 'false' }}"
 
 # OpenTofu Authentik state (ADR-0001 Phase 1): terraform.tfstate (+ .backup
-# sibling) and the rendered nos.auto.tfvars.json carry provider client_secrets
-# + outpost tokens, gitignored in the repo checkout — disk loss orphans the
-# tenant from tofu state unless they ride the nightly encrypted set.
+# sibling, in ~/.nos/tofu since 2026-11-05) and the rendered nos.auto.tfvars.json
+# (the checkout) carry provider client_secrets + outpost tokens — disk loss
+# orphans the tenant from tofu state unless they ride the nightly encrypted set.
 TOFU_STATE_DIR="{{ backup_tofu_state_dir }}"
+TOFU_TFVARS_DIR="{{ playbook_dir }}/terraform/authentik"
+# Only the tofu block makes TOFU_STATE_DIR: absent is FAILED only when tofu is managed.
+TOFU_MANAGED="{{ (manage_authentik_with_tofu | default(false) | bool and install_authentik | default(false) | bool) | lower }}"
 DO_TOFU_STATE="{{ 'true' if backup_tofu_state else 'false' }}"
 
 # Alpine image for volume/dir tar streaming — MUST match tasks/_restore_volume.yml
@@ -940,7 +943,10 @@ run_nos_state() {
 
 run_tofu_state() {
     [[ "${DO_TOFU_STATE}" != "true" ]] && return 0
-    [[ -d "${TOFU_STATE_DIR}" ]] || { log "tofu-state: ${TOFU_STATE_DIR} missing — recording as FAILED"; status_append "tofu-state" 0 0 0; return 0; }
+    if [[ ! -d "${TOFU_STATE_DIR}" ]]; then
+        [[ "${TOFU_MANAGED}" == "true" ]] || return 0
+        log "tofu-state: ${TOFU_STATE_DIR} missing — recording as FAILED"; status_append "tofu-state" 0 0 0; return 0
+    fi
 
     local date_str key start dur rc size
     date_str="$(date -u +%Y-%m-%d)"
@@ -955,21 +961,21 @@ run_tofu_state() {
     # ONLY the secret-bearing artifacts (state + its sibling + rendered tfvars).
     # NOT the whole terraform/authentik/ dir — the HCL is committed and the
     # .terraform/ provider cache is reproducible via `tofu init`. Restore is
-    # download+decrypt-to-workdir; re-seating into the git checkout is manual
+    # download+decrypt-to-workdir; re-seating into ~/.nos/tofu is manual
     # (see tasks/restore.yml + the role defaults comment).
-    local present=""
+    local present="" tfv=()
     [[ -f "${TOFU_STATE_DIR}/terraform.tfstate" ]] && present="${present} terraform.tfstate"
     [[ -f "${TOFU_STATE_DIR}/terraform.tfstate.backup" ]] && present="${present} terraform.tfstate.backup"
-    [[ -f "${TOFU_STATE_DIR}/nos.auto.tfvars.json" ]] && present="${present} nos.auto.tfvars.json"
-    if [[ -z "${present}" ]]; then
+    [[ -f "${TOFU_TFVARS_DIR}/nos.auto.tfvars.json" ]] && tfv=(-C "${TOFU_TFVARS_DIR}" nos.auto.tfvars.json)
+    if [[ -z "${present}" && -z "${tfv[*]+x}" ]]; then
         log "tofu-state: no tfstate/tfvars under ${TOFU_STATE_DIR} — skipping (blueprint engine?)"
         return 0
     fi
 
-    log "tofu-state: tar-gz of ${TOFU_STATE_DIR} (${present# })"
+    log "tofu-state: tar-gz of ${TOFU_STATE_DIR} (${present# }) ${tfv[*]+and the tfvars}"
     start=$(now_ms)
     # shellcheck disable=SC2086  # intentional word-split of the file list
-    tar -czf - -C "${TOFU_STATE_DIR}" ${present} \
+    tar -czf - -C "${TOFU_STATE_DIR}" ${present} "${tfv[@]+"${tfv[@]}"}" \
       | encrypt_stream "${key}" \
       | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
     rc=$?

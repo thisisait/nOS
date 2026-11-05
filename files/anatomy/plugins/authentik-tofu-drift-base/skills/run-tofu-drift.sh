@@ -69,14 +69,14 @@ if [[ -z "$TOFU_BIN" ]]; then
 fi
 
 # WHICH CHECKOUT AM I IN? The Pulse catalog stores an absolute {{ playbook_dir }},
-# so a converge from a worktree re-points this job there — and a worktree carries
-# the tfvars but NOT the state, so every resource reads as "to add" (measured
-# 2026-09-01: "101 to add" nightly against 109 live resources).
+# so a converge from a worktree re-points this job there. Until 2026-11-05 a
+# worktree carried the tfvars but NOT the state, so every resource read as "to
+# add" (measured 2026-09-01: "101 to add" nightly against 109 live resources).
+# The state now lives in ~/.nos/tofu/authentik for every checkout, but a
+# worktree's tfvars and backend init are still a branch's, not the estate's.
 #
 # Skipping was the first fix and it is a silent green: the job exits 0 having
-# checked nothing, and the estate loses drift coverage until some later converge
-# happens to run from the main checkout. So resolve the main checkout instead and
-# plan THERE — it is the one that owns the state.
+# checked nothing. So resolve the main checkout instead and plan THERE.
 #
 # NOT `--git-dir` vs `--git-common-dir`: from a SUBDIRECTORY git answers the first
 # absolutely and the second relatively, same directory as different strings, which
@@ -87,7 +87,7 @@ if _gitdir=$(git -C "$TOFU_DIR" rev-parse --absolute-git-dir 2>/dev/null); then
         */worktrees/*)
             _main_root="$(dirname "${_gitdir%%/worktrees/*}")"
             if [[ -f "$_main_root/terraform/authentik/nos.auto.tfvars.json" ]]; then
-                echo "INFO: $TOFU_DIR is inside a git WORKTREE; the state lives in the main checkout — planning in $_main_root/terraform/authentik instead"
+                echo "INFO: $TOFU_DIR is inside a git WORKTREE; the main checkout holds the estate's tfvars — planning in $_main_root/terraform/authentik instead"
                 TOFU_DIR="$_main_root/terraform/authentik"
             else
                 echo "INFO: $TOFU_DIR is inside a git WORKTREE and no tfvars were found in the main checkout $_main_root — nothing to plan against"
