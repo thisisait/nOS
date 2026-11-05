@@ -18,7 +18,6 @@ dies on an uninitialised dependency ("reached"), so nothing leaves the process.
 """
 from __future__ import annotations
 
-import importlib.util
 import json
 import pathlib
 import re
@@ -175,13 +174,6 @@ def test_no_agent_token_is_minted_with_the_operator_scope():
         assert "wing.operator" not in scopes, f"{yml.parent.name} declares wing.operator; a derived mint would carry it"
 
 
-def _tool_kam() -> dict[str, list[str]]:
-    spec = importlib.util.spec_from_file_location("agent_capability", REPO / "tools/agent-capability.py")
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod.TOOL_KAM
-
-
 def _route_of(path: str) -> tuple[str, str] | None:
     path = path.split("?")[0].rstrip(".,;:)`'\"/")
     for pattern, p, a in _routes():  # Nette is first-match-wins
@@ -192,23 +184,33 @@ def _route_of(path: str) -> tuple[str, str] | None:
     return None
 
 
-def test_what_agents_write_needs_no_operator_scope():
-    """Measured from each writing agent's own manifest + prompts, not assumed."""
-    writers = [k for k, v in _tool_kam().items() if "wing" in v]
-    assert writers, "TOOL_KAM no longer names a Wing write tool"
-    ops, calls = operator_verbs(), {}
+def _public(route: tuple[str, str], method: str) -> bool:
+    src = _presenter(route[0])
+    methods = _list_prop(src, "publicMethods")
+    return route[1] in _list_prop(src, "publicActions") and (not methods or method in methods)
+
+
+def test_every_api_call_an_agent_names_routes_and_its_token_can_make():
+    """Measured from each agent's own manifest + prompts, not assumed.
+
+    2026-10-07: upgrade-architect was told to POST .../coexistence/<svc>/queue (an
+    operator verb) on a wing.read token; inspektor named POST /pentest/findings (no route)."""
+    ops, calls = operator_verbs(), 0
     for yml in sorted(AGENTS.glob("*/agent.yml")):
         doc = yaml.safe_load(yml.read_text(encoding="utf-8"))
-        tools = {t.get("id") for t in doc.get("tools") or [] if isinstance(t, dict)}
-        if not tools & set(writers) and "wing.write" not in (doc.get("audit") or {}).get("capability_scopes", []):
-            continue
+        scopes = set((doc.get("audit") or {}).get("capability_scopes") or [])
         text = "\n".join(f.read_text(encoding="utf-8") for f in yml.parent.glob("*") if f.suffix in (".yml", ".md"))
-        for path in re.findall(r"\b(?:POST|PUT|DELETE|PATCH)\s+(/api/v1/\S+)", text):
-            calls.setdefault(yml.parent.name, set()).add(_route_of(path))
-    assert calls, "no writing agent declares a write call — the measurement went blind"
-    # An unrouted path (inspektor's POST /pentest/findings, 2026-10-07) 404s; it cannot be a verb here.
-    for agent, routes in calls.items():
-        assert not routes & ops, f"{agent} needs operator verb(s) {sorted(routes & ops)}"
+        for method, path in re.findall(r"\b(GET|POST|PUT|DELETE|PATCH)\s+(/api/v1/\S+)", text):
+            calls += 1
+            where = f"{yml.parent.name}: {method} {path}"
+            route = _route_of(path)
+            assert route, f"{where} matches no RouterFactory route (404)"
+            assert route not in ops, f"{where} is operator verb {route}; no agent token holds wing.operator"
+            if _public(route, method):
+                continue
+            need = {"wing.read", "wing.write"} if method == "GET" else {"wing.write"}
+            assert scopes & need, f"{where} needs one of {sorted(need)}; capability_scopes hold {sorted(scopes)}"
+    assert calls > 10, f"only {calls} agent API calls found — the measurement went blind"
 
 
 @needs_php
