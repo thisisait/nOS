@@ -338,9 +338,12 @@ def cycle(n: int, plan: dict) -> dict:
         rec["ok"] = bool(books.get("ok"))
         rec["detail"] = books.get("detail", "")
         # The seeded row already satisfies the books, so a failed absorb would
-        # otherwise read as an approve that held.
+        # otherwise read as an approve that held. rc>=2 is KEAP unreadable:
+        # an environment answer, as in sweep_and_verify, not a finding.
         if ab.returncode != 0:
             rec["ok"] = False
+            if ab.returncode >= 2:
+                rec.update(env=True, stage="absorb")
             rec["detail"] = (f"absorb exit {ab.returncode}: {(getattr(ab, 'stderr', '') or '')[-300:]}"
                              + (f"; {rec['detail']}" if rec["detail"] else ""))
         mine = [s for s in (books.get("slugs") or []) if s not in before]
