@@ -12,7 +12,7 @@
     "organism": 0,
     "habitat": 9,
     "sense": 86,
-    "limb": 123,
+    "limb": 124,
     "memory": 42,
     "law": 54,
     "reflex": 45,
@@ -1050,6 +1050,10 @@
       "kind": "effector"
     },
     "effector:worktree-lease": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:worktree-prune": {
       "level": "limb",
       "kind": "effector"
     },
