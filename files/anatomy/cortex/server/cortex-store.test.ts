@@ -152,11 +152,12 @@ describe('git materialisation (canonical ingest)', () => {
   const dir = dirFor('materialised');
   let first: CliResult;
 
+  // A full materialise outruns vitest's 10 s hook default (11-05: red on dev, file 46 s).
   beforeAll(() => {
     const out = cli('materialise', dir);
     expect(out.status, out.out).toBe(0);
     first = out.result!;
-  });
+  }, 180_000);
 
   it('applies every canonical domain file through the ported ingest path', () => {
     // 107 → 110 at keap_repo_ref v1.45.0: three new canonical domain files
