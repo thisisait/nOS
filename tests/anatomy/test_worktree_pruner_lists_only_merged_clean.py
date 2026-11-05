@@ -7,7 +7,9 @@ gitignored .claude/ would lose work nobody can recover. Fixture repo in tmp only
 
 from __future__ import annotations
 
+import importlib.util
 import json
+import os
 import pathlib
 import subprocess
 import sys
@@ -32,6 +34,13 @@ def prune(repo, *args):
     return r.returncode, (json.loads(r.stdout) if r.stdout.strip() else None), r.stderr
 
 
+def age(repo, hours=48):
+    """Backdate every worktree's admin files: the tool keeps a recently used one."""
+    old = os.path.getmtime(repo / ".git") - hours * 3600
+    for f in (repo / ".git" / "worktrees").rglob("*"):
+        os.utime(f, (old, old))
+
+
 def fixture(tmp_path):
     origin, repo, wts = tmp_path / "origin.git", tmp_path / "repo", tmp_path / "wt"
     git(tmp_path, "init", "-q", "--bare", str(origin))
@@ -48,6 +57,7 @@ def fixture(tmp_path):
     git(repo, "push", "-q", "origin", "dev")
     (wts / "dirty" / "wip.txt").write_text("uncommitted")
     commit(wts / "unpushed", "after-land.txt")
+    age(repo)
     return repo, wts
 
 
@@ -87,3 +97,35 @@ def test_unresolvable_base_is_unknown_not_empty(tmp_path):
     rc, out, _ = prune(repo, "--base", "origin/nope")
     assert rc == 0 and out["status"] == "UNKNOWN"
     assert prune(repo, "--base", "origin/nope", "--confirm")[0] == 2
+
+
+def test_a_recently_used_worktree_is_kept(tmp_path):
+    repo, wts = fixture(tmp_path)
+    git(repo, "worktree", "add", "-q", "-b", "feat/fresh", str(wts / "fresh"), "dev")
+    rc, out, err = prune(repo, "--confirm")
+    assert rc == 0, err
+    states = {pathlib.Path(w["path"]).name: w["state"] for w in out["worktrees"]}
+    assert states["fresh"] == "recent", states
+    assert (wts / "fresh").is_dir(), "a worktree a live session may use was removed"
+
+
+def test_a_failed_child_removal_keeps_its_parent(tmp_path, monkeypatch):
+    repo, wts = fixture(tmp_path)
+    child = wts / "clean" / ".claude" / "worktrees" / "child"
+    git(repo, "worktree", "add", "-q", "-b", "feat/child", str(child), "dev")
+    age(repo)
+    spec = importlib.util.spec_from_file_location("worktree_prune", TOOL)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    real = mod.git
+
+    def racing_git(cwd, *args):  # the child picks up work between scan and removal
+        if args[:2] == ("worktree", "remove") and args[2] == str(child.resolve()):
+            (child / "agent-wip.txt").write_text("uncommitted")
+        return real(cwd, *args)
+
+    monkeypatch.setattr(mod, "git", racing_git)
+    monkeypatch.setattr(sys, "argv", ["worktree-prune.py", "--repo", str(repo), "--no-size", "--confirm"])
+    assert mod.main() == 1
+    assert (child / "agent-wip.txt").is_file(), "the parent's removal took the child's new work"
+    assert (wts / "clean").is_dir()
