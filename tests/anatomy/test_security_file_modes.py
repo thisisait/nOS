@@ -113,12 +113,9 @@ EDGE_SECRET_RENDER = re.compile(
 )
 
 
-# Deliberate wider modes, by (task file, src). medulla: systemd unit for the
-# nos user, documented 0640 root:nos in docs/systems/thalamus/README.md.
-EDGE_SECRET_MODE_ALLOW = {
-	("roles/pazny.medulla/tasks/linux.yml",
-	 "{{ role_path }}/../pazny.thalamus/templates/thalamus.env.j2"): "640",
-}
+# Deliberate wider modes, by (task file, src). Empty since 2026-11-05: medulla.env went
+# 0640 root:nos -> 0600 root:root (only systemd's EnvironmentFile reads it, as root).
+EDGE_SECRET_MODE_ALLOW: dict = {}
 
 
 def _template_candidates(path, src):
