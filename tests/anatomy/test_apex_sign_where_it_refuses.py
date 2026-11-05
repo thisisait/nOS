@@ -3,11 +3,15 @@
 2026-10-29: signing a ruling on a branch took a worktree, two apex-sign calls and a push, and
 `apex-sign.py && apex-sign.py --confirm` never reached --confirm (the read exits 1), so the
 unsigned ruling reached dev. Now the refusal itself offers the signature behind one explicit yes.
+11-05 review: the offer pushed from the estate past its DISABLED push URL, by raw git push, on any
+ref. It now signs and pushes only through the operator's dev checkout (`nos.sign-checkout`) with
+its tools/nos-push, never on master, and the estate's push guard stays as estate-adopt.sh left it.
 """
 from __future__ import annotations
 
 import importlib.util
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -27,22 +31,27 @@ upd = _load("nos_update_world", REPO / "tests/anatomy/test_nos_update_moves_the_
 sign = _load("apex_sign", REPO / "tools/apex-sign.py")
 
 
-def _refused_world(tmp_path):
+def _refused_world(tmp_path, operator=True):
     origin, dev, home, sha = upd._world(tmp_path)
     est = upd._estate(home)
-    for k, v in (("user.name", "t"), ("user.email", "t@t"), ("commit.gpgsign", "false")):
-        upd._git(est, "config", k, v)
     upd._git(est, "remote", "set-url", "--push", "origin", "DISABLED")  # as estate-adopt.sh leaves it
+    for k, v in (("user.name", "t"), ("user.email", "t@t"), ("commit.gpgsign", "false")):
+        upd._git(dev, "config", k, v)
+    if operator:  # the operator's estate names the dev checkout that signs and pushes
+        upd._git(est, "config", "nos.sign-checkout", str(dev))
+        (dev / "tools").mkdir(exist_ok=True)
+        shutil.copy(REPO / "tools" / "nos-push", dev / "tools" / "nos-push")
     assert upd._update(home, dev).returncode == 0
     unsigned = upd._commit(dev, "unsigned", signed=False)
     upd._git(dev, "push", "-q", "origin", "HEAD:refs/heads/dev")
     return origin, dev, home, sha, unsigned
 
 
-def _answer(home, dev, text):
+def _answer(home, dev, text, *args):
     env = {k: v for k, v in os.environ.items() if not k.startswith(("GIT", "NOS_"))}
     env.update(HOME=str(home), NOS_SRC=str(dev))
-    return subprocess.run(["bash", str(NOS), "update"], env=env, input=text, capture_output=True, text=True, timeout=60)
+    return subprocess.run(["bash", str(NOS), "update", *args], env=env, input=text, capture_output=True, text=True,
+                          timeout=60)
 
 
 def test_no_refuses_and_signs_nothing(tmp_path):
@@ -64,6 +73,24 @@ def test_yes_signs_pushes_and_moves(tmp_path):
     assert sign.recorded(text) == sign.digest(text)
     assert upd._git(upd._estate(home), "rev-parse", "HEAD") == head
     assert upd._git(upd._estate(home), "worktree", "list").count("\n") == 0, "the signing worktree is gone"
+    assert upd._git(dev, "worktree", "list").count("\n") == 0, "the signing worktree is gone"
+    assert "git push" in got.stderr, "the push went through tools/nos-push"
+    assert upd._git(upd._estate(home), "remote", "get-url", "--push", "origin") == "DISABLED"
+
+
+def test_no_offer_without_the_operators_dev_checkout(tmp_path):
+    origin, dev, home, sha, unsigned = _refused_world(tmp_path, operator=False)
+    got = _answer(home, dev, "y\n")
+    assert got.returncode == 4 and "[y/N]" not in got.stderr, got.stdout + got.stderr
+    assert upd._git(origin, "rev-parse", "dev") == unsigned
+
+
+def test_no_offer_on_master(tmp_path):
+    origin, dev, home, sha, unsigned = _refused_world(tmp_path)
+    upd._git(dev, "push", "-q", "origin", "HEAD:refs/heads/master")
+    got = _answer(home, dev, "y\n", "master")
+    assert got.returncode == 4 and "[y/N]" not in got.stderr, got.stdout + got.stderr
+    assert upd._git(origin, "rev-parse", "master") == unsigned
 
 
 def test_show_is_read_only_and_exits_0(tmp_path, monkeypatch):
