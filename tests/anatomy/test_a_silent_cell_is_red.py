@@ -40,11 +40,12 @@ def test_a_cell_silent_past_its_heartbeat_is_named(tmp_path):
     }}))
     db = tmp_path / "wing.db"
     with sqlite3.connect(db) as seed:
-        seed.execute("CREATE TABLE pulse_jobs (id TEXT, paused INTEGER, created_at TEXT, removed_at TEXT)")
+        seed.execute("CREATE TABLE pulse_jobs (id TEXT, paused INTEGER, created_at TEXT, removed_at TEXT, paused_reason TEXT)")
         seed.execute("CREATE TABLE pulse_runs (job_id TEXT, fired_at TEXT)")
-        seed.executemany("INSERT INTO pulse_jobs VALUES (?,?,?,?)", [
-            ("p:fresh", 0, at(500), None), ("p:silent", 0, at(500), None), ("p:never", 0, at(500), None),
-            ("p:newborn", 0, at(2), None), ("p:paused", 1, at(500), None), ("p:gone", 0, at(500), at(100)),
+        seed.executemany("INSERT INTO pulse_jobs VALUES (?,?,?,?,?)", [
+            ("p:fresh", 0, at(500), None, None), ("p:silent", 0, at(500), None, None),
+            ("p:never", 0, at(500), None, None), ("p:newborn", 0, at(2), None, None),
+            ("p:paused", 1, at(500), None, "operator: noisy"), ("p:gone", 0, at(500), at(100), None),
         ])
         seed.executemany("INSERT INTO pulse_runs VALUES (?,?)", [
             ("p:fresh", at(30)), ("p:fresh", at(3)), ("p:silent", at(30)), ("p:paused", at(300)),
@@ -55,11 +56,28 @@ def test_a_cell_silent_past_its_heartbeat_is_named(tmp_path):
     conn.row_factory = sqlite3.Row
     try:
         silent = red.silent_cells(conn, beats)
+        held = red.held_cells(conn, beats)
     finally:
         conn.close()
     assert [c["cell"] for c in silent] == ["p:never", "p:silent"], silent
     lines = red.reds({"silent_cells": silent})
     assert any("p:silent" in ln and "heartbeat" in ln for ln in lines), lines
+    # a paused cell is a hold made visible, not hidden; a removed one is uninstalled = absent
+    assert [c["cell"] for c in held] == ["p:paused"], held
+    assert any("p:paused" in ln and "operator: noisy" in ln for ln in red.reds({"held_cells": held}))
+
+
+def test_one_line_per_cause():
+    """Measured 2026-11-05: Pulse down + 8 silent patrols printed 9 lines; Pulse up + 8 stuck printed 16."""
+    red = _red()
+    od = [{"job": f"p:{i}", "due_at": "x", "overdue_by": "1 h", "schedule": "0 3 * * *"} for i in range(3)]
+    cells = [{"cell": f"p:{i}", "job": f"p:{i}", "every_hours": 26, "age": "2 d ago"} for i in range(4)]
+    down = red.reds({"pulse": {"running": False, "how": "launchd: not loaded"},
+                     "overdue_jobs": od, "silent_cells": cells})
+    assert len(down) == 1 and "Pulse is not running" in down[0], down
+    up = red.reds({"pulse": {"running": True, "how": "launchd"}, "overdue_jobs": od, "silent_cells": cells})
+    assert len(up) == 4, up  # 3 overdue + the one silent cell only it can see (p:3)
+    assert sum("p:3" in ln for ln in up) == 1, up
 
 
 def test_an_unreadable_registry_is_unknown_not_green(tmp_path):
