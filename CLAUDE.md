@@ -92,7 +92,8 @@ without `--confirm` is always a dry run. Cloud sessions: [docs/cloud-e2e.md](doc
 4. `credentials.yml` — your secret overrides (gitignored)
 
 `vars_files` outrank role `defaults/main.yml`, so a version pin lives only in
-`default.config.yml`. Feature toggles are `install_*` / `configure_*` booleans.
+the default layers, and a Docker image pin in `default.config.yml` itself (the one
+file the upgrade path writes). Feature toggles are `install_*` / `configure_*` booleans.
 
 ## Architecture in brief
 

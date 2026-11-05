@@ -1444,6 +1444,18 @@ kiwix_zim_files: []
 #   dest: "wikipedia_cs_mini.zim"        # ~500 MB
 
 # ==============================================================================
+# GEO – image pins (the rest of geo is the 70-geo layer under config.d)
+# ==============================================================================
+
+maps_tileserver_version: "v5.6.0"                  # Docker image tag (maptiler/tileserver-gl). Pinned from floating latest (REM-117 reproducibility shadow; v5.6.0 verified on Docker Hub). tileserver-gl is CVE-clean in-window.
+maps_planetiler_version: "0.10.2"              # ghcr.io/onthegomap/planetiler
+geolibre_image: "ghcr.io/opengeos/geolibre"
+geolibre_version: "v3.2.0@sha256:7c43f124f306d7c00c66660faf73eced043d6ddd749a06afb055ed223e79cebe"   # image label v3.2.0, rev aa28b2a; the digest nos-atlas was tested against
+martin_image: "ghcr.io/maplibre/martin"
+martin_version: "1.16.1@sha256:59902019bf9038926ff0c71174237d6852e64c457830a6349abe7090be8818ca"   # index digest; linux/arm64 sha256:62e47a0d… (manifest inspect 2026-10-04)
+qgis_version: "latest@sha256:f825a56109bea5a9b7bee50d43bdec472aa614276ea2fbd44e570e8bff8f74af"   # WARNING: amd64 only (Rosetta on ARM64). DIGEST-pinned 2026-08-05 to the image THIS host already runs, so the pin freezes rather than changes it (mcp_grafana_version precedent). It read a bare `latest` while the image-pin gate scanned only role defaults, where it read "LTR" — the gate certified a tag the estate has never run. Re-pin to a semver tag on a supervised converge.
+
+# ==============================================================================
 # OBSERVABILITY – Grafana LGTM stack + Alloy
 # Architektura:
 #   Alloy (collector) → Prometheus (metrics) → Grafana (dashboards)

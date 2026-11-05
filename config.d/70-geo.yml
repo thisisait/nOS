@@ -5,7 +5,8 @@
 # One of the default layers (config.d/*.yml in order, then default.config.yml;
 # the set is tools/nos_identity.default_layers and main.yml vars_files). Every
 # variable is declared in exactly one of them. config.yml still overrides.
-# The install_* switches stay in the installation queue (default.config.yml).
+# The install_* switches and the image pins stay in default.config.yml: the
+# upgrade path writes only that file (test_image_pins_stay_in_default_config).
 # ==============================================================================
 
 # ==============================================================================
@@ -14,13 +15,11 @@
 
 maps_domain: "maps{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 maps_port: 8081                               # 8080 taken by Traefik dashboard
-maps_tileserver_version: "v5.6.0"                  # Docker image tag (maptiler/tileserver-gl). Pinned from floating latest (REM-117 reproducibility shadow; v5.6.0 verified on Docker Hub). tileserver-gl is CVE-clean in-window.
 
 # Base map: Planetiler builds OpenMapTiles PMTiles from the Geofabrik extract
 # once, into maps_cache_dir (survives every removal level). Region = Geofabrik slug.
 maps_region: "czech-republic"
 maps_languages: "cs,en,de,sk,pl"               # name:* tags kept in the tiles
-maps_planetiler_version: "0.10.2"              # ghcr.io/onthegomap/planetiler
 maps_planetiler_java_opts: "-Xmx3g"            # 6g was OOM-killed beside ~10 GB of estate; CZ measured in roles/pazny.offline_maps/README.md
 maps_cache_dir: "{{ artifact_cache_dir }}/maps"
 # Glyphs + sprites the vendored OpenFreeMap style expects (OFL fonts, BSD sprites).
@@ -36,13 +35,9 @@ maps_mbtiles_files: []
 
 geolibre_domain: "atlas{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 geolibre_port: 8072                           # nginx :80 in the container, 127.0.0.1 only
-geolibre_image: "ghcr.io/opengeos/geolibre"
-geolibre_version: "v3.2.0@sha256:7c43f124f306d7c00c66660faf73eced043d6ddd749a06afb055ed223e79cebe"   # image label v3.2.0, rev aa28b2a; the digest nos-atlas was tested against
 nos_atlas_src_dir: "{{ ansible_facts['env']['HOME'] }}/projects/nos-atlas"   # dist/nos-atlas is COPIED into geolibre_data_dir; build it there (npm run build)
 
 # martin: geo tables as vector tiles at atlas.<tenant>/tiles (same origin, the atlas gate).
-martin_image: "ghcr.io/maplibre/martin"
-martin_version: "1.16.1@sha256:59902019bf9038926ff0c71174237d6852e64c457830a6349abe7090be8818ca"   # index digest; linux/arm64 sha256:62e47a0d… (manifest inspect 2026-10-04)
 
 # GeoLibre Browser layer catalog (rendered to GEOLIBRE_SERVICES_FILE; schema = GeoLibre
 # docker/entrypoint.sh). Free, keyless services only; `licence_url` is the source checked.
@@ -91,4 +86,3 @@ geolibre_layers:
 
 qgis_domain: "gis{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 qgis_port: 8071
-qgis_version: "latest@sha256:f825a56109bea5a9b7bee50d43bdec472aa614276ea2fbd44e570e8bff8f74af"   # WARNING: amd64 only (Rosetta on ARM64). DIGEST-pinned 2026-08-05 to the image THIS host already runs, so the pin freezes rather than changes it (mcp_grafana_version precedent). It read a bare `latest` while the image-pin gate scanned only role defaults, where it read "LTR" — the gate certified a tag the estate has never run. Re-pin to a semver tag on a supervised converge.

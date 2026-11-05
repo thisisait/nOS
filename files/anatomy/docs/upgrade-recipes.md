@@ -567,7 +567,8 @@ See the following recipe files in the repo:
 - **A dry run is a false positive.** It short-circuits before handlers, so "success"
   says nothing about the apply path.
 - **An applied upgrade must bump the version pin** in `default.config.yml` (the only
-  place a pin lives — `tests/anatomy/test_a_pin_is_declared_once.py`), or the next plain
+  place an image pin lives — `tests/anatomy/test_a_pin_is_declared_once.py`,
+  `tests/anatomy/test_image_pins_stay_in_default_config.py`), or the next plain
   re-render reverts it. A MAJOR bump can also orphan the role's post-start automation.
 - **authentik majors are forward-only** (rollback `noop`): restoring the old dump under
   new code half-migrates the schema. PostgreSQL majors go through the coexistence track.
