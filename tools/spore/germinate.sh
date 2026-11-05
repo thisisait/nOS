@@ -91,6 +91,10 @@ envf="$(mktemp)"
 { grep -v '^NOS_SRC=' "$MNT/nos/nos-cli.env" | OLD="$OLD_HOME" NEW="$HOME" perl -pe 's/\Q$ENV{OLD}\E(?=[\/"\x27\s]|$)/$ENV{NEW}/g' || true; echo "NOS_SRC=$EST"; } > "$envf"
 place "$envf" "$HOME/.nos/nos-cli.env"; rm -f "$envf"
 place_tree "$MNT/home" "$HOME"
+# The seal log is written after the image closes, so the spore lacks it: its own seal is the record
+# (else reseal-due.py reads the restored blank as unsealed and rings). Idempotent across re-runs.
+sealed="$(hv sealed)"; seals="$HOME/.nos/spore-seals.log"
+[ -z "$sealed" ] || grep -qxF "$sealed" "$seals" 2>/dev/null || echo "$sealed" >> "$seals"
 [ ! -d "$HOME/.ssh" ] || chmod 700 "$HOME/.ssh"
 
 # ── repos: all branches from the bundle (or the remotes when every commit is on one), then HEAD ──
