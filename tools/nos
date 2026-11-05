@@ -532,23 +532,39 @@ fi
 [ "$LEAVE" -eq 1 ] && ARGS+=(-e leave=true)
 ARGS+=(-e "nos_cli_version=${NOS_CLI_VERSION}")
 
-# An -e @profile outranks config.yml without a word: config.yml install_kiwix: true lost to
-# profiles/core.yml's false and only 'profile: core.yml' was printed (profile-outranks-config). Name every install_/configure_
-# key the two disagree on before anything runs, --print-cmd included. Gate: test_profile_conflict_is_named.py.
-_prev=""
+# Every -e value in argv order, attached forms (-e@x, --extra-vars=x) included.
+_evals=() _prev=""
 for a in ${PASSTHRU[@]+"${PASSTHRU[@]}"}; do
-  case "$_prev" in -e|--extra-vars) case "$a" in @*)
-    _pf="${a#@}"; case "$_pf" in /*) ;; *) _pf="$NOS_SRC/$_pf" ;; esac
-    [ -f "$_pf" ] && [ -f "$NOS_SRC/config.yml" ] && awk -v prof="${a#@}" '
-      { sub(/[ \t]+#.*/, ""); sub(/[ \t]+$/, "") }
-      !/^(install|configure)_[A-Za-z0-9_]+:/ { next }
-      { k = $0; sub(/:.*/, "", k); v = $0; sub(/^[^:]*:[ \t]*/, "", v); v = tolower(v) }
-      FNR == NR { cfg[k] = v; next }
-      (k in cfg) && cfg[k] != v { printf "nos: %s: config.yml says %s, %s says %s — profile wins\n", k, cfg[k], prof, v }
-    ' "$NOS_SRC/config.yml" "$_pf" >&2 ;;
-  esac ;; esac
+  case "$_prev" in -e|--extra-vars) _evals+=("$a") ;; esac
+  case "$a" in -e?*) _evals+=("${a#-e}") ;; --extra-vars=*) _evals+=("${a#--extra-vars=}") ;; esac
   _prev="$a"
 done
+
+# config.yml install_kiwix: true lost silently to profiles/core.yml's false (profile-outranks-config).
+# Name each install_/configure_ key config.yml loses and the LAST -e setting it: 11-05 a later -e
+# won while nos said 'profile wins'. Gate: test_profile_conflict_is_named.py.
+_toggles() {  # <label> <yaml file> -> "label<TAB>key<TAB>value"
+  awk -v src="$1" '{ sub(/[ \t]+#.*/, ""); sub(/[ \t]+$/, "") }
+    /^(install|configure)_[A-Za-z0-9_]+:/ { k = $0; sub(/:.*/, "", k); v = $0; sub(/^[^:]*:[ \t]*/, "", v); print src "\t" k "\t" v }' "$2"
+}
+if [ -f "$NOS_SRC/config.yml" ]; then
+  {
+    _toggles config.yml "$NOS_SRC/config.yml"
+    for v in ${_evals[@]+"${_evals[@]}"}; do
+      case "$v" in
+        @*) _pf="${v#@}"; case "$_pf" in /*) ;; *) _pf="$NOS_SRC/$_pf" ;; esac
+            [ -f "$_pf" ] && _toggles "${v#@}" "$_pf" ;;
+        *) printf '%s\n' "$v" | grep -oE '"?(install|configure)_[A-Za-z0-9_]+"?[ ]*[:=][ ]*[^ ,}]+' \
+             | sed -E 's/^"?([^" :=]+)"?[ ]*[:=][ ]*/-e	\1	/' ;;
+      esac
+    done
+  } | awk -F '\t' '{ v = tolower($3); gsub(/["\047]/, "", v) }
+      $1 == "config.yml" { cfg[$2] = v; raw[$2] = $3 }
+      { win[$2] = $1; val[$2] = v; wraw[$2] = $3 }
+      END { for (k in cfg) if (win[k] != "config.yml" && val[k] != cfg[k])
+        printf "nos: %s: config.yml says %s, %s says %s — %s wins\n", k, raw[k], win[k], wraw[k], win[k] }' \
+    | sort >&2 || true  # a grep with no match must not end nos under pipefail
+fi
 
 if [ "$PRINT_CMD" -eq 1 ]; then
   printf '%s\n' "${ARGS[*]}"
@@ -622,9 +638,12 @@ fi
 _say_tags="" _say_prof=""
 _prev=""
 for a in ${PASSTHRU[@]+"${PASSTHRU[@]}"}; do
-  case "$_prev" in --tags|-t) _say_tags="$a" ;; -e|--extra-vars) case "$a" in @profiles/*) _say_prof="${_say_prof:+$_say_prof }${a#@profiles/}" ;; esac ;; esac
+  case "$_prev" in --tags|-t) _say_tags="$a" ;; esac
   case "$a" in --tags=*) _say_tags="${a#--tags=}" ;; esac
   _prev="$a"
+done
+for v in ${_evals[@]+"${_evals[@]}"}; do
+  case "$v" in @profiles/*) _say_prof="${_say_prof:+$_say_prof }${v#@profiles/}" ;; esac
 done
 echo "nos: converge $(git -C "$NOS_SRC" rev-parse --short HEAD 2>/dev/null || echo '?') from $NOS_SRC — tags: ${_say_tags:-all} · profile: ${_say_prof:-none} · removal: ${REMOVE:-none}" >&2
 echo "nos: Ansible reads the playbook and every config layer first (quiet for a while), then asks for sudo once." >&2
