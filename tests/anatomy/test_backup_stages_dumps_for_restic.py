@@ -160,7 +160,7 @@ def test_the_reconciler_adds_the_plan_to_a_daemon_that_predates_it(tmp_path: Pat
                                  capture_output=True, check=True).stdout
     assert run().startswith("CHANGED")
     cfg = json.loads(live.read_text())
-    assert [p["id"] for p in cfg["plans"]] == ["mine", "nos-offsite", "nos-dumps"]
+    assert [p["id"] for p in cfg["plans"]] == ["mine", "nos-dumps"]
     assert cfg["plans"][0]["paths"] == ["/ui"], "a UI-owned plan was rewritten"
     assert [r["id"] for r in cfg["repos"]] == ["offsite"] and cfg["auth"]["disabled"] is False
     assert run().strip() == "UNCHANGED"
