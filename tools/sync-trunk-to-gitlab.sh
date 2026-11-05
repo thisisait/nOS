@@ -63,7 +63,12 @@ if [ "$AGENT_FORGE" != "true" ]; then
   exit 0
 fi
 
-# The token comes from the runner (Pulse: secret:gitlab_api_token; nos-push exports it).
+# The runner hands the token (Pulse: secret:gitlab_api_token; nos-push exports it). Run by
+# hand, the shared resolver fetches it, so this script never opens the store itself.
+if [ -z "${GITLAB_TOKEN:-}" ]; then
+  . "$REPO_ROOT/tools/lib/pulse-env.sh"
+  eval "$(printf '{"GITLAB_TOKEN":"secret:gitlab_api_token"}' | resolve_pulse_env_json --exports)"
+fi
 TOKEN="${GITLAB_TOKEN:-}"
 DOMAIN="${GITLAB_DOMAIN:-}"
 [ -n "$DOMAIN" ] || DOMAIN="$(yaml_lookup gitlab_domain config.yml)"
@@ -77,7 +82,7 @@ NAME="$(yaml_lookup gitlab_nos_repo_name config.yml default.config.yml roles/paz
 [ -n "$NAME" ] || NAME="nOS"
 
 if [ -z "$TOKEN" ] || [ -z "$DOMAIN" ]; then
-  echo "[sync] missing GITLAB_TOKEN env or gitlab_domain — is the forge provisioned? (gitlab_agent_forge=true)"; exit 2
+  echo "[sync] no GITLAB_TOKEN (env or gitlab_api_token in the store) or gitlab_domain — is the forge provisioned? (gitlab_agent_forge=true)"; exit 2
 fi
 GITLAB_URL="https://oauth2:${TOKEN}@${DOMAIN}/${OWNER}/${NAME}.git"
 

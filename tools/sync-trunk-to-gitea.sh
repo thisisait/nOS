@@ -64,7 +64,12 @@ if [ "$AGENT_FORGE" != "true" ]; then
   exit 0
 fi
 
-# The token comes from the runner (Pulse: secret:gitea_api_token; nos-push exports it).
+# The runner hands the token (Pulse: secret:gitea_api_token; nos-push exports it). Run by
+# hand, the shared resolver fetches it, so this script never opens the store itself.
+if [ -z "${GITEA_TOKEN:-}" ]; then
+  . "$REPO_ROOT/tools/lib/pulse-env.sh"
+  eval "$(printf '{"GITEA_TOKEN":"secret:gitea_api_token"}' | resolve_pulse_env_json --exports)"
+fi
 TOKEN="${GITEA_TOKEN:-}"
 DOMAIN="${GITEA_DOMAIN:-}"
 [ -n "$DOMAIN" ] || DOMAIN="$(yaml_lookup gitea_domain config.yml)"
@@ -78,7 +83,7 @@ NAME="$(yaml_lookup gitea_nos_repo_name config.yml default.config.yml roles/pazn
 [ -n "$NAME" ] || NAME="nOS"
 
 if [ -z "$TOKEN" ] || [ -z "$DOMAIN" ]; then
-  echo "[sync] missing GITEA_TOKEN env or gitea_domain — is the forge provisioned? (T32 #35)"; exit 2
+  echo "[sync] no GITEA_TOKEN (env or gitea_api_token in the store) or gitea_domain — is the forge provisioned? (T32 #35)"; exit 2
 fi
 GITEA_URL="https://oauth2:${TOKEN}@${DOMAIN}/${OWNER}/${NAME}.git"
 
