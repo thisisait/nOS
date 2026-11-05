@@ -138,19 +138,42 @@ def test_nos_push_scores_before_it_pushes():
     assert "--strict" in src
 
 
-def test_the_scored_range_is_the_pushed_ref_not_head(repo):
-    """HEAD on A, push of B:dev: scoring HEAD scored A while B landed (review-v015)."""
-    mod = _tool()
-    _git(repo, "update-ref", "refs/remotes/origin/dev", "HEAD")
+@pytest.fixture()
+def landed(repo, tmp_path_factory):
+    """dev and b both pushed; the checkout stands on dev. Lands `origin/b:dev` (review-v015)."""
+    bare = tmp_path_factory.mktemp("remote") / "remote.git"
+    subprocess.run(["git", "init", "-q", "--bare", str(bare)], check=True)
+    _git(repo, "remote", "add", "origin", str(bare))
     _git(repo, "checkout", "-qb", "b")
     _, b_head = _commit(repo, {"tools/b.py": "B = 1\n"})
-    _git(repo, "checkout", "-qb", "a", "dev")
-    _commit(repo, {"tools/a.py": "A = 1\n"})
-    base, head, n = mod.push_range(repo, "origin", "b")
+    _git(repo, "push", "-q", "origin", "dev", "b")
+    _git(repo, "checkout", "-q", "dev")
+    return repo, b_head
+
+
+@pytest.mark.parametrize("ref", ["origin/b", "b"])
+def test_the_scored_range_is_what_lands_on_the_destination(landed, ref):
+    """Excluding every remote ref made a pushed source score empty while dev moved."""
+    repo, b_head = landed
+    base, head, n = _tool().push_range(repo, "origin", ref, "dev")
     assert (head, n) == (b_head, 1)
-    assert _git(repo, "rev-list", f"{base}..{head}") == _git(repo, "rev-list", "b", "--not", "--remotes=origin")
-    src = (REPO / "tools" / "nos-push").read_text()
-    assert '--ref "$src"' in src, "nos-push must score each refspec's source, not HEAD"
+    assert base == _git(repo, "rev-parse", "origin/dev")
+
+
+def test_nos_push_scores_each_refspec_against_its_destination(landed):
+    """Run nos-push itself (dry run, stub scorer): the scorer gets the refspec's src and dst."""
+    repo, _ = landed
+    tools = repo / "tools"
+    (tools / "nos-push").write_text((REPO / "tools" / "nos-push").read_text())
+    (tools / "nos-push").chmod(0o755)
+    calls = repo.parent / f"{repo.name}.calls.txt"
+    (tools / "prepush-score.py").write_text(
+        f"import sys\nopen({str(calls)!r}, 'a').write(' '.join(sys.argv[1:]) + '\\n')\n")
+    out = subprocess.run([str(tools / "nos-push"), "--dry-run", "--skip-sync", "origin", "origin/b:dev"],
+                         cwd=repo, capture_output=True, text=True)
+    assert out.returncode == 0, out.stdout + out.stderr
+    argv = calls.read_text().split()
+    assert argv[argv.index("--ref") + 1] == "origin/b" and argv[argv.index("--dst") + 1] == "dev"
 
 
 def test_the_scorer_never_prints_or_records_a_secret(repo, tmp_path, capsys, monkeypatch):
