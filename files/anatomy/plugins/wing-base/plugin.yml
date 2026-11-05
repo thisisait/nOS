@@ -329,6 +329,7 @@ pulse:
       max_concurrent: 1
       env:
         WING_DB_PATH: "{{ wing_home }}/app/data/wing.db"
+        WING_PUBLIC_URL: "https://{{ wing_domain }}"
     # ── Daily agent-cost tally (readiness item 2, 2026-08-12) ─────────────
     # pulse-run-agent.sh persists cost_usd + cost_basis into every
     # agent_run_end event; this job is the reader that makes the number seen.

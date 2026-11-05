@@ -5,6 +5,7 @@ tasks:
   - id: spore-reseal-after-backup
     title: "Re-seal the spore: a blank re-minted the secret master"
     command: tools/spore/nos-spore.sh --to /Volumes/<disk>/nos-spore --confirm
+    note: "First a fresh backup (under 6 h, backup-verify green): nos-spore.sh refuses to seal on a stale one."
     condition: [tools/spore/reseal-due.py]
     done: [tools/spore/reseal-due.py, --done]
     severity: high

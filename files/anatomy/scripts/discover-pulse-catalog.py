@@ -23,6 +23,7 @@ Inputs (env):
     NOS_PLAYBOOK_DIR             — repo root (substitutes {{ playbook_dir }})
     NOS_AUTHENTIK_DOMAIN         — full Authentik FQDN
     NOS_TENANT_DOMAIN            — operator's TLD
+    NOS_WING_DOMAIN              — Wing FQDN (substitutes {{ wing_domain }})
     NOS_GLOBAL_PASSWORD_PREFIX   — secret prefix
     NOS_WING_API_TOKEN           — Wing bearer for ansible-provisioned identity
     NOS_CONDUCTOR_WING_API_TOKEN — Wing bearer for nos-conductor identity
@@ -103,6 +104,7 @@ def _build_substitutions() -> dict[str, str]:
         "{{ playbook_dir }}":             _env("NOS_PLAYBOOK_DIR"),
         "{{ authentik_domain }}":         _env("NOS_AUTHENTIK_DOMAIN"),
         "{{ tenant_domain }}":            _env("NOS_TENANT_DOMAIN"),
+        "{{ wing_domain }}":              _env("NOS_WING_DOMAIN"),  # operator-tasks ntfy Click host
         "{{ global_password_prefix }}":   _env("NOS_GLOBAL_PASSWORD_PREFIX"),
         # Pulse is a literal str.replace, not Ansible. A facts token in a
         # manifest (conductor vulnerability-scan) must be named here or it

@@ -56,6 +56,7 @@ def tick(db: sqlite3.Connection, task: dict, apply: bool) -> str:
             if apply:
                 db.execute("UPDATE notifications SET superseded_at = ? WHERE uuid = ?",
                            (datetime.now(timezone.utc).isoformat(), row[0]))
+                db.commit()
             return "closed"
         return "open"
     cond = read(task["condition"])
@@ -65,14 +66,19 @@ def tick(db: sqlite3.Connection, task: dict, apply: bool) -> str:
         return "waiting"
     if apply:
         sev = task.get("severity", "high")
+        # ntfy's Click header needs a host: a bare /inbox opens nothing on a phone. Unset = no Click.
+        public = os.environ.get("WING_PUBLIC_URL", "").rstrip("/")
+        public = public if "://" in public else ""  # an empty domain renders "https://": no host
         db.execute(
             "INSERT INTO notifications (uuid, severity, title, body, actor_id, target_actor_id, "
             "origin_plugin, channels_json, metadata_json, supersede_key) VALUES (?,?,?,?,?,?,?,?,?,?)",
-            (str(uuid.uuid4()), sev, task["title"], f"Run: {task['command']}",
+            (str(uuid.uuid4()), sev, task["title"],
+             "\n".join(filter(None, [task.get("note"), f"Run: {task['command']}"])),
              key, "operator", "operator-tasks",
              json.dumps(["wing-inbox", "ntfy"] if sev in ("critical", "high") else ["wing-inbox"]),
-             json.dumps({"task_id": task["id"], "click_url": "/inbox"}), key),
+             json.dumps({"task_id": task["id"], "click_url": f"{public}/inbox" if public else None}), key),
         )
+        db.commit()  # per task: the next task's readers (up to 120 s each) must not hold the write lock
     return "RANG"
 
 
@@ -85,11 +91,10 @@ def main() -> int:
     path = os.environ.get("WING_DB_PATH") or str(pathlib.Path.home() / "wing/app/data/wing.db")
     db = sqlite3.connect(f"file:{path}?mode={'rw' if args.apply else 'ro'}", uri=True, timeout=5)
     unknown = False
-    with db:
-        for task in tasks:
-            verdict = tick(db, task, args.apply)
-            unknown |= verdict == "UNKNOWN"
-            print(f"{verdict:8} {task['id']}{'' if args.apply else ' (dry run)'}")
+    for task in tasks:
+        verdict = tick(db, task, args.apply)
+        unknown |= verdict == "UNKNOWN"
+        print(f"{verdict:8} {task['id']}{'' if args.apply else ' (dry run)'}")
     db.close()
     return 2 if unknown else 0
 

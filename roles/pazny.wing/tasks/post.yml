@@ -607,6 +607,7 @@
     NOS_HOME: "{{ ansible_facts['env']['HOME'] }}"
     NOS_AUTHENTIK_DOMAIN: "{{ authentik_domain | default('auth.' ~ (tenant_domain | default('dev.local'))) }}"
     NOS_TENANT_DOMAIN: "{{ tenant_domain | default('dev.local') }}"
+    NOS_WING_DOMAIN: "{{ wing_domain }}"
     NOS_GLOBAL_PASSWORD_PREFIX: "{{ global_password_prefix }}"
     # NOS_BONE_SECRET_RETIRED left this block 2026-08-12: the catalog now emits
     # `secret:bone_secret_retired` (the last secret-shaped token that still rode
