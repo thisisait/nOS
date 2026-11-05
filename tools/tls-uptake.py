@@ -196,7 +196,7 @@ CLIENT_CA_PATH = "/nos-certs/mariadb-ca.crt"
 
 #: THE FIVE MARIADB CLIENTS AND THE KNOB EACH ONE ACTUALLY READS.
 #:
-#: `docs/idea/21-mariadb-tls-ladder.md` scoped rung 3 as "MYSQL_ATTR_SSL_CA per
+#: `docs/archive/idea/21-mariadb-tls-ladder.md` scoped rung 3 as "MYSQL_ATTR_SSL_CA per
 #: Laravel client (freescout, firefly, bookstack)". That is true of exactly one
 #: of the three. Read from each running image on 2026-08-23:
 #:

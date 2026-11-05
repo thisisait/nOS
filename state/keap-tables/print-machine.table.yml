@@ -4,7 +4,7 @@
 # "which jobs miss their deadline if machine 2 stops" is answered by walking
 # print-job-step rows (the job↔machine N:N junction) against due dates — a
 # cortex query over transactional data, not a document lookup
-# (docs/idea/15-business-fixture.md, "What it exercises").
+# (docs/archive/idea/15-business-fixture.md, "What it exercises").
 
 title: "Print machines"
 description: >-

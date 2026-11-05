@@ -12,7 +12,7 @@ gates:
 > [`docs/archive/nos-face.md`](../../docs/archive/nos-face.md) (the face epic)
 > and [`filesystem.md`](filesystem.md) (the data classes).
 > `form` is the other axis; the genome owns both vocabularies
-> (`docs/idea/13-relations.md` §R3).
+> (`docs/archive/idea/13-relations.md` §R3).
 
 ## 1. Form — what the thing IS
 

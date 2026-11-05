@@ -33,7 +33,7 @@ gates:
 # 11a — The agentic loop: engine contract
 
 Opened 2026-08-02; built since (`files/anatomy/bone/`).
-**Parent:** [11-agentic-loop.md](../../docs/idea/11-agentic-loop.md) — the shape. This document is
+**Parent:** [11-agentic-loop.md](../../docs/archive/idea/11-agentic-loop.md) — the shape. This document is
 the **contract**: what gets built, where it lives, and what it may not do.
 
 Every section states a **DECISION**. §9 lists what was deliberately *not* decided.

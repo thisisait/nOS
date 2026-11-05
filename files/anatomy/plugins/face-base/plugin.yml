@@ -64,7 +64,7 @@ requires:
 # β1.A trichotomy label is forward_auth (pure gate that also injects headers).
 # The same ProxyProvider object backs it as header_oidc would.
 
-# ── DEPENDS_ON — service→service edges (docs/idea/13-relations.md, R2) ──────
+# ── DEPENDS_ON — service→service edges (docs/archive/idea/13-relations.md, R2) ──────
 # The face is a BFF over two host organs. Both are host daemons, not compose
 # services, which is why the first sweep — compose templates only — could not
 # see either.

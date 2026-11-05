@@ -45,7 +45,7 @@ requires:
     - host_alias
     - global_password_prefix
 
-# ── DEPENDS_ON — service→service edges (docs/idea/13-relations.md, R1) ──────
+# ── DEPENDS_ON — service→service edges (docs/archive/idea/13-relations.md, R1) ──────
 # EMPTY ON PURPOSE, and that is a measurement rather than an omission:
 # Gitea carries its own store — GITEA__database__DB_TYPE=sqlite3
 # (roles/pazny.gitea/templates/compose.yml.j2:38) — so it has NO DATA UPSTREAM,

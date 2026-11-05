@@ -4,8 +4,8 @@
 Wing executor now EXISTS (`files/anatomy/wing/app/Cortex/`, 2026-08-09) and
 executes two of its seven verbs; the other five wait on KEAP routes that are
 not published yet — see [What is actually built](#what-is-actually-built).**
-**Detail:** [`nos-cortex-lang.md`](../archive/nos-cortex-lang.md) ·
-[`nos-cortex-lang-wing-executor.md`](../archive/nos-cortex-lang-wing-executor.md)
+**Detail:** [`nos-cortex-lang.md`](../nos-cortex-lang.md) ·
+[`nos-cortex-lang-wing-executor.md`](../nos-cortex-lang-wing-executor.md)
 
 ## The idea
 
@@ -62,7 +62,7 @@ of which `get` and `resolve` execute and the other five extend
 classify/embed route to any bearer Wing holds, so those five verbs have nothing
 to bind to yet.
 
-Until they bind, [06](06-genome.md)'s hydrator still has nowhere to land for
+Until they bind, [06](../../idea/06-genome.md)'s hydrator still has nowhere to land for
 anything but `get`/`resolve`.
 
 ## The two nouns the language was missing (shipped 2026-08-10, contract v2)
@@ -93,7 +93,7 @@ not something the chain **operates on** — it is a hint about who runs the stag
 carry colons: this box serves `qwen2.5-coder:32b`, `nomic-embed-text:latest`,
 `hermes3:8b`. A quoted string is the one slot in this grammar that carries
 another vendor's punctuation unedited, which is what
-[`foreign-properties`](../../ssot/doctrine/foreign-properties.md) asks of us — we own
+[`foreign-properties`](../../../ssot/doctrine/foreign-properties.md) asks of us — we own
 the provider prefix, ollama owns everything after it.
 
 The provider vocabulary is declared three times today (`agent.schema.yaml`,

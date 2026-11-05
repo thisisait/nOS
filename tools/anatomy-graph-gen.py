@@ -62,7 +62,7 @@ ADDRESS SPACE (kind-prefixed, local ids verbatim — §2b)
     organ_system:<key>      `organ_systems:` groups of files/anatomy/apex/ruling.yml
     tissue:<name>           state/tissues/<name>.tissue.yml (tools/tissue-status.py)
 
-SERVICE→SERVICE DEPENDENCIES (docs/idea/13-relations.md R1)
+SERVICE→SERVICE DEPENDENCIES (docs/archive/idea/13-relations.md R1)
 -----------------------------------------------------------
 A service plugin declares, at its TOP level, what its service cannot run
 without — same key, same shape and same refusals as a pulse job's
@@ -1896,7 +1896,7 @@ def find_cycle(edges: list[dict], kinds: set[str]) -> list[str] | None:
     return None
 
 
-# ── R2: layer, DERIVED (ssot/doctrine/layers.md §3, docs/idea/13-relations.md) ──
+# ── R2: layer, DERIVED (ssot/doctrine/layers.md §3, docs/archive/idea/13-relations.md) ──
 
 
 #: The one place the layer arithmetic is written down. `graphLayout.ts`

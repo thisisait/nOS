@@ -50,7 +50,7 @@ requires:
 # the Traefik layer via the `authentik@file` middleware. RBAC tier
 # determines which Authentik group expression policy applies.
 
-# ── DEPENDS_ON — service→service edges (docs/idea/13-relations.md, R2) ──────
+# ── DEPENDS_ON — service→service edges (docs/archive/idea/13-relations.md, R2) ──────
 depends_on:
   - upstream: "service:bone"
     kind: data

@@ -1,6 +1,6 @@
 # KEAP DataTable — "Print jobs" (the fixture's core object).
 #
-# docs/idea/15-business-fixture.md: "Its core object is a job — a deadline, a
+# docs/archive/idea/15-business-fixture.md: "Its core object is a job — a deadline, a
 # material, a quantity, a machine, and a physical outcome. That is the shape
 # nOS has no example of." The deadline lives on the order (a job inherits it
 # through graph.parent), the machine lives in print-job-step (N:N, because a

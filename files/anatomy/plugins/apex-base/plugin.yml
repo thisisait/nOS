@@ -33,7 +33,7 @@ requires:
     - apex_version
     - tenant_domain
 
-# ── DEPENDS_ON — surveyed, no upstreams (docs/idea/13-relations.md, R1) ──────
+# ── DEPENDS_ON — surveyed, no upstreams (docs/archive/idea/13-relations.md, R1) ──────
 # The empty list is a positive statement: apex serves prebuilt static files
 # and can outlive every other container. Its build-time input
 # (state/anatomy-graph.json + the signed ruling) is repo substrate, not a

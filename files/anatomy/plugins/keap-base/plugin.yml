@@ -66,7 +66,7 @@ requires:
 # native_oidc later: flip mode/provider_type, add redirect_uris/scopes
 # (miniflux-base shape) and an OIDC client lib in the backend.
 
-# ── DEPENDS_ON — service→service edges (docs/idea/13-relations.md, R2) ──────
+# ── DEPENDS_ON — service→service edges (docs/archive/idea/13-relations.md, R2) ──────
 depends_on:
   - upstream: "service:ollama"
     kind: data

@@ -65,7 +65,7 @@
     },
     "depends_on": {
       "type": "array",
-      "description": "Service→service DATA dependency edges, CONSUMER-side (docs/idea/13-relations.md R1/R2). Same key, shape and refusals as a pulse job's depends_on, one level up: what this plugin's service cannot run without. Compiled into state/anatomy-graph.json by tools/anatomy-graph-gen.py and pinned against BOTH main.yml's auto-enable blocks and a full mechanical sweep of what the code performs, by tests/anatomy/test_service_dependency_edges.py. An EMPTY array is a scoped measurement — 'surveyed, NO DATA UPSTREAM' — and reads differently from an absent block, which is 'nobody looked'. It does NOT mean the node is a root: SSO upstreams reach the graph through service:authentik -> authentik:<slug>, and gitea-base carries [] while deriving L1.",
+      "description": "Service→service DATA dependency edges, CONSUMER-side (docs/archive/idea/13-relations.md R1/R2). Same key, shape and refusals as a pulse job's depends_on, one level up: what this plugin's service cannot run without. Compiled into state/anatomy-graph.json by tools/anatomy-graph-gen.py and pinned against BOTH main.yml's auto-enable blocks and a full mechanical sweep of what the code performs, by tests/anatomy/test_service_dependency_edges.py. An EMPTY array is a scoped measurement — 'surveyed, NO DATA UPSTREAM' — and reads differently from an absent block, which is 'nobody looked'. It does NOT mean the node is a root: SSO upstreams reach the graph through service:authentik -> authentik:<slug>, and gitea-base carries [] while deriving L1.",
       "items": {
         "type": "object",
         "required": ["upstream", "kind", "measured"],

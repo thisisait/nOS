@@ -40,7 +40,7 @@ requires:
     - tenant_domain
     - host_alias
 
-# ── DEPENDS_ON — service→service edges (docs/idea/13-relations.md, R2) ──────
+# ── DEPENDS_ON — service→service edges (docs/archive/idea/13-relations.md, R2) ──────
 # THE EDGE THE FIRST DERIVATION COULD NOT FIND. Its completeness side iterated
 # main.yml's three auto-enable blocks, so a dependency those blocks had never
 # heard of was outside the derivation entirely — and its reachability probe

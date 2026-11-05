@@ -1,7 +1,7 @@
 # =============================================================================
 # KEAP DataTable definition — "Parties" (the entity registry's counterparty core)
 #
-# THE FIXTURE'S FIRST TABLE (w-fixture, docs/idea/15-business-fixture.md), and
+# THE FIXTURE'S FIRST TABLE (w-fixture, docs/archive/idea/15-business-fixture.md), and
 # deliberately GENERAL FIRST, BUSINESS SECOND: this is the EN 16931 party
 # shape (seller/buyer/delivery party as one noun), not a label-printer table.
 # The label-printer tables reference it by rowRef; a future e-shop would

@@ -12,18 +12,17 @@
 > previous surface reached 20 390 lines because nothing ever forced that choice.
 
 Counted 2026-09-14: most “open/design” rows below had already shipped or
-been seeded. Files stay in this directory until `idea-surface-absorb` moves
-cites (gates still pin `ssot/doctrine/loop-contract.md`,
-`13-relations.md`, `15-business-fixture.md`, `21-mariadb-tls-ladder.md`,
-`02-cortex-lang.md`). Ceiling stays 24 until that cite-migration; it may
-only fall. Do not add idea 22+. Device work is dtt `device-organ`.
+been seeded. On 2026-11-05 `idea-surface-absorb` moved the five cite targets
+(02 cortex-lang, 11 agentic loop, 13 relations, 15 business fixture, 21 MariaDB
+TLS ladder) to `docs/archive/idea/` and rewrote every cite;
+the ceiling fell to 18 (`ssot/INDEX.yml` realms.idea.ceiling) and may only fall.
+Do not add idea 22+. Device work is dtt `device-organ`.
 
 ## The set
 
 | | idea | status (honest 2026-09-14) | the one sentence |
 |---|---|---|---|
 | [01](01-secrets.md) | Secrets — kill the blast radius | **keep** — P1 inert; P3/P5 open | One leaked string yielded 103 credentials; the fix is one-way derivation, not a safer cupboard. |
-| [02](02-cortex-lang.md) | cortex-lang — an ontology-typed IR | **shipped** — cite target; archive after absorb | The LLM emits a typed plan; execution is local, and a capability can never be added by data. |
 | [03](03-cortex-corpus.md) | The corpus, and what it can honestly recall | **seeded** (`cortex-*`, `kpro`) — archive after absorb | Parity is measured nightly; the user tree is one document, so recall is thin by *input*, not by design. |
 | [04](04-one-filesystem.md) | One filesystem | **keep** | The same document can live in three places and nothing decides which is real. |
 | [05](05-per-user-isolation.md) | Per-user isolation | **seeded** `fs-peruser` — absorb into 04 | Per-user prices concurrency, not headcount — and the secret scope must be built before the containers are. |
@@ -34,9 +33,6 @@ only fall. Do not add idea 22+. Device work is dtt `device-organ`.
 | [14](14-notification-spine.md) | One notification spine | **seeded** — archive after absorb | One abstract channel; chats, mail and approval surfaces are implementations. The write half ships and no channel carries an answer back. |
 | [12](12-state-surface.md) | The state surface | **seed** `state-surface` then archive | One artifact every model reads first — actor_id on events is the real gap. |
 | [10](10-roadmap-surface.md) | The roadmap surface | **shipped** — archive after absorb | A plan that must be rewritten by hand to stay true will not stay true; the table is asked, not copied. |
-| [11](11-agentic-loop.md) | The agentic loop | **built** — index said “design”; that was a lie (fee 50) | The propose→judge loop exists; remaining defects are `loop-*` rows. |
-| [13](13-relations.md) | Relations | **R1–R5 shipped** — still a cite target | What is joined to what, and who owns the verb. |
-| [15](15-business-fixture.md) | A real business on nOS | **increment 1 shipped** — cite target | A fixture is data that argues back. |
 | [11a](../../ssot/doctrine/loop-contract.md) | The loop engine contract | **promoted** 2026-10-07 to `ssot/doctrine/loop-contract.md` | Tests and Bone cite the article. |
 | [13F](13-fable-review.md) | Fable review of the loop engine | **record** — colliding number | Filed under 13; 13 proper is relations. |
 | [16](16-orchestrator-question.md) | The orchestrator question | **decision record** — not open | Which layer is ours. |
@@ -44,7 +40,6 @@ only fall. Do not add idea 22+. Device work is dtt `device-organ`.
 | [18](18-second-environment.md) | A second environment | **seeded** as `sere*` — archive after absorb | VPS, local VM, or neither yet. |
 | [19](19-fable-review-2.md) | Fable review, second pass | **record** | Open asks already have `loop-*` slugs. |
 | [20](20-devops-security-skills-read.md) | DevOps-security skills read | **record** — seed `compose-hardening` | Adopt none as a sweep. |
-| [21](21-mariadb-tls-ladder.md) | MariaDB TLS ladder | **seeded** `sec-transport-mariadb*` — cite target | Remaining cliff is the seed, not this essay. |
 
 
 ## How to use this

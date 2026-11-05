@@ -6,7 +6,7 @@
 # any seeded email not ending in `.invalid` and any phone not in the +420 000
 # reserved shape — real people appear only after the fixture's own Article-30
 # entry exists and the company has said yes in writing
-# (docs/idea/15-business-fixture.md, "The one rule this fixture ships with").
+# (docs/archive/idea/15-business-fixture.md, "The one rule this fixture ships with").
 
 title: "Party contact points"
 description: >-

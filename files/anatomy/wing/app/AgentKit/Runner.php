@@ -101,7 +101,7 @@ final class Runner
 	 *
 	 * The three caps above are PER ITERATION and multiply: 600s per SDK
 	 * request × 30 calls × 10 iterations is roughly fifteen hours for one
-	 * stuck agent, and nothing at all counted tokens. `docs/idea/11-agentic-loop.md`
+	 * stuck agent, and nothing at all counted tokens. `docs/archive/idea/11-agentic-loop.md`
 	 * §5 is titled "Bounded, because unbounded is the failure mode"; the
 	 * session was the level with no bound.
 	 *

@@ -47,7 +47,7 @@ requires:
     - host_alias
     - global_password_prefix
 
-# ── DEPENDS_ON — service→service edges (docs/idea/13-relations.md, R1) ──────
+# ── DEPENDS_ON — service→service edges (docs/archive/idea/13-relations.md, R1) ──────
 # Transcribed from main.yml's two `Auto-enable <provider> for services that
 # require it` blocks (MariaDB, Redis Docker) — the estate has held this as
 # behaviour since before the graph existed. Compiled by

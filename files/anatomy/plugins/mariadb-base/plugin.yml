@@ -31,7 +31,7 @@ requires:
     - mariadb_data_dir
     - global_password_prefix
 
-# ── DEPENDS_ON — service→service edges (docs/idea/13-relations.md, R1) ──────
+# ── DEPENDS_ON — service→service edges (docs/archive/idea/13-relations.md, R1) ──────
 # EMPTY ON PURPOSE, and that is a measurement rather than an omission:
 # MariaDB is substrate: its compose fragment names no other service.
 # An absent block reads as "nobody looked"; this one reads as "looked, no

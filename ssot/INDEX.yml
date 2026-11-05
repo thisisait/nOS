@@ -32,7 +32,7 @@ realms:
     path: docs/idea
     in_force: false
     for: not law
-    ceiling: 23   # files, measured 2026-10-07; absorb or archive, never accrete
+    ceiling: 18   # files, measured 2026-11-05; absorb or archive, never accrete
   dtt:
     path: "$NOS_SEED_DIR"
     in_force: true

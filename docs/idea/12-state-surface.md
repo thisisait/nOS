@@ -1,6 +1,6 @@
 # 12 — The state surface: one file every model reads first
 
-**Status: design, 2026-08-02.** Companion to [11](11-agentic-loop.md) — the same
+**Status: design, 2026-08-02.** Companion to [11](../archive/idea/11-agentic-loop.md) — the same
 engine serves it, because a weakness reader and a state reader are the same
 reader with different framing.
 
@@ -114,7 +114,7 @@ A Claude Code session is an **actor** — `operator:claude-code` — not an agen
 
 ## 4. Shape
 
-`GET /v1/state` on the loop engine ([11](11-agentic-loop.md)), plus a file at a
+`GET /v1/state` on the loop engine ([11](../archive/idea/11-agentic-loop.md)), plus a file at a
 stable path so a model with no network can still read it.
 
 ```

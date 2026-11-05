@@ -82,7 +82,7 @@ nomic-embed-text cosine ranking if the synonym table starts fighting itself.
 
 ## 4. The refusal that matters
 
-`docs/idea/02-cortex-lang.md` refuses `kg:`/`ent:` at namespace granularity
+`docs/archive/idea/02-cortex-lang.md` refuses `kg:`/`ent:` at namespace granularity
 so no timing signal about *tenant data* survives a query. This tool is
 different in kind, not just degree: it searches **our own OpenAPI contract**
 — a static, already-committed, non-secret artifact describing the shape of

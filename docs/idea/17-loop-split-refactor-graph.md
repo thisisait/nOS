@@ -75,7 +75,7 @@ The one tenant-scoped token is **read-only over KEAP taxonomy**, `db:` deliberat
 
 **(b) The estate already priced this and the research missed it.** `docs/roadmap-2026q2.md:1267` ✅: *"Multi-tenant fleet mode (per-tenant-on-one-host) … ~5× more work — Authentik tenants, Wing /hub multi-tenant view, per-tenant secret namespaces, per-tenant data segregation. Postponed."* Any plan premised on "one string wide" must reconcile with that row.
 
-**(c) I do not claim the business side "cannot have an oracle."** The research asserted that as its thesis while conceding in its own unestablished list that it never tried to design one. `15-business-fixture.md:98` names *"the loop — a question whose right answer changed since the last time it was asked"* as a fixture surface, and `cortex-corpus-diff` is already a judge of exactly the derivation-checking shape. The honest statement: **a deterministic judge over given business data is plausible and unbuilt.** Finding one is the gate for promoting `nos-mandate` to a loop.
+**(c) I do not claim the business side "cannot have an oracle."** The research asserted that as its thesis while conceding in its own unestablished list that it never tried to design one. `docs/archive/idea/15-business-fixture.md:98` names *"the loop — a question whose right answer changed since the last time it was asked"* as a fixture surface, and `cortex-corpus-diff` is already a judge of exactly the derivation-checking shape. The honest statement: **a deterministic judge over given business data is plausible and unbuilt.** Finding one is the gate for promoting `nos-mandate` to a loop.
 
 ### What is refused outright
 

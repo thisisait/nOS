@@ -3,7 +3,7 @@
 **Status: runbook, authored 2026-08-16 for the operator's "wild night" ask.**
 The design argument lives in the session reports and
 `docs/minimax-groundwork.md`; this file is what the operator holds during the
-night. §5 of `docs/idea/11-agentic-loop.md` is the governing doctrine:
+night. §5 of `docs/archive/idea/11-agentic-loop.md` is the governing doctrine:
 *"Bounded, because unbounded is the failure mode."* The night is held to it.
 
 ## 1. What the night can honestly be — and the two things it cannot

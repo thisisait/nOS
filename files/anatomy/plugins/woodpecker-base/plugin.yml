@@ -50,7 +50,7 @@ requires:
     - gitea_domain
     - global_password_prefix
 
-# ── DEPENDS_ON — service→service edges (docs/idea/13-relations.md, R1) ──────
+# ── DEPENDS_ON — service→service edges (docs/archive/idea/13-relations.md, R1) ──────
 # Transcribed from `requires.peer_service: gitea` above, which
 # state/schema/plugin.schema.json records as "documentation-only today;
 # loader doesn't enforce". Compiled by tools/anatomy-graph-gen.py; pinned by
