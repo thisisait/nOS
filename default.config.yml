@@ -2676,6 +2676,9 @@ manage_authentik_with_tofu: false
 # HCL and `tofu plan` is no-op (tools/tofu-authentik-adopt.sh) — the destroy
 # guard refuses apply otherwise. Reversible: flip back to "blueprint".
 authentik_engine: "blueprint"
+# OpenTofu state is runtime data, so it lives in ~/.nos (0700), never in the checkout:
+# a second clone started stateless there and planned 13 live providers anew (2026-10-23).
+tofu_authentik_state_dir: "{{ ansible_facts['env']['HOME'] }}/.nos/tofu/authentik"
 authentik_secret_key: "{{ global_password_prefix }}_pw_authentik_secret"
 authentik_db_name: "authentik"
 authentik_db_user: "authentik"
@@ -3314,6 +3317,8 @@ backup_coverage:
   pi_config_dir:               { class: derived, why: "rendered agent config" }
   iiab_terminal_config_dir:    { class: derived, why: "rendered config" }
   node_exporter_textfile_dir:  { class: derived, why: "metrics scratch" }
+  tofu_authentik_state_dir:    { class: dump, why: "backup.sh run_tofu_state (tofu-state): terraform.tfstate + .backup" }
+  backup_tofu_state_dir:       { class: dump, why: "is tofu_authentik_state_dir — what run_tofu_state reads" }
   backup_staging_dir:          { class: store, why: "tonight's plaintext dumps — the restic source, rewritten every run" }
   backup_pre_blank_dir:        { class: store, why: "the staging set as a blank found it (pre-wipe copy, newest 2)" }
   one_way_upgrade_backup_dir:  { class: store, why: "cold tars before a migration with no rollback (one-way-upgrade-guard); the operator prunes" }
@@ -3341,7 +3346,7 @@ backup_thalamus_ledger_path: "{{ thalamus_data_dir }}/ledger.db"
 backup_keap_container: "iiab-keap-1"
 backup_keap_db_container_path: "/data/keap.db"
 backup_tofu_state: true                                 # terraform.tfstate(+.backup) + nos.auto.tfvars.json
-backup_tofu_state_dir: "{{ playbook_dir }}/terraform/authentik"
+backup_tofu_state_dir: "{{ tofu_authentik_state_dir }}"
 # Client-side encryption (GDPR Art.32 / NIS2 at-rest). OFF only for a throw-away
 # dev target with no PII. The passphrase is the ONLY key to every object —
 # credentials.yml MUST survive off-box (see docs/backup-architecture.md custody).

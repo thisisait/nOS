@@ -215,14 +215,24 @@
 
 # ── 4b. OpenTofu Authentik state — reset so a blank recreates from scratch ──
 # The blank wipes Authentik's DB (every provider/app/outpost gets a NEW pk on
-# reinstall), but terraform.tfstate lives in the REPO (not a data dir) and so
-# survived blanks — carrying STALE pks. The next `tofu apply` then PUTs to pks
-# that now belong to OTHER providers (e.g. tofu's "Superset" pk became an agent
+# reinstall), but terraform.tfstate lives in ~/.nos/tofu (not a data dir; the
+# checkout until 2026-11-05) and so survives blanks — carrying STALE pks. The
+# next `tofu apply` then PUTs to pks that now belong to OTHER providers (e.g. tofu's "Superset" pk became an agent
 # client) → "provider with this name already exists" 400s, and the apply could
 # clobber the wrong object. Resetting the state here makes tofu CREATE cleanly
 # against the wiped tenant. Backup custody is separate (run_tofu_state); this is
 # the working copy only. Root-caused 2026-06-14 (a converge after a blank).
 - name: "[BLANK] Reset OpenTofu Authentik state (stale pks across blanks)"
+  ansible.builtin.file:
+    path: "{{ tofu_authentik_state_dir }}/{{ item }}"
+    state: absent
+  loop:
+    - terraform.tfstate
+    - terraform.tfstate.backup
+  when: (authentik_engine | default('blueprint')) == 'tofu' or (manage_authentik_with_tofu | default(false) | bool)
+
+# A checkout copy not yet moved to ~/.nos would be moved in by this converge, stale pks and all.
+- name: "[BLANK] Reset OpenTofu state a checkout still holds"
   ansible.builtin.file:
     path: "{{ playbook_dir }}/terraform/authentik/{{ item }}"
     state: absent
@@ -232,12 +242,11 @@
   when: (authentik_engine | default('blueprint')) == 'tofu' or (manage_authentik_with_tofu | default(false) | bool)
 
 # OpenTofu writes a timestamped terraform.tfstate.<epoch>.backup on every apply.
-# These accumulate in the repo working tree (gitignored, but they pile up and
-# muddy which state is live). The reset above only removes the singular backup,
+# These accumulate beside the state (they pile up and muddy which state is live). The reset above only removes the singular backup,
 # so wipe the timestamped ones too — keeping the blank's wipe-all contract honest.
 - name: "[BLANK] Find timestamped OpenTofu Authentik backups"
   ansible.builtin.find:
-    paths: "{{ playbook_dir }}/terraform/authentik"
+    paths: "{{ tofu_authentik_state_dir }}"
     patterns: "terraform.tfstate.*.backup"
     use_regex: false
   register: _blank_tofu_backups

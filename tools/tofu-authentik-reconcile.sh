@@ -30,6 +30,8 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TF_DIR="$REPO_ROOT/terraform/authentik"
+# The state lives outside the checkout (tasks/tofu-authentik.yml inits the backend there).
+STATE="${NOS_TOFU_STATE:-$HOME/.nos/tofu/authentik/terraform.tfstate}"
 REG="$REPO_ROOT/state/tofu-authentik-services.yml"
 SECRETS="${HOME}/.nos/secrets.yml"
 PORT="${AUTHENTIK_PORT:-9003}"
@@ -47,7 +49,7 @@ done
 command -v tofu >/dev/null || { echo "[reconcile] tofu not on PATH"; exit 2; }
 [ -f "$SECRETS" ] || { echo "[reconcile] $SECRETS missing"; exit 2; }
 [ -f "$TF_DIR/nos.auto.tfvars.json" ] || { echo "[reconcile] tfvars missing — run the playbook once to render it"; exit 2; }
-[ -f "$TF_DIR/terraform.tfstate" ] || { echo "[reconcile] no state yet — nothing to reconcile"; exit 0; }
+[ -f "$STATE" ] || { echo "[reconcile] no state yet — nothing to reconcile"; exit 0; }
 
 TOKEN="$(python3 -c "import yaml,os;print(yaml.safe_load(open(os.path.expanduser('$SECRETS'))).get('authentik_bootstrap_token',''))")"
 auth=(-H "Authorization: Bearer ${TOKEN}")
@@ -73,7 +75,7 @@ pk_for() { echo "$APPMAP" | awk -v s="$1" '$1==s{print $2; exit}'; }
 # state slug -> recorded provider PK (drift detection — read the tfstate once)
 STATEPK="$(python3 -c "
 import json
-s=json.load(open('terraform.tfstate'))
+s=json.load(open('$STATE'))
 for r in s.get('resources',[]):
     m=r.get('module','')
     if m.startswith('module.service[\"') and r.get('type') in ('authentik_provider_oauth2','authentik_provider_proxy'):
@@ -103,7 +105,7 @@ BACKED_UP=0
 backup_once() {
   [ "$DRY" = 1 ] && return
   [ "$BACKED_UP" = 1 ] && return
-  cp terraform.tfstate "terraform.tfstate.reconcile-bak-$(date +%Y%m%d-%H%M%S)"
+  cp "$STATE" "$STATE.reconcile-bak-$(date +%Y%m%d-%H%M%S)"
   echo "[reconcile] state backup written"; BACKED_UP=1
 }
 

@@ -55,9 +55,9 @@ files=(
   "$NOS_HOME/paperclip-board.token"
   "$NOS_HOME/paperclip-ceo-invite.txt"
 )
-# What tools/estate-adopt.sh --from carries: config, credentials, *.bak.yml, OpenTofu state.
+# What tools/estate-adopt.sh --from carries: config, credentials, *.bak.yml.
 estate=("$EST/config.yml" "$EST/credentials.yml")
-for f in "$EST"/*.bak.yml "$EST"/terraform/*/terraform.tfstate "$EST"/terraform/*/terraform.tfstate.backup; do
+for f in "$EST"/*.bak.yml; do
   [ -f "$f" ] && estate+=("$f")
 done
 
@@ -70,6 +70,8 @@ done
 # Home trees: SSH keys, and the mkcert CA every estate certificate chains to.
 homedirs=()
 [ -d "$HOME/.ssh" ] && homedirs+=("$HOME/.ssh")
+# OpenTofu state left the checkout for ~/.nos/tofu (2026-11-05); germinate places it back as a tree.
+[ -d "$NOS_HOME/tofu" ] && homedirs+=("$NOS_HOME/tofu")
 CAROOT=""
 if command -v mkcert >/dev/null 2>&1; then
   CAROOT="$(mkcert -CAROOT)"

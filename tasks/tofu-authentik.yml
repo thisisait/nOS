@@ -81,6 +81,34 @@
       vars:
         tofu_authentik_services: "{{ (lookup('template', playbook_dir + '/state/tofu-authentik-services.yml') | from_yaml).tofu_authentik_services }}"
 
+    - name: "[tofu-authentik] State dir under ~/.nos (0700)"
+      ansible.builtin.file:
+        path: "{{ tofu_authentik_state_dir }}"
+        state: directory
+        mode: '0700'
+
+    # One-time: state a checkout still holds MOVES to ~/.nos (a copy would diverge).
+    # Both present and different = two histories; refuse, the operator picks one.
+    # Gate: test_a_converge_writes_nothing_into_the_checkout runs this script.
+    - name: "[tofu-authentik] Move tofu state out of the checkout"
+      ansible.builtin.shell: |
+        set -eu
+        for f in "$SRC"/terraform.tfstate*; do
+          [ -f "$f" ] || continue
+          d="$DST/$(basename "$f")"
+          if [ ! -e "$d" ]; then mv "$f" "$d"; echo "moved $f"
+          elif cmp -s "$f" "$d"; then rm "$f"; echo "dropped identical $f"
+          else echo "REFUSE: $f and $d differ: keep the live one, delete the other, re-run" >&2; exit 1
+          fi
+        done
+      args:
+        executable: /bin/bash
+      environment:
+        SRC: "{{ _tf_dir }}"
+        DST: "{{ tofu_authentik_state_dir }}"
+      register: _tofu_state_move
+      changed_when: _tofu_state_move.stdout | length > 0
+
     # ── WORKTREE GUARD (2026-08-31) ─────────────────────────────────────────
     # The tofu state is gitignored, so it exists ONLY in the checkout that
     # created it. A linked git worktree therefore starts with no state at all,
@@ -113,11 +141,10 @@
     - name: "[tofu-authentik] Refuse to own Authentik state from a worktree"
       ansible.builtin.fail:
         msg: >-
-          REFUSED: {{ playbook_dir }} is a linked git worktree, and the tofu
-          state is gitignored — this checkout has none, so `tofu apply` would
-          try to CREATE every Authentik provider and application that already
-          exists live (measured: 53 of each on 2026-08-31, all of which failed
-          with `400 already exists`). Run the authentik/anatomy tags from the
+          REFUSED: {{ playbook_dir }} is a linked git worktree. The tofu state
+          in {{ tofu_authentik_state_dir }} is the live estate's, and a branch's
+          HCL must not apply over it (before the state left the checkout, a
+          worktree planned to CREATE 53 live providers, 2026-08-31). Run the authentik/anatomy tags from the
           main checkout, or pass
           `-e authentik_engine=blueprint` to skip the tofu path entirely.
       when:
@@ -138,7 +165,8 @@
         - _tofu_git_dirs.stdout_lines[0] != _tofu_git_dirs.stdout_lines[1]
 
     - name: "[tofu-authentik] tofu init"
-      ansible.builtin.command: "tofu init -input=false -no-color"
+      # -reconfigure: the state was moved above, so there is nothing to migrate.
+      ansible.builtin.command: "tofu init -input=false -no-color -reconfigure -backend-config=path={{ tofu_authentik_state_dir }}/terraform.tfstate"
       args:
         chdir: "{{ _tf_dir }}"
       changed_when: false
@@ -175,6 +203,7 @@
         chdir: "{{ _tf_dir }}"
       environment:
         AUTHENTIK_PORT: "{{ authentik_port | default(9000) }}"
+        NOS_TOFU_STATE: "{{ tofu_authentik_state_dir }}/terraform.tfstate"
       async: "{{ tofu_reconcile_async_timeout | default(600) }}"
       poll: 0
       register: _reconcile_job
@@ -381,7 +410,7 @@
       ansible.builtin.file:
         path: "{{ item }}"
         mode: "0600"
-      loop: "{{ query('fileglob', _tf_dir ~ '/terraform.tfstate*') }}"
+      loop: "{{ query('fileglob', tofu_authentik_state_dir ~ '/terraform.tfstate*') }}"
       when:
         - (authentik_engine | default('blueprint')) == 'tofu'
         - _tofu_destroy_split.unexplained | length == 0

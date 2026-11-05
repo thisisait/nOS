@@ -3,6 +3,8 @@
 # .terraform.lock.hcl joins the frozen-CI toolchain next to requirements.lock.yml.
 terraform {
   required_version = ">= 1.6.0"
+  # Path given at init (-backend-config=path=) by tasks/tofu-authentik.yml: ~/.nos/tofu/authentik.
+  backend "local" {}
   required_providers {
     authentik = {
       source  = "goauthentik/authentik"

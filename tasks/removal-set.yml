@@ -264,6 +264,8 @@
       - { var: backup_staging_dir, level: all, why: "under ~/backups: the plaintext dumps the pre-wipe snapshot reads" }
       - { var: backup_pre_blank_dir, level: all, why: "under ~/backups: staging as the blank found it — the restore source after a blank" }
       - { var: one_way_upgrade_backup_dir, level: all, why: "under ~/backups: the only rollback of a one-way upgrade" }
+      - { var: tofu_authentik_state_dir, level: all, why: "under ~/.nos: a blank resets the state files in it (blank-reset 4b), uninstall takes it" }
+      - { var: backup_tofu_state_dir, level: all, why: "is tofu_authentik_state_dir" }
       - { var: node_exporter_textfile_dir, level: all, why: "under ~/.nos, the runtime side-car; blank keeps it, uninstall takes it" }
       - { var: jellyfin_movies_dir, level: never, why: "operator media library under ~/media — never nOS-owned" }
       - { var: jellyfin_shows_dir, level: never, why: "operator media library under ~/media — never nOS-owned" }
