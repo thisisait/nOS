@@ -203,8 +203,12 @@ gitlab_forge=$(yaml_lookup gitlab_agent_forge \
 	"$REPO_DIR/config.yml" "$REPO_DIR/default.config.yml" \
 	"$REPO_DIR/roles/pazny.gitlab/defaults/main.yml")
 synced=0
+gitlab_token=$(yaml_lookup gitlab_api_token \
+	"$REPO_DIR/credentials.yml" "$REPO_DIR/config.yml" "$HOME/.nos/secrets.yml")
+# The sync tools no longer open the store (they also run as Pulse jobs): hand them the tokens.
 sync_forge() { # $1=label  $2=tool
-	if "$SCRIPT_DIR/$2" dev master >/dev/null 2>&1; then
+	if GITEA_TOKEN="$token" GITEA_DOMAIN="$domain" GITLAB_TOKEN="$gitlab_token" \
+		"$SCRIPT_DIR/$2" dev master >/dev/null 2>&1; then
 		echo "→ $1 trunk synced (agent-forge: fast-forward dev + master)"
 	else
 		echo "→ $1 trunk sync deferred — non-fast-forward or forge unreachable; push still ok"

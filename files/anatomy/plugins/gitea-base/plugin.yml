@@ -203,6 +203,8 @@ pulse:
       owner: install_loops   # syncs the nOS trunk: a development loop (2026-10-15)
       runner: subprocess
       command: "{{ playbook_dir }}/tools/sync-trunk-to-gitea.sh"
+      env:
+        GITEA_TOKEN: "{{ gitea_api_token }}"
       schedule: "*/20 * * * *"
       jitter_min: 3
       max_runtime_s: 120

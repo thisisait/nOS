@@ -132,6 +132,8 @@ pulse:
       owner: install_loops   # syncs the nOS trunk: a development loop (2026-10-15)
       runner: subprocess
       command: "{{ playbook_dir }}/tools/sync-trunk-to-gitlab.sh"
+      env:
+        GITLAB_TOKEN: "{{ gitlab_api_token }}"
       schedule: "*/20 * * * *"
       jitter_min: 3
       max_runtime_s: 120

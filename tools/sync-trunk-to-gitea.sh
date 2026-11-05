@@ -64,10 +64,10 @@ if [ "$AGENT_FORGE" != "true" ]; then
   exit 0
 fi
 
+# The token comes from the runner (Pulse: secret:gitea_api_token; nos-push exports it).
 TOKEN="${GITEA_TOKEN:-}"
-[ -n "$TOKEN" ] || TOKEN="$(yaml_lookup gitea_api_token credentials.yml config.yml "$HOME/.nos/secrets.yml")"
 DOMAIN="${GITEA_DOMAIN:-}"
-[ -n "$DOMAIN" ] || DOMAIN="$(yaml_lookup gitea_domain credentials.yml config.yml)"
+[ -n "$DOMAIN" ] || DOMAIN="$(yaml_lookup gitea_domain config.yml)"
 if [ -z "$DOMAIN" ]; then
   TENANT="$(yaml_lookup tenant_domain config.yml default.config.yml)"
   [ -n "$TENANT" ] && DOMAIN="git.${TENANT}"
@@ -78,7 +78,7 @@ NAME="$(yaml_lookup gitea_nos_repo_name config.yml default.config.yml roles/pazn
 [ -n "$NAME" ] || NAME="nOS"
 
 if [ -z "$TOKEN" ] || [ -z "$DOMAIN" ]; then
-  echo "[sync] missing GITEA_TOKEN/gitea_api_token or gitea_domain — is the forge provisioned? (T32 #35)"; exit 2
+  echo "[sync] missing GITEA_TOKEN env or gitea_domain — is the forge provisioned? (T32 #35)"; exit 2
 fi
 GITEA_URL="https://oauth2:${TOKEN}@${DOMAIN}/${OWNER}/${NAME}.git"
 

@@ -63,10 +63,10 @@ if [ "$AGENT_FORGE" != "true" ]; then
   exit 0
 fi
 
+# The token comes from the runner (Pulse: secret:gitlab_api_token; nos-push exports it).
 TOKEN="${GITLAB_TOKEN:-}"
-[ -n "$TOKEN" ] || TOKEN="$(yaml_lookup gitlab_api_token credentials.yml config.yml "$HOME/.nos/secrets.yml")"
 DOMAIN="${GITLAB_DOMAIN:-}"
-[ -n "$DOMAIN" ] || DOMAIN="$(yaml_lookup gitlab_domain credentials.yml config.yml)"
+[ -n "$DOMAIN" ] || DOMAIN="$(yaml_lookup gitlab_domain config.yml)"
 if [ -z "$DOMAIN" ]; then
   TENANT="$(yaml_lookup tenant_domain config.yml default.config.yml)"
   [ -n "$TENANT" ] && DOMAIN="gitlab.${TENANT}"
@@ -77,7 +77,7 @@ NAME="$(yaml_lookup gitlab_nos_repo_name config.yml default.config.yml roles/paz
 [ -n "$NAME" ] || NAME="nOS"
 
 if [ -z "$TOKEN" ] || [ -z "$DOMAIN" ]; then
-  echo "[sync] missing GITLAB_TOKEN/gitlab_api_token or gitlab_domain — is the forge provisioned? (gitlab_agent_forge=true)"; exit 2
+  echo "[sync] missing GITLAB_TOKEN env or gitlab_domain — is the forge provisioned? (gitlab_agent_forge=true)"; exit 2
 fi
 GITLAB_URL="https://oauth2:${TOKEN}@${DOMAIN}/${OWNER}/${NAME}.git"
 

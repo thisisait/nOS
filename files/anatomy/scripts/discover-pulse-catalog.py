@@ -118,6 +118,9 @@ def _build_substitutions() -> dict[str, str]:
         "{{ surveyor_wing_api_token }}":   "secret:surveyor_wing_api_token",
         "{{ upgrade_architect_wing_api_token }}": "secret:upgrade_architect_wing_api_token",
         "{{ bone_secret }}":              "secret:bone_secret",
+        # trunk-sync read these from secrets.yml itself (test_no_pulse_job_reads_the_secret_store).
+        "{{ gitea_api_token }}":          "secret:gitea_api_token",
+        "{{ gitlab_api_token }}":         "secret:gitlab_api_token",
         # The audit chain's retired-key ring (2026-08-06). Verify-only, and
         # legitimately EMPTY until the first rotation. A REFERENCE since
         # 2026-08-12: this was the one secret-shaped token still substituted as
