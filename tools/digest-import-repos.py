@@ -21,7 +21,8 @@ review (repos are not an authoritative party registry — they never mint a part
 DRY by default. --absorb upserts by slug, skipping present. Tear down with
 tools/digest-teardown.py on the printed bundle. Exit 0 · 1 gate refused · 2 KEAP.
 
-Manifests parsed (minimal): package.json (npm), requirements.txt (pypi), go.mod (go).
+Manifests parsed (minimal, direct deps only): package.json (npm), requirements.txt
+(pypi), go.mod (go), composer.json (composer), Cargo.toml (cargo), *.csproj (nuget).
 """
 from __future__ import annotations
 
@@ -30,7 +31,9 @@ import json
 import pathlib
 import re
 import sys
+import tomllib
 import urllib.error
+import xml.etree.ElementTree as ET
 
 import yaml
 
@@ -87,9 +90,44 @@ def _parse_go_mod(text: str) -> list[tuple[str, str, str]]:
     return out
 
 
+def _parse_composer_json(text: str) -> list[tuple[str, str, str]]:
+    data = json.loads(text)
+    # platform reqs (php, ext-*, lib-*) carry no vendor/ prefix and are not packages
+    return [(name, str(ver), "composer")
+            for section in ("require", "require-dev")
+            for name, ver in (data.get(section) or {}).items() if "/" in name]
+
+
+def _parse_cargo_toml(text: str) -> list[tuple[str, str, str]]:
+    data = tomllib.loads(text)
+    out = []
+    for section in ("dependencies", "dev-dependencies", "build-dependencies"):
+        for name, spec in (data.get(section) or {}).items():
+            ver = spec.get("version", "") if isinstance(spec, dict) else spec
+            out.append((name, str(ver), "cargo"))
+    return out
+
+
+def _parse_csproj(text: str) -> list[tuple[str, str, str]]:
+    out = []
+    for el in ET.fromstring(text).iter():
+        if el.tag.rsplit("}", 1)[-1] != "PackageReference" or not el.get("Include"):
+            continue
+        ver = el.get("Version")
+        if ver is None:
+            child = next((c for c in el if c.tag.rsplit("}", 1)[-1] == "Version"), None)
+            ver = (child.text or "").strip() if child is not None else ""
+        out.append((el.get("Include"), ver, "nuget"))
+    return out
+
+
+# keyed by exact file name, or by suffix for project files named after the project
 _MANIFESTS = {"package.json": _parse_package_json,
               "requirements.txt": _parse_requirements_txt,
-              "go.mod": _parse_go_mod}
+              "go.mod": _parse_go_mod,
+              "composer.json": _parse_composer_json,
+              "Cargo.toml": _parse_cargo_toml,
+              ".csproj": _parse_csproj}
 
 
 class RepoImporter:
@@ -125,11 +163,12 @@ class RepoImporter:
                 continue
             apps = []
             for manifest in sorted(repo_dir.rglob("*")):
-                if manifest.name not in _MANIFESTS:
+                parser = _MANIFESTS.get(manifest.name) or _MANIFESTS.get(manifest.suffix)
+                if parser is None or not manifest.is_file():
                     continue
                 try:
-                    pkgs = _MANIFESTS[manifest.name](manifest.read_text(encoding="utf-8"))
-                except (ValueError, OSError) as exc:
+                    pkgs = parser(manifest.read_text(encoding="utf-8"))
+                except (ValueError, OSError, ET.ParseError) as exc:
                     self.skipped.append(f"{repo_dir.name}/{manifest.name}: unparsable ({exc})")
                     continue
                 apps.append({"path": str(manifest.parent.relative_to(repo_dir)),
