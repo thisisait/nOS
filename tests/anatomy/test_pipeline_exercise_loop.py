@@ -179,6 +179,9 @@ def test_an_approve_whose_absorb_failed_is_a_finding(monkeypatch):
     assert _stub_cycle(monkeypatch, 0)["ok"] is True
     rec = _stub_cycle(monkeypatch, 1)
     assert rec["ok"] is False and "absorb" in rec["detail"]
+    assert not rec.get("env")
+    rec = _stub_cycle(monkeypatch, 2)  # 2 = KEAP unreadable: the estate, not the pipeline
+    assert rec["ok"] is False and rec["env"] is True and rec["stage"] == "absorb"
 
 
 def test_a_cycle_that_could_not_run_is_not_coverage(monkeypatch, tmp_path):
