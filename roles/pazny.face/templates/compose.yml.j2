@@ -44,10 +44,9 @@ services:
       # Edge-trust: believe X-Authentik-* ONLY with this token (anti-spoof).
       FACE_EDGE_TOKEN: "{{ face_edge_token }}"
       FACE_EDGE_TOKEN_HEADER: "x-face-edge-token"
-      # Wing app catalog (host daemon on loopback). GET is public; pass the wing
-      # edge token too in case the API path enforces it.
+      # Wing app catalog (host daemon on loopback). GET is public. No Wing edge
+      # token: it forges a Tier-1 identity to Wing's pages (test_no_appendage_holds_the_wing_edge_token).
       NOS_HUB_API_URL: "http://host.docker.internal:{{ wing_port | default(9000) }}/api/v1/hub/systems"
-      WING_EDGE_TOKEN: "{{ wing_edge_token | default('') }}"
       # Wing API (bearer). The BFF projects responses onto an allow-list before
       # they reach a browser: `GET /pulse_jobs` returns env blocks verbatim.
       NOS_WING_API_URL: "http://host.docker.internal:{{ wing_port | default(9000) }}/api/v1"

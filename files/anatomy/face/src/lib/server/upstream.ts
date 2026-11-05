@@ -23,7 +23,6 @@ const HUB_URL = () => env.NOS_HUB_API_URL ?? 'http://host.docker.internal:9000/a
 const KEAP_TABLES = () => env.NOS_KEAP_TABLES_URL ?? 'http://host.docker.internal:8091/api/tables';
 
 const VFS_TOKEN = () => env.NOS_VFS_API_TOKEN ?? '';
-const WING_EDGE = () => env.WING_EDGE_TOKEN ?? '';
 
 function boneHeaders(json = false): Record<string, string> {
 	const h: Record<string, string> = { authorization: `Bearer ${VFS_TOKEN()}` };
@@ -184,15 +183,13 @@ export const userstate = {
 	}
 };
 
-// ── Wing hub catalog (public GET; edge token passed defensively) ─────────────
+// ── Wing hub catalog (public GET; /api/v1 has no edge check) ────────────────
 
 export async function hubSystems(): Promise<unknown> {
-	const h: Record<string, string> = {};
-	if (WING_EDGE()) h['x-wing-edge-token'] = WING_EDGE();
 	// ?listed=1: Wing's /hub filter + hub_card overlay, so the dock lists what /hub lists.
 	const u = new URL(HUB_URL());
 	u.searchParams.set('listed', '1');
-	return asJson(await fetch(u, { headers: h }));
+	return asJson(await fetch(u));
 }
 
 // ── Wing API, AS the end user (files/anatomy/contracts/face-wing.yml) ─────────
@@ -222,9 +219,7 @@ async function wingGet(
 ): Promise<unknown> {
 	const u = new URL(WING_API() + path);
 	for (const [k, v] of Object.entries(params ?? {})) u.searchParams.set(k, v);
-	const h = asUser(user);
-	if (WING_EDGE()) h['x-wing-edge-token'] = WING_EDGE();
-	return asJson(await fetch(u, { headers: h }));
+	return asJson(await fetch(u, { headers: asUser(user) }));
 }
 
 /** Every registered Pulse job. Wing returns `jobs` as a MAP keyed by id — not
