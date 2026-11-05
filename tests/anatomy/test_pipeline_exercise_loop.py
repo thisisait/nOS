@@ -142,3 +142,52 @@ def test_a_clean_book_holds(monkeypatch):
     monkeypatch.setattr(LOOP.digest_absorb, "read_rows", lambda t: rows.get(t, []))
     out = LOOP.assert_books(truth, "b", expect_booked=True)
     assert out["ok"] is True and out["balanced"] is True
+
+
+def test_a_reject_is_judged_against_what_the_books_held_before(monkeypatch):
+    """Every fixture document is already a seeded row; a reject that booked
+    nothing must hold, or every reject reads as 'reached the books'."""
+    truth = LOOP.truth_for(LOOP.DOCS[0])
+    rows = {"invoice": [{"slug": "seed", "document_number": truth["id"]}], "posting": []}
+    monkeypatch.setattr(LOOP.digest_absorb, "read_rows", lambda t: rows.get(t, []))
+    out = LOOP.assert_books(truth, "b", expect_booked=False, before={"seed"})
+    assert out["ok"] is True, out
+
+
+def _stub_cycle(monkeypatch, absorb_rc: int):
+    truth = LOOP.truth_for(LOOP.DOCS[0])
+    slug = nos_digest.invoice_slug("b", "s", truth["id"])
+    rows = {"invoice": [{"slug": slug, "document_number": truth["id"], "seller": "s",
+                         "book_owner": "b"}],
+            "posting": [{"slug": "p1", "entry": f"je-{slug}", "direction": "debit", "amount": 1},
+                        {"slug": "p2", "entry": f"je-{slug}", "direction": "credit", "amount": 1}]}
+    monkeypatch.setattr(LOOP.digest_absorb, "read_rows", lambda t: rows.get(t, []))
+    monkeypatch.setattr(LOOP, "render", lambda *a: pathlib.Path("x.jpg"))
+    monkeypatch.setattr(LOOP, "sweep_and_verify", lambda *a: {
+        "ok": True, "verdict": "approve", "queue_slug": "q"})
+    monkeypatch.setattr(LOOP, "teardown", lambda *a: "ok")
+
+    class Ab:
+        returncode = absorb_rc
+    monkeypatch.setattr(LOOP, "absorb", lambda *a: Ab())
+    return LOOP.cycle(1, {"doc": LOOP.DOCS[0], "degrade": "clean", "seed": 1})
+
+
+def test_an_approve_whose_absorb_failed_is_a_finding(monkeypatch):
+    """The seeded row already satisfies the books, so absorb's own exit is the
+    only evidence an approve reached it."""
+    assert _stub_cycle(monkeypatch, 0)["ok"] is True
+    rec = _stub_cycle(monkeypatch, 1)
+    assert rec["ok"] is False and "absorb" in rec["detail"]
+
+
+def test_a_cycle_that_could_not_run_is_not_coverage(monkeypatch, tmp_path):
+    """KEAP refused = the cell was never exercised; counting it reports
+    cells visited that never ran."""
+    monkeypatch.setattr(LOOP, "STATE", tmp_path / "state")
+    monkeypatch.setattr(LOOP, "SEED", tmp_path / "seed")
+    monkeypatch.setattr(LOOP.job_readiness, "hold", lambda *a: None)
+    monkeypatch.setattr(LOOP, "cycle", lambda n, plan: {
+        "n": n, **plan, "ok": False, "env": True, "detail": "KEAP refused"})
+    assert LOOP.main(["--cycles", "1", "--doc", LOOP.DOCS[0], "--degrade", "clean"]) == 2
+    assert LOOP.load_coverage().get(f"{LOOP.DOCS[0]}|clean", 0) == 0
