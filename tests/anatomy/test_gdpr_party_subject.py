@@ -82,7 +82,7 @@ def test_party_routes_only_to_digest_closure(kind):
 
 def _argv(kind, confirm):
     argv = _task(kind, "Party subject — digest")["ansible.builtin.command"]["argv"]
-    ctx = {f"{kind}_subject": GOOD_PARTY, f"_{kind}_confirm": confirm, "playbook_dir": "/r"}
+    ctx = {f"{kind}_subject": GOOD_PARTY, f"_{kind}_confirm": confirm, "playbook_dir": "/r", "nos_tools_python": "/venv/bin/python"}
     if isinstance(argv, str):
         return ENV.compile_expression(_expr(argv))(**ctx)
     return [ENV.from_string(a).render(**ctx) for a in argv]
