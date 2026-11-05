@@ -22,8 +22,8 @@ final class CoexistenceRepository
 	}
 
 	// ── Planned-coexistence queue (W5-B5) ────────────────────────────────────
-	// The upgrade-architect agent queues a parallel-track provision for a
-	// breaking upgrade; the --tags coexistence consumer applies it.
+	// The operator queues a parallel-track provision for a breaking upgrade
+	// (the upgrade-architect only recommends one); --tags coexistence applies it.
 
 	/** @return array<int,array<string,mixed>> */
 	public function listPlanned(string $status = 'planned'): array
