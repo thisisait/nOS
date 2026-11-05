@@ -141,7 +141,7 @@ jobs:
       # of nine assertions in the tool-scope gate — every one that actually
       # calls a tool — skipped on every run here. Declared, so a failed or
       # deleted `composer install` aborts instead of going quietly green.
-      NOS_TEST_PROVIDES: git,ansible-playbook,php,composer,jq,sqlite3,openssl,node,cargo,files/anatomy/wing/vendor/autoload.php
+      NOS_TEST_PROVIDES: git,ansible-playbook,php,composer,jq,sqlite3,openssl,node,cargo,files/anatomy/wing/vendor/autoload.php,files/anatomy/cortex/node_modules/.bin/tsx
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v7
@@ -195,6 +195,11 @@ jobs:
       # test_pupil_approvals_hold, _eye_reads_the_wire and _renders_the_fixture run them there.
       - name: Install the face's JS lane.
         run: npm ci --ignore-scripts --prefix files/anatomy/face
+
+      # The cortex analyzer gates (local_model_bench_v3, the oracle gate, iris_bench_pipeline)
+      # skip without tsx; the cortex job never runs pytest, so they skipped everywhere.
+      - name: Install the cortex's JS lane.
+        run: npm ci --ignore-scripts --prefix files/anatomy/cortex
 
       # fastapi: tests/bone_vfs mounts the Bone VFS router on a throwaway app to
       # exercise the containment + filename-hardening gates (nOS-face v0.2).
