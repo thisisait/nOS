@@ -107,13 +107,14 @@
       register: _medulla_sys_bin
       ignore_errors: "{{ ansible_check_mode }}"  # --check builds nothing
 
-    - name: "[pazny.medulla] Its environment (0640 root:nos: the KEAP proxy secret and model keys)"
+    # 0600 root:root: only systemd's EnvironmentFile reads it, as root, before the unit drops to nos.
+    - name: "[pazny.medulla] Its environment (the KEAP proxy secret and model keys)"
       ansible.builtin.template:
         src: "{{ role_path }}/../pazny.thalamus/templates/thalamus.env.j2"
         dest: /etc/nos/medulla.env
         owner: root
-        group: "{{ nos_system_user }}"
-        mode: '0640'
+        group: root
+        mode: '0600'
       no_log: true
       register: _medulla_sys_env
 
