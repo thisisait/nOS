@@ -138,6 +138,21 @@ def test_nos_push_scores_before_it_pushes():
     assert "--strict" in src
 
 
+def test_the_scored_range_is_the_pushed_ref_not_head(repo):
+    """HEAD on A, push of B:dev: scoring HEAD scored A while B landed (review-v015)."""
+    mod = _tool()
+    _git(repo, "update-ref", "refs/remotes/origin/dev", "HEAD")
+    _git(repo, "checkout", "-qb", "b")
+    _, b_head = _commit(repo, {"tools/b.py": "B = 1\n"})
+    _git(repo, "checkout", "-qb", "a", "dev")
+    _commit(repo, {"tools/a.py": "A = 1\n"})
+    base, head, n = mod.push_range(repo, "origin", "b")
+    assert (head, n) == (b_head, 1)
+    assert _git(repo, "rev-list", f"{base}..{head}") == _git(repo, "rev-list", "b", "--not", "--remotes=origin")
+    src = (REPO / "tools" / "nos-push").read_text()
+    assert '--ref "$src"' in src, "nos-push must score each refspec's source, not HEAD"
+
+
 def test_the_scorer_never_prints_or_records_a_secret(repo, tmp_path, capsys, monkeypatch):
     mod = _tool()
     base, head = _commit(repo, {
