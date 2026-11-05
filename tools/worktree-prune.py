@@ -6,12 +6,16 @@ which ones would go. `--confirm` runs `git worktree remove` (no --force) on thos
 
 A worktree is prunable only when ALL hold: not the main or current one, not
 locked, no uncommitted or untracked change, its HEAD is an ancestor of --base
-(default origin/dev, as last fetched; no fetch here), and no kept worktree sits
+(default origin/dev, as last fetched; no fetch here), its admin HEAD/index were
+not touched in the last --min-age-hours (default 24: a fresh or just-landed
+worktree a live session works in looks landed too), and no kept worktree sits
 inside it (nested agent chains live under the gitignored .claude/, which
-`git worktree remove` would delete with the parent). An unresolvable base is
-UNKNOWN: nothing is listed and --confirm exits 2.
+`git worktree remove` would delete with the parent). A removal that fails keeps
+its ancestors too. An unresolvable base is UNKNOWN: nothing is listed and
+--confirm exits 2.
 
-    tools/worktree-prune.py [--repo PATH] [--base origin/dev] [--json] [--no-size] [--confirm]
+    tools/worktree-prune.py [--repo PATH] [--base origin/dev] [--json] [--no-size]
+                            [--min-age-hours 24] [--confirm]
 """
 
 from __future__ import annotations
@@ -21,10 +25,13 @@ import json
 import os
 import subprocess
 import sys
+import time
 
 
 def git(cwd, *args):
-    return subprocess.run(["git", "-C", cwd, *args], capture_output=True, text=True)
+    # No optional index locks: a scan of ~180 worktrees must not race a live session's git.
+    return subprocess.run(["git", "--no-optional-locks", "-C", cwd, *args],
+                          capture_output=True, text=True)
 
 
 def worktrees(repo):
@@ -43,7 +50,13 @@ def worktrees(repo):
     return out
 
 
-def state(wt, base):
+def last_used(path):
+    gd = git(path, "rev-parse", "--absolute-git-dir").stdout.strip()
+    return max((os.path.getmtime(os.path.join(gd, f)) for f in ("HEAD", "index", "logs/HEAD")
+                if gd and os.path.exists(os.path.join(gd, f))), default=time.time())
+
+
+def state(wt, base, min_age_s):
     if wt["locked"]:
         return "locked"
     if not os.path.isdir(wt["path"]):
@@ -53,6 +66,8 @@ def state(wt, base):
         return "dirty"
     if git(wt["path"], "merge-base", "--is-ancestor", wt["head"], base).returncode:
         return "unmerged"
+    if time.time() - last_used(wt["path"]) < min_age_s:
+        return "recent"
     return "merged-clean"
 
 
@@ -67,6 +82,7 @@ def main() -> int:
     ap.add_argument("--base", default="origin/dev")
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--no-size", action="store_true")
+    ap.add_argument("--min-age-hours", type=float, default=24)
     ap.add_argument("--confirm", action="store_true")
     a = ap.parse_args()
 
@@ -82,7 +98,7 @@ def main() -> int:
     for i, wt in enumerate(wts):
         if i == 0 or wt["path"] == here:
             continue  # the main worktree and the one we run from are never candidates
-        s = state(wt, a.base) if base_ok else "UNKNOWN"
+        s = state(wt, a.base, a.min_age_hours * 3600) if base_ok else "UNKNOWN"
         rows.append({"path": wt["path"], "branch": wt["branch"], "state": s,
                      "size_kb": None if a.no_size or s == "missing" else size_kb(wt["path"])})
     # Every worktree that stays (main and current included) pins its ancestors.
@@ -111,12 +127,17 @@ def main() -> int:
         return 0
     if not base_ok:
         return 2
-    rc = 0
-    # Deepest first, so a removed parent never takes a child before git sees it.
+    rc, failed = 0, []
+    # Deepest first; a child git refused (work since the scan) pins its ancestors.
     for r in sorted(prunable, key=lambda r: -len(r["path"])):
+        if any(f.startswith(r["path"] + os.sep) for f in failed):
+            print(f"kept {r['path']}: holds a child whose removal failed", file=sys.stderr)
+            failed.append(r["path"])
+            continue
         res = git(a.repo, "worktree", "remove", r["path"])
         if res.returncode:
             print(f"kept {r['path']}: {res.stderr.strip()}", file=sys.stderr)
+            failed.append(r["path"])
             rc = 1
     return rc
 
