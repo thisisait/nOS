@@ -247,16 +247,18 @@ def absorb(intake: pathlib.Path, owner_ico: str | None) -> subprocess.CompletedP
     return _run(cmd)
 
 
-def assert_books(truth: dict, owner: str | None, expect_booked: bool) -> dict:
+def assert_books(truth: dict, owner: str | None, expect_booked: bool,
+                 before: set[str] = frozenset()) -> dict:
     """What the estate now holds about this document — the half vision-bench
-    cannot see. Identity, uniqueness, and a balanced entry."""
+    cannot see. Identity, uniqueness, and a balanced entry. A reject is judged
+    on the rows that are not in `before`: every fixture document is seeded."""
     doc_no = str(truth.get("id") or "")
     invoices = [r for r in digest_absorb.read_rows("invoice")
                 if str(r.get("document_number") or "") == doc_no]
     out = {"booked": len(invoices), "identity_ok": None, "balanced": None, "slugs": []}
     out["slugs"] = sorted(str(r.get("slug")) for r in invoices)
     if not expect_booked:
-        out["ok"] = len(invoices) == 0
+        out["ok"] = not [s for s in out["slugs"] if s not in before]
         out["detail"] = "" if out["ok"] else "a rejected document reached the books"
         return out
     if len(invoices) != 1:
@@ -330,10 +332,17 @@ def cycle(n: int, plan: dict) -> dict:
         before = {str(r.get("slug")) for r in digest_absorb.read_rows("invoice")}
         ab = absorb(intake, owner_ico)
         rec["absorb_rc"] = ab.returncode
-        books = assert_books(truth, owner, expect_booked=vr["verdict"] == "approve")
+        books = assert_books(truth, owner, expect_booked=vr["verdict"] == "approve",
+                             before=before)
         rec["books"] = books
         rec["ok"] = bool(books.get("ok"))
         rec["detail"] = books.get("detail", "")
+        # The seeded row already satisfies the books, so a failed absorb would
+        # otherwise read as an approve that held.
+        if ab.returncode != 0:
+            rec["ok"] = False
+            rec["detail"] = (f"absorb exit {ab.returncode}: {(getattr(ab, 'stderr', '') or '')[-300:]}"
+                             + (f"; {rec['detail']}" if rec["detail"] else ""))
         mine = [s for s in (books.get("slugs") or []) if s not in before]
         rec["created"] = mine
         rec["teardown"] = teardown(mine, tmp, vr.get("queue_slug", ""))
@@ -377,9 +386,10 @@ def main(argv: list[str] | None = None) -> int:
               f"(seed {plan['seed']}) — {plan['reason']}")
         rec = cycle(n, plan)
         cycles.append(rec)
-        cov[f"{plan['doc']}|{plan['degrade']}"] = cov.get(
-            f"{plan['doc']}|{plan['degrade']}", 0) + 1
-        save_coverage(cov)
+        if not rec.get("env"):  # a cycle the estate refused never exercised its cell
+            cov[f"{plan['doc']}|{plan['degrade']}"] = cov.get(
+                f"{plan['doc']}|{plan['degrade']}", 0) + 1
+            save_coverage(cov)
         label = "held" if rec.get("ok") else ("COULD NOT RUN" if rec.get("env") else "FINDING")
         print(f"  {label}"
               f" · accuracy {rec.get('accuracy')} · {rec.get('verdict')}"
