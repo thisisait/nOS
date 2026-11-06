@@ -71,6 +71,11 @@ nos [-y] [--remove=none|data|deep|all] [--confirm] [--leave]
                     *refused when combined with --remove — see exit codes.
 ```
 
+**A host's profile is remembered in config.yml** (`nos_profile: core` loads
+`profiles/core.yml` on every run, UNDER config.yml, so your toggles win). The banner
+prints it. `-e @profiles/x.yml` still works for a one-off run and, being extra-vars,
+outranks config.yml; `nos` names each toggle it overrides.
+
 **The ladder (D1):**
 
 | Level | Scope |

@@ -325,6 +325,29 @@
         - "{{ playbook_dir }}/config.yml"
       tags: ['always']
 
+    # The host's profile, remembered (11-06 ruling): config.yml names it, it loads UNDER config.yml.
+    # An -e profile is extra-vars and outranked config.yml; a plain `nos` forgot it (11-01, mini).
+    # Gate: test_a_remembered_profile_sits_under_config.py.
+    - name: "[Profile] The remembered profile is a profile name"
+      ansible.builtin.assert:
+        that: nos_profile is match('^[a-z0-9][a-z0-9-]*$')
+        fail_msg: "config.yml nos_profile '{{ nos_profile }}' is not a profiles/<name>.yml name"
+      when: nos_profile | default('') | length > 0
+      tags: ['always']
+
+    - name: "[Profile] Load profiles/<nos_profile>.yml"
+      ansible.builtin.include_vars:
+        file: "{{ playbook_dir }}/profiles/{{ nos_profile }}.yml"
+      when: nos_profile | default('') | length > 0
+      tags: ['always']
+
+    - name: "[Profile] Re-assert config.yml over the profile"
+      include_vars: "{{ item }}"
+      with_fileglob:
+        - "{{ playbook_dir }}/config.yml"
+      when: nos_profile | default('') | length > 0
+      tags: ['always']
+
     # ── Synthetic identities (profiles/test-users.yml) ────────────────────
     # The roster is read namespaced so the profile's switch stays the
     # operator's (config.yml / -e); adopted only when nothing declared one —

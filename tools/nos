@@ -645,6 +645,8 @@ done
 for v in ${_evals[@]+"${_evals[@]}"}; do
   case "$v" in @profiles/*) _say_prof="${_say_prof:+$_say_prof }${v#@profiles/}" ;; esac
 done
+_kept_prof="$(sed -nE 's/^nos_profile:[[:space:]]*["'\'']?([a-z0-9-]+).*/\1/p' "$NOS_SRC/config.yml" 2>/dev/null | tail -1 || true)"
+if [ -n "$_kept_prof" ]; then _say_prof="${_say_prof:+$_say_prof over }$_kept_prof (config.yml)"; fi
 echo "nos: converge $(git -C "$NOS_SRC" rev-parse --short HEAD 2>/dev/null || echo '?') from $NOS_SRC — tags: ${_say_tags:-all} · profile: ${_say_prof:-none} · removal: ${REMOVE:-none}" >&2
 echo "nos: Ansible reads the playbook and every config layer first (quiet for a while), then asks for sudo once." >&2
 
