@@ -5,7 +5,7 @@ one derived source — remains open. Filed the same day from the surveyor
 onboarding (2026-08-17); one symptom of the shape paid then too (the runner's
 silent audit-POST failure — see occurrence in
 [07](07-messages-that-outlive-their-mode.md) and
-`tests/anatomy/test_wing_event_post_failure_is_not_silent.py`).
+`tests/anatomy/test_wing_audit_journey.py`).
 
 > **The gate found a live instance on the run that introduced it.** `curator`
 > had asked for `WING_API_TOKEN: "{{ curator_wing_api_token }}"` in its pulse

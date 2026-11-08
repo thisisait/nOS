@@ -75,7 +75,7 @@ def test_pulse_run_agent_awk_uses_last_field():
 
 # test_approvals_presenter_canonicalizes_payload was deleted with its subject
 # (ApprovalsPresenter retired 2026-08-08, pinned by
-# test_approval_queue_event_backed.py). Canonical-JSON-before-HMAC matters
+# test_wing_inbox_journey.py). Canonical-JSON-before-HMAC matters
 # only for Bone-verified writes; the surviving in-app signer posts to Wing's
 # /api/v1/events, whose verifier HMACs the RAW body, so signing the exact
 # string sent is correct there.

@@ -129,7 +129,7 @@ orchestrator that filed the question itself and holds the 201 body.
 `answered_by` is required, must not be `unknown`, and must not be shaped
 `agent:*` / `channel:*`; the old silent fallback to the bearer token's name (a
 service, not a person) is gone. Pinned by
-`test_only_a_gated_presenter_answers_without_a_token.py` — a gate the
+`test_wing_api_journey.py` — a gate the
 repository docblock had cited for hours before it existed.
 
 ---
@@ -157,7 +157,7 @@ with the ask.
 deciding surface stays gated; a lower-tier read view is not worth a second
 surface. The URL carries no credential and no per-question addressing.
 
-Pinned by `test_a_question_notification_carries_a_click.py` (retro-red: 4/5
+Pinned by `test_wing_inbox_journey.py` (retro-red: 4/5
 tests failed against the pre-fix tree). `test_a_notification_is_a_pointer`
 still passes; the credential gates followed the insert to its new home.
 
@@ -188,7 +188,7 @@ A naive "delete and 404" would have left a dead nav tab and five red gates.
 
 **Kept, as planned:** the `agent_approval_request` / `_decision` event types —
 emitted by `AgentQuestionRepository`, decision only on the winning UPDATE.
-The rewritten `test_approval_queue_event_backed.py` (retro-red against the
+The rewritten `test_wing_inbox_journey.py` (retro-red against the
 pre-retirement tree) pins: surface gone, legacy URL redirects, still no
 second approval store in the schema, the event types survive with exactly ONE
 writer, and the decision emit sits inside the `$affected === 1` branch.
@@ -271,7 +271,7 @@ Learned today, each the hard way:
    comments; scope to the smallest syntactic unit.
 2. **`php -l` does not load a class.** `AskOperatorTool` passed lint and fataled
    on load for want of one `use`. Eight grep-only tests were green against it.
-   `test_every_registered_tool_actually_loads.py` executes PHP now — keep it that
+   `test_wing_agent_tools_journey.py` executes PHP now — keep it that
    way.
 3. **An unroutable `{plink}` renders as `#`.** `Inbox:markRead` had no route and
    nothing had been marked read since May. Check `action="…"` on the live page

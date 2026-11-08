@@ -52,7 +52,7 @@
 
     # Wing reads no uploads, and its auth is PHP code: a multipart body would
     # reach PHP's rfc1867 parser pre-auth from any local user or container
-    # (2026 UAF reports). Refused here, before PHP. Gate: test_wing_refuses_multipart.py
+    # (2026 UAF reports). Refused here, before PHP. Gate: test_wing_api_journey.py
     @multipart header_regexp Content-Type (?i)multipart
     respond @multipart "Wing accepts no multipart bodies" 415 {
         close
@@ -61,7 +61,7 @@
     # Who calls /api/v1, measured for ONE release (row wing-to-medulla-waves, wave 0): method,
     # path, status, duration. Headers and the query string never reach the file — they carry
     # the bearer, cookies and ?token=. Remove once the wave-1 move list is drawn from it.
-    # Gate: test_the_wing_api_log_holds_no_secret.py
+    # Gate: test_wing_api_journey.py
     @not_api not path /api/v1/*
     log_skip @not_api
     log wing_api {

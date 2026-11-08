@@ -242,7 +242,7 @@ final class RouterFactory
 		// muscle memory learn the successor; the approve/reject verb routes
 		// died with ApprovalsPresenter (whose decision path could lose a
 		// decision two silent ways: empty-secret early return + discarded
-		// curl result). Pinned by test_approval_queue_event_backed.py.
+		// curl result). Pinned by test_wing_inbox_journey.py.
 		$router->addRoute('approvals', 'Inbox:approvals');
 
 		// /questions (2026-08-28) — READ-ONLY ledger of the same rows: who

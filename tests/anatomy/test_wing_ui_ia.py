@@ -36,7 +36,7 @@ def test_top_nav_carries_every_grouped_tab():
     assert 'href="/approvals"' not in src, (
         "the Approvals tab is back in the layout — /approvals has been a "
         "redirect to /inbox since A11's retirement (2026-08-08); either the "
-        "surface was resurrected (see test_approval_queue_event_backed.py) "
+        "surface was resurrected (see test_wing_inbox_journey.py) "
         "or this is a stale nav entry."
     )
     # Insights group

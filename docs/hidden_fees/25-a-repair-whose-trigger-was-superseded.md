@@ -70,7 +70,7 @@ The cap moved from `AgentsPresenter` to the repository, because a policy defined
 by one of several callers drifts. The lazy page-view call stays: it is a free
 extra chance, and it is the only path that *tells* the operator a reap happened.
 
-Gate: `tests/anatomy/test_a_dead_session_is_closed_by_a_successor.py` — both
+Gate: `tests/anatomy/test_wing_agent_sessions_journey.py` — both
 paths reap, and reap **before** they insert, so a session can never become a
 candidate for its own reaper. Proven in the failing direction.
 

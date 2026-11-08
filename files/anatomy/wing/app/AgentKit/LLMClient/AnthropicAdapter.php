@@ -91,7 +91,7 @@ final class AnthropicAdapter implements LLMClientInterface
 		// because the fallback event carries the unmatched message verbatim;
 		// without that the session read as "OpenClaw 404" and would have sent
 		// someone to debug a gateway that had done nothing wrong.
-		// Pinned by tests/anatomy/test_the_sdk_named_parameters_match.py.
+		// Pinned by tests/anatomy/test_wing_agent_tools_journey.py.
 		$params = [
 			'model' => $this->modelId,
 			'maxTokens' => $maxTokens,

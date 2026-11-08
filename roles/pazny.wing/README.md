@@ -44,7 +44,7 @@ via host launchd — no PHP-FPM container. The version is pinned by
   missing bottle surfaces at provision time, not as a silent daemon crash.
 - **Bumping the pin.** Re-validate on the live host (`frankenphp --version`),
   then update `frankenphp_version` in `default.config.yml`. The
-  `tests/anatomy/test_wing_frankenphp_version_pin.py` gate keeps the pin and the
+  `tests/anatomy/test_wing_deploy_journey.py` gate keeps the pin and the
   preflight wired together.
 
 ## Variables

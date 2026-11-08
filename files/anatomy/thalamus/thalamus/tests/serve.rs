@@ -7007,7 +7007,7 @@ fn stop_agent_cancels_a_run_she_started_and_she_hears_it() {
 
 #[test]
 fn stop_agent_on_a_run_she_did_not_start_is_wings_404() {
-    // Wing is the referee (parent_ref must be this Iris session): tests/anatomy/test_a_session_can_be_stopped.py.
+    // Wing is the referee (parent_ref must be this Iris session): tests/anatomy/test_wing_agent_sessions_journey.py.
     let (wing, seen) = fake(vec![r#"!404 {"error": "not_found", "code": 404}"#.into()]);
     let rig = rig_wing("stop-not-hers", admin(), &wing, WING_TOKEN, vec![stop(CHILD), answer("x")]);
     let (got, session) = tool_turn(&rig, "stop that run");

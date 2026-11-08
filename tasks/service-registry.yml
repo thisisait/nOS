@@ -19,7 +19,7 @@
 
 # Wing's hub reads this file, so it ingests the copy just rendered (an ingest in
 # pazny.wing post.yml ran first and kept the last run's urls). Gate:
-# tests/anatomy/test_wing_ingests_the_registry_this_run_wrote.py
+# tests/anatomy/test_wing_deploy_journey.py
 - name: "[Service Registry] Wing ingests the registry into its systems table"
   ansible.builtin.command:
     # No chdir: the module enters chdir BEFORE checking removes, so a host

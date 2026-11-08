@@ -23,7 +23,7 @@ use Nette\Database\Explorer;
  *
  * A11 stores agent-action approvals as `events` rows — `agent_approval_request`
  * paired with `agent_approval_decision` on `actor_action_id` — and
- * `test_approval_queue_event_backed.py` forbids a dedicated table, on the
+ * `test_wing_inbox_journey.py` forbids a dedicated table, on the
  * correct ground that events are the single source of truth for audit and a
  * side table would duplicate lineage. That gate also names its own trigger for
  * revisiting: "when a SECOND surface programmatically gates on approvals".
@@ -330,7 +330,7 @@ final class AgentQuestionRepository
 	 * skips the only check that stops an arbitrary caller answering. It is safe
 	 * ONLY while every call site is behind an RBAC gate. `InboxPresenter` sets
 	 * `$minAccessTier = 1` for exactly this reason, and
-	 * `test_only_a_gated_presenter_answers_without_a_token.py` refuses any new
+	 * `test_wing_api_journey.py` refuses any new
 	 * caller that is not similarly gated. Do not call it from an API presenter
 	 * that authenticates with a bearer token — a service token is not a person,
 	 * and "who approved this" must name someone. The one exception (Q3, ruled

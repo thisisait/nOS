@@ -44,7 +44,7 @@ assertion here is satisfied by a tool that refuses everything, which is the
 failure mode a security gate is most likely to ship green.
 
 The bridge is the one the suite already uses for PHP-effect gates
-(tests/anatomy/test_bound_agent_can_file_its_report.py): write a probe into the
+(tests/anatomy/test_wing_agent_sessions_journey.py): write a probe into the
 wing tree, run it with the local `php` against the composer autoload, read JSON
 off stdout. On CI the vendor tree is DECLARED (NOS_TEST_PROVIDES carries the
 autoload path) so its absence aborts the session rather than skipping the half

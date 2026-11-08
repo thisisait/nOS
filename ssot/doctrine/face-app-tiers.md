@@ -78,7 +78,7 @@ a one-shot success and an over- or under-engineered app.
 "UI" is in parentheses throughout: an app MAY be a **headless scheduled
 task** (a Pulse job / cron) with no UI — it is still an nOS app, and it is
 still **visible + operable in nOS face** (the Anatomy app's Pulse and Wing
-views; Wing's own Latte pages only shrink — `test_wing_latte_ratchet.py`).
+views; Wing's own Latte pages only shrink — `test_wing_pages_journey.py`).
 
 ## 3. The tiers — the `build` axis
 

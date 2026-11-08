@@ -254,7 +254,7 @@ final class GateOracle
 	 * reached a real verdict (requirements absent, sandbox failure, no uuid) —
 	 * absence is UNKNOWN, never a verdict on the work. Only a peak that saw a
 	 * genuine FAIL may say `needs_revision`/`max_iterations_reached`.
-	 * Gate: test_an_unrunnable_judge_is_not_failed_work.py.
+	 * Gate: test_wing_agent_sessions_journey.py.
 	 */
 	public function outcome(bool $stoppedAtPeak): string
 	{
