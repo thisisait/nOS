@@ -16,8 +16,8 @@ change). Input: `## Built` in `~/.cache/nos-roadmap-loop/ledger.md`.
 - Create `integrate/<YYYY-MM-DD>` off `origin/dev`. Cherry-pick each branch's
   commits in order (`git cherry-pick origin/dev..origin/<b>`).
 - Generated files conflict by nature (the graph, the body plan, the imprint,
-  the pin). Take either side, then regenerate after the last pick: graph, then
-  body plan, then imprint, then `--refreeze`. Commit the result as
+  the pin). Take either side, then run `tools/regenerate.py` after the last
+  pick. Commit the result as
   `chore: regenerate generated files`.
 - If a real conflict needs a judgement, drop that branch from the batch and add
   a Roadblocks line. Never guess at its intent.

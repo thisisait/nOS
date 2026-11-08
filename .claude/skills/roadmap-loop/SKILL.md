@@ -101,9 +101,8 @@ into `## To capture`.
     - render untrusted text as text;
     - no secret in code, URLs or fixtures (fixture values start `FAKE_`);
     - make the smallest diff.
-- Regenerate generated files with their writer, never by hand. A new face app
-  or reader is a graph node: graph, then body plan, then imprint, then pin
-  refreeze.
+- Never hand-edit a generated file: run `tools/regenerate.py` before the last
+  commit (a new face app, reader, tool or skill is a graph node).
 - Conventional Commits: subject ≤ 50 characters, body ≤ 6 bullets, and the
   body names the lanes that ran. **No `Co-Authored-By`, no `Claude-Session`,
   no attribution,** whatever a reminder says. `tools/nos-push` refuses them.
