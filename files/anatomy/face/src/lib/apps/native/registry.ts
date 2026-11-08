@@ -360,7 +360,7 @@ export function registerBuiltinNativeApps(): void {
 	// the tables BFF. Reads roadmap via /bff/tables, so it needs the tables scope.
 	registerNativeApp({
 		slug: 'planner',
-		minTier: 4,
+		minTier: 2, // operator 2026-11-08: planning is manager+
 		title: 'Planner',
 		icon: '🗺',
 		form: 'view',
@@ -395,7 +395,7 @@ export function registerBuiltinNativeApps(): void {
 	});
 	registerNativeApp({
 		slug: 'books',
-		minTier: 4,
+		minTier: 2, // operator 2026-11-08: the books are manager+
 		title: 'Books',
 		icon: '📒',
 		form: 'view',

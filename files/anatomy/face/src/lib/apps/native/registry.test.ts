@@ -228,6 +228,9 @@ describe('minTier: who may open an app', () => {
 		const user = openableApps('view', 'utility').map((a) => a.slug);
 		expect(user).toContain('files');
 		expect(user).not.toContain('anatomy');
+		// operator 2026-11-08: the books and planning are manager+.
+		expect(user).not.toContain('books');
+		expect(user).not.toContain('planner');
 		expect(launchNative('anatomy')).toBeNull();
 		expect(openableApps('widget').map((a) => a.slug)).not.toContain('anatomy-widget');
 		setViewer(['nos-admins']);
