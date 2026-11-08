@@ -92,3 +92,8 @@ judgements:
      reason: "fixed in 6.5.2 (NVD CPE ranges end at 6.5.1); the pin is 7.1.4"}
   - {id: CVE-2026-93485, subject: "wordpress_version", verdict: accepted, until: 2026-11-30,
      reason: "NVD 'through 7.1', no fixed release named; DOM XSS behind Authentik; re-judge on 7.1.5 or the WordPress security notes"}
+  # Proposed 2026-11-08 (red-status: 5 unjudged; erpnext x2 + frankenphp closed by fix/advisory-bumps-1108).
+  - {id: GHSA-9p7v-45m2-wxgj, subject: "n8n_version", verdict: not-applicable, until: 2027-01-31,
+     reason: "advisory text: blocked by default in 2.42.6, 2.43.3, 2.44.0 and 3.0.1; its ranges name no 2.44+ line, so the matcher reads <3.0.1; the pin is 2.45.7"}
+  - {id: GHSA-gjr3-hvp7-6pgm, subject: "erpnext_version", verdict: not-applicable, until: 2027-01-31,
+     reason: "fixed only on v16 (16.36.0); not deployed: install_erpnext is false in the estate (estate-status --config, 2026-11-08); re-judge when it is enabled"}
