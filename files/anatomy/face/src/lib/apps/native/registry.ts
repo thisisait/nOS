@@ -382,6 +382,18 @@ export function registerBuiltinNativeApps(): void {
 			}
 		]
 	});
+	// Wing's inbox as a face app (row wing-inc1-inbox-app): the first Wing page moved to the face.
+	registerNativeApp({
+		slug: 'inbox',
+		minTier: 1,
+		title: 'Inbox',
+		icon: '📥',
+		form: 'view',
+		build: 'F2',
+		component: () => import('./InboxApp.svelte'),
+		defaultSize: { w: 760, h: 620 },
+		apiScopes: ['inbox']
+	});
 	registerNativeApp({
 		slug: 'keap-explore',
 		minTier: 4,

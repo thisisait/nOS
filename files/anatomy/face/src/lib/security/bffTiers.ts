@@ -10,6 +10,7 @@ import type { Tier } from './tier';
 
 export const BFF_TIERS: Record<string, Tier> = {
 	'/bff/bone': 1,
+	'/bff/inbox': 1,
 	'/bff/loop': 1,
 	'/bff/loop/judge': 1,
 	'/bff/pulse': 1,
@@ -32,6 +33,7 @@ export const BFF_TIERS: Record<string, Tier> = {
 /** A FaceApp.apiScopes name -> the routes it calls; an app's minTier must reach each. */
 export const SCOPE_ROUTES: Record<string, string[]> = {
 	config: ['/bff/config'],
+	inbox: ['/bff/inbox'],
 	iris: ['/bff/iris/send', '/bff/iris/stream'],
 	pulse: ['/bff/pulse'],
 	tables: ['/bff/tables'],

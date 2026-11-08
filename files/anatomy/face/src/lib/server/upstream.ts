@@ -272,6 +272,42 @@ export async function wingNotifications(
 	return wingGet(user, '/notifications', { limit: '40', ...params });
 }
 
+// ── The face Inbox app (row wing-inc1-inbox-app): Tier 1, Wing decides the tier again ──
+
+/** The open agent questions, oldest first (Api\InboxPresenter, $bffOperatorReads). */
+export async function wingQuestions(user: WingUser): Promise<unknown> {
+	return wingGet(user, '/inbox/questions');
+}
+
+/** Mark one notification read; 404 = already read or unknown, said, never a quiet success. */
+export async function wingMarkRead(user: WingUser, uuid: string): Promise<unknown> {
+	const u = WING_API() + '/notifications/' + encodeURIComponent(uuid) + '/read';
+	return asJson(await fetch(u, { method: 'POST', headers: asUser(user) }));
+}
+
+/** One answer as the person (Wing records user:<uid>, via face). A 409 is not an error to the
+ *  caller: it is the answer that won, or the deadline that passed; both are returned with the code. */
+export async function wingAnswer(
+	user: WingUser,
+	uuid: string,
+	answer: string
+): Promise<{ status: number; body: unknown }> {
+	const u = WING_API() + '/inbox/questions/' + encodeURIComponent(uuid) + '/answer';
+	const r = await fetch(u, {
+		method: 'POST',
+		headers: asUser(user, true),
+		body: JSON.stringify({ answer })
+	});
+	const text = await r.text();
+	let body: unknown = {};
+	try {
+		body = text ? JSON.parse(text) : {};
+	} catch {
+		body = { error: text };
+	}
+	return { status: r.status, body };
+}
+
 function asUser(user: WingUser, json = false): Record<string, string> {
 	const h: Record<string, string> = {
 		authorization: `Bearer ${WING_BFF_TOKEN()}`,
