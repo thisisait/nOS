@@ -40,8 +40,6 @@ import importlib.util
 import shutil
 import os
 import pathlib
-import re
-import subprocess
 import sys
 
 import pytest
@@ -1168,20 +1166,9 @@ def test_the_pytest_ratchet_is_remeasured_against_collection(pytestconfig):
     but it can be forced to re-derive.
     """
     import _shard
-    session = _shard.collected_under(pytestconfig, "tests/anatomy")  # this run's own collection
-    if session is not None:
-        collected = len(session)
-    else:
-        proc = subprocess.run(
-            [sys.executable, "-m", "pytest", "tests/anatomy", "--collect-only", "-q"],
-            cwd=REPO, capture_output=True, text=True, timeout=600,
-        )
-        match = re.search(r"(\d+)\s+tests? collected", proc.stdout)
-        assert match, (
-            "could not read a collection count from pytest; this gate has gone "
-            f"blind rather than green.\nstdout tail: {proc.stdout[-500:]}"
-        )
-        collected = int(match.group(1))
+    # The whole corpus, before the tests/_lanes.yml cut: the total a collect-only reports.
+    selected, collected = _shard.collection(pytestconfig, "tests/anatomy")
+    assert collected >= len(selected), f"the lane cut invented tests: {len(selected)} selected of {collected}"
     assert collected > 1000, f"collection returned {collected} — the run is broken, not the ratchet"
 
     recorded = MEASURED_WORK["pytest-anatomy"]

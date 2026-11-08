@@ -12,10 +12,12 @@ Refresh the weights from one or more `pytest --durations=0` logs:
 """
 from __future__ import annotations
 
+import functools
 import json
 import os
 import pathlib
 import re
+import subprocess
 import sys
 from collections import Counter, defaultdict
 
@@ -47,11 +49,12 @@ def assign(nodeids, n: int, weights: dict | None = None) -> dict[str, int]:
 
 
 COLLECTED: list[str] | None = None  # this session's whole collection, before the shard cut
+ALL: list[str] | None = None  # the same, before the tests/_lanes.yml cut too (set by tests/conftest.py)
 
 
 def collected_under(config, rel: str) -> list[str] | None:
     """Nodeids this session collected under `rel`, or None when it did not collect all of it
-    (a narrower path, -k/-m/--deselect/--lf/--ignore): the caller then collects in a subprocess."""
+    (a narrower path, -k/-m/--deselect/--lf/--ignore): collection() then collects in a subprocess."""
     o = config.option
     if COLLECTED is None or any(getattr(o, a, None) for a in ("keyword", "markexpr", "deselect", "lf", "ignore", "ignore_glob")):
         return None
@@ -60,7 +63,32 @@ def collected_under(config, rel: str) -> list[str] | None:
     if not any("::" not in a and (target == (here / a).resolve() or (here / a).resolve() in target.parents)
                for a in config.args):
         return None
-    return [n for n in COLLECTED if n.startswith(rel.rstrip("/") + "/")]
+    return _under(COLLECTED, rel)
+
+
+def _under(nodeids: list[str], rel: str) -> list[str]:
+    return [n for n in nodeids if n.startswith(rel.rstrip("/") + "/")]
+
+
+@functools.cache
+def _collect_only(root: str, rel: str) -> tuple[tuple[str, ...], int]:
+    env = {k: v for k, v in os.environ.items() if k not in ("NOS_TEST_PROVIDES", ENV)}
+    r = subprocess.run([sys.executable, "-m", "pytest", "-p", "no:cacheprovider", "--collect-only", "-q", rel],
+                       capture_output=True, text=True, timeout=600, cwd=root, env=env)
+    m = re.search(r"(\d+)(?:/(\d+))?\s+tests? collected", r.stdout)
+    assert r.returncode == 0 and m, f"collect-only of {rel} failed (rc={r.returncode}):\n{r.stdout[-2000:]}{r.stderr[-2000:]}"
+    return tuple(ln for ln in r.stdout.splitlines() if "::" in ln), int(m[2] or m[1])
+
+
+def collection(config, rel: str) -> tuple[list[str], int]:
+    """(nodeids selected under `rel` with this env's NOS_LANE, count collected before the lane cut).
+    From this session's own collection when it covered `rel`, else ONE --collect-only
+    subprocess per session, shared by every gate that asks (gate-diet, 2026-11-08)."""
+    selected = collected_under(config, rel)
+    if selected is not None and ALL is not None:
+        return selected, len(_under(ALL, rel))
+    nodeids, total = _collect_only(str(config.rootpath), rel)
+    return list(nodeids), total
 
 
 @pytest.hookimpl(trylast=True)
