@@ -98,7 +98,7 @@
 #
 # Same shape as the flag/effect split this repo keeps finding — the flag records
 # an intention, and something else has to carry it out. Pinned by
-# tests/anatomy/test_a_flag_removes_what_it_staged.py.
+# tests/anatomy/test_wordpress_portal_journey.py.
 - name: "[pazny.wordpress] Remove mu-plugins whose flag is off"
   ansible.builtin.file:
     path: "{{ stacks_dir }}/iiab/wordpress/mu-plugins/{{ item.file }}"

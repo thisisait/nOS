@@ -20,7 +20,7 @@ TWICE IN ONE DAY, 2026-08-06:
 Being told about a trap and walking into it hours later is an argument for a
 gate, not for more care. This is that gate.
 
-WHY THE EXISTING GATE COULD NOT SEE IT: `test_a_flag_removes_what_it_staged.py`
+WHY THE EXISTING GATE COULD NOT SEE IT: `test_wordpress_portal_journey.py`
 reads the same loop and looks for `.php` filenames among each item's VALUES.
 That is true whatever the KEY is called, so it stayed green while the task was
 unrunnable. It tested the shape and not the runtime — which is worth stating

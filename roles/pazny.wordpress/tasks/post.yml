@@ -189,7 +189,7 @@
 - name: "[pazny.wordpress Post] Ensure client portal pages"
   # Literal block on purpose: a folded `>` keeps the newlines of more-indented
   # lines, so the `if` body ran as four commands ("wp: command not found",
-  # blank 2026-09-29). Gate: test_wordpress_portal_pages_task_runs.py
+  # blank 2026-09-29). Gate: test_wordpress_portal_journey.py
   ansible.builtin.shell: |
     existing=$({{ docker_bin }} compose -p iiab exec -T wordpress wp post list --allow-root --post_type=page --name={{ item.slug }} --format=ids)
     if [ -z "$existing" ]; then
