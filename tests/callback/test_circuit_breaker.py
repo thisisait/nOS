@@ -14,13 +14,31 @@ Guards:
 from __future__ import annotations
 
 import os
+import time
 
 from tests.callback.conftest import FakePlay, FakePlaybook
+
+
+class _Clock:
+    """wing_telemetry's clock: sleep() advances it, so a retry backoff costs no wall time."""
+
+    def __init__(self):
+        self.now = time.time()
+
+    def time(self):
+        return self.now
+
+    monotonic = time
+
+    def sleep(self, seconds):
+        self.now += seconds
 
 
 def _make_plugin(monkeypatch, tmp_path, threshold=None):
     from callback_plugins import wing_telemetry as gt
 
+    # Activation emits hit the black-hole port below and back off 0.5 s + 1 s per emit.
+    monkeypatch.setattr(gt, "time", _Clock())
     monkeypatch.setenv("NOS_TELEMETRY_ENABLED", "1")
     monkeypatch.setenv("WING_EVENTS_SQLITE_FALLBACK",
                        str(tmp_path / "fallback.db"))
