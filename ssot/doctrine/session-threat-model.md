@@ -102,7 +102,10 @@ compared with review findings: no labelled set exists. At that rate
 `--strict` would refuse two pushes in five, so the model score must not set
 `worst` on its own until it is calibrated, and committed data files
 (`docs/llm/security/*.json`) trip text signals for persistence and secret
-paths. Both are a checker change of their own (roadmap `prepush-score-calibrate`).
+paths. Both are a checker change of their own (roadmap `prepush-score-calibrate`):
+the model now lifts an aspect at most `MODEL_LIFT` (20) above its evidence, and
+the notebook reads as prose. Replayed over the same runs: 24 of 412 reach 70,
+every evidence-only red stays red.
 
 ## 7. The monthly review
 

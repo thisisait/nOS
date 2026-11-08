@@ -61,7 +61,9 @@ GATE_PATH = re.compile(r"^tests/|allow.?list|ratchet|^files/anatomy/apex/|^\.cod
 CONVERGED = re.compile(r"^(roles|tasks|handlers)/|^main\.yml$")
 COMMENT = re.compile(r"^\s*(#(?!!)|//|--\s|\*|;|<!--)")
 ASSERT = re.compile(r"\bassert\b|self\.assert\w+\(|pytest\.raises")
-DOC = re.compile(r"\.(md|txt|rst)$")
+# docs/llm/security/*.json is the scanner's notebook: prose about exposures, not a
+# read of them (it tripped "persistence" and "secret store path", 2026-11-08).
+DOC = re.compile(r"\.(md|txt|rst)$|^docs/llm/security/[^/]+\.json$")
 # Text an agent obeys is code for this threat model, even when it is markdown.
 AGENT_TEXT = re.compile(r"(^|/)(CLAUDE|AGENTS)\.md$|^\.claude/|^files/anatomy/agents/|(^|/)SKILL\.md$")
 
@@ -329,6 +331,17 @@ def ask_model(report: dict, model: str, call=None) -> dict:
     return {"model": model, "status": "ok", "scores": scores}
 
 
+#: How far an uncalibrated model may lift an aspect above its evidence. Replayed
+#: over 412 recorded runs (2026-11-08): uncapped 164 reached 70, +20 gives 24,
+#: evidence alone 15 (session-threat-model.md §6).
+MODEL_LIFT = 20
+
+
+def worst_score(det: dict, model: dict) -> int:
+    capped = (min(s, det.get(a, 0) + MODEL_LIFT) for a, s in model.items())
+    return max([*det.values(), *capped], default=0)
+
+
 def _bar(score: int, width: int = 20) -> str:
     full = round(score * width / 100)
     return "█" * full + "░" * (width - full)
@@ -416,7 +429,7 @@ def main(argv: list[str] | None = None) -> int:
     rng = f"{base[:8]}..{head[:8]} ({commits} commit(s))"
     print(render(report, result, hashes, rng, tuple(_notes(repo, hashes, log))))
 
-    worst = max([*report["det"].values(), *(m["score"] for m in result.get("scores", {}).values())])
+    worst = worst_score(report["det"], {a: m["score"] for a, m in result.get("scores", {}).items()})
     record = {"ts": datetime.now(timezone.utc).isoformat(timespec="seconds"), "base": base, "head": head,
               "commits": commits, "checker_sha256": hashes["checker"], "prompt_sha256": hashes["prompt"],
               "det": report["det"], "model": result.get("model"), "model_status": result["status"],

@@ -210,3 +210,21 @@ def test_a_model_scoring_zero_against_strong_signals_is_not_a_score(repo):
     zeros = json.dumps({a: {"score": 0, "reason": "fine"} for a, _ in mod.ASPECTS})
     result = mod.ask_model(report, "stub:1b", call=lambda m, p: zeros)
     assert result["status"] == "UNAVAILABLE" and "evidence ignored" in result["why"]
+
+
+def test_a_model_lifts_an_aspect_only_so_far_above_its_evidence():
+    """2026-11-08: the model put 161 of 408 pushes at >= 70 where evidence put
+    15, so --strict would refuse two in five."""
+    mod = _tool()
+    lift = mod.MODEL_LIFT
+    assert mod.worst_score({"secrets": 0}, {"secrets": 95}) == lift < 70
+    assert mod.worst_score({"secrets": 60}, {"secrets": 95}) == 60 + lift
+    assert mod.worst_score({"secrets": 80}, {"secrets": 0}) == 80
+
+
+def test_the_scan_notebook_is_prose_not_a_secret_read(repo):
+    base, head = _commit(repo, {
+        "docs/llm/security/remediation-queue.json":
+            '{"note": "rotate ~/.nos/secrets.yml after the LaunchAgents crontab audit"}\n',
+    })
+    assert not _signals(_tool().collect(repo, base, head), "secrets")
