@@ -12,7 +12,7 @@
     "organism": 0,
     "habitat": 9,
     "sense": 86,
-    "limb": 124,
+    "limb": 125,
     "memory": 42,
     "law": 56,
     "reflex": 45,
@@ -938,6 +938,10 @@
       "kind": "effector"
     },
     "effector:recipe-pr": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:regenerate": {
       "level": "limb",
       "kind": "effector"
     },

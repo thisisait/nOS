@@ -4,7 +4,7 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 580,
+    "nodes": 581,
     "edges": 562,
     "nodes_pulse": 45,
     "nodes_judge": 5,
@@ -28,7 +28,7 @@
     "nodes_tasktype": 9,
     "nodes_skill": 16,
     "nodes_reader": 68,
-    "nodes_effector": 117,
+    "nodes_effector": 118,
     "nodes_article": 28,
     "nodes_organ_system": 13,
     "nodes_tissue": 1,
@@ -2150,6 +2150,13 @@
       "title": "tools/recipe-pr.sh — validate an upgrade recipe and (optionally) open a PR/MR",
       "anchor": "02.02.04",
       "description": "Effector tools/recipe-pr.sh: tools/recipe-pr.sh — validate an upgrade recipe and (optionally) open a PR/MR"
+    },
+    "effector:regenerate": {
+      "kind": "effector",
+      "source": "tools/regenerate.py",
+      "title": "Rewrite every stale file in state/generated.yml with its writer, in registry order (graph → body plan → imprint), re-freezing the face layout pin; `--check` names what is stale. The one command for the one freshness gate.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/regenerate.py: Rewrite every stale file in state/generated.yml with its writer, in registry order (graph → body plan → imprint), re-freezing the face layout pin; `--check` names what is stale. The one command for the one freshness gate."
     },
     "effector:reload-stale-config": {
       "kind": "effector",
@@ -7881,7 +7888,7 @@
       "from": "effector:anatomy-graph-gen",
       "to": "doctrine:ssot/doctrine/layers.md#3",
       "kind": "governed_by",
-      "via": "cited at tools/anatomy-graph-gen.py:1899",
+      "via": "cited at tools/anatomy-graph-gen.py:1900",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"
@@ -7890,7 +7897,7 @@
       "from": "effector:anatomy-graph-gen",
       "to": "doctrine:ssot/doctrine/loop-contract.md#DECISION-2e",
       "kind": "governed_by",
-      "via": "cited at tools/anatomy-graph-gen.py:1567",
+      "via": "cited at tools/anatomy-graph-gen.py:1568",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"

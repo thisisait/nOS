@@ -266,6 +266,7 @@ posts, restarts or renders something.
 - `anatomy-graph-gen.py` — Compile the anatomy graph — every declared actor and edge, one address space.
 - `body-plan-gen.py` — Project the anatomy graph onto biology's levels via the lexicon's graph_kind names (state/genome/lexicon.yml, kind → level) into state/body-plan.json.
 - `imprint-gen.py` — Render IMPRINT.md, the first page a newborn model reads, from the body plan, readers, task types and doors (`--check`, ≤ 200 lines).
+- `regenerate.py` — Rewrite every stale file in state/generated.yml with its writer, in registry order (graph → body plan → imprint), re-freezing the face layout pin; `--check` names what is stale. The one command for the one freshness gate.
 - `routing-graph-gen.py` — Compile the agent capability graph (nos-work://) into routing-graph.json for the Planner Routing view.
 - `apex-sign.py` — Sign the apex ruling — after showing what changed since it was last signed.
 - `d12-annotate-plugins.py` — D1.2.b — add `name` + `enabled` to each plugin's authentik block.

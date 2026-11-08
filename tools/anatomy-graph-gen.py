@@ -116,6 +116,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import functools
+import hashlib
 import importlib.util
 import json
 import re
@@ -2148,6 +2149,12 @@ def main() -> int:
                 print(f"anatomy-graph: {target.relative_to(REPO)} STALE — "
                       f"regenerate with tools/anatomy-graph-gen.py", file=sys.stderr)
                 return 1
+        pin_path = FACE_TARGET.parent / "graphLayout.force.pin.json"
+        pin = json.loads(pin_path.read_text(encoding="utf-8")) if pin_path.exists() else {}
+        if pin.get("graphSha256") != hashlib.sha256(FACE_TARGET.read_bytes()).hexdigest():
+            print("anatomy-graph: the face layout pin was frozen against a DIFFERENT graph — "
+                  "run tools/anatomy-graph-gen.py --refreeze", file=sys.stderr)
+            return 1
         print(f"anatomy-graph current ({json.loads(text)['counts']['nodes']} nodes, "
               f"{json.loads(text)['counts']['edges']} edges)")
         return 0
@@ -2163,7 +2170,6 @@ def main() -> int:
     # The sha is NOT auto-stamped here: writing it without re-running the
     # vitest hash would silence the gate while the position pin stays stale —
     # the exact self-reported success this estate keeps digging out.
-    import hashlib
     pin_path = FACE_TARGET.parent / "graphLayout.force.pin.json"
     if pin_path.exists():
         pin = json.loads(pin_path.read_text(encoding="utf-8"))
