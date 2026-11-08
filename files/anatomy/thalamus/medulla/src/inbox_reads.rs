@@ -19,8 +19,8 @@ pub fn answer(db: &Path, path: &str, query: &str, header: &dyn Fn(&str) -> Optio
 fn serve(db: &Path, uuid: Option<String>, query: &str, header: &dyn Fn(&str) -> Option<String>) -> rusqlite::Result<(u16, Value)> {
     let db = Connection::open_with_flags(db, OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX)?;
     db.busy_timeout(Duration::from_secs(5))?;
-    // InboxPresenter declares no $bffOperatorReads: face-bff does not reach the inbox reads.
-    if let Err(refused) = auth(&db, "questions", &[], header)? {
+    // Api\InboxPresenter $bffOperatorReads = ['questions'] (face Inbox app, 2026-11-08).
+    if let Err(refused) = auth(&db, "questions", &["questions"], header)? {
         return Ok(refused);
     }
     let now = inbox::now();

@@ -1378,6 +1378,32 @@ paths:
           description: Not found
       security:
         - BearerAuth: []
+  '/api/v1/notifications/{uuid}/read':
+    post:
+      summary: mark one notification read (an operator verb; Tier 1 through the face BFF)
+      operationId: Notifications_read_post
+      tags:
+        - Notifications
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
+        '404':
+          description: Not found
+      security:
+        - BearerAuth:
+            - wing.operator
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
   /api/v1/patches:
     get:
       summary: 'list patches (filter: status, component_id, limit)'

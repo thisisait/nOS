@@ -6,6 +6,7 @@ namespace App\Presenters\Api;
 
 use App\Model\AgentQuestionRepository;
 use App\Model\TokenRepository;
+use App\Security\EndUser;
 use Nette\Http\IResponse;
 
 /**
@@ -45,6 +46,9 @@ final class InboxPresenter extends BaseApiPresenter
 	protected array $operatorScopes = ['wing.operator', 'wing.answer'];
 
 	protected array $answerActions = ['answer'];
+
+	/** The face Inbox app lists the open questions as a Tier-1 person (row wing-inc1-inbox-app, 2026-11-08). */
+	protected array $bffOperatorReads = ['questions'];
 
 	public function __construct(
 		private AgentQuestionRepository $questions,
@@ -121,7 +125,8 @@ final class InboxPresenter extends BaseApiPresenter
 
 	/**
 	 * POST /api/v1/inbox/questions/<uuid>/answer
-	 *   body: {reply_token, answer, answered_by?, via?}; the wing.answer relay sends no reply_token
+	 *   body: {reply_token, answer, answered_by?, via?}; the wing.answer relay sends no reply_token,
+	 *   nor does the face BFF for a Tier-1 person (startup() ran requireOperator; operator 2026-11-08)
 	 */
 	public function actionAnswer(string $uuid): void
 	{
@@ -129,7 +134,10 @@ final class InboxPresenter extends BaseApiPresenter
 		$b = $this->getJsonBody();
 		// The medulla relays a tier-1 decider its kernel named; the bearer reaches nothing but this action.
 		$relay = TokenRepository::grants($this->validatedToken['scopes'] ?? null, 'wing.answer');
-		foreach ($relay ? ['answer', 'answered_by'] : ['reply_token', 'answer'] as $required) {
+		// The face Inbox app: the person is the edge identity, Tier 1 (requireOperator ran in startup()).
+		$face = $this->endUser !== null && $this->endUser->operator
+			&& ($this->validatedToken['name'] ?? null) === EndUser::TOKEN_NAME;
+		foreach ($relay ? ['answer', 'answered_by'] : ($face ? ['answer'] : ['reply_token', 'answer']) as $required) {
 			if (!isset($b[$required]) || (string) $b[$required] === '') {
 				$this->sendError("Missing required field: {$required}");
 			}
@@ -161,8 +169,8 @@ final class InboxPresenter extends BaseApiPresenter
 			$this->sendError('answered_by from the medulla is the login name its kernel named');
 		}
 
-		$verdict = $relay
-			? $this->questions->answerAsOperator($uuid, (string) $b['answer'], $answeredBy, 'medulla')
+		$verdict = $relay || $face
+			? $this->questions->answerAsOperator($uuid, (string) $b['answer'], $answeredBy, $relay ? 'medulla' : 'face')
 			: $this->questions->answer(
 				uuid:        $uuid,
 				replyToken:  (string) $b['reply_token'],

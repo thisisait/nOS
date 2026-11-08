@@ -48,6 +48,7 @@ final class RouterFactory
 		// Notifications read (W5-A2, 2026-05-26): GET = list (bearer). Creation
 		// stays on the Bone HMAC path; this is the read the scout agent needs
 		// for its severity-spike signal (previously 404 → un-evaluable).
+		$api->addRoute('api/v1/notifications/<uuid>/read', 'Notifications:read');
 		$api->addRoute('api/v1/notifications', 'Notifications:default');
 		// A13.2 (2026-05-07): Prometheus metrics surface scraped by Alloy.
 		// Anonymous read; bound to 127.0.0.1:9000 only (Caddyfile).
