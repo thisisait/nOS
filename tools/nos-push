@@ -83,6 +83,10 @@ for spec in "${REFSPECS[@]}"; do
 	[ -n "$src" ] || continue  # `:branch` is a delete, it carries nothing
 	[ "$dst" = HEAD ] && dst="$BRANCH"
 	[ -n "$dst" ] || dst="$src"
+	# CLAUDE.md §Commit convention: no attribution trailers, from any agent or session (operator 2026-11-08).
+	if git -C "$PUSH_DIR" log --format=%B "$src" --not --remotes="$REMOTE" | grep -qiE '^(co-authored-by|claude-session):'; then
+		echo "→ nos-push refused: a commit in $src carries a Co-Authored-By/Claude-Session trailer — reword it"; exit 2
+	fi
 	if [ "$STRICT" -eq 1 ]; then
 		python3 "$SCRIPT_DIR/prepush-score.py" --repo "$PUSH_DIR" --remote "$REMOTE" --ref "$src" --dst "$dst" --strict \
 			|| { echo "→ push refused by prepush-score --strict"; exit 3; }
