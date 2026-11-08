@@ -16,6 +16,8 @@
 	import { SETTLE_MS, eye, look, step, type Input } from './eye';
 	import Message from './Message.svelte';
 	import ModelPicker from './ModelPicker.svelte';
+	import Questions from './Questions.svelte';
+	import { answer, fromWire, said, type Question } from './questions';
 	import type { Act, Acted, Limb } from '$lib/limbs/types';
 	import { asked, closed, composerOpen, decide, empty, seen, type Decision } from './approvals';
 	import { mark, type Catalogue } from './marks';
@@ -75,6 +77,10 @@
 	let draft = $state('');
 	// The person's catalogue as serve last sent it; the composer marks the draft against it (marks.ts).
 	let catalogue: Catalogue = $state({ tables: [] });
+	// The agents' open questions (tier 1 answers in place, operator 2026-11-08); null = not read.
+	let questions: Question[] | null = $state(null);
+	let answers: Record<string, string> = $state({});
+	let showQuestions = $state(false);
 	const pieces = $derived.by(() => {
 		const out: { text: string; kind?: string }[] = [];
 		let at = 0;
@@ -186,6 +192,15 @@
 	}
 
 	// The decided edit joins the scrollback with the answer, as shell.rs:181-182 does.
+	function readQuestions() {
+		transport?.send({ t: 'questions' }).catch((e) => push({ note: `questions not read: ${e}` }));
+	}
+
+	function answerQuestion(uuid: string, text: string) {
+		const m = answer(uuid, text);
+		if (m) transport?.send(m).catch((e) => (answers = { ...answers, [uuid]: `not sent: ${e}` }));
+	}
+
 	async function decided(approval: string, d: Decision) {
 		const r = decide(q, approval, d);
 		if (!r.send || !r.decided) return;
@@ -508,6 +523,9 @@
 				if (payload.t === 'said') return void push({ me: payload.text });
 				if (payload.t === 'workspace') return void workspaceHeld(payload.doc);
 				if (payload.t === 'catalogue') return void (catalogue = { tables: payload.tables });
+				if (payload.t === 'questions') return void (questions = fromWire(payload.items));
+				if (payload.t === 'answer_result')
+					return void (answers = { ...answers, [payload.uuid]: said(payload) });
 				if (payload.t === 'act') return void acting(payload);
 				if (payload.t === 'model_options') {
 					models = payload.options;
@@ -691,9 +709,26 @@
 		{#if link.state === 'closed'}
 			<StatusNote kind="unwired" block={false}>{link.reason ?? 'disconnected'}</StatusNote>
 			<button onclick={connect}>connect</button>
+		{:else}
+			<button
+				class="ghost"
+				aria-expanded={showQuestions}
+				onclick={() => {
+					showQuestions = !showQuestions;
+					if (showQuestions) readQuestions();
+				}}>questions</button
+			>
 		{/if}
 	{/snippet}
 	<Eye {view} />
+	{#if showQuestions}
+		<Questions
+			items={questions}
+			results={answers}
+			onanswer={answerQuestion}
+			onrefresh={readQuestions}
+		/>
+	{/if}
 	<div class="column" bind:this={column}>
 		{#each log as e}
 			{#if 'me' in e}<p class="me">{e.me}</p>
