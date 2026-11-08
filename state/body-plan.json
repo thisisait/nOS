@@ -4,7 +4,7 @@
   "projects": "state/anatomy-graph.json",
   "levels_from": "state/genome/lexicon.yml",
   "counts": {
-    "genome": 22,
+    "genome": 25,
     "cell": 17,
     "tissue": 1,
     "organ": 83,
@@ -2030,6 +2030,18 @@
       "kind": "skill"
     },
     "skill:release-prep": {
+      "level": "genome",
+      "kind": "skill"
+    },
+    "skill:roadmap-integrate": {
+      "level": "genome",
+      "kind": "skill"
+    },
+    "skill:roadmap-loop": {
+      "level": "genome",
+      "kind": "skill"
+    },
+    "skill:roadmap-watch": {
       "level": "genome",
       "kind": "skill"
     },

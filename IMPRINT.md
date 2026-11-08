@@ -37,7 +37,7 @@ the agent's or anyone's — is caught before it costs anything. Both are the poi
 Levels run smallest to largest, then the systems that cut across every level.
 Each line: level (count) — what it means (the lexicon's words), then the most connected nodes (edge count).
 
-- **genome** (22) — The declared facts every part of nOS inherits. Most live in state/genome/ (genes, schemas, this lexicon, the task types); the skill library lives in files/anatomy/skills/, beside the code that hands skills out. Most connected: tasktype:investigate (14), tasktype:seed-edit (5), skill:nos-backoffice (3)
+- **genome** (25) — The declared facts every part of nOS inherits. Most live in state/genome/ (genes, schemas, this lexicon, the task types); the skill library lives in files/anatomy/skills/, beside the code that hands skills out. Most connected: tasktype:investigate (14), tasktype:seed-edit (5), skill:nos-backoffice (3)
 - **cell** (17) — One model in one specialization; in code it is called an agent. Most connected: agent:librarian (11), agent:jeff (9), agent:surveyor (8)
 - **tissue** (1) — The transplantable pack of one specialization's cells with their skills, tables and services. Most connected: tissue:backoffice (23)
 - **organ** (83) — One service or host daemon with one job; one row in state/manifest.yml. Most connected: service:pulse (45), service:postgresql (11), service:keap (10)
