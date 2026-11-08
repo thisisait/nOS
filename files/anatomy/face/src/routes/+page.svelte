@@ -30,6 +30,7 @@
 	} from '$lib/apps/native'; // G5
 	import FilePicker from '$lib/apps/native/file-picker/FilePicker.svelte'; // G5
 	import WidgetLayer from '$lib/apps/widgets/WidgetLayer.svelte';
+	import { widgetPrefs, setWidgetHidden } from '$lib/apps/widgets/prefs';
 	import MenubarStatus from '$lib/components/MenubarStatus.svelte';
 	import Clock from '$lib/components/Clock.svelte';
 	import { initShortcuts, SHORTCUTS, run as runShortcut } from '$lib/wm/shortcuts';
@@ -44,6 +45,7 @@
 	// mounted by <WidgetLayer /> and a frame is launched from the hub catalog
 	// below, so neither belongs in this list.
 	const natives = openableApps('view', 'utility');
+	const widgetApps = openableApps('widget');
 
 	// Reactive desktop background from the active wallpaper (validated).
 	const bg = $derived(safeBackground($activeWallpaper));
@@ -136,6 +138,16 @@
 			icon: a.icon,
 			run: () => launchNativeApp(a.slug)
 		})),
+		...widgetApps.map((w) => {
+			const hidden = $widgetPrefs.hidden.includes(w.slug);
+			return {
+				id: `widget:${w.slug}`,
+				title: `${hidden ? 'Show' : 'Hide'} widget: ${w.title}`,
+				hint: 'widget',
+				icon: w.icon,
+				run: () => setWidgetHidden(w.slug, !hidden)
+			};
+		}),
 		...apps.map((a) => ({
 			id: `hub:${a.slug}`,
 			title: a.title,
