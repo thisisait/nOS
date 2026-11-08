@@ -6,29 +6,24 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md). Release narrative →
 > [`RELEASE.md`](../RELEASE.md). Completed plans → [`docs/archive/`](archive/).
 >
-> Last updated: 2026-10-09.
+> Last updated: 2026-11-08.
 
 ## Now (current track)
 
-1. **v0.16-beta is being drafted** (row `rel-016`; `RELEASE.md` section marked
-   DRAFT). Blank converge 2026-10-09: one first-login timeout (passed on
-   `--tags identities`), smoke 50/50, `--strict` with the tester 49/50 (probe
-   fixed), E2E 339/0. Converge `failed=0` on 2026-10-10 (MUST 6), after a KEAP
-   restore from the pre-blank set; OpenHuman memory lives in KEAP (hippocampus,
-   keap v2.1.0). Open before the tag: (1) CI on every lane at the release PR
-   (macOS integration only runs there); (2) atlas needs `install_martin: true`
-   and one converge, or the MUST moves to a release note (the operator's call);
-   one more `nos` to prove the OpenHuman chat route, then a second host.
-   After the tag: `review-v015-followups`, `default-config-split`,
-   `containerized-core`; v0.17 rows: Iris cell, OpenHuman acceptance.
+1. **v0.18-beta is tagged** (`51bbfece`, row `rel-018`); dev runs ahead of master.
+   Master's scheduled CI is red until the next cut: the Linux FrankenPHP digest
+   is fixed on dev (`895e5b29`); the macOS registry-ingest chdir and the
+   `loop:pipeline-exercise` 0/4 nights (intake's held code 10 read as
+   could-not-run) wait on `fix/registry-ingest-guard` (stacked on
+   `fix/pipeline-exercise-held-code`). State: `tools/red-status.py`.
 2. **Wing compat symlink** `state/llm-backends.yml` → `state/habitat/` stays until
    every host has run `nos --tags wing`; then delete it and the two fallback reads.
-3. **Redis leaf rotation is LIVE** (converged 2026-10-01; requirepass == new
-   leaf, hash-compared; smoke 47/47, E2E 277 green).
+3. **Waiting on operator rulings:** `fix/gates-see-sibling-worktrees` (GATE
+   CHANGE), `feat/kiwix-library-stays-current`; n8n's advisory needs 3.x (major).
 4. **Datastore TLS is POSTPONED** by the operator. The research is kept in dtt
    (`sec-transport-enforce`, `sec-transport-study`) for when it resumes.
-5. **Roadmap reconciled 2026-10-02:** 205 open rows checked against the code;
-   96 closed with evidence, 5 folded, epics with all children done closed.
+5. **DGX (spark1):** cut-over in review (operator browser login + reboot test);
+   the vLLM bench waits on driver 595 (row `dgx-driver-595-operator`).
 6. **Identities:** accounts exist from install for every declared identity;
    tier-1 is admin in gitea/nextcloud/grafana/openwebui/outline. Open: an e2e
    tester's Outline role lags one converge (its account is born mid-run); six
