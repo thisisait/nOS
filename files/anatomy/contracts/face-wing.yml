@@ -76,7 +76,7 @@ wire:
     refusals:
       - "thalamus bearer without a canonical X-Nos-User-Uid -> 401"
       - "thalamus bearer on any other action or method, operator verbs included -> 403"
-      - "cancel of a run not the person's, not started by the named Iris session, or absent -> the same 404 (tests/anatomy/test_a_session_can_be_stopped.py)"
+      - "cancel of a run not the person's, not started by the named Iris session, or absent -> the same 404 (tests/anatomy/test_wing_agent_sessions_journey.py)"
     gate: tests/anatomy/test_thalamus_speaks_for_a_person_only_to_start.py
 
 # ── 3. The three invariants (ssot/doctrine/cross-repo-contracts.md §4) ────────────────────

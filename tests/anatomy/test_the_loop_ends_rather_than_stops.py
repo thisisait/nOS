@@ -272,7 +272,7 @@ def test_an_iteration_boundary_stops_rather_than_discards():
     # The outcome word moved into GateOracle::outcome (2026-08-29 — so that an
     # unrunnable judge reports `indeterminate`, not failed work); the break must
     # now reach that shared return. The mapping itself is EXECUTED by
-    # test_an_unrunnable_judge_is_not_failed_work.py, not grepped here.
+    # test_wing_agent_sessions_journey.py, not grepped here.
     assert "$oracle->outcome(" in loop and "break;" in loop, (
         "the iteration-boundary ceiling no longer breaks out with the result so "
         "far — it throws again, discarding a completed iteration."

@@ -77,7 +77,7 @@ pulse:
         # ALERT_RELAY_STATE is deliberately NOT declared here. The catalog does
         # a literal str.replace over a fixed token map, so `{{ ansible_facts
         # ['env']['HOME'] }}` would reach Wing verbatim and 400 the converge —
-        # test_pulse_catalog_renders_every_token.py caught exactly that on this
+        # test_wing_deploy_journey.py caught exactly that on this
         # manifest's first draft. HOME is already in the forked process's
         # environment, so the script's own default (~/.nos/prom-alerts-seen.json)
         # resolves it correctly with nothing to keep in sync.

@@ -32,7 +32,7 @@ There is one AgentKit: `files/anatomy/wing/app/AgentKit/`, opened by
   Satisfaction is `nos-loop judge` via `GateOracle`, never the proposer's
   client (`GateOracle.php:8-18`).
 - The schema enum and DI-registered `id()` returns must match both ways
-  (`test_the_tool_enum_tracks_registration.py:1-10`). Intent is a roadmap
+  (`test_wing_agent_tools_journey.py`). Intent is a roadmap
   row, not a reserved enum member.
 
 ## 2. Identity, scopes, vault

@@ -118,7 +118,7 @@ final class InboxPresenter extends BaseApiPresenter
 		// NEVER the reply token (the mcp-wing leak this presenter shipped and
 		// adversarial review caught the same day) are recorded there, next to
 		// the insert. Do not add a second insert here; the gate that pins this
-		// is test_a_question_notification_carries_a_click.py.
+		// is test_wing_inbox_journey.py.
 
 		$this->sendCreated($made);
 	}

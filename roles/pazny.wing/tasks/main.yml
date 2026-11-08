@@ -182,7 +182,7 @@
 # pins nothing. Pinned by tests/anatomy/test_pinned_artifacts_fetch_the_pin.py.
 # macOS then hit the mirror image (#48): brew landed 1.12.6 over the 1.12.4
 # pin on every fresh Mac. Same fetch now, every platform:
-# tests/anatomy/test_frankenphp_pin_governs_every_platform.py.
+# tests/anatomy/test_wing_deploy_journey.py.
 - name: "[pazny.wing] Download the pinned FrankenPHP static binary"
   vars:
     # Release asset suffix: mac-arm64 | mac-x86_64 | linux-aarch64 | linux-x86_64.

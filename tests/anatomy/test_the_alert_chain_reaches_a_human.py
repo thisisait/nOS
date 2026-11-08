@@ -65,7 +65,7 @@ def test_every_env_token_the_relay_needs_is_renderable():
     """The catalog does a literal str.replace over a FIXED token map.
 
     An unknown `{{ token }}` survives into Wing verbatim and 400s the converge.
-    test_pulse_catalog_renders_every_token.py owns the general rule; this pins
+    test_wing_deploy_journey.py owns the general rule; this pins
     the specific token this plugin introduced, and that its NOS_* feed exists.
     """
     assert '"{{ prometheus_port }}"' in CATALOG.read_text(encoding="utf-8"), (

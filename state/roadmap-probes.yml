@@ -651,7 +651,7 @@ obs-pulse-dashboard: >-
 # would be confirming the description, which this file's header forbids. So it
 # asserts the two cases that were measured and fixed, and nothing else.
 dry-run-evidence: >-
-  test -f tests/anatomy/test_a_dry_run_gathers_its_own_evidence.py
+  test -f tests/anatomy/test_wing_deploy_journey.py
   && [ "$(grep -c 'check_mode: false' roles/pazny.wing/tasks/main.yml)" -ge 3 ]
 
 # The row is the two measured cases; the twenty are its child, and that child

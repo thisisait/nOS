@@ -44,7 +44,7 @@ Both reads in `roles/pazny.wing/tasks/main.yml` opt out of check mode.
 `--tags wing --check` now completes: **438 ok, 0 failed** — the first successful
 dry run of that role.
 
-Gate: `tests/anatomy/test_a_dry_run_gathers_its_own_evidence.py` parses the
+Gate: `tests/anatomy/test_wing_deploy_journey.py` parses the
 role's tasks and refuses any `fail:`/`assert:` whose CONDITION reads a register
 filled by a check-blind module. It deliberately ignores the `msg:` body — the
 diagnostic there already renders its own `default('(diagnose task skipped)')`,

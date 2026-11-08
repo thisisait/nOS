@@ -206,7 +206,7 @@ def test_the_a11_race_is_recorded_where_someone_will_find_it():
 
     2026-08-08: ApprovalsPresenter was retired (this test's second assertion
     said, in its own message, to delete it when that happened — done; the
-    retirement is pinned by test_approval_queue_event_backed.py). What must
+    retirement is pinned by test_wing_inbox_journey.py). What must
     survive the retirement is the REASONING: why a resolution table exists
     beside an append-only log, recorded where a maintainer of the table will
     meet it.

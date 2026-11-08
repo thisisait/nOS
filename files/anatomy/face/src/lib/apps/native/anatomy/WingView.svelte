@@ -2,7 +2,7 @@
   Wing view — the audit spine and the notification inbox.
 
   Wing's Latte pages move here one increment at a time (roadmap
-  wing-organ-without-face); test_wing_latte_ratchet.py lets them only shrink,
+  wing-organ-without-face); test_wing_pages_journey.py lets them only shrink,
   so a page lives in both places for one release at most. What this adds is the
   THREAD: an `actor_action_id` shared by a Pulse run and every event it
   produced. Open a run in the Pulse view, follow it here, and the two lists

@@ -175,7 +175,7 @@ def _build_substitutions() -> dict[str, str]:
         # A declared env token MISSING here is stored as literal braces and
         # 401s silently at run time — curator-sweep shipped that way
         # 2026-07-14 (env is outside the SEC-8 validator, so no 400). Gate:
-        # test_pulse_catalog_renders_every_token, found it 2026-08-01.
+        # test_wing_deploy_journey, found it 2026-08-01.
         "{{ librarian_wing_api_token }}": "secret:librarian_wing_api_token",
         "{{ gitleaks_wing_api_token }}":  "secret:gitleaks_wing_api_token",
         "{{ keap_agent_token_capture }}": "secret:keap_agent_token_capture",

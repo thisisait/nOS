@@ -33,7 +33,7 @@ def test_reaper_runs_on_catalog_view():
     # open, on both runtimes). A policy defined by one of several callers
     # drifts, so it now lives with the reaper — and this assertion follows it
     # rather than pinning the old location. See
-    # tests/anatomy/test_a_dead_session_is_closed_by_a_successor.py.
+    # tests/anatomy/test_wing_agent_sessions_journey.py.
     sessions = SESSIONS.read_text()
     assert "SESSION_CAP_MINUTES_DEFAULT" in sessions
     assert "AGENT_SESSION_CAP_MINUTES" in sessions, "env override lost"
