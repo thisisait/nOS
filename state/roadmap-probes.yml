@@ -665,7 +665,7 @@ dry-run-evidence-sweep:
 # the drill can only go green on tomorrow's object.
 backup-drill-keap-db: >-
   grep -q 'keap_verify_js' roles/pazny.backup/files/backup.sh
-  && test -f tests/anatomy/test_a_snapshot_is_opened_before_it_is_uploaded.py
+  && test -f tests/anatomy/test_backup_journey.py
 
 # ── The five security rows nobody had ever checked (2026-08-30) ─────────────
 #

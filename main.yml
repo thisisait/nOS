@@ -539,7 +539,7 @@
       tags: ['always', 'preflight']
 
     # Both backup paths (tasks/backup.yml, pazny.backrest) run restic against restic_repo;
-    # refused here, not ~680 tasks in. Gate: tests/anatomy/test_backup_preflight_refuses_empty_repo.py.
+    # refused here, not ~680 tasks in. Gate: tests/anatomy/test_backup_playbook_journey.py.
     - name: "[Preflight] Refuse a backup without a restic_repo"
       ansible.builtin.fail:
         msg: "restic_repo is empty (configure_backup or install_backrest is on) — set it in config.yml (e.g., /Volumes/Backup/restic, s3:endpoint/bucket, sftp:user@host:/path)"

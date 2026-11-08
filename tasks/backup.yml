@@ -229,7 +229,7 @@
       mkdir -p "$STAGE" && chmod 700 "$STAGE"
       PATHS=("$STAGE")
       ROWS=()
-      # Same function as roles/pazny.backup/files/backup.sh (gate: test_a_good_dump_survives_the_next_backup).
+      # Same function as roles/pazny.backup/files/backup.sh (gate: test_backup_journey).
       keep_if_shrunk() {
           local new="$1" old="$2" n o
           [[ -f "${old}" ]] || return 0

@@ -80,7 +80,7 @@ still got wrong twice in one file by someone who had just finished writing it
 down: **in a shell without `pipefail`, appending anything to a pipeline
 discards the verdict of everything before it.**
 
-Gate: `tests/anatomy/test_a_snapshot_is_opened_before_it_is_uploaded.py`.
+Gate: `tests/anatomy/test_backup_journey.py`.
 
 ## Not closed
 
