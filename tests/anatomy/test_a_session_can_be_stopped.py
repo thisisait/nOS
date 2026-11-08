@@ -106,16 +106,17 @@ def test_an_agent_token_stops_nothing(tmp_path):
 
 @needs_php
 @needs_vendor
-def test_the_face_bff_stops_nothing(tmp_path):
-    """The row widened the thalamus alone: the face-bff bearer, Tier 1 or not, reaches no cancel,
-    and the run it named is still running afterwards."""
-    user, admin, read = _run(tmp_path, [
-        _cancel(A1, None, token="bff-secret", uid="alice", groups="nos-users"),
-        _cancel(A1, None, token="bff-secret", uid="alice", groups="nos-admins"),
+def test_the_face_bff_stops_only_ones_own(tmp_path):
+    """Operator 2026-11-08 (wing-inc2): the face-bff bearer reaches cancel, but Wing narrows it to
+    the person's own run; another's answers 404 like an absent one and stays running."""
+    other, read, own = _run(tmp_path, [
+        _cancel(A1, None, token="bff-secret", uid="bob", groups="nos-users"),
         _get(A1),
+        _cancel(A1, None, token="bff-secret", uid="alice", groups="nos-users"),
     ])
-    assert (user["code"], admin["code"]) == (403, 403), (user, admin)
+    assert other["code"] == 404, other
     assert read["body"]["session"]["status"] == "running", read
+    assert own["code"] == 202, own
 
 
 _LOOP = r"""<?php
