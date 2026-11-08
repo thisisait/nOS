@@ -128,6 +128,9 @@ jobs:
         shard: [1, 2, 3, 4]
     env:
       NOS_PYTEST_SHARD: ${{ matrix.shard }}/4
+      # tests/_lanes.yml files (toolchain + playbook harnesses) leave the dev-push path; the
+      # nightly schedule, a manual run and a PR to master run everything (gate-diet, 2026-11-08).
+      NOS_LANE: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.base_ref == 'master') && 'all' || '' }}
       # THE ENVIRONMENT CONTRACT (tests/anatomy/_environment_contract.py):
       # every tool named here must resolve on PATH or the anatomy suite
       # ABORTS before running a single test. This job is where the
@@ -265,6 +268,19 @@ jobs:
       - name: Unit tests (vitest).
         working-directory: files/anatomy/face
         run: npm test
+
+  # The Rust workspace (thalamus, contract, medulla) on every push: pytest stopped proxying
+  # `cargo test` (tests/_lanes.yml, gate-diet 2026-11-08), so this job is now its only CI run.
+  thalamus:
+    name: Thalamus (cargo test)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out the codebase.
+        uses: actions/checkout@v7
+
+      - name: Test the workspace.
+        working-directory: files/anatomy/thalamus
+        run: cargo test --locked --workspace
 
   # ──────────────────────────────────────────────────────────────────────────
   # NOS-APP – nOS.app's Swift decoder against the thalamus-shell fixture

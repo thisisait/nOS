@@ -1,0 +1,41 @@
+# Test files the commit path skips (tests/_lanes.py; gate-diet, operator 2026-11-08).
+# A dev push and tests/fast.sh deselect them; CI's nightly schedule, workflow_dispatch and
+# PRs to master run them (NOS_LANE=all). Naming a file on the command line still runs it.
+# Gate: tests/anatomy/test_lanes_hold.py.
+
+# Spawns cargo, vitest/node or a real ansible-playbook run. CI's `thalamus` (cargo test) and
+# `face` (vitest) jobs run those toolchains on every push; the playbook harnesses run nightly.
+nightly:
+  tests/anatomy/test_openhuman_role.py: playbook, 25 runs
+  tests/anatomy/test_run_mode_journey.py: playbook harness plays
+  tests/anatomy/test_thalamus_and_face_lanes_run.py: cargo workspace + face vitest (own CI jobs)
+  tests/anatomy/test_genui_workspace_poc.py: cargo
+  tests/anatomy/test_tailscale_wiring.py: playbook
+  tests/anatomy/test_profile_builder_writes_a_config_nos_accepts.py: node + nos validate sweep
+  tests/anatomy/test_profile_builder_refuses_contradictions.py: node, 60 s budget
+  tests/anatomy/test_profile_builder_asks_the_edge.py: node
+  tests/anatomy/test_claude_cli_respects_an_existing_install.py: playbook
+  tests/anatomy/test_backup_without_rustfs_goes_to_restic.py: playbook
+  tests/anatomy/test_backup_copy1_absent_without_rustfs.py: playbook
+  tests/anatomy/test_backup_preflight_refuses_empty_repo.py: playbook
+  tests/anatomy/test_restore_from_a_local_dir.py: playbook
+  tests/anatomy/test_a_postgres_db_restores_alone.py: playbook
+  tests/anatomy/test_the_drill_replays_every_postgres_db.py: playbook
+  tests/anatomy/test_face_wing_contract.py: cargo + node
+  tests/anatomy/test_thalamus_serve.py: cargo binary
+  tests/anatomy/test_thalamus_shell_contract.py: cargo
+  tests/anatomy/test_blank_run_leaves_a_record.py: playbook
+  tests/anatomy/test_host_daemon_stop_is_authored.py: playbook
+  tests/anatomy/test_preflight_authentik_gate_matches_renderers.py: playbook
+  tests/anatomy/test_iris_renders_the_fixture.py: face vitest (face job)
+  tests/anatomy/test_iris_approvals_hold.py: face vitest (face job)
+  tests/anatomy/test_openhuman_remembers_in_keap.py: playbook
+  tests/anatomy/test_jellyfin_libraries_mount_at_their_host_path.py: playbook
+  tests/anatomy/test_skills_prune_dangling_links.py: playbook
+  tests/anatomy/test_medulla_unit_runs_as_nos.py: playbook
+  tests/anatomy/test_kiwix_restarts_on_any_new_zim.py: playbook
+  tests/anatomy/test_every_host_package_has_an_owner.py: repo-wide sweep, 30 s
+
+# Single-commit files untouched since August with no red story (row gate-diet-cold-files):
+# path: the date it went cold. After 14 days, a file that never failed nightly is deleted.
+cold: {}

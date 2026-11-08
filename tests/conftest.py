@@ -26,7 +26,16 @@ for _p in (_REPO_ROOT, _ANATOMY, _HERE):
         sys.path.insert(0, _p)
 
 # CI splits the suite across runners (NOS_PYTEST_SHARD=k/N); unset = everything.
-from _shard import pytest_collection_modifyitems  # noqa: E402,F401
+# Before the split, tests/_lanes.yml files leave the commit path (NOS_LANE=all keeps them).
+import pytest  # noqa: E402
+import _lanes  # noqa: E402
+from _shard import pytest_collection_modifyitems as _shard_cut  # noqa: E402
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_collection_modifyitems(config, items):
+    _lanes.deselect(config, items)
+    _shard_cut(config, items)
 
 # The estate clone's config.yml (nos_identity.operator_file) is the operator's live
 # answer; a test that wants one sets NOS_ESTATE_DIR itself (test_readers_read_the_estate_config).
