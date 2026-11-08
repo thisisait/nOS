@@ -14,8 +14,8 @@
 		"@sveltejs/vite-plugin-svelte": "5.1.1",
 		"@tauri-apps/cli": "2.12.2",
 		"svelte": "5.56.6",
-		"vite": "6.4.3",
-		"vitest": "4.1.11"
+		"vite": "6.4.5",
+		"vitest": "4.1.12"
 	},
 	"engines": {
 		"node": ">=20"
