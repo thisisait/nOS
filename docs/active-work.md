@@ -10,20 +10,22 @@
 
 ## Now (current track)
 
-1. **v0.18-beta is tagged** (`51bbfece`, row `rel-018`); dev runs ahead of master.
-   Master's scheduled CI is red until the next cut: the Linux FrankenPHP digest
-   is fixed on dev (`895e5b29`); the macOS registry-ingest chdir and the
-   `loop:pipeline-exercise` 0/4 nights (intake's held code 10 read as
-   could-not-run) wait on `fix/registry-ingest-guard` (stacked on
-   `fix/pipeline-exercise-held-code`). State: `tools/red-status.py`.
+1. **v0.18-beta is tagged** (`51bbfece`, row `rel-018`); dev runs ahead of master,
+   whose scheduled CI stays red until the next cut (fixes are on dev). State:
+   `tools/red-status.py`.
 2. **Wing compat symlink** `state/llm-backends.yml` → `state/habitat/` stays until
    every host has run `nos --tags wing`; then delete it and the two fallback reads.
-3. **Waiting on operator rulings:** `fix/gates-see-sibling-worktrees` (GATE
-   CHANGE), `feat/kiwix-library-stays-current`; n8n's advisory needs 3.x (major).
+3. **Iris + face (focus 1), landed 2026-11-08:** pending cards reach the readers,
+   a face person answers agents' questions in place, nOS.app announces cards (wire
+   v17), the pupil is retired (serve checks the workspace layout), Linux deciders
+   are the face relay only. Waits on the operator: the face journey on the estate
+   (`FACE_E2E=1 tools/run-playwright.sh --iris journeys/iris-face.spec.ts`).
 4. **Datastore TLS is POSTPONED** by the operator. The research is kept in dtt
    (`sec-transport-enforce`, `sec-transport-study`) for when it resumes.
-5. **DGX (spark1):** cut-over in review (operator browser login + reboot test);
-   the vLLM bench waits on driver 595 (row `dgx-driver-595-operator`).
+5. **Wing without Latte (focus 2):** face apps declare `minTier` and every BFF
+   route has a tier; inc1 (the face Inbox app, Tier 1) landed, its Latte page
+   stays one release (row `wing-inc1-latte-gone`). Next increment: being defined.
+   DGX (spark1): reboot test + driver 595 wait on the operator (plan artifact).
 6. **Identities:** accounts exist from install for every declared identity;
    tier-1 is admin in gitea/nextcloud/grafana/openwebui/outline. Open: an e2e
    tester's Outline role lags one converge (its account is born mid-run); six
