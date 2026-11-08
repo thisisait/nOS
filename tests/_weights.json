@@ -237,6 +237,7 @@
   "tests/anatomy/test_wing_inbox_journey.py": 0.8,
   "tests/anatomy/test_wing_pages_journey.py": 1.0,
   "tests/anatomy/test_woodpecker_pat_is_minted_not_pasted.py": 5.0,
+  "tests/anatomy/test_wordpress_portal_journey.py": 0.6,
   "tests/anatomy/test_workflow_scripts_are_valid.py": 0.9,
   "tests/anatomy/test_worktree_lease.py": 1.0
  },
