@@ -1771,12 +1771,20 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
 
     /// answer (v16): the halt's tier-1 decider check, then the answer relayed to Wing, which writes the
     /// record and resolves it once; the medulla never writes it. A refused peer reaches no Wing.
+    /// A face person answers in place (operator 2026-11-08): the relay hello is the proof, as for a
+    /// card in may_decide; tier 1 still holds. The halt and settings stay native (setter_refusal).
     fn answer(&self, who: &Person, out: &mut dyn Write, peer: &Value, uuid: &str, answer: &str) {
-        if let Some(why) = self.setter_refusal(who, peer, "an answer") {
+        let face = peer["via"] == "face";
+        let refused = if face {
+            (!self.is_tier1(who)).then(|| format!("{} is not tier 1, so an answer is not theirs to set", who.username))
+        } else {
+            self.setter_refusal(who, peer, "an answer")
+        };
+        if let Some(why) = refused {
             self.say(format!("refused an answer to {uuid} from {} {peer}: {why}", who.username));
             return send(out, &ToShell::Refused { reason: why, widget: None });
         }
-        let r = crate::inbox::relay(uuid, answer, &who.username, &self.wing.url);
+        let r = crate::inbox::relay(uuid, answer, &who.username, if face { "face" } else { "medulla" }, &self.wing.url);
         self.say(format!("answer to {uuid} by {} {peer}: {}", who.username, encode(&r).trim_end()));
         send(out, &r);
     }

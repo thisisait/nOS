@@ -23,7 +23,7 @@ pub fn open_questions(agent: Option<&str>) -> Result<Vec<Map<String, Value>>, St
 
 /// One answer carried to Wing, whose conditional UPDATE resolves it once (Api\InboxPresenter::actionAnswer),
 /// with the wing-answer bearer read per act. Never retried: what Wing said is the outcome.
-pub fn relay(uuid: &str, answer: &str, by: &str, wing_url: &str) -> ToShell {
+pub fn relay(uuid: &str, answer: &str, by: &str, via: &str, wing_url: &str) -> ToShell {
     let done = |outcome, winning_answer: Option<String>, why: Option<String>| ToShell::AnswerResult { uuid: uuid.into(), outcome, winning_answer, why };
     // The uuid goes into Wing's URL path: checked here, not only by the wire decoder of today's caller.
     if !nos_contract::wire::is_uuid(uuid) {
@@ -34,7 +34,7 @@ pub fn relay(uuid: &str, answer: &str, by: &str, wing_url: &str) -> ToShell {
         Err(why) => return done(AnswerOutcome::Refused, None, Some(why)),
     };
     let url = format!("{}/api/v1/inbox/questions/{uuid}/answer", crate::state::wing_base(wing_url));
-    let body = json!({"answer": answer.trim(), "answered_by": by, "via": "medulla"});  // trimmed as Wing's browser path is
+    let body = json!({"answer": answer.trim(), "answered_by": by, "via": via});  // trimmed as Wing's browser path is
     match crate::serve::agent(10).post(&url).header("authorization", &format!("Bearer {token}")).send_json(body) {
         Err(e) => done(AnswerOutcome::Refused, None, Some(format!("Wing did not answer at {url}: {e}"))),
         Ok(mut r) => {

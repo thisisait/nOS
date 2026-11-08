@@ -79,15 +79,57 @@ fn serve(tag: &str, port: u16) -> (PathBuf, Served) {
          INSERT INTO agent_questions VALUES (1, '{Q}', 'conductor', 'Apply the upgrade?', 'secret-sha', 'open', NULL, '2099-01-01T00:00:00Z', '2026-11-01 08:00:00');
          INSERT INTO agent_questions VALUES (2, 'a1b2c3d4-0000-4000-8000-000000000002', 'conductor', 'Old one', 'sha', 'answered', 'no', NULL, '2026-10-01 08:00:00');")).unwrap();
     let me = std::fs::canonicalize(env!("CARGO_BIN_EXE_medulla")).unwrap();
+    // The face's loopback door too, on a free port kept in HOME for relay_tab.
+    let door = TcpListener::bind("127.0.0.1:0").unwrap().local_addr().unwrap().port();
+    std::fs::write(home.join("relay.port"), door.to_string()).unwrap();
     let child = env(&mut Command::new(env!("CARGO_BIN_EXE_medulla")), &home, port)
         .args(["thalamus", "serve", "--data-dir"]).arg(home.join("data"))
         .env("KEAP_PROXY_SHARED_SECRET", "s").env("NOS_TIER1_GROUPS", "nos-admins").env("NOS_DECIDER_EXES", &me)
+        .env("THALAMUS_RELAY_SECRET", RELAY).env("THALAMUS_RELAY_PORT", door.to_string())
         .env("NOS_INBOX_DB", &db).stdout(Stdio::null()).stderr(Stdio::null()).spawn().unwrap();
     for _ in 0..200 {
         if home.join(".nos/thalamus.sock").exists() { break }
         std::thread::sleep(Duration::from_millis(50));
     }
     (home.clone(), Served(child, home))
+}
+
+const RELAY: &str = "relay-hop-secret-q16f";
+
+/// One line through the face's relay as alice (the hello first), and the first answer back.
+fn relay_tab(home: &Path, line: &str) -> Value {
+    let port: u16 = std::fs::read_to_string(home.join("relay.port")).unwrap().parse().unwrap();
+    let mut s = None;
+    for _ in 0..100 {
+        if let Ok(c) = std::net::TcpStream::connect(("127.0.0.1", port)) { s = Some(c); break }
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    let mut s = s.expect("the relay door never opened");
+    s.set_read_timeout(Some(Duration::from_secs(10))).unwrap();
+    let hello = serde_json::json!({"relay": "face", "secret": RELAY, "uid": "alice", "username": "alice", "groups": [], "tab": "t1"});
+    s.write_all(format!("{hello}\n{line}").as_bytes()).unwrap();
+    let mut back = String::new();
+    BufReader::new(s).read_line(&mut back).unwrap();
+    serde_json::from_str(&back).unwrap()
+}
+
+/// Operator 2026-11-08: a face person answers in place; tier 1 still holds and the halt stays native.
+#[test]
+fn a_face_person_answers_in_place_and_still_cannot_halt() {
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    let port = wing(seen.clone());
+    let (home, _served) = serve("face", port);
+    let v = relay_tab(&home, &format!("{{\"t\":\"answer\",\"uuid\":\"{Q}\",\"answer\":\"yes\"}}\n"));
+    assert_eq!((v["t"].as_str(), v["outcome"].as_str()), (Some("answer_result"), Some("answered")), "{v}");
+    let body = format!("POST /api/v1/inbox/questions/{Q}/answer Bearer {} {{\"answer\":\"yes\",\"answered_by\":\"alice\",\"via\":\"face\"}}", "a".repeat(64));
+    assert_eq!(*seen.lock().unwrap(), vec![body]);
+
+    let v = relay_tab(&home, "{\"t\":\"halt\",\"reason\":\"test\"}\n");
+    assert_eq!(v["t"], "refused", "a relay halt: {v}");
+    map(&home, &["nos-users"]);
+    let v = relay_tab(&home, &format!("{{\"t\":\"answer\",\"uuid\":\"{Q}\",\"answer\":\"no\"}}\n"));
+    assert!(v["t"] == "refused" && v["reason"].as_str().unwrap().contains("tier 1"), "{v}");
+    assert_eq!(seen.lock().unwrap().len(), 1, "a refusal reached Wing: {:?}", seen.lock().unwrap());
 }
 
 fn medulla(home: &Path, port: u16, args: &[&str]) -> Output {
