@@ -35,8 +35,8 @@ THREE RULES THIS TOOL IS BUILT ON, each from something the survey found:
      Rendering them as "match" would be the calm-by-absence defect this estate
      keeps finding in its own gates.
 
-  3. AN INTENTIONAL DIFFERENCE CARRIES ITS REASON. ansible-core is 2.20.5 on
-     this host and 2.21.0 in the frozen CI venv ON PURPOSE. Printed bare it
+  3. AN INTENTIONAL DIFFERENCE CARRIES ITS REASON. ansible-core is 2.20.9 on
+     this host and 2.21.6 in the frozen CI venv ON PURPOSE. Printed bare it
      reads as drift and someone "fixes" it. Every known split names where the
      reasoning is written down.
 
@@ -116,8 +116,8 @@ TOOLCHAIN = [
 #: excuses one specific pair of values, not the whole comparison.
 KNOWN_SPLITS = {
     "ansible-core": {
-        "host": "2.20.5", "pin": "2.21.0",
-        "why": "the operator's daily driver stays 2.20.5; 2.21.0 is the frozen "
+        "host": "2.20.9", "pin": "2.21.6",
+        "why": "the operator's daily driver stays 2.20.9; 2.21.6 is the frozen "
                "CI mirror (the GitHub runner's filter-load path needs a 2.21 "
                "symbol). Reasoning: tools/ci-freeze.env header + docs/git-and-release.md "
                "§Frozen integration toolchain.",

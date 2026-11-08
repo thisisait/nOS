@@ -46,7 +46,7 @@ jobs:
         with:
           python-version: '3.13'
 
-      # Pin ansible-core to the operator's installed baseline 2.20.5.
+      # Pin ansible-core to the operator's installed baseline 2.20.9.
       # NOTE: the Integration-job red (2026-06-08) was NOT an ansible-core issue
       # — it was Python 3.14. `setup-python` `'3.x'` floated to 3.14, where
       # ansible-core 2.20.x's filter plugins fail to import
@@ -54,10 +54,10 @@ jobs:
       # filters get SKIPPED and every filter (`bool`/`default`/`to_nice_json`/…)
       # throws "No filter named" at runtime (integration only — syntax/lint don't
       # resolve templates). Fixed by pinning `python-version: '3.13'` everywhere
-      # below. This `<2.20.6` upper bound just matches the operator baseline; it
+      # below. This `<2.21` upper bound just matches the operator baseline; it
       # is not load-bearing for the Python 3.14 fix.
       - name: Install lint dependencies.
-        run: pip3 install yamllint 'ansible-core>=2.20,<2.20.6' ansible-lint
+        run: pip3 install yamllint 'ansible-core>=2.20.9,<2.21' ansible-lint
 
       - name: yamllint – YAML syntax check.
         run: yamllint .
@@ -91,7 +91,7 @@ jobs:
 
       # Pin to current operator baseline (2.20.x). See Lint job comment.
       - name: Install Ansible.
-        run: pip3 install 'ansible-core>=2.20,<2.20.6'
+        run: pip3 install 'ansible-core>=2.20.9,<2.21'
 
       - name: Install Ansible Galaxy requirements.
         # Retry: Galaxy occasionally returns transient 502/Bad Gateway from
@@ -522,10 +522,9 @@ jobs:
           PY: ${{ steps.python-setup.outputs.python-path }}
         run: |
           # Frozen toolchain pins — single source of truth shared 1:1 with the
-          # local pre-release gate (tools/ci-local.sh). NOS_ANSIBLE_CORE today is
-          # ansible-core==2.21.0, the only 2.21 release — exactly what the old
-          # >=2.21,<2.24 range resolved to, so behaviour is unchanged; the freeze
-          # just stops a future 2.21.x/2.22 float from landing mid-gating.
+          # local pre-release gate (tools/ci-local.sh). NOS_ANSIBLE_CORE is
+          # ansible-core==2.21.6 (GHSA-w8p5-mx5w-cpqj fixed in 2.21.1). The
+          # freeze just stops a future 2.21.x/2.22 float from landing mid-gating.
           . "${GITHUB_WORKSPACE}/tools/ci-freeze.env"
           "$PY" -m venv "$RUNNER_TEMP/nosvenv"
           "$RUNNER_TEMP/nosvenv/bin/pip" install --upgrade pip
@@ -684,10 +683,9 @@ jobs:
           PY: ${{ steps.python-setup.outputs.python-path }}
         run: |
           # Frozen toolchain pins — single source of truth shared 1:1 with the
-          # local pre-release gate (tools/ci-local.sh). NOS_ANSIBLE_CORE today is
-          # ansible-core==2.21.0, the only 2.21 release — exactly what the old
-          # >=2.21,<2.24 range resolved to, so behaviour is unchanged; the freeze
-          # just stops a future 2.21.x/2.22 float from landing mid-gating.
+          # local pre-release gate (tools/ci-local.sh). NOS_ANSIBLE_CORE is
+          # ansible-core==2.21.6 (GHSA-w8p5-mx5w-cpqj fixed in 2.21.1). The
+          # freeze just stops a future 2.21.x/2.22 float from landing mid-gating.
           . "${GITHUB_WORKSPACE}/tools/ci-freeze.env"
           "$PY" -m venv "$RUNNER_TEMP/nosvenv"
           "$RUNNER_TEMP/nosvenv/bin/pip" install --upgrade pip

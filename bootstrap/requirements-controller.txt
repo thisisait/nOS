@@ -1,7 +1,7 @@
 # The Python that runs ansible-playbook also runs nOS's custom modules (main.yml
 # ansible_python_interpreter = ansible_playbook_python), so it needs what they import.
 # Gate: tests/anatomy/test_controller_requirements_cover_imports.py.
-ansible-core>=2.20,<2.20.6   # the operator's baseline (estate-status: INTENTIONAL 2.20.5)
+ansible-core>=2.20.9,<2.21   # the operator's baseline (estate-status: INTENTIONAL 2.20.9); GHSA-w8p5-mx5w-cpqj fixed in 2.20.7
 PyYAML>=6,<7                 # library/, module_utils/
 Jinja2>=3.1,<4               # module_utils/load_plugins.py, library/nos_migrate.py
 requests>=2.32,<3            # callback_plugins/wing_telemetry.py, module_utils/nos_authentik_client.py
