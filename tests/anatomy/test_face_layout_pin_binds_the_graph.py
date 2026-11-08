@@ -11,22 +11,14 @@ regens between 2026-08-20 and 2026-08-23 (`72b909e3`, `43a6dd08`,
 a hash mismatch nobody connected to the graph — because the duty lives in
 the vitest lane and the regen workflow runs the PYTEST lane.
 
-This gate moves the tripwire into the lane that causes the change. The pin
-records `graphSha256` — the sha256 of the anatomy-graph.json it was frozen
-against — and this file compares it to the artifact. A regen without a
-re-freeze now fails HERE, in the same suite that already forces the regen
-itself (test_anatomy_graph_is_sound.py), with the remedy in the message.
-
-What this gate cannot do, honestly: it cannot verify the POSITION hash —
-that needs node and belongs to the vitest lane. It only proves the pin and
-the graph were frozen together. Editing graphSha256 by hand without running
-vitest defeats it; gates guard forgetting, not falsification.
+Since 2026-11-08 (gate-diet-freshness-one) the binding is part of
+`tools/anatomy-graph-gen.py --check`, run by test_generated_files_hold.py;
+`tools/regenerate.py` re-freezes. What stays here: both files exist, and the
+pin is written the way the face lane's prettier will check it.
 """
 
 from __future__ import annotations
 
-import hashlib
-import json
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
@@ -34,42 +26,11 @@ FACE = REPO / "files" / "anatomy" / "face" / "src" / "lib" / "anatomy"
 PIN = FACE / "graphLayout.force.pin.json"
 GRAPH = FACE / "anatomy-graph.json"
 
-REMEDY = (
-    "anatomy-graph.json changed since the layout pin was frozen. Re-freeze "
-    "deliberately: (1) cd files/anatomy/face && FACE_LAYOUT_REPIN=1 npx vitest "
-    "run src/lib/anatomy/graphLayout.test.ts (rewrites positions, graphSha256 "
-    "and pinnedAt); (2) npx prettier --write src/lib/anatomy/graphLayout.force.pin.json; "
-    "(3) run vitest again without FACE_LAYOUT_REPIN — it must pass — and read the "
-    "positions diff before committing."
-)
-
 
 def test_the_pin_and_the_graph_exist():
     """Positive control — a moved file must not read as a passing bind."""
     assert PIN.is_file(), f"pin missing at {PIN}"
     assert GRAPH.is_file(), f"graph missing at {GRAPH}"
-
-
-def test_the_pin_names_the_graph_it_froze():
-    pin = json.loads(PIN.read_text(encoding="utf-8"))
-    assert "graphSha256" in pin, (
-        "the pin does not record which graph it was frozen against; "
-        "without that binding a graph regen goes red only in the face lane, "
-        "days later. " + REMEDY
-    )
-    actual = hashlib.sha256(GRAPH.read_bytes()).hexdigest()
-    assert pin["graphSha256"] == actual, REMEDY
-
-
-def test_the_two_graph_copies_are_one_artifact():
-    """The gate hashes the face copy the test imports; this pins that the
-    state/ copy is the same bytes, so 'which copy' can never be a loophole
-    (tools/anatomy-graph-gen.py writes both in one call)."""
-    state_copy = REPO / "state" / "anatomy-graph.json"
-    assert state_copy.read_bytes() == GRAPH.read_bytes(), (
-        "state/anatomy-graph.json and the face vendored copy diverge — "
-        "run tools/anatomy-graph-gen.py"
-    )
 
 
 # ── and the file the pytest lane rewrites must survive the FACE lane ────────

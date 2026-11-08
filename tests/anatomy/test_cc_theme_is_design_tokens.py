@@ -40,13 +40,6 @@ def test_readme_pins_the_design_commit():
     assert re.search(r"commit `[0-9a-f]{7,}`", README.read_text())
 
 
-def test_theme_py_is_generated_from_the_vendored_tokens():
-    sync = _load(REPO / "tools/design-sync.py", "design_sync")
-    sha = re.search(r"commit `([0-9a-f]+)`", README.read_text())[1]
-    expected = sync.render_theme(json.loads(TOKENS.read_text()), sha)
-    assert THEME_PY.read_text() == expected, "tools/cc/theme.py is stale: run tools/design-sync.py"
-
-
 def test_theme_values_are_opaque_hex():
     theme = _load(THEME_PY, "cc_theme")
     for k, v in theme.VALUES.items():

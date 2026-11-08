@@ -15,8 +15,6 @@ from __future__ import annotations
 import importlib.util
 import json
 import pathlib
-import subprocess
-import sys
 
 import pytest
 import yaml
@@ -75,12 +73,6 @@ def test_every_body_node_resolves_to_an_anatomy_node():
         assert (e["from"], e["to"], e["kind"]) in real, f"edge not in the anatomy graph: {e}"
         for end in (e["from"], e["to"]):
             assert plan["nodes"][end]["level"] != "internal", f"edge touches internal {end}"
-
-
-def test_check_is_clean():
-    got = subprocess.run([sys.executable, str(GEN), "--check"], cwd=REPO,
-                         capture_output=True, text=True, timeout=60)
-    assert got.returncode == 0, got.stderr or got.stdout
 
 
 def test_the_map_holds_no_per_node_facts():

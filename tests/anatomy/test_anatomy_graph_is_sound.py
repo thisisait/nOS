@@ -73,31 +73,6 @@ def committed() -> dict:
 # ── meta-rule: regenerate-and-diff ────────────────────────────────────────
 
 
-def test_the_committed_graph_matches_a_fresh_build(gen, committed):
-    fresh = gen.render(gen.build())
-    assert fresh == GRAPH.read_text(encoding="utf-8"), (
-        "state/anatomy-graph.json is stale against the manifests — "
-        "run tools/anatomy-graph-gen.py (regenerate-and-diff, the estate's "
-        "fourth instance of this pattern)"
-    )
-
-
-def test_the_graph_is_byte_stable(gen):
-    """Two builds must agree exactly — a nondeterministic artifact churns
-    every commit and trains people to rubber-stamp its diffs."""
-    assert gen.render(gen.build()) == gen.render(gen.build())
-
-
-def test_the_face_vendored_copy_is_identical(committed):
-    """The face container's build context is files/anatomy/face/ ONLY
-    (roles/pazny.face synchronize), so the definition screen imports a
-    vendored copy. Two copies of one artifact are tolerable exactly as long
-    as a gate makes divergence impossible."""
-    face = REPO / "files/anatomy/face/src/lib/anatomy/anatomy-graph.json"
-    assert face.exists(), "the face vendored graph copy is missing"
-    assert face.read_text(encoding="utf-8") == GRAPH.read_text(encoding="utf-8")
-
-
 # ── refusal 1: dangling edge ──────────────────────────────────────────────
 
 

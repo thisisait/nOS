@@ -5,6 +5,8 @@ places that disagreed: Bone's MACHINE_WRITTEN dict (11 paths), .gitattributes
 (2) and the --check of each writer (run by hand). state/generated.yml is now
 the one registry; Bone reads it and this gate holds the rest to it. A
 hand-edited artifact goes red here through its writer's own --check.
+Since 2026-11-08 (gate-diet) it is the ONLY freshness gate; tools/regenerate.py
+is the one command that makes it green.
 """
 from __future__ import annotations
 
@@ -95,5 +97,5 @@ def test_the_artifact_is_what_its_writer_writes(argv):
     got = subprocess.run([sys.executable, *argv], cwd=REPO, capture_output=True,
                          text=True, timeout=600)
     assert got.returncode == 0, (
-        f"{' '.join(argv)} says the committed file is not what it writes — rerun the "
-        f"writer, never edit the file:\n{(got.stdout + got.stderr)[-1500:]}")
+        f"{' '.join(argv)} says the committed file is not what it writes — run "
+        f"tools/regenerate.py, never edit the file:\n{(got.stdout + got.stderr)[-1500:]}")

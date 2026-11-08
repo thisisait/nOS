@@ -9,7 +9,10 @@ tools/apex-sign.py's own digest(), so the two can never disagree on the formula.
 from __future__ import annotations
 
 import importlib.util
+import os
 from pathlib import Path
+
+import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 RULING = REPO / "files/anatomy/apex/ruling.yml"
@@ -30,6 +33,13 @@ def unsigned(path: Path) -> str | None:
             "then tools/apex-sign.py --confirm, then commit files/anatomy/apex/ruling.yml")
 
 
+# Release lane only (gate-diet, operator 2026-11-08): 38 re-sign commits in 30 days on dev, no
+# catch. An unsigned ruling is fail-closed (apex serving is signature-gated); a PR to master
+# or NOS_RELEASE_GATE=1 runs it.
+RELEASE = os.environ.get("GITHUB_BASE_REF") == "master" or os.environ.get("NOS_RELEASE_GATE") == "1"
+
+
+@pytest.mark.skipif(not RELEASE, reason="release lane: a PR to master or NOS_RELEASE_GATE=1")
 def test_the_committed_ruling_is_signed():
     assert unsigned(RULING) is None, unsigned(RULING)
 

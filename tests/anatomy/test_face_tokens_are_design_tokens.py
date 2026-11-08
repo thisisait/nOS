@@ -42,13 +42,6 @@ def _root(css: str) -> str:
     return m[1] if m else ""
 
 
-def test_tokens_css_is_what_design_sync_writes():
-    sha = re.search(r"commit `([0-9a-f]+)`", (DESIGN / "README.md").read_text())[1]
-    expected = _sync().render_face_css(json.loads((DESIGN / "tokens.json").read_text()),
-                                       (DESIGN / "components.css").read_text(), sha)
-    assert TOKENS_CSS.read_text() == expected, "face tokens.css is stale: run tools/design-sync.py"
-
-
 def test_every_face_colour_equals_its_glass_face_token():
     colours = {c["name"]: c["value"][THEME] for c in json.loads((DESIGN / "tokens.json").read_text())["color"]["tokens"]}
     gen = _generated()
