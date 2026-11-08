@@ -15,8 +15,8 @@ const wingQuestion = {
 	options_json: '["yes","no"]',
 	severity: 'high',
 	status: 'open',
-	reply_token: 'plaintext-token',
-	reply_token_sha: 'sha-of-the-token',
+	reply_token: 'FAKE_plaintext_token',
+	reply_token_sha: 'FAKE_sha_of_the_token',
 	expires_at: '2099-01-01T00:00:00Z',
 	default_on_expiry: 'no',
 	created_at: '2026-11-08 08:00:00'
@@ -37,7 +37,7 @@ describe('the face inbox projection', () => {
 			onExpiry: 'no'
 		});
 		const wire = JSON.stringify(projectQuestions([wingQuestion]));
-		for (const leak of ['plaintext-token', 'sha-of-the-token', 'secret', 's1'])
+		for (const leak of ['FAKE_plaintext_token', 'FAKE_sha_of_the_token', 'secret', 's1'])
 			expect(wire).not.toContain(leak);
 	});
 
