@@ -22,8 +22,9 @@
 # tests/anatomy/test_wing_ingests_the_registry_this_run_wrote.py
 - name: "[Service Registry] Wing ingests the registry into its systems table"
   ansible.builtin.command:
-    cmd: "{{ wing_php_cli }} bin/ingest-registry.php --registry={{ openclaw_projects_dir | default(ansible_facts['env']['HOME'] + '/projects') }}/default/service-registry.json"
-    chdir: "{{ wing_app_dir }}"
+    # No chdir: the module enters chdir BEFORE checking removes, so a host
+    # without ~/wing/app failed here instead of skipping (master CI, macOS).
+    cmd: "{{ wing_php_cli }} {{ wing_app_dir }}/bin/ingest-registry.php --registry={{ openclaw_projects_dir | default(ansible_facts['env']['HOME'] + '/projects') }}/default/service-registry.json"
     removes: "{{ wing_data_dir }}/wing.db"   # no Wing DB yet: nothing to ingest into
   register: _wing_ingest
   # digest-changed compares the table before/after (App\Model\TableDigest).
