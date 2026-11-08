@@ -23,6 +23,9 @@ use App\Model\AuditChainRepository;
  */
 final class AuditPresenter extends BaseApiPresenter
 {
+    /** The face Anatomy Wing view shows the verdict to a Tier-1 person (row wing-inc2-agents-timeline). */
+    protected array $bffOperatorReads = ['verify'];
+
     public function __construct(private AuditChainRepository $audit)
     {
     }

@@ -61,6 +61,9 @@ final class AgentsPresenter extends BaseApiPresenter
 
 	protected array $bffActions = ['sessions'];
 
+	/** The face Agents app lists the roster as a Tier-1 person (row wing-inc2-agents-timeline, 2026-11-08). */
+	protected array $bffOperatorReads = ['default'];
+
 	/** Iris's start_agent: POST sessions as the person who approved it (face-wing.yml, wire). */
 	protected array $thalamusActions = ['sessions'];
 

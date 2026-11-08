@@ -31,7 +31,9 @@ final class AgentSessionsPresenter extends BaseApiPresenter
 	/** The newest *_report body a read carries, in bytes: what Iris hears of a run it started. */
 	public const REPORT_CAP = 4096;
 
-	protected array $bffActions = ['default'];
+	/** cancel too (operator 2026-11-08): actionCancel's scope() lets Tier 1 stop any run and a
+	 *  tier 2-4 person only their own; not $operatorActions, which would refuse the thalamus. */
+	protected array $bffActions = ['default', 'cancel'];
 
 	protected array $thalamusActions = ['cancel'];
 

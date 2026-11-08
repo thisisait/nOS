@@ -15,8 +15,8 @@ pub fn answer(db: &Path, path: &str, header: &dyn Fn(&str) -> Option<String>) ->
 fn serve(db: &Path, header: &dyn Fn(&str) -> Option<String>) -> rusqlite::Result<(u16, Value)> {
     let db = Connection::open_with_flags(db, OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX)?;
     db.busy_timeout(Duration::from_secs(5))?;
-    // AuditPresenter declares no $bffOperatorReads: face-bff does not reach it.
-    if let Err(refused) = auth(&db, "verify", &[], header)? {
+    // Api\AuditPresenter $bffOperatorReads = ['verify'] (face Anatomy Wing view, 2026-11-08).
+    if let Err(refused) = auth(&db, "verify", &["verify"], header)? {
         return Ok(refused);
     }
     Ok(match std::env::var("MEDULLA_AUDIT_CHAIN").as_deref() {

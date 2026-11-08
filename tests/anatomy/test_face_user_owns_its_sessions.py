@@ -197,3 +197,23 @@ def test_the_bff_bearer_reaches_nothing_else(tmp_path):
     ])
     assert catalog["code"] == 403
     assert no_uid["code"] == 401
+
+
+@needs_php
+@needs_vendor
+def test_the_face_agents_app_reaches_the_roster_and_cancel(tmp_path):
+    """Row wing-inc2-agents-timeline (operator 2026-11-08): Tier 1 lists the roster; anyone may
+    cancel their own run and Tier 1 any run, through actionCancel's scope(). Reaching it was a
+    403 "does not reach" before; now a run that is not yours answers like an absent one."""
+    def cancel(uuid: str, **who) -> dict:
+        return {"presenter": "AgentSessions", "method": "POST", "params": {"action": "cancel", "uuid": uuid}, **who}
+    roster, others, own, admin = _run(tmp_path, [
+        {"presenter": "Agents", "method": "GET", "params": {"action": "default"}, **_bff(groups="nos-users,nos-admins")},
+        cancel("b1", **_bff()),
+        cancel("a1", **_bff()),
+        cancel("b1", **_bff(groups="nos-users,nos-admins")),
+    ])
+    assert roster["code"] == 200 and {a["name"] for a in roster["body"]["data"]} >= {"helper", "ops-triage"}, roster
+    assert others["code"] == 404, f"a tier-3 person cancelled someone else's run: {others}"
+    # The fixture's runs are idle: reaching the verb answers 409 (not running), never 403.
+    assert own["code"] == 409 and admin["code"] == 409, (own, admin)
