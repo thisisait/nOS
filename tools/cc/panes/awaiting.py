@@ -24,6 +24,7 @@ def detail(row, data):
     out["act"] = {
         "signature": "tools/apex-sign.py  (then --confirm)",
         "question": "answer in Wing /inbox",
+        "approval": "the person decides it in Iris (face, nOS.app or the terminal)",
         "proposal": "nos-loop history; landing is deliberate",
         "inbox": "Wing /inbox",
     }.get(row.get("kind"), "—")

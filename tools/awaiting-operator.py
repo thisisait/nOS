@@ -17,6 +17,7 @@ to certify its own action.
 Sources, and where each one is READ from rather than inferred:
 
   * `agent_questions`   — an agent stopped and asked (`AskOperatorTool`).
+  * Iris approval cards — asked in the thalamus ledger, never decided.
   * `notifications`     — unread CRITICAL/HIGH in the Wing inbox.
   * loop proposals      — judged and never landed; delegated to
                           `tools/loop-status.py::awaiting()` rather than
@@ -51,7 +52,7 @@ WING_DB = pathlib.Path.home() / "wing" / "app" / "data" / "wing.db"
 RULING = REPO / "files/anatomy/apex/ruling.yml"
 
 #: Rank. The operator reads top-down and stops when they run out of evening.
-URGENCY = {"question": 0, "signature": 1, "inbox": 2, "proposal": 3}
+URGENCY = {"question": 0, "approval": 0, "signature": 1, "inbox": 2, "proposal": 3}
 
 
 def _now() -> datetime:
@@ -128,6 +129,50 @@ def inbox(conn: sqlite3.Connection) -> list[dict]:
         "where": f"/inbox — {r['uuid'][:8]}",
         "note": None,
     } for r in rows]
+
+
+#: An Iris card asked and never decided, in a session the thalamus can still resume
+#: (ledger.rs resume/open_approvals): the turn waits for that person's click.
+IRIS_OPEN = """
+SELECT r.run_id, s.actor_id, r.ts, json_extract(r.result_json, '$.approval') AS approval,
+       COALESCE(substr(r.task, instr(r.task, '/tool:') + 6), '') AS tool
+  FROM events r JOIN sessions s ON s.uuid = r.run_id
+ WHERE r.type = 'agent_approval_request'
+   AND (s.ended_at IS NULL OR s.stop_reason IN ('connection_closed', 'switched'))
+   AND NOT EXISTS (SELECT 1 FROM events d WHERE d.run_id = r.run_id AND d.type = 'agent_approval_decision'
+                   AND json_extract(d.result_json, '$.approval') = json_extract(r.result_json, '$.approval'))
+ ORDER BY r.id"""
+
+
+def iris_approvals() -> tuple[list[dict] | None, str]:
+    """Open Iris cards from the thalamus ledger. Until 2026-11-08 this reader read
+    wing.db only, so a card waiting in ledger.db was in nobody's list."""
+    spec = importlib.util.spec_from_file_location("_thalamus_status", REPO / "tools" / "thalamus-status.py")
+    try:
+        th = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(th)
+        db, why = th.locate_ledger()
+    except Exception as exc:  # noqa: BLE001 — cannot ask is one answer
+        return None, f"tools/thalamus-status.py could not load ({type(exc).__name__})"
+    if db is None:
+        return ([], "") if not why else (None, why)
+    conn, how = th._open_ro(db)
+    if conn is None:
+        return None, f"{db} — {how}"
+    try:
+        rows = conn.execute(IRIS_OPEN).fetchall()
+    except sqlite3.Error as exc:
+        return None, f"{db} — unreadable: {exc}"
+    finally:
+        conn.close()
+    return [{
+        "kind": "approval",
+        "what": f"Iris asks {r['actor_id']} to approve {r['tool'] or 'a tool call'}",
+        "severity": "high",
+        "age": _age(r["ts"]),
+        "where": f"Iris — session {r['run_id'][:8]}, card {(r['approval'] or '')[:8]}",
+        "note": None,
+    } for r in rows], ""
 
 
 def proposals() -> list[dict] | None:
@@ -212,6 +257,12 @@ def collect() -> dict:
             items += questions(conn)
             items += inbox(conn)
         conn.close()
+
+    a, why = iris_approvals()
+    if a is None:
+        unknown.append(f"thalamus ledger — {why}; open Iris approvals are UNKNOWN")
+    else:
+        items += a
 
     p = proposals()
     if p is None:

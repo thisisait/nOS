@@ -111,6 +111,19 @@ def ledger_from_argv(argv: list, where: str) -> tuple[pathlib.Path | None, str]:
     return None, f"{where} passes no --data-dir"
 
 
+def locate_ledger() -> tuple[pathlib.Path | None, str]:
+    """The ledger this host's thalamus opens, for other readers. (None, "") = no thalamus is
+    deployed here (absent, not unknown); (None, why) = deployed but its --data-dir unreadable."""
+    if os.environ.get("NOS_THALAMUS_LEDGER"):
+        return pathlib.Path(os.environ["NOS_THALAMUS_LEDGER"]), ""
+    if nos_host.SYSTEM == "Linux":
+        if not (HOME / ".config/systemd/user" / f"{LABEL}.service").exists():
+            return None, ""
+        d = nos_host.service_definition(LABEL)
+        return ledger_from_argv(d["argv"], "unit ExecStart") if d else (None, "unit unreadable")
+    return ledger_path(PLIST) if PLIST.exists() else (None, "")
+
+
 def judge_ledger(db: pathlib.Path) -> list[dict]:
     con, how = _open_ro(db)
     if con is None:
