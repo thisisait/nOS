@@ -93,6 +93,7 @@ def _load(name: str, path: pathlib.Path):
 
 GEN = _load("gen_invoice_images", REPO / "tools" / "gen-invoice-images.py")
 BENCH = _load("vision_bench", REPO / "tools" / "loops" / "vision-bench.py")
+INTAKE = _load("invoice_vision_intake", REPO / "tools" / "invoice-vision-intake.py")
 
 #: Every document the fixture can render, and every way it can be carried.
 DOCS = sorted(p.name[: -len(".image.txt")] for p in FIXTURE.glob("*.image.txt"))
@@ -205,11 +206,11 @@ def sweep_and_verify(intake: pathlib.Path, image: pathlib.Path, truth: dict) -> 
     shutil.copy2(image, intake / "incoming" / image.name)
     sw = _run([PY, str(REPO / "tools" / "invoice-vision-intake.py"), "--intake", str(intake)])
     said = ((sw.stderr or "") + (sw.stdout or "")).strip()[-300:]
-    # rc=1 is the sweep's NORMAL outcome — "held for operator verify", the
-    # Pulse finding it exists to raise. Only rc>=2 means it could not read the
-    # estate (KEAP down or too slow, ollama unarmed), which is an environment
-    # answer and not a verdict on the pipeline: the two must not share a bucket.
-    if sw.returncode >= 2:
+    # EXIT_FINDINGS is the sweep's NORMAL outcome — "held for operator verify",
+    # the Pulse finding it exists to raise. Anything else non-zero means it
+    # could not read the estate (KEAP down, ollama unarmed) or crashed: an
+    # environment answer, not a verdict on the pipeline.
+    if sw.returncode not in (0, INTAKE.EXIT_FINDINGS):
         return {"stage": "sweep", "ok": False, "env": True,
                 "detail": said or f"exit {sw.returncode}, and it said nothing"}
 
@@ -325,6 +326,8 @@ def cycle(n: int, plan: dict) -> dict:
         if not vr.get("ok"):
             rec.update(ok=False, stage=vr.get("stage"), detail=vr.get("detail"),
                        env=bool(vr.get("env")))
+            if vr.get("queue_slug"):  # a failed verify still leaves our queue row
+                rec["teardown"] = teardown([], tmp, vr["queue_slug"])
             return rec
         # What the books held BEFORE this cycle. Only the difference is ours to
         # remove — the fixture documents are seeded rows, and a cycle that

@@ -194,3 +194,16 @@ def test_a_cycle_that_could_not_run_is_not_coverage(monkeypatch, tmp_path):
         "n": n, **plan, "ok": False, "env": True, "detail": "KEAP refused"})
     assert LOOP.main(["--cycles", "1", "--doc", LOOP.DOCS[0], "--degrade", "clean"]) == 2
     assert LOOP.load_coverage().get(f"{LOOP.DOCS[0]}|clean", 0) == 0
+
+
+def test_a_held_sweep_is_not_could_not_run(monkeypatch, tmp_path):
+    """The intake says "held for verify" with its EXIT_FINDINGS (10 since
+    0d0b8968); reading that as rc>=2 made every night 0/4 COULD NOT RUN."""
+    class Sw:
+        returncode = LOOP.INTAKE.EXIT_FINDINGS
+        stdout = stderr = ""
+    monkeypatch.setattr(LOOP, "_run", lambda *a, **k: Sw())
+    image = tmp_path / "x.jpg"
+    image.write_bytes(b"")
+    vr = LOOP.sweep_and_verify(tmp_path / "intake", image, {})
+    assert not vr.get("env"), vr
