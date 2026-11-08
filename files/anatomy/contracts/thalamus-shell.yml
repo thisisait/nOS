@@ -14,11 +14,10 @@ consumer:
   organ: thalamus   # the shell is the same binary's default mode
   code:
     - files/anatomy/thalamus/contract/examples/wire_fixture.rs
-    - files/anatomy/pupil/src-tauri/src/bridge.rs        # the pupil (desktop window) decodes with the same crate
     - files/anatomy/face/src/lib/iris/fixture.test.ts     # and draws every fixture component
 gates:
   both: tests/anatomy/test_thalamus_shell_contract.py   # decodes, re-encodes and refuses the fixture
-  pupil: tests/anatomy/test_pupil_renders_the_fixture.py
+  face: tests/anatomy/test_iris_renders_the_fixture.py
 
 # ── 1. The wire ─────────────────────────────────────────────────────────────
 wire:
@@ -27,10 +26,10 @@ wire:
   to_thalamus: [turn, approval_decision, control, widget, form_submit, choice_reply, working_for, model_options, model_pick, resume, workspace_load, workspace_save, catalogue, limbs, acted, clear, branch, stop, state, halt, lift_halt, setting, questions, answer, approvals_open]
   to_shell: [session, text, render, approval_request, refused, activity, widget, form_result, table_changed, working_for, model_options, said, replay, workspace, catalogue, act, model_state, state, questions, answer_result, approvals_open]
   widget: >-
-    A widget is a spec the person placed; the pupil re-runs it over `widget {widget, spec, trigger}`
+    A widget is a spec the person placed; the face Iris re-runs it over `widget {widget, spec, trigger}`
     and the thalamus answers as that person, without the model, with `widget {session, widget,
     component}` (table_results, a chart that may have no points yet, a form or a kpi) or `refused
-    {reason, widget}`. `widget` is the pupil's token [A-Za-z0-9_-]{1,64}, echoed, never a thalamus
+    {reason, widget}`. `widget` is the face Iris's token [A-Za-z0-9_-]{1,64}, echoed, never a thalamus
     id. spec is exactly one of {rows: query_rows arguments}, {chart: {query {table, q?, where?},
     chart bar|line|pie, x column, y? number column, op count|sum|avg}} (aggregated by the thalamus:
     category x largest first, 59 and "other" past 60; date x by UTC day, the last 60; number x
@@ -48,7 +47,7 @@ wire:
     chart carries {chart: ...} only when the model named its source and the thalamus drew KEAP's
     aggregate in place of the model's numbers; a knowledge_tree render carries {knowledge: {node: its focus}}; a kpi render always carries {kpi: ...} (one without it, or
     with another spec, is refused: its number is the thalamus's). The model never adds a widget; the person's click
-    does, and the pupil stores the spec, never the rows. The terminal says "(pinnable in the pupil)".
+    does, and the face Iris stores the spec, never the rows. The terminal says "(pinnable in the face)".
   form_submit: >-
     `form_submit {form, widget, values}` submits a widget form the thalamus sent on this connection
     (form a uuid, widget its token, values {key: string|number|bool}). The submit is the person's
@@ -69,7 +68,7 @@ wire:
     write; a picked label is only a label.
   table_changed: >-
     `table_changed {session, table, row}` follows every write this connection approved (an insert
-    from a form or an approved row edit), so the pupil re-runs the widgets that read that table.
+    from a form or an approved row edit), so the face Iris re-runs the widgets that read that table.
   working_for: >-
     `working_for {scope}` is the person saying whom they work for in this session (the septum, D2):
     scope is all (no wall, as before one is said), personal, or {client: <a party's id, slug or name>},
@@ -100,7 +99,7 @@ wire:
     The person's workspace document is the thalamus's, per person (the peer's identity, never a field), in
     <data-dir>/people/<uid>/workspace.json (0600, written whole). `workspace_load` answers `workspace {doc}`,
     doc null when none is held; `workspace_save {doc}` replaces it with a JSON object of at most 512 KiB and
-    answers nothing, or `refused`. Neither opens a session. The pupil keeps its own file as an offline cache
+    answers nothing, or `refused`. Neither opens a session. The face Iris keeps its own file as an offline cache
     and moves it up once, when the thalamus holds none.
   replay: >-
     `resume`, asked before anything else on a connection, opens the person's last session closed by its
@@ -261,7 +260,7 @@ components:
       series share the same x; scatter is number or time x; pie is 1 series of values >= 0
     # delta added|removed|changed marks what an action would change (iris-genui-change-markers). A child of an
     # added or removed node is that too: check() refuses a child that says otherwise. Both shells say the mark
-    # as text (+ - ~), never as colour only; the pupil adds a "+N −M ~K" row and a Před / Změny / Po switch.
+    # as text (+ - ~), never as colour only; the face Iris adds a "+N −M ~K" row and a Před / Změny / Po switch.
     tree: "a hierarchy (show tool): {title?, nodes[{label, note?, delta?, children[]}]}; depth at most 4, at most 100 nodes; one root with 2-4 children is an org chart, otherwise a nested list"
     timeline: >-
       a history (show tool): {title?, items[{when, title, note?, hi?, until?, lane?}]}; at most 30; when every
@@ -277,7 +276,7 @@ components:
       who sends what to whom, in order (show tool): {title?, participants[], steps[{from, to, text, dashed?} |
       {note, over[]} | {phase}]}; 2-8 participants, unique, at most 40 chars; at most 40 steps; a message text at
       most 120 (from may equal to), a note at most 200 over 1-2 participants, a phase at most 60; from, to and over
-      name participants exactly. The pupil draws SVG lifelines (face/src/lib/iris/sequence/layout.ts widens a gap until its
+      name participants exactly. The face Iris draws SVG lifelines (face/src/lib/iris/sequence/layout.ts widens a gap until its
       labels fit), solid arrows, dashed replies, every word a text node; the terminal says "A -> B: text" (dashed
       "A --> B"), notes and phases as indented lines
     choice: >-
@@ -285,7 +284,7 @@ components:
       note?}], suggested[], multi}; question at most 15 words and 120 chars, 2-6 options, labels at most 60 chars
       and unique (case and spaces aside), a note at most 200, suggested names options: exactly 1, or 1 or more
       when multi. The model sends no id: the thalamus mints a uuid and a render carries it (a render without one
-      is refused), and an approval_request never carries a choice. The pupil draws native radios (checkboxes
+      is refused), and an approval_request never carries a choice. The face Iris draws native radios (checkboxes
       when multi) with the suggestion preselected and marked "navrženo", and sends choice_reply once on
       "Odpovědět"; the terminal numbers the options and answers with /choose 2 (or 1,3)
     # v12: four kinds whose names and prop shapes follow OpenUI's genui-lib (MIT; docs/systems/thalamus/genui-vocabulary.md).
@@ -303,14 +302,14 @@ components:
       that is not a row query_rows showed this person in this session, sets table to its id and name to its title (the
       model never sends name; a render without it is refused); a (table, row) once. No url, no file path
     follow_up: >-
-      next prompts the person may send (show tool): {prompts[] 1-4, each 1-200 chars, unique case aside}; the pupil puts a
+      next prompts the person may send (show tool): {prompts[] 1-4, each 1-200 chars, unique case aside}; the face Iris puts a
       clicked prompt in the composer and the person sends it as their own turn; the terminal lists them. Never an action
     knowledge_tree: >-
       the ontology around one node of our knowledge (read_node, or a knowledge widget; v10): {title?, focus, nodes[{id,
       name, parent?, child_count?, text?}], hidden}; ids [A-Za-z0-9._-]{1,128}, unique; focus names a node; a parent
       names a node of the tree (none: a top); at most 200 nodes (serve draws iris_knowledge_tree_max, default 50: the
       parent chain, the node, its children, then its siblings), a name 1-200 chars, a text at most 600 (the focus's
-      description head); hidden is how many the cap left out, said by both shells. Never in an approval. The pupil
+      description head); hidden is how many the cap left out, said by both shells. Never in an approval. The face Iris
       draws it as the graph's layered columns (parent -> child), the focus marked; a click on a node opens that node
       as a knowledge widget, read by the thalamus without the model; the terminal says one indented line a node
     dendrogram: >-
@@ -319,7 +318,7 @@ components:
       exactly one node has no parent and root names it; every parent is a node of the tree and no chain cycles; at most
       200 nodes (serve cuts the rest in order and hidden says how many), a name 1-200 chars, a note at most 600, started
       and ended are dates (ended not before started). Serve builds it from Wing's agent_sessions, threads, iterations
-      and events by actor_action_id; the model never writes it. Never in an approval. The pupil draws it as the graph's
+      and events by actor_action_id; the model never writes it. Never in an approval. The face Iris draws it as the graph's
       layered columns, status as tone (ok ok, running info, waiting warn, bad bad); the terminal says one indented line a node
     # Crosses the wire only inside a `widget` message: a render or approval_request carrying one is
     # refused (wire.rs not_a_form).
@@ -328,17 +327,17 @@ components:
       {form uuid, table, title (the KEAP table's), fields[{key, label, kind text|number|date|select|bool,
       required, options?, min?, max?, placeholder?, when? {key, op eq|neq, value}}], omitted[{key, kind}],
       prefill? {key: value}}; at most 20 fields, keys unique, never empty or __-prefixed, a select has 1-50
-      options, min <= max; `when` names another field and never sits on a required one (the pupil hides the
+      options, min <= max; `when` names another field and never sits on a required one (the face Iris hides the
       field while it fails and sends no value for it); prefill names fields only and is where the person's
       draft starts, never a value sent (KEAP's column def has no min/max, so serve sets none); a rowRef column is a select of
-      the parent rows' refDisplay labels (1-50, unique; else text, the parent's id) and the submit writes the picked row's id; the pupil draws its own header
+      the parent rows' refDisplay labels (1-50, unique; else text, the parent's id) and the submit writes the picked row's id; the face Iris draws its own header
       "Adds a row to <title> (<table>)" and button "Add row"; the terminal says the fields and
-      "fill it in the pupil"
+      "fill it in the face"
     kpi: >-
       one number serve computed from a table (show kind kpi, only with a source {query, op, y?}; or a kpi
       widget): {title, value, unit?, delta?, delta_label?, source?}; title 1-120 chars, unit at most 16, delta_label
       60, source 200 (what was totalled over which rows). The model never sends the number: serve drops its
-      value, delta and source and draws query_rows' total. Never in an approval. The pupil draws the value as one
+      value, delta and source and draws query_rows' total. Never in an approval. The face Iris draws the value as one
       big text node in the shell locale (unit after it, CZK when no unit and the title names money) and delta
       as an arrow and a sign (↑ +320, ↓ −3.5) with its word for a screen reader; the terminal says
       "<title>: <value> <unit>", "up|down <|delta|> <label>" and "from <source>"
@@ -353,10 +352,10 @@ components:
       WidgetSpec of wire.widget and passes check_spec, an empty lens value is unset; kind and options are the
       column's, for the person's lens input (a rowRef's: its parent labels, as a form's; a where names a label
       and serve reads it as that parent's id). serve validated each widget against the live schema as the
-      person (no row read but a rowRef's parents) and moved the ones that failed to dropped with why, always present. The pupil draws it
+      person (no row read but a rowRef's parents) and moved the ones that failed to dropped with why, always present. The face Iris draws it
       with "Place on a new board": the click makes a board inside the open one with that lens and runs each widget once (trigger
       click); the lens joins every rows, chart and kpi widget's where at send time, a form takes its eq values
-      as prefill; the terminal says it and "place it in the pupil"
+      as prefill; the terminal says it and "place it in the face"
 
 # ── 3. The three invariants (ssot/doctrine/cross-repo-contracts.md §4) ──────
 invariants:

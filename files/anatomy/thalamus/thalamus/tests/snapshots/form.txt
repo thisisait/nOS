@@ -1,4 +1,4 @@
-form Expenses (table expenses): fill it in the pupil
+form Expenses (table expenses): fill it in the face
   When (date)
   Kind (select, required, options food|travel|tools)
   Amount (number, required)

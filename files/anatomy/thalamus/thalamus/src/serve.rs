@@ -2303,8 +2303,8 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         }
         o.choices.remove(choice);
         let quoted = |v: &[String]| v.iter().map(|l| json!(l).to_string()).collect::<Vec<_>>().join(", ");
-        // Equal is not agreement, nor proof it was left alone: only the pupil preselects.
-        let kept = if same { "; that is your suggestion, which the pupil preselects, so it may have been left as it was" } else { "" };
+        // Equal is not agreement, nor proof it was left alone: only the face preselects.
+        let kept = if same { "; that is your suggestion, which the face preselects, so it may have been left as it was" } else { "" };
         o.messages.push(json!({"role": "user", "content": format!("[thalamus] choice {choice}: picked {}{kept}", quoted(picked))}));
         true
     }

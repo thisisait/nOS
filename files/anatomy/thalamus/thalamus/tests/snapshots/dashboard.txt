@@ -1,4 +1,4 @@
-dashboard Bench board: 3 widgets, place it in the pupil
+dashboard Bench board: 3 widgets, place it in the face
   lens: track = platform; due < (unset)
   rows: Next rows (table iris-bench-2)
   chart: Points by track (bar, sum of points by track, table iris-bench-2)

@@ -86,23 +86,23 @@ the same newline-JSON wire:
   reads it back, and the new columns take values at once.
 - `show{component}`: draws one component of `SHOW_KINDS` (serve.rs; among them
   `chart` in six kinds over a category, number or time axis, `timeline`, `graph`;
-  inline SVG in the pupil, values as text in the terminal) the model builds. Unknown fields and over-cap components are refused (`Component::check`,
+  inline SVG in the face Iris, values as text in the terminal) the model builds. Unknown fields and over-cap components are refused (`Component::check`,
   also in every shell's decoder) and only the model hears why. It can never draw
   an approval or a kind a tool or a control draws. A `kpi` (one number on a tile) is
   drawn only with `source {query, op, y?}`: serve computes the total, drops any number
   the model sent, and pins `{kpi}` so the tile re-runs. Each kind carries one
   sentence saying when to use it (`SHOW_ABOUT`, told beside its shape). A `sources`
   item must be a row query_rows showed this session; serve names it, or refuses it.
-  A `follow_up` prompt clicked in the pupil lands in the composer, never sent for the
+  A `follow_up` prompt clicked in the face Iris lands in the composer, never sent for the
   person. Vocabulary inventory against OpenUI: [genui-vocabulary.md](genui-vocabulary.md). A rows widget exports the rows
-  it shows as CSV (pupil `csv.ts`, formula cells apostrophed) to a new file in Downloads.
+  it shows as CSV (face Iris `csv.ts`, formula cells apostrophed) to a new file in Downloads.
 
 The shell raises three views without the model: F2 inbox, F3 approvals
 (`tools/awaiting-operator.py`), F4 red status (`tools/red-status.py`).
 
 ## Whom the person works for (the septum)
 
-`/for <client>`, `/for personal` or `/for all` (terminal and pupil composer) sends
+`/for <client>`, `/for personal` or `/for all` (terminal and face composer) sends
 `working_for`. serve resolves the client against the party rows of role `client`
 (an unknown one is refused, naming the clients), reads each table def's
 `client_scope` from `state/keap-tables` (`src/septum.rs`, the vocabulary of
@@ -121,13 +121,13 @@ its hit does not say whose), so it is dropped and the result says "hidden by sco
 on personal data nothing is dropped (KEAP 2.1.0 search returns no DataTable rows).
 `inbox` for a client reads no captures and names them as refused ("personal");
 the moderation queue (proposed promotions) is still shown.
-serve holds the wall per connection; the pupil says it again on a reconnect and re-runs
+serve holds the wall per connection; the face Iris says it again on a reconnect and re-runs
 its widgets when it changes. Not yet covered: rowRef selects in forms (they list every
 parent row), and an insert_many's lines (only the parent row is walked).
 
 ## Widgets and forms
 
-A widget is a spec the pupil stores in its workspace layout
+A widget is a spec the face Iris stores in its workspace layout
 (`files/anatomy/contracts/workspace-layout.yml`) and re-runs as the person over a
 `widget` message, without the model: `rows` (a `query_rows`), `chart` (serve
 groups and sums, counts or averages one column server side) or `form` (built by
@@ -140,22 +140,22 @@ ledger gets the request (`op: insert`), the decision and the result, each with
 the peer's `{pid, exe}`; `commit()` does the one
 POST, and the shell gets `form_result` and `table_changed`.
 
-Who may decide: `thalamus_decider_exes` (role default `[]`, off: the peer is only
-recorded). When the operator sets it in `config.yml` — recommended
-`[thalamus_pupil_exe, thalamus_bin]`, the pupil and the y/n terminal shell — serve
+Who may decide: `thalamus_decider_exes` (macOS default: the y/n terminal shell, the medulla
+and nOS.app; Linux `[]`, the peer only recorded; the face Iris retired 2026-11-08). The face relay
+decides as the person (its authenticated hello). With the list set, serve
 refuses a `form_submit`, `approval_decision` or `choice_reply` sent by any other
 executable, or one it cannot name. The sender is read per line (macOS `LOCAL_PEERPID`,
 the last process to use the socket) and its kernel path is compared to the
 canonicalized entries; on Linux a set list refuses every decision, so there only the face relay decides
 (ruled 2026-11-08; `tools/thalamus-status.py` line `deciders` says who may decide). The refusal is said, recorded
-with the peer and reason, and the approval, form or choice stays open. The pupil then
+with the peer and reason, and the approval, form or choice stays open. The face Iris then
 re-runs the widgets on the active tab that read that table; the rest go stale
 until their tab is shown. The whole path runs offline in
 `tests/anatomy/test_genui_workspace_poc.py` over `state/fixtures/genui-workspace-poc/`.
 
 With the list set, a client not on it (`tools/iris-bench.py`, any python socket client)
 gets a `refused` for its decision and no `idle`. A mis-set list admits nobody, so the role refuses it at render (a string, an empty,
-relative or `:` entry, or a path that names no file once the pupil is built) and serve warns
+relative or `:` entry, or a path that names no file once the medulla and nOS.app are built) and serve warns
 at start (`serve::deciders`).
 
 The emergency halt (`halt`, `lift_halt`, wire v14; `medulla halt|resume`) is stricter: it
@@ -190,10 +190,10 @@ the Face window, where the card is decided. Gate: `files/anatomy/thalamus/thalam
 What path identity cannot stop: anything that runs code inside a listed binary. Both are
 signed with the local identity but without the hardened runtime (`codesign --options
 runtime`), so `DYLD_INSERT_LIBRARIES` or a debugger attach by the same user still decides
-as the pupil, and so does whoever can replace the file at a listed path. The list stops
+as nOS.app, and so does whoever can replace the file at a listed path. The list stops
 another program from sending a decision; it is not a defence against code running as you.
 Turning the hardened runtime on is an open operator decision (it must be tried live against
-the pupil's webview first).
+nOS.app's webview first).
 
 ## The model
 
@@ -219,7 +219,7 @@ The system prompt starts with the imprint: `IMPRINT.md` for a cloud row,
 are refused and the log says which file. The reader's model line shows why a
 model is unbound.
 
-The person may pick another model for the session (W5): the pupil's header select or
+The person may pick another model for the session (W5): the face Iris's header select or
 `/model` in the terminal sends `model_options`; serve offers every `backends_allowed` row
 that is armed and passes the binding gates and `gdpr_posture` (a non-EU row only under
 `none`), a local row once per model ollama has pulled (`GET /v1/models`) over the floor

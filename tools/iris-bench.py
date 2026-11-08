@@ -7,7 +7,7 @@ lines that come back are the whole evidence. A turn ends on activity `idle`
 (serve sends one after every turn, however it ended, and one after a decision);
 a decision serve refuses (thalamus_decider_exes set) ends on `refused` instead.
 
-It only reads. Every approval_request is rejected with the decision the pupil
+It only reads. Every approval_request is rejected with the decision the face Iris
 sends for reject, so nothing is written; it never sends form_submit or widget,
 and it never writes a roadmap row. A live run needs NOS_LIVE=1; `--offline`
 with an explicit `--sock` is the test path (a fake thalamus).
@@ -156,7 +156,7 @@ def run_case(case: dict, sock: str, timeout: float) -> dict:
                     got["approvals"].append(m.get("approval"))
                     got["cards"].append((m.get("component") or {}).get("props", {}))
                     got["card_kinds"].append((m.get("component") or {}).get("kind"))
-                    # The decision the pupil sends for reject (approvals.ts); serve answers it with text + idle.
+                    # The decision the face Iris sends for reject (approvals.ts); serve answers it with text + idle.
                     f.write(json.dumps({"t": "approval_decision", "approval": m.get("approval"),
                                         "decision": "reject", "note": None}) + "\n")
                     f.flush()

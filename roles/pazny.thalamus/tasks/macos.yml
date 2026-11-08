@@ -49,11 +49,19 @@
 - name: "[pazny.thalamus] Flush handlers (apply a pending restart now)"
   ansible.builtin.meta: flush_handlers
 
-# Static, so --tags thalamus reaches it; signs with the identity minted above. After the daemon
-# serves, so a failed pupil build (npm, tauri) never holds back the plist or the bootstrap.
-- ansible.builtin.import_tasks: pupil.yml
+# The pupil retired 2026-11-08 (row pupil-retire): nOS.app holds the same face Iris and the native
+# verbs. What a converge before that left on the host goes, so no stale app still looks like Iris.
+- name: "[pazny.thalamus] Remove the retired pupil (Iris.app, its build dir and hashes)"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ ansible_facts['env']['HOME'] }}/Applications/Iris.app"
+    - "{{ thalamus_home }}/pupil-target"
+    - "{{ thalamus_home }}/bin/nos-pupil.sha256"
+    - "{{ thalamus_home }}/bin/nos-pupil.source-sha256"
 
-# After pupil.yml built nos-pupil: a listed path that names no file admits nobody, silently.
+# A listed path that names no file admits nobody, silently.
 - name: "[pazny.thalamus] Each listed decider exists"
   ansible.builtin.stat:
     path: "{{ item }}"
@@ -67,7 +75,7 @@
       thalamus_decider_exes names no file:
       {{ _thalamus_deciders.results | rejectattr('stat.exists') | map(attribute='item') | join(', ') }};
       it would admit nobody (src/serve.rs decider_refusal).
-  when: not ansible_check_mode  # --check builds no pupil
+  when: not ansible_check_mode  # --check builds no medulla or nOS.app
 
 # The effect, read by the reader: socket 0600, job loaded, ledger readable. Any line not OK fails,
 # except the model line: serving without one warns (ruling 2026-10-12) — the reader still says UNKNOWN.

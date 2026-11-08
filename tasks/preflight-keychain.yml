@@ -1,6 +1,6 @@
 ---
 # The keychain's "codesign wants to use the key" dialog stopped a converge about two thirds in
-# (pazny.medulla signs medulla + nOS.app, pazny.thalamus the pupil). Sign a throwaway with the same
+# (pazny.medulla signs medulla + nOS.app). Sign a throwaway with the same
 # identity here so the dialog comes at the start. Never fails: a refusal keeps the later
 # errSecInternalComponent message. Gate: tests/anatomy/test_keychain_preflight_order.py.
 - name: "[Preflight] Find the nOS signing identity in the login keychain"

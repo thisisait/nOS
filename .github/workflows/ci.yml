@@ -177,22 +177,18 @@ jobs:
       - name: Install the wing vendor tree.
         run: composer install --no-progress --no-interaction --no-scripts -d files/anatomy/wing
 
-      # tests/anatomy/test_pupil_renders_the_fixture.py runs the pupil's vitest over
-      # the thalamus-shell fixture; without node_modules it is red, not skipped.
+      # tests/anatomy/test_iris_renders_the_fixture.py runs Iris's vitest over the
+      # thalamus-shell fixture; without node_modules it is red, not skipped.
       - name: Set up Node.
         uses: actions/setup-node@v7
         with:
           node-version: '24'   # = node_nvm_version major (test_ci_node_is_the_host_node)
           cache: npm
-          cache-dependency-path: files/anatomy/pupil/package-lock.json
+          cache-dependency-path: files/anatomy/face/package-lock.json
 
-      # --ignore-scripts: no package's install script runs on the runner (esbuild's
-      # binary arrives as an optional dep); pinned by test_pupil_runtime_deps_are_the_allow_list.py.
-      - name: Install the pupil's JS lane.
-        run: npm ci --ignore-scripts --prefix files/anatomy/pupil
-
-      # Iris's components and their vitest live in face/src/lib/iris (the pupil borrows them);
-      # test_pupil_approvals_hold, _eye_reads_the_wire and _renders_the_fixture run them there.
+      # Iris's components and their vitest live in face/src/lib/iris (the pupil retired 2026-11-08);
+      # test_iris_approvals_hold, _eye_reads_the_wire and _renders_the_fixture run them there.
+      # --ignore-scripts: no package's install script runs on the runner.
       - name: Install the face's JS lane.
         run: npm ci --ignore-scripts --prefix files/anatomy/face
 

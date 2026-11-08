@@ -10,7 +10,7 @@ import { env } from '$env/dynamic/private';
 import type { Identity } from '$lib/contracts';
 import type { Link } from '$lib/iris/wire';
 
-/** One line's cap, as the pupil's bridge (bridge.rs MAX_LINE). */
+/** One line's cap, as the thalamus relay reads it (1 MiB). */
 export const MAX_LINE = 1 << 20;
 /** Open Iris tabs per person; the thalamus keeps only the newest anyway (relay.rs take_over). */
 export const MAX_TABS = 4;

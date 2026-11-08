@@ -243,7 +243,7 @@ fn an_empty_chart_says_no_rows_yet() {
     assert_eq!(lines, ["bar chart: 1 series over category x, not drawn here", "  rows: (no rows yet)"]);
 }
 
-/// A widget form is filled in the pupil; the terminal says what it asks and nothing more.
+/// A widget form is filled in the face; the terminal says what it asks and nothing more.
 #[test]
 fn a_form_is_said_as_its_fields_and_filled_in_the_pupil() {
     let c: nos_contract::renderers::Component = serde_json::from_str(r#"{"kind":"form","props":{
@@ -267,7 +267,7 @@ fn a_widget_is_said_under_its_token() {
         }
     }
     let said: String = app.lines.iter().map(|l| format!("{l}\n")).collect();
-    for want in ["widget w4:", "form Expenses (table expenses): fill it in the pupil", "widget w5:", "  count: (no rows yet)",
+    for want in ["widget w4:", "form Expenses (table expenses): fill it in the face", "widget w5:", "  count: (no rows yet)",
                  "widget w-expenses_1:", "refused (widget w2): no column `kinds` in Expenses"] {
         assert!(said.contains(want), "{want:?} not in:\n{said}");
     }
@@ -292,7 +292,7 @@ fn an_offered_dashboard_is_said_and_placed_in_the_pupil() {
     let (_, m) = fixture().into_iter().find(|(case, _)| case == "Iris offers a dashboard").expect("the fixture's dashboard");
     let ToShell::Render { component, .. } = m else { panic!("the dashboard sample no longer decodes: {m:?}") };
     let said: String = shell::component_lines(&component).iter().map(|l| format!("{l}\n")).collect();
-    for want in ["dashboard Bench board: 3 widgets, place it in the pupil", "  lens: track = platform; due < (unset)",
+    for want in ["dashboard Bench board: 3 widgets, place it in the face", "  lens: track = platform; due < (unset)",
                  "  rows: Next rows (table iris-bench-2)", "  chart: Points by track (bar, sum of points by track, table iris-bench-2)",
                  "  form: Add a row (table iris-bench-2)", "  left out: By owner — no column `owner` in iris-bench-2"] {
         assert!(said.contains(want), "{want:?} not in:\n{said}");
@@ -308,7 +308,7 @@ fn a_pinnable_render_is_one_muted_line() {
             app.apply(m);
         }
     }
-    let pinned: Vec<_> = app.lines.iter().filter(|l| l.to_string() == "(pinnable in the pupil)").collect();
+    let pinned: Vec<_> = app.lines.iter().filter(|l| l.to_string() == "(pinnable in the face)").collect();
     assert_eq!(pinned.len(), 2, "one line per pinned render, none for the table");
     assert!(pinned.iter().all(|l| l.style.fg == Some(ratatui::style::Color::DarkGray)), "{pinned:?}");
 }

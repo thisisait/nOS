@@ -283,9 +283,9 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
                 out.push(Line::from(format!("  {}{until}  {}{note}{hi}{lane}", it.when, it.title)));
             }
         }
-        // Filled in the pupil only: the terminal says what it asks, and Enter sends nothing.
+        // Filled in the face only: the terminal says what it asks, and Enter sends nothing.
         Component::Form(f) => {
-            out.push(head(format!("form {} (table {}): fill it in the pupil", f.title, f.table)));
+            out.push(head(format!("form {} (table {}): fill it in the face", f.title, f.table)));
             for x in &f.fields {
                 let kind = cell(&serde_json::to_value(x.kind).unwrap_or_default());
                 let req = if x.required { ", required" } else { "" };
@@ -300,9 +300,9 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
                 out.push(Line::styled(format!("  not editable here: {}", o.join(", ")), Style::new().fg(Color::DarkGray)));
             }
         }
-        // Placed in the pupil only: the terminal says the offer; nothing here places or runs it.
+        // Placed in the face only: the terminal says the offer; nothing here places or runs it.
         Component::Dashboard(d) => {
-            out.push(head(format!("dashboard {}: {} widgets, place it in the pupil", d.name, d.widgets.len())));
+            out.push(head(format!("dashboard {}: {} widgets, place it in the face", d.name, d.widgets.len())));
             if !d.lens.is_empty() {
                 let op = |o: LensOp| match o { LensOp::Eq => "=", LensOp::Neq => "!=", LensOp::Lt => "<", LensOp::Gt => ">", LensOp::Contains => "contains" };
                 let l: Vec<String> = d.lens.iter()
@@ -456,7 +456,7 @@ impl App {
                 }
                 // The workspace is the pupil's; here a pin is only said.
                 if pin.is_some() {
-                    self.lines.push(Line::styled("(pinnable in the pupil)", Style::new().fg(Color::DarkGray)));
+                    self.lines.push(Line::styled("(pinnable in the face)", Style::new().fg(Color::DarkGray)));
                 }
             }
             ToShell::ApprovalRequest { approval, component, .. } => {

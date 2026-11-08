@@ -2983,7 +2983,7 @@ fn heard(rig: &Rig, n: usize) -> String {
 /// preselects it, the terminal does not, and serve cannot tell which one answered.
 #[test]
 fn a_pick_equal_to_the_suggestion_is_said_as_such_and_no_more() {
-    const SAME: &str = "; that is your suggestion, which the pupil preselects, so it may have been left as it was";
+    const SAME: &str = "; that is your suggestion, which the face preselects, so it may have been left as it was";
     for (name, multi, picked, want) in [
         ("untouched", false, vec!["todos"], format!(r#"picked "todos"{SAME}"#)),
         ("untouched2", true, vec!["expenses", "todos"], format!(r#"picked "expenses", "todos"{SAME}"#)),
@@ -4773,7 +4773,7 @@ fn a_prefilled_form_s_submit_is_still_only_what_the_person_sent() {
             other => panic!("expected the widget form, got {other:?}"),
         }
     };
-    // The prefill is a draft in the pupil, never a value serve adds: a submit without kind is refused.
+    // The prefill is a draft in the face, never a value serve adds: a submit without kind is refused.
     send_submit(&s, &form, "f1", serde_json::json!({"amount": 5}));
     assert!(matches!(next(&mut r), Some(ToShell::Refused { ref reason, .. }) if reason.contains("kind is required")));
     send_submit(&s, &form, "f1", serde_json::json!({"amount": 7, "kind": "food"}));

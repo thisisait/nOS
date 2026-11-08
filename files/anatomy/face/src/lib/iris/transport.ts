@@ -1,5 +1,5 @@
-// How Iris reaches the thalamus. The pupil hands it the Tauri bridge (pupil/src/transport.tauri.ts,
-// the only file that names it); the face will hand it a web one. resume, workspace_load and
+// How Iris reaches the thalamus. The face hands it the web one (transport.web.ts, the BFF relay;
+// the Tauri pupil retired 2026-11-08). resume, workspace_load and
 // workspace_save are wire messages, so they ride `send`; the layout calls are the local cache.
 import type { Link, ToShell, ToThalamus } from './wire';
 import type { Layout } from './workspace';

@@ -47,7 +47,7 @@
 # The removable-volume grant (ledger under nos_data_root) binds to the designated requirement; the
 # linker's ad-hoc DR is the cdhash, so every rebuild re-asked. Minted once, operator-approved 2026-10-12;
 # untrusted on purpose: it signs only for TCC, never for Gatekeeper. Needs the login keychain unlocked.
-# Registered as _thalamus_signing: pazny.thalamus's pupil.yml signs the pupil with the same identity.
+# Registered as _thalamus_signing: tasks/app.yml signs nOS.app with the same identity.
 - name: "[pazny.medulla] The local code-signing identity (minted once in the login keychain)"
   ansible.builtin.shell: |
     set -euo pipefail

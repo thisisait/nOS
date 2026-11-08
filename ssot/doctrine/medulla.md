@@ -80,7 +80,7 @@ on that prefix still reaches PHP, which keeps writing the record.
 
 ## 6. What stays separate
 
-The face, KEAP, pupil and cortex. Cortex stays TypeScript, and Wing's PHP cortex
+The face, KEAP and cortex (the pupil retired 2026-11-08). Cortex stays TypeScript, and Wing's PHP cortex
 executor moves to cortex, not to Rust.
 
 ## 7. Never

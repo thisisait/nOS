@@ -54,9 +54,9 @@
       - thalamus_decider_exes is iterable and thalamus_decider_exes is not string and thalamus_decider_exes is not mapping
       - thalamus_decider_exes | reject('string') | list | length == 0
       - thalamus_decider_exes | select('string') | reject('match', '^/[^:]+$') | list | length == 0
-    fail_msg: "thalamus_decider_exes must be a list of absolute paths without ':', e.g. [\"{{ thalamus_pupil_exe }}\", \"{{ thalamus_bin }}\"]."
+    fail_msg: "thalamus_decider_exes must be a list of absolute paths without ':', e.g. [\"{{ thalamus_bin }}\", \"{{ thalamus_nos_app_exe }}\"]."
 
-# One daemon per host: launchd on macOS (macos.yml, plus the pupil app), the
+# One daemon per host: launchd on macOS (macos.yml, plus nOS.app), the
 # operator's systemd --user unit on Linux with a socket every login shares (linux.yml).
 - ansible.builtin.import_tasks: macos.yml
   when: nos_service_manager == 'launchd'

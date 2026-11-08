@@ -40,7 +40,7 @@ decision for the operator, not a default.
    - The full offline suite once, to a file, read the summary line (never
      `| tail`: memory `local-pytest-false-green`):
      `python3 -m pytest tests --ignore=tests/e2e -q -p no:cacheprovider > /tmp/rp-pytest.txt 2>&1`.
-     Plus cargo (thalamus, contract), face and pupil vitest, `ansible-lint`.
+     Plus cargo (thalamus, contract), face vitest, `ansible-lint`.
    - `tools/ci-local.sh` (frozen toolchain, syntax-check).
    - **A blank is the gate** (memory `blank-is-the-gate`): the release names the
      newest blank converge (`nos --remove=data --confirm`, then `nos`) and its
