@@ -2,8 +2,6 @@ update nOS Roadmap (roadmap) / backup-restic-fork — nothing is written unless 
 u approve
   status: "open" -> "done"
   note: (empty) -> "landed"
-widget w6:
-  > 02 Formal Sciences — Mathematics, logic and computing.
 table expenses changed (row e3)
 refused: login carol has no row in the identity map
 refused (widget w2): no column `kinds` in Expenses; columns: when, kind, amount
@@ -49,6 +47,8 @@ act: NOT recorded — Wing refused it (HTTP 403)
 1 agent question(s) wait:
   7f3e2d1c-0b9a-4c8d-9e7f-6a5b4c3d2e1f conductor (high): Apply the nextcloud upg
 rade? — until 2099-01-01T00:00:00Z, then no
+1 card(s) wait for you
+0 card(s) wait for you
 no agent question waits
 answer 7f3e2d1c-0b9a-4c8d-9e7f-6a5b4c3d2e1f: answered, recorded by Wing
 answer 7f3e2d1c-0b9a-4c8d-9e7f-6a5b4c3d2e1f: LOST — no won first

@@ -68,6 +68,9 @@ pub enum ToThalamus {
     /// A tier-1 decider answers one question (v16): serve relays it to Wing, which resolves it once, and
     /// answers `answer_result`; anyone else gets `refused` and Wing hears nothing.
     Answer { uuid: String, answer: String },
+    /// The person's own Iris cards asked and not yet decided (v17), from the ledger; serve answers
+    /// `approvals_open`. nOS.app polls it to badge the menu bar and announce a new card.
+    ApprovalsOpen,
     /// The face's answer to an `act`: ok and what it returned, or why not.
     Acted {
         act: String,
@@ -231,7 +234,22 @@ pub enum ToShell {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         why: Option<String>,
     },
+    /// The person's open Iris cards (v17), oldest first; deciding one still happens in its session.
+    ApprovalsOpen { items: Vec<OpenApproval> },
 }
+
+/// One Iris card waiting for its person (v17): which session asked, the card, the tool, when.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct OpenApproval {
+    pub session: String,
+    pub approval: String,
+    pub tool: String,
+    pub asked_at: String,
+}
+
+/// The most open cards one `approvals_open` carries.
+pub const MAX_OPEN_APPROVALS: usize = 100;
 
 /// answered: this answer resolved it; lost: another won first; expired: the deadline passed; refused: anything else.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -671,6 +689,12 @@ fn check_shell(m: &ToShell) -> Result<(), String> {
                 return Err(format!("questions holds at most {MAX_QUESTIONS} items"));
             }
             items.iter().try_for_each(|q| need_uuid("question", q.get("uuid").and_then(|u| u.as_str()).unwrap_or_default()))
+        }
+        ToShell::ApprovalsOpen { items } => {
+            if items.len() > MAX_OPEN_APPROVALS {
+                return Err(format!("approvals_open holds at most {MAX_OPEN_APPROVALS} items"));
+            }
+            items.iter().try_for_each(|a| need_uuid("session", &a.session).and_then(|_| need_uuid("approval", &a.approval)))
         }
         ToShell::AnswerResult { uuid, outcome, winning_answer, .. } => {
             need_uuid("question", uuid)?;

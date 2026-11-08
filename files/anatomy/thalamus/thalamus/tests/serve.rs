@@ -594,6 +594,35 @@ fn approve_posts_the_approved_cells_once_as_the_person() {
     assert!(req < dec);
 }
 
+/// v17 (row iris-approvals-native-notify): approvals_open lists the person's own undecided cards, what
+/// nOS.app badges and announces; another person's card is never in it, and a decided one leaves it.
+#[test]
+fn a_person_sees_only_their_own_open_cards() {
+    let rig = rig_n("opencards", mapped(), shown_then(&[ROWS, POSTED]), edit_turn());
+    let (s, mut r, session, approval, _) = propose(&rig);
+    // Another person's card, asked in a live session of theirs.
+    let db = rusqlite::Connection::open(&rig.ledger).unwrap();
+    db.execute_batch("INSERT INTO sessions (uuid, agent_name, agent_version, status, trigger, actor_id, trace_id, model_uri, started_at)
+                        VALUES ('11111111-2222-4333-8444-555555555555', 'iris', 1, 'running', 'shell', 'user:bob', 't', 'm', '2026-11-08T08:00:00Z');
+                      INSERT INTO events (ts, run_id, type, task, result_json) VALUES ('2026-11-08T08:01:00Z',
+                        '11111111-2222-4333-8444-555555555555', 'agent_approval_request', 'iris/tool:row_edit',
+                        '{\"approval\": \"99999999-8888-4777-8666-555555555555\"}');").unwrap();
+    let open = |s: &UnixStream, r: &mut BufReader<UnixStream>| {
+        (&*s).write_all(encode(&ToThalamus::ApprovalsOpen).as_bytes()).unwrap();
+        match next(r) {
+            Some(ToShell::ApprovalsOpen { items }) => items,
+            other => panic!("expected approvals_open, got {other:?}"),
+        }
+    };
+    let items = open(&s, &mut r);
+    assert_eq!(items.len(), 1, "{items:?}");
+    assert_eq!((items[0].session.as_str(), items[0].approval.as_str()), (session.as_str(), approval.as_str()));
+    assert!(!items[0].tool.is_empty() && !items[0].asked_at.is_empty(), "{items:?}");
+    decide(&s, &approval, Decision::Reject);
+    assert!(matches!(next(&mut r), Some(ToShell::Text { .. })));
+    assert!(open(&s, &mut r).is_empty(), "a decided card is still listed");
+}
+
 #[test]
 fn reject_never_posts() {
     let rig = rig_n("reject", mapped(), shown_then(&[ROWS, POSTED]), edit_turn());

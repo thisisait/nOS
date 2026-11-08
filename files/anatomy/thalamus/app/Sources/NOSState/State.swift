@@ -179,6 +179,34 @@ public struct AnswerResult: Decodable, Sendable, Equatable {
     public static func decode(_ line: Data) throws -> AnswerResult { try JSONDecoder().decode(AnswerResult.self, from: line) }
 }
 
+/// One Iris card waiting for this person (v17 `approvals_open {items}`). It is decided in its session, in the
+/// face or the terminal; the app only says it waits.
+public struct OpenApproval: Decodable, Sendable, Equatable {
+    public let session: String, approval: String, tool: String, asked_at: String
+    public init(session: String, approval: String, tool: String, asked_at: String) {
+        self.session = session; self.approval = approval; self.tool = tool; self.asked_at = asked_at
+    }
+}
+
+public struct ApprovalsOpen: Decodable, Sendable, Equatable {
+    public let items: [OpenApproval]
+    enum CodingKeys: String, CodingKey { case t, items }
+    public init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: CodingKeys.self)
+        guard try c.decode(String.self, forKey: .t) == "approvals_open" else {
+            throw DecodingError.dataCorruptedError(forKey: .t, in: c, debugDescription: "not an approvals_open message")
+        }
+        items = try c.decode([OpenApproval].self, forKey: .items)
+    }
+    public static func decode(_ line: Data) throws -> ApprovalsOpen { try JSONDecoder().decode(ApprovalsOpen.self, from: line) }
+}
+
+/// The cards to announce: those not announced before. The set it returns is what is open now, so a card
+/// decided and asked again (a new id) is announced again, and a decided one is forgotten.
+public func newCards(_ open: [OpenApproval], announced: Set<String>) -> ([OpenApproval], Set<String>) {
+    (open.filter { !announced.contains($0.approval) }, Set(open.map(\.approval)))
+}
+
 /// The to_thalamus `answer {uuid, answer}` line (v16).
 public func answer(_ uuid: String, _ text: String) -> Data {
     let line: JSONValue = .object(["t": .string("answer"), "uuid": .string(uuid), "answer": .string(text)])

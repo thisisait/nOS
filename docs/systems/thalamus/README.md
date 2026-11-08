@@ -177,7 +177,14 @@ needs the halt's tier-1 decider; serve relays it once, never retried, to POST
 which reaches that action and nothing else) from `~/.nos/secrets.yml`. Wing's conditional
 UPDATE writes the record; serve answers `answer_result` answered, lost (with the answer that
 won), expired or refused. Until a converge mints `wing_answer_token` the answer is refused.
-Gate: `medulla/tests/questions.rs`.
+A face person (tier 1) answers in place over the relay, Wing hears `via: face`; the halt and
+settings stay native (operator 2026-11-08). Gate: `medulla/tests/questions.rs`.
+
+Waiting cards (wire v17): `approvals_open` lists the person's own Iris cards asked and not
+decided, in a session the thalamus can still resume, read from the ledger. nOS.app polls it with
+the questions, counts both in the menu bar and posts one notification per new card; a click opens
+the Face window, where the card is decided. Gate: `tests/serve.rs`
+`a_person_sees_only_their_own_open_cards`, and `state-check` decodes the fixture's samples.
 
 What path identity cannot stop: anything that runs code inside a listed binary. Both are
 signed with the local identity but without the hardened runtime (`codesign --options

@@ -5,6 +5,7 @@ import AppKit
 import Darwin
 import NOSState
 import SwiftUI
+import UserNotifications
 import WebKit
 
 /// One request line on the thalamus socket, its one answer line; nil when it does not answer in `secs`.
@@ -57,6 +58,47 @@ func readQuestions() -> ([Question]?, String) {
     return (nil, j?["t"] as? String == "refused" ? "refused: \(j?["reason"] as? String ?? "no reason given")" : "an answer the app cannot read")
 }
 
+/// This person's open Iris cards (v17); nil and why when refused or unanswered (UNKNOWN, never "none").
+func readApprovals() -> ([OpenApproval]?, String) {
+    guard let d = ask(#"{"t":"approvals_open"}"#) else { return (nil, "the medulla did not answer") }
+    if let o = try? ApprovalsOpen.decode(d) { return (o.items, "") }
+    let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any]
+    return (nil, j?["t"] as? String == "refused" ? "refused: \(j?["reason"] as? String ?? "no reason given")" : "an answer the app cannot read")
+}
+
+/// One native notification per new card; a click opens the Face window, where the card is decided. Only in a
+/// bundle: outside one (swift run) UNUserNotificationCenter traps, so nothing is posted and the badge still counts.
+final class Notes: NSObject, UNUserNotificationCenterDelegate, @unchecked Sendable {
+    private var onClick: (@Sendable () -> Void)?
+    private var center: UNUserNotificationCenter? { Bundle.main.bundleIdentifier == nil ? nil : .current() }
+
+    func start(_ click: @escaping @Sendable () -> Void) {
+        onClick = click
+        guard let c = center else { return }
+        c.delegate = self
+        c.requestAuthorization(options: [.alert, .sound]) { _, _ in }
+    }
+
+    func post(_ a: OpenApproval) {
+        guard let c = center else { return }
+        let n = UNMutableNotificationContent()
+        n.title = "Iris waits for your approval"
+        n.body = "\(a.tool), asked \(a.asked_at)"  // the tool's name, never the card's arguments
+        n.sound = .default
+        c.add(UNNotificationRequest(identifier: a.approval, content: n, trigger: nil))
+    }
+
+    func userNotificationCenter(_ c: UNUserNotificationCenter, didReceive r: UNNotificationResponse,
+                                withCompletionHandler done: @escaping () -> Void) {
+        onClick?(); done()
+    }
+
+    func userNotificationCenter(_ c: UNUserNotificationCenter, willPresent n: UNNotification,
+                                withCompletionHandler done: @escaping (UNNotificationPresentationOptions) -> Void) {
+        done([.banner, .sound])
+    }
+}
+
 /// An answer relayed to Wing, in words. Only `answered` says decided; lost and refused never read as it.
 func relay(_ q: Question, _ text: String) -> String {
     guard let d = ask(String(decoding: answer(q.uuid, text), as: UTF8.self), secs: 15) else {
@@ -80,10 +122,15 @@ func relay(_ q: Question, _ text: String) -> String {
     @Published var busy: String?        // a verb asked and not yet answered
     @Published var questions: [Question]?
     @Published var questionsWhy = ""    // why questions is nil
+    @Published var approvals: [OpenApproval]?  // this person's open Iris cards; nil: UNKNOWN
+    @Published var faceAsked = 0        // a notification click; the menu-bar label opens the Face window
+    private var announced = Set<String>()
+    private let notes = Notes()
     private var timer: Timer?
     private var open = false, ticks = 0  // questions: every 30 s, every 5 s while the menu is open
 
     init() {
+        notes.start { Task { @MainActor [weak self] in self?.faceAsked += 1 } }
         poll(); pollQuestions()
         for (n, v) in [(NSMenu.didBeginTrackingNotification, true), (NSMenu.didEndTrackingNotification, false)] {
             NotificationCenter.default.addObserver(forName: n, object: nil, queue: .main) { [weak self] _ in
@@ -190,7 +237,26 @@ func relay(_ q: Question, _ text: String) -> String {
             let (q, why) = readQuestions()
             await MainActor.run { self.questions = q; self.questionsWhy = why }
         }
+        pollApprovals()
     }
+
+    /// The cards on the same clock as the questions; each new one is announced once. UNKNOWN announces
+    /// nothing and forgets nothing.
+    func pollApprovals() {
+        Task.detached {
+            let (a, _) = readApprovals()
+            await MainActor.run {
+                self.approvals = a
+                guard let a else { return }
+                let (fresh, now) = newCards(a, announced: self.announced)
+                self.announced = now
+                fresh.forEach { self.notes.post($0) }
+            }
+        }
+    }
+
+    /// What the menu-bar number counts: open questions and open cards, each only when read.
+    var waiting: Int { (questions?.count ?? 0) + (approvals?.count ?? 0) }
 
     func poll() {
         Task.detached {
@@ -245,6 +311,16 @@ struct MenuView: View {
         } else {
             Text(verbatim: "Questions: UNKNOWN (\(estate.questionsWhy))")
         }
+        if let a = estate.approvals {
+            Menu("Iris cards (\(a.count))") {
+                if a.isEmpty { Text("none waiting") }
+                ForEach(a, id: \.approval) { c in
+                    Button("\(c.tool), asked \(c.asked_at)") { openWindow(id: "face"); NSApp.activate(ignoringOtherApps: true) }
+                }
+            }
+        } else {
+            Text("Iris cards: UNKNOWN")
+        }
         if let s = estate.state {
             if let jobs = s.pausedJobs {
                 Menu("Paused jobs (\(jobs.count))") {
@@ -261,6 +337,20 @@ struct MenuView: View {
         Divider()
         Button("Face") { openWindow(id: "face"); NSApp.activate(ignoringOtherApps: true) }
         Button("Quit nOS") { NSApp.terminate(nil) }.keyboardShortcut("q")
+    }
+}
+
+/// The menu-bar icon and the waiting count; it also opens the Face window when a notification is clicked,
+/// since the label is the one view always there to hold `openWindow`.
+struct BarLabel: View {
+    @ObservedObject var estate: Estate
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        let on = estate.state?.halt.on  // unreachable or unreadable: a question mark, never the calm icon
+        Image(systemName: on == nil ? "questionmark.circle" : on == true ? "stop.circle.fill" : "circle.hexagongrid")
+            .onChange(of: estate.faceAsked) { openWindow(id: "face"); NSApp.activate(ignoringOtherApps: true) }
+        if estate.waiting > 0 { Text(verbatim: "\(estate.waiting)") }
     }
 }
 
@@ -312,9 +402,7 @@ struct WebView: NSViewRepresentable {
         MenuBarExtra {
             MenuView(estate: estate)
         } label: {
-            let on = estate.state?.halt.on  // unreachable or unreadable: a question mark, never the calm icon
-            Image(systemName: on == nil ? "questionmark.circle" : on == true ? "stop.circle.fill" : "circle.hexagongrid")
-            if let n = estate.questions?.count, n > 0 { Text(verbatim: "\(n)") }
+            BarLabel(estate: estate)
         }
         Window("Face", id: "face") {
             if let url = faceURL() { WebView(url: url).frame(minWidth: 900, minHeight: 600) } else { Text("NOSFaceURL is not set") }

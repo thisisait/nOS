@@ -303,7 +303,12 @@ export type ToShell =
 			outcome: 'answered' | 'lost' | 'expired' | 'refused';
 			winning_answer?: string;
 			why?: string;
-	  };
+	  }
+	/** v17: this person's Iris cards asked and not yet decided, oldest first. */
+	| { t: 'approvals_open'; items: OpenApproval[] };
+
+/** One Iris card waiting for its person (wire.rs OpenApproval, v17). */
+export type OpenApproval = { session: string; approval: string; tool: string; asked_at: string };
 
 /** The estate's set-points and host organs (wire.rs EstateState, v13); null is UNKNOWN, never off. */
 export type SetPoint = { on: boolean | null; since?: string; reason?: string; file: string };
@@ -378,6 +383,7 @@ export type ToThalamus =
 	| { t: 'setting'; key: string; value: Value }
 	| { t: 'questions'; agent?: string }
 	| { t: 'answer'; uuid: string; answer: string }
+	| { t: 'approvals_open' }
 	| { t: 'workspace_save'; doc: { [k: string]: unknown } }
 	| { t: 'catalogue' }
 	| { t: 'limbs'; limbs: Limb[] }

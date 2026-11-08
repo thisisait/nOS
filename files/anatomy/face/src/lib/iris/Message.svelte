@@ -197,6 +197,13 @@
 						? 'EXPIRED — the deadline passed, the agent took its default'
 						: `REFUSED — ${msg.why ?? 'Wing did not say why'}`}
 		</p>
+	{:else if msg.t === 'approvals_open'}
+		<!-- nOS.app badges and announces them; each card is decided in its own session. -->
+		{#if msg.items.length === 0}<p class="muted">no card waits for you</p>{:else}<ul class="muted">
+				{#each msg.items as a}<li>
+						card {a.approval}: {a.tool} in session {a.session}, asked {a.asked_at}
+					</li>{/each}
+			</ul>{/if}
 	{:else if msg.t === 'workspace'}
 		<p class="muted">
 			{msg.doc ? 'the workspace the thalamus holds' : 'the thalamus holds no workspace yet'}

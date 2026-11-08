@@ -516,6 +516,8 @@ impl App {
             ToShell::Workspace { .. } | ToShell::Catalogue { .. } | ToShell::ModelState { .. } => {}
             ToShell::State(s) => self.lines.extend(crate::state::lines(&s).into_iter().map(Line::from)),
             m @ (ToShell::Questions { .. } | ToShell::AnswerResult { .. }) => self.lines.extend(crate::inbox::lines(&m).into_iter().map(Line::from)),
+            // The terminal shows each card in its own session; the count is for nOS.app's badge.
+            ToShell::ApprovalsOpen { items } => self.lines.push(Line::from(format!("{} card(s) wait for you", items.len()))),
             // The terminal declares no limbs, so serve sends it no act: one that arrives is said, never done.
             ToShell::Act { app, action, .. } => self.lines.push(warn(format!("refused: an act {app}.{action}, but this shell has no limbs"))),
         }

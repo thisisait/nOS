@@ -323,6 +323,22 @@ impl Ledger {
         rows.map(|r| r.map(|(a, t, j)| (a, t, serde_json::from_str(&j).unwrap_or(Value::Null)))).collect()
     }
 
+    /// Every card `actor` was asked and has not decided, in a session it can still resume (resume()),
+    /// oldest first: (session, approval, tool, asked_at). What nOS.app badges and announces (v17).
+    pub fn open_approvals_of(&self, actor: &str) -> rusqlite::Result<Vec<(String, String, String, String)>> {
+        let mut q = self.db.prepare(
+            "SELECT r.run_id, json_extract(r.result_json, '$.approval'), COALESCE(substr(r.task, instr(r.task, '/tool:') + 6), ''), r.ts
+             FROM events r JOIN sessions s ON s.uuid = r.run_id
+             WHERE s.actor_id = ?1 AND r.type = ?2 AND (s.ended_at IS NULL OR s.stop_reason IN ('connection_closed', 'switched'))
+               AND NOT EXISTS (SELECT 1 FROM events d WHERE d.run_id = r.run_id AND d.type = ?3
+                 AND json_extract(d.result_json, '$.approval') = json_extract(r.result_json, '$.approval'))
+             ORDER BY r.id")?;
+        let rows = q.query_map(params![actor, Kind::ApprovalRequest.as_str(), Kind::ApprovalDecision.as_str()], |r| {
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))
+        })?;
+        rows.collect()
+    }
+
     /// The last `n` things the person and Iris said in `session` (agent_message person|iris), oldest first.
     pub fn messages(&self, session: &str, n: usize) -> rusqlite::Result<Vec<(String, String)>> {
         let mut q = self.db.prepare(

@@ -73,4 +73,17 @@ for msg in answers {
 if qs.isEmpty || answers.isEmpty { fail("the fixture carries no questions or answer sample") }
 let keys = Set(settings.compactMap { $0["key"] as? String })
 if !keys.isSuperset(of: ["pulse.paused", "loops.paused"]) { fail("the fixture misses a setting sample: \(keys)") }
-print("ok \(samples.count) states \(settings.count) settings \(qs.count) questions \(results.count) results \(answers.count) answers")
+let opens = shell.filter { $0["t"] as? String == "approvals_open" }
+for msg in opens {
+    let o: ApprovalsOpen
+    do { o = try ApprovalsOpen.decode(data(msg)) } catch { fail("approvals_open: \(error)") }
+    let items = msg["items"] as? [[String: Any]] ?? []
+    if o.items.map(\.approval) != items.compactMap({ $0["approval"] as? String }) { fail("approvals_open: items mis-read") }
+}
+if opens.isEmpty { fail("the fixture carries no approvals_open sample") }
+// A card is announced once: the second poll of the same card says nothing, a new card says itself.
+let card = OpenApproval(session: "s", approval: "a1", tool: "files.move", asked_at: "t")
+let (first, seen) = newCards([card], announced: [])
+let (again, _) = newCards([card], announced: seen)
+if first.count != 1 || !again.isEmpty { fail("newCards: a card was not announced exactly once") }
+print("ok \(samples.count) states \(settings.count) settings \(qs.count) questions \(results.count) results \(answers.count) answers \(opens.count) open")

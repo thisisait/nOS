@@ -11,7 +11,7 @@ use nos_contract::renderers::{is_date, ActionApproval, ApprovalsList, Axis, Cell
                                Dropped, FieldKind, Form, FormField, InboxItem, InboxList, KnowledgeNode, KnowledgeTree, need_node_id, Lens, LensOp, Lines, List, ListItem, Omitted, Parent, RedStatus,
                                Row, RowDiffApproval, SchemaColumn, ColumnAddApproval, ColumnKind, ExistingColumn, Series, Table, TableResults, TableSchemaApproval, Timeline, TimelineItem, Visibility};
 use nos_contract::wire::{check_params, check_spec, decode_to_thalamus, encode, CatalogueColumn, CatalogueTable, ChartSpec, EstateState, ControlView, Decision, FormSpec,
-                         KnowledgeSpec, KpiSpec, Limb, Op, ParamKind, Phase, Scope, ModelOption, ToShell, ToThalamus, Trigger, WidgetChart, WidgetSpec, MAX_REPLAY};
+                         KnowledgeSpec, KpiSpec, Limb, Op, ParamKind, Phase, Scope, ModelOption, OpenApproval, ToShell, ToThalamus, Trigger, WidgetChart, WidgetSpec, MAX_REPLAY};
 use nos_contract::uid;
 use crate::store;
 use serde_json::{json, Map, Value};
@@ -1272,6 +1272,7 @@ impl Server {
                 Ok(ToThalamus::Setting { key, value }) => self.set_setting(&who, &mut out, &peer, &key, &value),
                 Ok(ToThalamus::Questions { agent }) => self.questions(&who, &mut out, agent.as_deref()),
                 Ok(ToThalamus::Answer { uuid, answer }) => self.answer(&who, &mut out, &peer, &uuid, &answer),
+                Ok(ToThalamus::ApprovalsOpen) => self.approvals_open(&who, &mut out),
                 Ok(ToThalamus::Acted { act, .. }) => refuse(&mut out, &format!("no act {act} waits for an answer")),
                 Ok(ToThalamus::WorkspaceSave { doc }) => {
                     if let Err(why) = store::write(&store::path(&self.data, &who.uid(), "workspace"), &doc) {
@@ -1787,6 +1788,21 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         let r = crate::inbox::relay(uuid, answer, &who.username, if face { "face" } else { "medulla" }, &self.wing.url);
         self.say(format!("answer to {uuid} by {} {peer}: {}", who.username, encode(&r).trim_end()));
         send(out, &r);
+    }
+
+    /// approvals_open (v17): the person's own undecided cards, read from the ledger; never another
+    /// person's. A ledger that does not read is refused, never an empty list.
+    fn approvals_open(&self, who: &Person, out: &mut dyn Write) {
+        let actor = format!("user:{}", who.uid());
+        let rows = self.ledger.lock().map_err(|_| "ledger poisoned".to_string())
+            .and_then(|l| l.open_approvals_of(&actor).map_err(|e| format!("the ledger does not read: {e}")));
+        match rows {
+            Ok(rows) => send(out, &ToShell::ApprovalsOpen {
+                items: rows.into_iter().take(nos_contract::wire::MAX_OPEN_APPROVALS)
+                    .map(|(session, approval, tool, asked_at)| OpenApproval { session, approval, tool, asked_at }).collect(),
+            }),
+            Err(why) => refuse(out, &why),
+        }
     }
 
     /// One ledger event; the row id, or the reason it was refused (also logged).
