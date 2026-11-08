@@ -83,7 +83,7 @@ What changes for nOS ([v28.0.0 notes](https://github.com/go-gitea/gitea/releases
   default `EGRESS_MODE=lax` denies every non-public host that is not listed. `auth.<tld>`
   resolves to host-gateway (private), so without it the Authentik login is denied. The
   template renders `ci.<tld>,auth.<tld>` there once `gitea_version >= 28`
-  (`tests/anatomy/test_gitea_28_egress_names_auth.py`); the recipe adds the same key to the
+  (`tests/anatomy/test_gitea_forge_journey.py`); the recipe adds the same key to the
   rendered override before the tag bump. `[webhook] ALLOWED_HOST_LIST` is deprecated.
   Lax mode lets webhooks reach public hosts; 1.27 allowed only the CI host.
 - **Boot refusals.** A wildcard in `BLOCKED_DOMAINS`/`BLOCKED_HOST_LIST` stops 28 from
