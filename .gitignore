@@ -87,3 +87,7 @@ files/anatomy/apex/dist/
 files/anatomy/thalamus/**/target/
 state/fixtures/oneshot/last-trace.jsonl
 state/fixtures/oneshot/last-run.json
+
+# The retired pupil's build output (dist, node_modules, src-tauri/gen) outlived its own
+# .gitignore in every estate that built it, and `nos update` refuses an unclean checkout.
+files/anatomy/pupil/

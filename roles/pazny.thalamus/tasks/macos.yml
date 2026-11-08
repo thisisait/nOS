@@ -60,6 +60,7 @@
     - "{{ thalamus_home }}/pupil-target"
     - "{{ thalamus_home }}/bin/nos-pupil.sha256"
     - "{{ thalamus_home }}/bin/nos-pupil.source-sha256"
+    - "{{ playbook_dir }}/files/anatomy/pupil"  # its untracked build output blocked `nos update`
 
 # A listed path that names no file admits nobody, silently.
 - name: "[pazny.thalamus] Each listed decider exists"
