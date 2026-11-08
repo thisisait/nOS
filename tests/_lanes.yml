@@ -17,10 +17,8 @@ nightly:
   tests/anatomy/test_claude_cli_respects_an_existing_install.py: playbook
   tests/anatomy/test_backup_without_rustfs_goes_to_restic.py: playbook
   tests/anatomy/test_backup_copy1_absent_without_rustfs.py: playbook
-  tests/anatomy/test_backup_preflight_refuses_empty_repo.py: playbook
-  tests/anatomy/test_restore_from_a_local_dir.py: playbook
+  tests/anatomy/test_backup_playbook_journey.py: playbook (preflight, restore_from, drill)
   tests/anatomy/test_a_postgres_db_restores_alone.py: playbook
-  tests/anatomy/test_the_drill_replays_every_postgres_db.py: playbook
   tests/anatomy/test_face_wing_contract.py: cargo + node
   tests/anatomy/test_thalamus_serve.py: cargo binary
   tests/anatomy/test_thalamus_shell_contract.py: cargo
