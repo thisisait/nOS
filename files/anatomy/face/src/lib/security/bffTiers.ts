@@ -17,6 +17,10 @@ export const BFF_TIERS: Record<string, Tier> = {
 	'/bff/pulse/run': 1,
 	'/bff/wing': 1,
 	'/bff/agent-sessions/[uuid]': 4,
+	// Wing narrows it: Tier 1 stops any run, anyone else their own (operator 2026-11-08).
+	'/bff/agent-sessions/[uuid]/cancel': 4,
+	'/bff/agents': 1,
+	'/bff/audit': 1,
 	'/bff/agents/[name]/sessions': 4,
 	'/bff/ask': 4,
 	'/bff/config': 4,
@@ -32,6 +36,7 @@ export const BFF_TIERS: Record<string, Tier> = {
 
 /** A FaceApp.apiScopes name -> the routes it calls; an app's minTier must reach each. */
 export const SCOPE_ROUTES: Record<string, string[]> = {
+	agents: ['/bff/agents', '/bff/agents/[name]/sessions', '/bff/agent-sessions/[uuid]/cancel'],
 	config: ['/bff/config'],
 	inbox: ['/bff/inbox'],
 	iris: ['/bff/iris/send', '/bff/iris/stream'],

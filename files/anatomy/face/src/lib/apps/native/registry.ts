@@ -394,6 +394,18 @@ export function registerBuiltinNativeApps(): void {
 		defaultSize: { w: 760, h: 620 },
 		apiScopes: ['inbox']
 	});
+	// Wing's agents page as a face app (row wing-inc2-agents-timeline).
+	registerNativeApp({
+		slug: 'agents',
+		minTier: 1,
+		title: 'Agents',
+		icon: '🤖',
+		form: 'view',
+		build: 'F2',
+		component: () => import('./AgentsApp.svelte'),
+		defaultSize: { w: 900, h: 600 },
+		apiScopes: ['agents']
+	});
 	registerNativeApp({
 		slug: 'keap-explore',
 		minTier: 4,

@@ -336,8 +336,23 @@ export const agentSessions = {
 	async get(user: { uid: string; groups: string[] }, uuid: string): Promise<unknown> {
 		const u = WING_API() + '/agent-sessions/' + encodeURIComponent(uuid);
 		return asJson(await fetch(u, { headers: asUser(user) }));
+	},
+	/** Stop a running session: Tier 1 any, anyone else their own (Wing's scope(); 404 otherwise). */
+	async cancel(user: { uid: string; groups: string[] }, uuid: string): Promise<unknown> {
+		const u = WING_API() + '/agent-sessions/' + encodeURIComponent(uuid) + '/cancel';
+		return asJson(await fetch(u, { method: 'POST', headers: asUser(user, true), body: '{}' }));
 	}
 };
+
+/** The agent roster (Tier 1; Api\AgentsPresenter $bffOperatorReads). */
+export async function wingAgents(user: WingUser): Promise<unknown> {
+	return wingGet(user, '/agents');
+}
+
+/** The audit chain's cached verdict (Tier 1; Api\AuditPresenter $bffOperatorReads). */
+export async function wingAuditVerify(user: WingUser): Promise<unknown> {
+	return wingGet(user, '/audit/verify');
+}
 
 // ── Bone (host daemon) ───────────────────────────────────────────────────────
 //

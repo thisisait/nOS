@@ -16,6 +16,8 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { loadWing, type WingResponse } from '$lib/api/pulse';
+	import { loadAudit, type AuditVerdict } from '$lib/api/agents';
+	import { auditLine } from '$lib/anatomy/audit';
 	import { isUnreadWork, type WingEventView, type WingNotificationView } from '$lib/anatomy/wing';
 	import { StatusNote, Badge, StateDot, Panel, severityTone } from '$lib/components/ui';
 
@@ -52,8 +54,16 @@
 		void refresh();
 	});
 
+	// The audit chain's cached verdict (Wing's Audit page moved here, row wing-inc2-agents-timeline).
+	let audit = $state<AuditVerdict | null>(null);
+	let auditErr = $state('');
+
 	onMount(() => {
 		timer = setInterval(() => void refresh(), POLL_MS);
+		loadAudit().then(
+			(v) => (audit = v),
+			(e) => (auditErr = String(e))
+		);
 	});
 	onDestroy(() => clearInterval(timer));
 
@@ -84,6 +94,13 @@
 				<button onclick={() => onclearthread?.()}>show everything</button>
 			</div>
 		{/if}
+
+		<p class="audit">
+			{#if auditErr}<Badge tone="warn">audit chain UNKNOWN</Badge> {auditErr}
+			{:else if audit}{@const l = auditLine(audit)}<Badge tone={l.tone}>{l.badge}</Badge>
+				{l.detail}
+			{/if}
+		</p>
 
 		<div class="cols">
 			<Panel title="Events">
