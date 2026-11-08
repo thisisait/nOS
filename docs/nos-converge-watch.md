@@ -221,7 +221,7 @@ CLT tagged `homebrew` so `--skip-tags homebrew` skips Xcode tools with brew. Gat
 - `docker manifest inspect` sequential — local `image inspect` first (`test_apps_image_probe_asks_local_first.py`).
 - restic "is repo initialized" — `cat config`, not `snapshots` (`test_backup_journey.py`).
 - mcp_gateway token verify — persist once (`test_mcp_grafana_token_is_not_reminted.py`).
-- keap empty-seed GET — skip when `rows: []` (`test_keap_empty_seed_skips_row_fetch.py`). Reader: `p=32933` device-client "No row WHERE-guard".
+- keap empty-seed GET — skip when `rows: []` (`test_keap_role_journey.py`). Reader: `p=32933` device-client "No row WHERE-guard".
 - Wing GDPR upsert — one `--json=-` (`test_gdpr_upsert_is_one_invocation.py`).
 - `~/.nos/ansible.log` rotation in `nos` before ansible opens it (`test_ansible_log_rotates_before_converge.py`).
 

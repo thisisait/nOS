@@ -48,7 +48,7 @@ Either of these, independently:
   deliberately **no `| default(keap_version)`** in the template — that fallback
   reads as caution and restores the whole defect on exactly the `--tags` passes
   where someone is iterating and not looking. A missing fact is a loud render
-  failure. Gate: `tests/anatomy/test_the_keap_tag_names_a_tree.py`.
+  failure. Gate: `tests/anatomy/test_keap_role_journey.py`.
 
   **Cost accepted:** one image per commit rather than one per version, so the
   local image store grows with iteration. `nos --remove=deep` prunes it; that is

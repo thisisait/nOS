@@ -26,7 +26,7 @@ Operator pins live in `default.config.yml` (`keap_domain`, `keap_port`, `keap_ve
 
 > **Never pin `v1.19.0` or `v1.20.0`** — both are real released tags that silently drop
 > the self-model tree (see `roles/pazny.keap/defaults/main.yml` and
-> `tests/anatomy/test_keap_pin_not_cancelled.py`). Self-model work needs `v1.21.0`+.
+> `tests/anatomy/test_keap_role_journey.py`). Self-model work needs `v1.21.0`+.
 
 ## Authentication
 
