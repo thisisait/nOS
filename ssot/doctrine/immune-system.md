@@ -5,7 +5,7 @@ row: immune-system
 gates:
   - tests/anatomy/test_a_silent_cell_is_red.py
   - tests/anatomy/test_every_indicator_is_registered.py
-last_reviewed: 2026-10-06
+last_reviewed: 2026-11-08
 review_every_days: 31
 ---
 # The immune system — indicators as senses
@@ -93,18 +93,19 @@ A detector that cannot fill one in is not an indicator yet.
 
 ## 5. Today's population
 
-| Indicator | Kind | Heartbeat | Lifespan | Regulated |
-|---|---|---|---|---|
-| undeclared-status, workload-digest-status, santa-status | sentinel | red-status run | — | no |
-| discovery, gitleaks, npm-ioc, tofu-drift, security-drift, advisory, vulnerability-scan | patrol | 26 h, its Pulse job's last run | — | no |
-| prepush-score, CodeRabbit + checklist | checkpoint | per push / PR | — | no |
-| audit-chain-verify | verdicts integrity | 26 h, its Pulse job's last run | — | — |
-| crawler | — | **none exists** | — | — |
-| apoptosis, regulator | — | **none exists** | — | — |
+The population is `state/immune/indicators.yml`, the contract as schema
+(gate `test_every_indicator_is_registered.py`); red-status names a patrol
+silent past its heartbeat. Reviewed 2026-11-08: 19 indicators, 10 sentinel,
+7 patrol, 1 checkpoint, 1 verdicts; none regulated.
 
-The gaps are the roadmap children of `immune-system`: an indicator registry
-with the contract as schema, the first crawler,
-apoptosis, and the regulator.
+| Kind | State |
+|---|---|
+| crawler | **none exists** |
+| apoptosis, regulator | **none exists** |
+
+The gaps are the roadmap children of `immune-system`: the first crawler,
+apoptosis, and the regulator. The regulator's first patient is prepush-score:
+see [session-threat-model.md](session-threat-model.md) §6.
 
 ## 6. Ceilings
 

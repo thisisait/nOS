@@ -5,7 +5,7 @@ row: operator-session-threat-model
 gates:
   - tests/anatomy/test_prepush_score.py
   - tests/anatomy/test_threat_review_reads_the_checklist.py
-last_reviewed: 2026-10-04
+last_reviewed: 2026-11-08
 review_every_days: 31
 ---
 # The operator session — the attacker is the assistant
@@ -94,6 +94,15 @@ that way, everything in §6 is detection, never prevention.
 **Advisory.** It prints and never blocks; `nos-push --strict` refuses at 70.
 These are **scores, not probabilities**: uncalibrated until the JSONL has
 enough runs to compare against what the review later found.
+
+**Measured 2026-11-08** (408 runs since 2026-10-04, one prompt, three checker
+versions, `--strict` never used): 163 runs (40 %) reached 70. Deterministic
+signals reached 70 in 15 of them; the model (hermes3:8b) did in 161. Not yet
+compared with review findings: no labelled set exists. At that rate
+`--strict` would refuse two pushes in five, so the model score must not set
+`worst` on its own until it is calibrated, and committed data files
+(`docs/llm/security/*.json`) trip text signals for persistence and secret
+paths. Both are a checker change of their own (roadmap `prepush-score-calibrate`).
 
 ## 7. The monthly review
 
