@@ -146,7 +146,8 @@ recorded). When the operator sets it in `config.yml` — recommended
 refuses a `form_submit`, `approval_decision` or `choice_reply` sent by any other
 executable, or one it cannot name. The sender is read per line (macOS `LOCAL_PEERPID`,
 the last process to use the socket) and its kernel path is compared to the
-canonicalized entries; on Linux a set list refuses every decision. The refusal is said, recorded
+canonicalized entries; on Linux a set list refuses every decision, so there only the face relay decides
+(ruled 2026-11-08; `tools/thalamus-status.py` line `deciders` says who may decide). The refusal is said, recorded
 with the peer and reason, and the approval, form or choice stays open. The pupil then
 re-runs the widgets on the active tab that read that table; the rest go stale
 until their tab is shown. The whole path runs offline in
@@ -183,7 +184,7 @@ settings stay native (operator 2026-11-08). Gate: `medulla/tests/questions.rs`.
 Waiting cards (wire v17): `approvals_open` lists the person's own Iris cards asked and not
 decided, in a session the thalamus can still resume, read from the ledger. nOS.app polls it with
 the questions, counts both in the menu bar and posts one notification per new card; a click opens
-the Face window, where the card is decided. Gate: `tests/serve.rs`
+the Face window, where the card is decided. Gate: `files/anatomy/thalamus/thalamus/tests/serve.rs`
 `a_person_sees_only_their_own_open_cards`, and `state-check` decodes the fixture's samples.
 
 What path identity cannot stop: anything that runs code inside a listed binary. Both are

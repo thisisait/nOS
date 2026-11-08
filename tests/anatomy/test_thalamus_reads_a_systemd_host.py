@@ -79,6 +79,8 @@ def test_collect_on_linux_reads_unit_journal_and_systemctl(monkeypatch, tmp_path
     assert rows["model"]["state"] == "OK" and rows["model"]["source"].startswith("journalctl")
     assert rows["relay"]["state"] == "RED", "a secret in the env file and a closed door"
     assert rows["ledger"]["source"] == str(data / "ledger.db"), "--data-dir from ExecStart"
+    # Ruled 2026-11-08 (thalamus-linux-deciders): on Linux the face relay decides, socket peers record only.
+    assert rows["deciders"]["state"] == "OK" and "face relay decides" in rows["deciders"]["detail"], rows["deciders"]
 
 
 def test_an_unreadable_journal_or_unit_is_unknown(monkeypatch):
@@ -89,5 +91,19 @@ def test_an_unreadable_journal_or_unit_is_unknown(monkeypatch):
     monkeypatch.setattr(r.nos_host, "service_state", lambda label: None)
     monkeypatch.setattr(r.nos_host, "service_log", lambda label, **k: None)
     rows = {x["check"]: x for x in r.collect()}
-    for check in ("socket", "systemd", "model", "relay", "ledger", "last session"):
+    for check in ("socket", "systemd", "model", "relay", "deciders", "ledger", "last session"):
         assert rows[check]["state"] == "UNKNOWN", (check, rows[check])
+
+
+def test_who_may_decide_is_said_per_platform(tmp_path):
+    """A set list on Linux refuses every decision (SO_PEERCRED names no binary); on macOS a listed
+    path that names no file admits nobody. Both are red; the honest default is green and says who decides."""
+    j = _reader().judge_deciders
+    assert j("/h/thalamus/bin/thalamus", True, True, "u")["state"] == "RED"
+    assert j("", False, True, "u")["state"] == "OK" and "no face relay" in j("", False, True, "u")["detail"]
+    real = tmp_path / "nOS"
+    real.write_text("")
+    assert j(f"{real}:/nowhere/medulla", True, False, "p")["state"] == "RED"
+    ok = j(str(real), True, False, "p")
+    assert ok["state"] == "OK" and "nOS" in ok["detail"] and "face relay" in ok["detail"], ok
+    assert j(None, True, False, "p")["state"] == "UNKNOWN"

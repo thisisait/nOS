@@ -204,12 +204,38 @@ def judge_relay(log: pathlib.Path | str, plist: pathlib.Path | str, lines: list[
     return line("relay", OK, f"{said}, accepting", str(log))
 
 
+def judge_deciders(exes: str | None, relay: bool, linux: bool, source: str) -> dict:
+    """Who may decide here (NOS_DECIDER_EXES, src/serve.rs decider_refusal). Ruled 2026-11-08 (row
+    thalamus-linux-deciders): on Linux only the face relay decides, since SO_PEERCRED names no binary."""
+    if exes is None:
+        return line("deciders", UNKNOWN, "definition unreadable: who may decide is unknown", source)
+    names = [p for p in exes.split(":") if p]
+    relay_says = "the face relay decides as the person (tier 1 answers)" if relay else "no face relay on this host"
+    if linux:
+        if names:
+            return line("deciders", RED, f"{len(names)} listed, but a set list refuses every decision on Linux "
+                        "(SO_PEERCRED names no binary); leave thalamus_decider_exes empty", source)
+        return line("deciders", OK, f"{relay_says}; socket peers are recorded only; nobody halts or sets a "
+                    "setting over the socket", source)
+    if not names:
+        return line("deciders", OK, f"list off: decisions record the peer only, nobody halts over the socket; {relay_says}", source)
+    missing = [n for n in names if not pathlib.Path(n).exists()]
+    if missing:
+        return line("deciders", RED, f"listed but no file, so they admit nobody: {', '.join(missing)}", source)
+    return line("deciders", OK, f"{', '.join(pathlib.Path(n).name for n in names)}; {relay_says}", source)
+
+
 def collect() -> list[dict]:
     if nos_host.SYSTEM == "Linux":
         return collect_systemd()
     sock = pathlib.Path(os.environ.get("NOS_THALAMUS_SOCKET", HOME / ".nos/thalamus.sock"))
     log = pathlib.Path(os.environ.get("NOS_THALAMUS_LOG", HOME / "thalamus/log/launchd.err.log"))
     head = [judge_socket(sock), judge_service(nos_host.service_state(LABEL)), judge_model(log), judge_relay(log, PLIST)]
+    try:
+        env = plistlib.loads(PLIST.read_bytes()).get("EnvironmentVariables") or {}
+        head.append(judge_deciders(env.get("NOS_DECIDER_EXES", ""), bool(env.get("THALAMUS_RELAY_SECRET")), False, str(PLIST)))
+    except (OSError, plistlib.InvalidFileException, ValueError, AttributeError):
+        head.append(judge_deciders(None, False, False, str(PLIST)))
     if os.environ.get("NOS_THALAMUS_LEDGER"):
         return head + judge_ledger(pathlib.Path(os.environ["NOS_THALAMUS_LEDGER"]))
     db, why = ledger_path(PLIST)
@@ -240,6 +266,8 @@ def collect_systemd() -> list[dict]:
             head.append(line("relay", UNKNOWN, "unit unreadable", str(unit)))
         else:
             head.append(judge_relay(src, d["path"], lines, want=bool(env.get("THALAMUS_RELAY_SECRET"))))
+    head.append(judge_deciders(None if d is None else env.get("NOS_DECIDER_EXES", ""),
+                               bool(env.get("THALAMUS_RELAY_SECRET")), True, d["path"] if d else str(unit)))
     if os.environ.get("NOS_THALAMUS_LEDGER"):
         return head + judge_ledger(pathlib.Path(os.environ["NOS_THALAMUS_LEDGER"]))
     if d is None:
