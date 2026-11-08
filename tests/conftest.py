@@ -29,11 +29,13 @@ for _p in (_REPO_ROOT, _ANATOMY, _HERE):
 # Before the split, tests/_lanes.yml files leave the commit path (NOS_LANE=all keeps them).
 import pytest  # noqa: E402
 import _lanes  # noqa: E402
+import _shard  # noqa: E402
 from _shard import pytest_collection_modifyitems as _shard_cut  # noqa: E402
 
 
 @pytest.hookimpl(trylast=True)
 def pytest_collection_modifyitems(config, items):
+    _shard.ALL = [i.nodeid for i in items]
     _lanes.deselect(config, items)
     _shard_cut(config, items)
 
