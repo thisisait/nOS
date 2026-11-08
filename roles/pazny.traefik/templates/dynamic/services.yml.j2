@@ -195,7 +195,7 @@ http:
 {# router is the ONLY way in, and it is gated by authentik@file. It is NOT the  #}
 {# REM-144 shape: the upstream is the built-in api@internal service (not the    #}
 {# Docker host-gateway), and `traefik` stays in traefik_skip_ids so the manifest #}
-{# auto-loop emits nothing for it. Gate: test_traefik_api_not_insecure.py.       #}
+{# auto-loop emits nothing for it. Gate: test_traefik_edge_journey.py.           #}
 {% if traefik_dashboard_route_enabled | default(false) | bool %}
 {% for _sfx, _ep, _tls in _doors %}
     traefik-dashboard{{ _sfx }}:

@@ -1,7 +1,7 @@
 """REM-256 — Node-RED native OIDC must not be pinned off in SOURCE.
 
 The plugin declares authentik.mode: native_oidc. Traefik therefore does NOT
-attach authentik@file (test_native_oidc_no_authentik_middleware,
+attach authentik@file (test_traefik_edge_journey,
 test_forward_auth_does_not_stack). adminAuth in settings.js.j2 only renders
 when install_authentik AND nodered_native_oidc_enabled are both true.
 
