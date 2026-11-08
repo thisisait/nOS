@@ -6105,6 +6105,20 @@ fn a_workspace_saved_is_loaded_after_reconnect_and_only_by_its_person() {
     assert_eq!(aside, 1, "the broken file is kept aside");
 }
 
+/// Row pupil-retire (2026-11-08): the layout contract's refusals used to be the pupil's to check on
+/// its own file; serve now checks every save, so a layout the contract refuses is never held.
+#[test]
+fn a_workspace_the_layout_contract_refuses_is_not_held() {
+    let rig = rig("wsrefused", mapped(), ROWS, vec![answer("never")]);
+    let bad = serde_json::json!({"version": 3, "active": "nowhere", "chat": {"x": 24, "y": 24, "w": 420, "h": 560, "open": true},
+        "workspaces": [{"id": "ws1", "name": "Plans", "items": []}]});
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let back = said_back(&s, &mut r, &ToThalamus::WorkspaceSave { doc: bad });
+    assert!(matches!(&back, Some(ToShell::Refused { reason, .. }) if reason.contains("not saved")), "{back:?}");
+    assert_eq!(said_back(&s, &mut r, &ToThalamus::WorkspaceLoad), Some(ToShell::Workspace { doc: None }), "a refused layout was held");
+}
+
 #[test]
 fn an_approval_left_open_survives_reconnect_and_is_decided_once() {
     let rig = rig_n("resumeask", mapped(), shown_then(&[ROWS, ROWS, POSTED]), edit_turn());

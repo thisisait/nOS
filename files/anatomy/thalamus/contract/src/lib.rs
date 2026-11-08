@@ -5,3 +5,4 @@
 pub mod renderers;
 pub mod uid;
 pub mod wire;
+pub mod workspace;

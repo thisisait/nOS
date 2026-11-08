@@ -1275,7 +1275,10 @@ impl Server {
                 Ok(ToThalamus::ApprovalsOpen) => self.approvals_open(&who, &mut out),
                 Ok(ToThalamus::Acted { act, .. }) => refuse(&mut out, &format!("no act {act} waits for an answer")),
                 Ok(ToThalamus::WorkspaceSave { doc }) => {
-                    if let Err(why) = store::write(&store::path(&self.data, &who.uid(), "workspace"), &doc) {
+                    // The layout contract's refusals, checked at its one writer since the pupil retired.
+                    if let Err(why) = nos_contract::workspace::decode(&doc.to_string()) {
+                        refuse(&mut out, &format!("the workspace was not saved: {why}"));
+                    } else if let Err(why) = store::write(&store::path(&self.data, &who.uid(), "workspace"), &doc) {
                         refuse(&mut out, &format!("the workspace was not saved: {why}"));
                     }
                 }

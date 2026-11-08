@@ -117,8 +117,8 @@
 		const t = setTimeout(() => see({ e: 'settle', seq }), SETTLE_MS[state]);
 		return () => clearTimeout(t);
 	});
-	// Saved a moment after the last change; the bridge checks it against workspace-layout.yml. The local
-	// file is the offline cache; the thalamus's copy is the person's once it answered on this link.
+	// Saved a moment after the last change; serve checks it against workspace-layout.yml. The local
+	// copy (userstate) is the offline cache; the thalamus's copy is the person's once it answered on this link.
 	$effect(() => {
 		const snap = plain();
 		if (!loaded || !transport) return;
