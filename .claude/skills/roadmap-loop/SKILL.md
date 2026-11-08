@@ -65,16 +65,23 @@ Run `nos dtt status --status active,next` and read the titles only. Never pass
 `--knowledge` (656 KB). Read one row's body with
 `nos dtt status --json | jq '.rows[] | select(.slug=="<slug>")'`.
 
-Candidate groups, in order:
-1. children of `face-the-endpoint` and of `wing-organ-without-face`;
-2. children of `digest`;
+Candidate groups, in order (dry run 2026-11-08: by parent alone, every face row
+outside two parents fell behind 141 platform rows):
+1. track `face`, at any depth;
+2. track `digest` and the children of `digest`;
 3. track `platform`;
 4. the rest.
 
 Within a group, take `next` before `active`, then board order. Skip a row
 that:
+- is already done: a `feat/<slug>` or `fix/<slug>` branch (local or origin) is
+  an ancestor of `origin/dev`, or the body says "built" or "Propose: shipped".
+  Put it in `## Questions` as "move to review?";
+- has an unmerged `origin/feat/<slug>` or `origin/fix/<slug>`: someone is on it;
+- is gate work: its deliverable is a gate, a ratchet or a judge. The loop edits
+  no gate, so leave it for the session;
 - needs the live estate, a converge, a purchase or a new account;
-- waits on a ruling;
+- waits on a ruling or on an operator check ("once … verified on the estate");
 - depends on a branch in `## Built`;
 - is the slug of a branch already in `## Built`;
 - failed twice in the Log.
