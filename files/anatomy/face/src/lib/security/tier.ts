@@ -51,6 +51,15 @@ function isOwner(who?: { uid?: string; ownerId?: string }): boolean {
 	return !!uid && !!owner && uid === owner;
 }
 
+/** An RBAC tier: 1 admin, 2 manager, 3 user, 4 guest (lower = more privileged). */
+export type Tier = 1 | 2 | 3 | 4;
+
+/** True when the caller's best group reaches `min` (row face-app-min-tier); no known group = no. */
+export function reachesTier(min: Tier, groups: readonly string[] | undefined): boolean {
+	const r = callerRank(groups);
+	return r !== undefined && r <= min;
+}
+
 /** True when the caller's groups include any write-tier group. */
 export function canWriteTables(groups: readonly string[] | undefined): boolean {
 	const set = groupSet(groups);

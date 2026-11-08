@@ -94,6 +94,7 @@ describe('limbs · app-declared', () => {
 			form: 'view',
 			build: 'F1',
 			component: async () => ({ default: (() => {}) as never }),
+			minTier: 4,
 			limbs: [
 				{
 					action: 'rename',

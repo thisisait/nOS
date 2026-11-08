@@ -40,6 +40,8 @@ import { requestAnatomy, type AnatomyView } from '$lib/anatomy/focus';
 import { listTables, loadTable } from '$lib/api/tables';
 import { vfsList, vfsMove } from '$lib/api/vfs';
 import { basename, joinPath, parentPath } from './paths';
+import { reachesTier, type Tier } from '$lib/security/tier';
+import { scopeTier } from '$lib/security/bffTiers';
 
 /** A lazily-loaded native component (the default export of a `.svelte` file). */
 export type NativeComponentLoader = () => Promise<{ default: Component }>;
@@ -66,6 +68,10 @@ export interface FaceApp {
 	stateNamespace?: string;
 	/** Actions Iris may take in this app (`$lib/limbs`); writes sit behind a card. */
 	limbs?: LimbDecl[];
+	/** The least privileged tier that may open it (1 admin .. 4 guest; row face-app-min-tier).
+	 *  Required for every component-backed app; a hub frame is 4 (the hub already filtered it by
+	 *  tierOf). It must reach every BFF route its apiScopes call (bffTiers.ts). */
+	minTier?: Tier;
 }
 
 const registry = new Map<string, FaceApp>();
@@ -84,7 +90,33 @@ export function registerNativeApp(app: FaceApp): void {
 		throw new TypeError(`${app.slug}: form=frame carries a component — a frame is an iframe`);
 	if (app.form !== 'frame' && !app.component)
 		throw new TypeError(`${app.slug}: form=${app.form} needs a component loader`);
+	if (app.form !== 'frame' && ![1, 2, 3, 4].includes(app.minTier as number))
+		throw new TypeError(`${app.slug}: form=${app.form} needs a minTier 1-4`);
+	const need = scopeTier(app.apiScopes);
+	if ((app.minTier ?? 4) > need)
+		throw new TypeError(
+			`${app.slug}: minTier ${app.minTier ?? 4} opens an app whose BFF routes need tier ${need}`
+		);
 	registry.set(app.slug, app);
+}
+
+/** The person looking at this face (edge-trusted groups from the layout); null until set. */
+let viewer: readonly string[] | null = null;
+
+/** Set once the page has the identity. Until then nothing is hidden: the BFF and Wing refuse
+ *  anyway (layers 2 and 3), so this layer only spares a person a tile that would answer 403. */
+export function setViewer(groups: readonly string[] | undefined): void {
+	viewer = groups ?? [];
+}
+
+/** May the viewer open this app? */
+export function mayOpen(app: FaceApp): boolean {
+	return viewer === null || reachesTier(app.minTier ?? 4, viewer);
+}
+
+/** appsOfForm, less what the viewer's tier may not open (dock, palette, widget layer). */
+export function openableApps(...forms: readonly AppForm[]): FaceApp[] {
+	return appsOfForm(...forms).filter(mayOpen);
 }
 
 /**
@@ -108,7 +140,9 @@ export function registerHubFrames(apps: readonly HubApp[]): {
 			skipped.push(a.slug);
 			continue;
 		}
-		registerNativeApp({ slug: a.slug, title: a.title, icon: a.icon, form: 'frame' });
+		// The hub already filtered by tierOf; its tier still hides the tile from a lower viewer.
+		const t = Math.min(4, Math.max(1, Math.round(a.tier || 4))) as Tier;
+		registerNativeApp({ slug: a.slug, title: a.title, icon: a.icon, form: 'frame', minTier: t });
 		registered++;
 	}
 	return { registered, skipped };
@@ -162,7 +196,7 @@ export function formCounts(): Record<AppForm, number> {
  */
 export function launchNative(slug: string): string | null {
 	const app = registry.get(slug);
-	if (!app || app.form === 'widget' || app.form === 'frame') return null;
+	if (!app || app.form === 'widget' || app.form === 'frame' || !mayOpen(app)) return null;
 	return openWindow({
 		app: app.slug,
 		title: app.title,
@@ -216,6 +250,7 @@ export function resolveNativeComponent(slug: string): Promise<Component> | null 
 export function registerBuiltinNativeApps(): void {
 	registerNativeApp({
 		slug: 'files',
+		minTier: 4,
 		title: 'Files',
 		icon: '🗂',
 		form: 'view',
@@ -262,6 +297,7 @@ export function registerBuiltinNativeApps(): void {
 	});
 	registerNativeApp({
 		slug: 'tables',
+		minTier: 4,
 		title: 'Tables',
 		icon: '🧮',
 		form: 'view',
@@ -288,6 +324,7 @@ export function registerBuiltinNativeApps(): void {
 	// the view rather than a silently empty screen.
 	registerNativeApp({
 		slug: 'anatomy',
+		minTier: 1,
 		title: 'Anatomy',
 		icon: '🫀',
 		form: 'view',
@@ -323,6 +360,7 @@ export function registerBuiltinNativeApps(): void {
 	// the tables BFF. Reads roadmap via /bff/tables, so it needs the tables scope.
 	registerNativeApp({
 		slug: 'planner',
+		minTier: 4,
 		title: 'Planner',
 		icon: '🗺',
 		form: 'view',
@@ -346,6 +384,7 @@ export function registerBuiltinNativeApps(): void {
 	});
 	registerNativeApp({
 		slug: 'keap-explore',
+		minTier: 4,
 		title: 'Explore',
 		icon: '🕸',
 		form: 'view',
@@ -356,6 +395,7 @@ export function registerBuiltinNativeApps(): void {
 	});
 	registerNativeApp({
 		slug: 'books',
+		minTier: 4,
 		title: 'Books',
 		icon: '📒',
 		form: 'view',
@@ -385,6 +425,7 @@ export function registerBuiltinNativeApps(): void {
 	// nerve (bff/iris). The layout is cached in app.iris; the thalamus holds the person's copy.
 	registerNativeApp({
 		slug: 'iris',
+		minTier: 4,
 		title: 'Iris',
 		icon: '👁',
 		form: 'view',
@@ -398,6 +439,7 @@ export function registerBuiltinNativeApps(): void {
 	// on the desktop, never opened as a window (launchNative refuses it).
 	registerNativeApp({
 		slug: 'anatomy-widget',
+		minTier: 1,
 		title: 'Anatomy at a glance',
 		icon: '🫀',
 		form: 'widget',
@@ -410,4 +452,5 @@ export function registerBuiltinNativeApps(): void {
 /** Test hook — clear the registry between unit tests. */
 export function _resetRegistry(): void {
 	registry.clear();
+	viewer = null;
 }

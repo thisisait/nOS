@@ -13,6 +13,8 @@ import {
 	launchNative,
 	resolveNativeComponent,
 	_resetRegistry,
+	openableApps,
+	setViewer,
 	type FaceApp
 } from './registry';
 import { normalizePath, joinPath, parentPath, basename, crumbs } from './paths';
@@ -27,7 +29,8 @@ const stub: FaceApp = {
 	component: async () => ({ default: {} as never }),
 	defaultSize: { w: 800, h: 600 },
 	apiScopes: ['vfs'],
-	stateNamespace: 'app.files'
+	stateNamespace: 'app.files',
+	minTier: 4
 };
 
 beforeEach(() => {
@@ -151,7 +154,8 @@ describe('form + build are two independent axes', () => {
 			icon: 'W',
 			form: 'widget',
 			build: 'F1',
-			component: async () => ({ default: {} as never })
+			component: async () => ({ default: {} as never }),
+			minTier: 4
 		});
 		expect(launchNative('w')).toBeNull();
 		expect(get(windows)).toHaveLength(0);
@@ -191,5 +195,56 @@ describe('path helpers', () => {
 			{ name: 'reports', path: 'documents/reports' }
 		]);
 		expect(crumbs('', 'root')).toEqual([{ name: 'root', path: '' }]);
+	});
+});
+
+// Row face-app-min-tier (layer 1 of three): an app declares the least privileged tier that may
+// open it, the launcher hides what the viewer's tier may not open, and launchNative refuses it.
+describe('minTier: who may open an app', () => {
+	beforeEach(() => {
+		_resetRegistry();
+		_resetDesktop();
+	});
+
+	it('a component-backed app without a minTier is refused at register', () => {
+		const bare: FaceApp = { ...stub };
+		delete bare.minTier;
+		expect(() => registerNativeApp(bare)).toThrow(/needs a minTier/);
+	});
+
+	it('an app cannot open below the tier its BFF routes need', () => {
+		// anatomy calls /bff/pulse, a tier-1 route: a guest-tier anatomy would only ever answer 403.
+		expect(() =>
+			registerNativeApp({ ...stub, slug: 'a', apiScopes: ['pulse'], minTier: 4 })
+		).toThrow(/routes need tier 1/);
+		expect(() =>
+			registerNativeApp({ ...stub, slug: 'a', apiScopes: ['pulse'], minTier: 1 })
+		).not.toThrow();
+	});
+
+	it('a user sees no admin app and cannot launch one; an admin sees both', () => {
+		registerBuiltinNativeApps();
+		setViewer(['nos-users']);
+		const user = openableApps('view', 'utility').map((a) => a.slug);
+		expect(user).toContain('files');
+		expect(user).not.toContain('anatomy');
+		expect(launchNative('anatomy')).toBeNull();
+		expect(openableApps('widget').map((a) => a.slug)).not.toContain('anatomy-widget');
+		setViewer(['nos-admins']);
+		expect(openableApps('view', 'utility').map((a) => a.slug)).toContain('anatomy');
+		expect(launchNative('anatomy')).not.toBeNull();
+	});
+
+	it('a viewer in no known group opens nothing', () => {
+		registerBuiltinNativeApps();
+		setViewer(['someone-else']);
+		expect(openableApps('view', 'utility', 'widget')).toEqual([]);
+	});
+
+	it('a hub frame carries the catalog tier', () => {
+		registerHubFrames([
+			{ slug: 'grafana', title: 'Grafana', icon: 'G', url: '/g', description: '', tier: 1 }
+		]);
+		expect(getNativeApp('grafana')?.minTier).toBe(1);
 	});
 });

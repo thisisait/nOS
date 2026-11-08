@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { windows, openWindow, focusApp } from '$lib/stores/desktop';
 	import Window from '$lib/components/Window.svelte';
 	import WindowBody from '$lib/components/WindowBody.svelte';
@@ -23,7 +23,8 @@
 	import {
 		registerBuiltinNativeApps,
 		registerHubFrames,
-		appsOfForm,
+		openableApps,
+		setViewer,
 		launchNative,
 		initFilePickerBridge
 	} from '$lib/apps/native'; // G5
@@ -37,10 +38,12 @@
 	let { data }: { data: PageData } = $props();
 	let apps = $state<HubApp[]>([]);
 	registerBuiltinNativeApps();
+	// The viewer's tier hides what they may not open (row face-app-min-tier); the BFF refuses anyway.
+	setViewer(untrack(() => data.identity?.groups)); // the edge identity of this page load; it does not change under it
 	// Dock + palette tiles: the two forms that OPEN A WINDOW. A widget is
 	// mounted by <WidgetLayer /> and a frame is launched from the hub catalog
 	// below, so neither belongs in this list.
-	const natives = appsOfForm('view', 'utility');
+	const natives = openableApps('view', 'utility');
 
 	// Reactive desktop background from the active wallpaper (validated).
 	const bg = $derived(safeBackground($activeWallpaper));

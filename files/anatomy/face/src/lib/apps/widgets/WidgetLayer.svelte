@@ -14,7 +14,7 @@
   layer itself is pointer-transparent; each widget opts back in, so the empty
   desktop between widgets stays clickable.
 
-  It renders `appsOfForm('widget')` — the registry is the source of truth for
+  It renders `openableApps('widget')` (the viewer's tier, row face-app-min-tier) — the registry is the source of truth for
   which widgets exist, exactly as it is for dock apps. Each widget component
   resolves through the SAME lazy seam as a window body
   (`resolveNativeComponent`), so a widget is a first-class registered app and
@@ -26,7 +26,7 @@
   would make the layer the arbiter of every widget's data policy.
 -->
 <script lang="ts">
-	import { appsOfForm } from '$lib/apps/native';
+	import { openableApps } from '$lib/apps/native';
 	import WidgetHost from './WidgetHost.svelte';
 	import type { Identity } from '$lib/contracts';
 
@@ -35,7 +35,7 @@
 	// Read once: the registry is populated on mount by
 	// registerBuiltinNativeApps() before this layer renders, and widgets are
 	// not added at runtime.
-	const widgets = appsOfForm('widget');
+	const widgets = openableApps('widget');
 </script>
 
 {#if widgets.length > 0}
