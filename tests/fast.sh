@@ -20,6 +20,9 @@ start=$(date +%s)
 # themselves (the profile-builder sweep's 60 s budget failed under 7 shards: 64-88 s).
 # Measured 2026-10-25. Every other file goes to the shards.
 apart=$(grep -l -E '"cargo"|cargo (test|build)|too slow' tests/anatomy/test_*.py 2>/dev/null)
+# Named on the command line, a tests/_lanes.yml file would run anyway; leave those to their lane.
+[ "${NOS_LANE:-}" = all ] || apart=$(python3 -c 'import sys; sys.path.insert(0, "tests"); import _lanes
+skip = set(_lanes.listed()); print("\n".join(p for p in sys.argv[1:] if p not in skip))' $apart)
 ignore=(); for f in $apart; do ignore+=("--ignore=$f"); done
 for k in $(seq 1 "$n"); do
   NOS_PYTEST_SHARD="$k/$n" python3 -m pytest -q -p no:cacheprovider "$@" "${ignore[@]}" > "$out/shard-$k.log" 2>&1 &
