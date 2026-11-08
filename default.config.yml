@@ -875,16 +875,16 @@ docker_bin: /usr/local/bin/docker
 # frankenphp_version: pazny.wing fetches exactly this release and refuses a
 # binary whose `frankenphp --version` does not report it. Bump = new version +
 # all four checksums below, in one commit.
-frankenphp_version: "1.13.4"
-# sha256 per release asset (frankenphp-<key>) of v1.13.4 as rebuilt 2026-11-05.
+frankenphp_version: "1.13.5"
+# sha256 per release asset (frankenphp-<key>) of v1.13.5 as of 2026-11-08.
 # Upstream's static.yaml rebuilds the LATEST tag every night and re-uploads (--clobber), so these
 # go stale daily. Re-pin with tools/frankenphp-repin.py --write (nightly: workflow frankenphp-digest
 # opens the PR); it moves a pin only after `gh attestation verify` names upstream's static.yaml.
 # mac-x86_64 has no asset since 1.13.3: its pin is still 1.13.1's, so an Intel Mac fails closed.
 frankenphp_checksums:
-  linux-aarch64: "c405bbb9c6561381109a12c5707ec71109f098423c3c935667543c2c443e37f8"
-  linux-x86_64: "88e4229fb48167418e50bc29b94df5a4f83801ec70ea6637ed44bf0527e74c29"
-  mac-arm64: "8c767bc3b8d1bfac287748aff4d62ade240f7e2cd1984196e5d5a84fd3a47629"
+  linux-aarch64: "dec255cf2c69f127fc47f8f312be0bb600f58738e0e34574f77d58f91c408de0"
+  linux-x86_64: "512e61cf72699f7680beb9a1c51da994bed0ee9a0e451b74a74c85eb286b20d9"
+  mac-arm64: "fa2d1c11d4b95527cb57f947f1ec922c68efc58aa0a2c2fccd3c05f9c31108c9"
   mac-x86_64: "b9123b427cb357eac076b1f316f71589cfe5c3db4ad2449114e243563d794a89"
 
 # ==============================================================================
@@ -2332,7 +2332,7 @@ erpnext_port: 8087                     # 8082 = Traefik dashboard, 8083-8086 tak
 # in this wave the result cannot be verified against `docker ps`. The tag and
 # its arm64 manifest are verified against the registry; that the service comes
 # up on it is not. First supervised `-e install_erpnext=true` run is the test.
-erpnext_version: "v15.124.1"              # GHSA-v38v-9h2p-hr8v (critical) + 4 high fixed by 15.121.3 [advisory-status 2026-10-23]. REM-208: GHSA-6w83-8777-v93q SSTI (CVSS 9.9), floor 15.119.1 — pinned above it so the fourth overtake has margin
+erpnext_version: "v15.124.5"              # top of v15 (2026-11-04): GHSA-m668-9q43-8g29 + GHSA-x267-fgf5-54q9 fixed by 15.124.2 [advisory-status 2026-11-08]. Prior GHSA-v38v-9h2p-hr8v (critical) fixed by 15.121.3. REM-208: GHSA-6w83-8777-v93q SSTI (CVSS 9.9), floor 15.119.1 — pinned above it so the fourth overtake has margin
 # erpnext_data_dir: DEPRECATED since P0.1 migration to a named volume. Sites data
 # lives in Docker named volume `b2b_erpnext_sites` (managed for blank-reset
 # via `compose down -v` + `volume prune -f -a`). External storage can be
