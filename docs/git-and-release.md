@@ -98,8 +98,8 @@ both `tools/ci-local.sh` and the CI integration jobs (`.github/workflows/ci.yml`
 `tools/ci-local.sh` before a release push; refresh both files together with
 `tools/ci-local.sh --refresh-lock`.
 
-- The daily driver stays **ansible-core 2.20.5** (`.python-version` pins Python 3.13.13).
-  The frozen venv is the **2.21.0** mirror: the GitHub runner's filter-load path imports
+- The daily driver stays **ansible-core 2.20.9** (`.python-version` pins Python 3.13.13).
+  The frozen venv is the **2.21.6** mirror: the GitHub runner's filter-load path imports
   `VaultDecryptionContext`, a 2.21 symbol, and a 2.20 controller there skips every core
   filter ("No filter named 'bool'/'default'…"). The fix was a NEWER ansible, not an
   older one. When CI is red and local is green, compare exact versions between the
