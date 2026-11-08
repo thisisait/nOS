@@ -5209,9 +5209,9 @@
     "skill:roadmap-loop": {
       "kind": "skill",
       "source": ".claude/skills/roadmap-loop/SKILL.md",
-      "title": "One unattended iteration of roadmap development — pick the next unblocked dtt row, build it on its own branch, run only the touched lanes, push the branch, leave e2e + security notes. Run as `/loop /roadmap-loop`. Never lands, converges, asks, writes tests, or runs the full suite (that is /roadmap-integrate, in batches).",
+      "title": "One unattended iteration of roadmap development (`dry` = rehearse without pushing) — pick the next unblocked dtt row, build it on its own branch, run only the touched lanes, push the branch, leave e2e + security notes. Run as `/loop /roadmap-loop`. Never lands, converges, asks, writes tests, or runs the full suite (that is /roadmap-integrate, in batches).",
       "anchor": "02.02.09",
-      "description": "Skill 'roadmap-loop' (.claude/skills/roadmap-loop/SKILL.md): One unattended iteration of roadmap development — pick the next unblocked dtt row, build it on its own branch, run only the touched lanes, push the branch, leave e2e + security notes. Run as `/loop /roadmap-loop`. Never lands, converges, asks, writes tests, or runs the full suite (that is /roadmap-integrate, in batches)."
+      "description": "Skill 'roadmap-loop' (.claude/skills/roadmap-loop/SKILL.md): One unattended iteration of roadmap development (`dry` = rehearse without pushing) — pick the next unblocked dtt row, build it on its own branch, run only the touched lanes, push the branch, leave e2e + security notes. Run as `/loop /roadmap-loop`. Never lands, converges, asks, writes tests, or runs the full suite (that is /roadmap-integrate, in batches)."
     },
     "skill:roadmap-watch": {
       "kind": "skill",

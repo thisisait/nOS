@@ -1,6 +1,6 @@
 ---
 name: roadmap-loop
-description: One unattended iteration of roadmap development — pick the next unblocked dtt row, build it on its own branch, run only the touched lanes, push the branch, leave e2e + security notes. Run as `/loop /roadmap-loop`. Never lands, converges, asks, writes tests, or runs the full suite (that is /roadmap-integrate, in batches).
+description: One unattended iteration of roadmap development (`dry` = rehearse without pushing) — pick the next unblocked dtt row, build it on its own branch, run only the touched lanes, push the branch, leave e2e + security notes. Run as `/loop /roadmap-loop`. Never lands, converges, asks, writes tests, or runs the full suite (that is /roadmap-integrate, in batches).
 ---
 
 # /roadmap-loop — one iteration
@@ -17,6 +17,23 @@ The loop never pushes to `dev`/`master`, never converges the estate, never
 edits `config.yml`/`credentials.yml`, never calls `AskUserQuestion`, and never
 runs `tests/fast.sh`. CLAUDE.md applies in full, except the test rule in §3,
 which the operator waived for this loop only.
+
+## Dry run: `/roadmap-loop dry`
+
+Run once, without `/loop`, to rehearse. Do §1 through §4 for real: pick a row,
+build it on a local branch, run the lanes, write the notes. Then stop, with
+these differences:
+- no `tools/nos-push`;
+- no `nos dtt update`;
+- no `ScheduleWakeup`;
+- the ledger and notes go to `~/.cache/nos-roadmap-loop/dry/`.
+
+End by reporting:
+- the row you picked and why;
+- the first five rows you skipped, each with its reason;
+- the local branch and its commits;
+- the notes path;
+- the push you would have made.
 
 ## 0. Ledger
 
