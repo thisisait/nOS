@@ -17,7 +17,7 @@
     "law": 56,
     "reflex": 45,
     "heartbeat": 1,
-    "internal": 77,
+    "internal": 78,
     "edges": 443
   },
   "nodes": {
@@ -1064,6 +1064,10 @@
     "effector:worktree-prune": {
       "level": "limb",
       "kind": "effector"
+    },
+    "faceapp:agents": {
+      "level": "internal",
+      "kind": "faceapp"
     },
     "faceapp:anatomy": {
       "level": "internal",
