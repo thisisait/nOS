@@ -7,7 +7,7 @@ nginx forward-auth config mapped error_page 403 404 500 502 503 → @authentik_b
 (path-not-found, e.g. a static asset under /outpost.goauthentik.io) may bypass;
 every 5xx routes to @authentik_fail_closed which returns 503 (deny).
 
-REM-047's gate (test_rem047_authentik_header_injection.py) pins the *auth.conf*
+REM-047's gate (test_traefik_edge_journey.py) pins the *auth.conf*
 side. This gate pins the companion *locations.conf* side — the
 /outpost.goauthentik.io error_page mapping and the @authentik_fail_closed location
 itself — which no other gate covers. Dropping either re-opens the bypass.

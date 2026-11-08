@@ -87,7 +87,7 @@ files/anatomy/bone/
 with a justification a test can read (M5). A new daemon means a new
 `state/manifest.yml` entry, and the moment that entry carries `domain_var` +
 `port_var` it auto-derives a Traefik router —
-`tests/anatomy/test_traefik_exposure_justified.py` exists because exactly that
+`tests/anatomy/test_traefik_edge_journey.py` exists because exactly that
 happened to Traefik's own dashboard and leaked the password prefix (REM-144). The
 cheapest way to satisfy E is to add no routable surface at all.
 

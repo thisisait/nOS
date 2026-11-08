@@ -223,6 +223,7 @@
   "tests/anatomy/test_the_undeclared_reader_names_what_nobody_declared.py": 0.7,
   "tests/anatomy/test_tissue_holds.py": 1.0,
   "tests/anatomy/test_tld_class.py": 1.4,
+  "tests/anatomy/test_traefik_edge_journey.py": 1.0,
   "tests/anatomy/test_traefik_lane_upstream_keys.py": 1.4,
   "tests/anatomy/test_two_agent_lock_jobs_cannot_overlap.py": 0.9,
   "tests/anatomy/test_unreachable_is_not_a_404.py": 0.5,

@@ -339,7 +339,7 @@ def test_manifest_routes_apex_through_the_exposure_gates_population():
     assert apex.get("domain_var") == "apex_domain" and apex.get("port_var") == "apex_port", (
         "apex must be routed via the manifest auto-derivation (domain_var + "
         "port_var) — a traefik_extra_routers entry would bypass "
-        "test_traefik_exposure_justified.py's population"
+        "test_traefik_edge_journey.py's population"
     )
     assert apex.get("install_flag") == "install_apex"
     assert apex.get("rbac_tier") == 4
