@@ -84,6 +84,7 @@
   "tests/anatomy/test_genome_contract.py": 1.2,
   "tests/anatomy/test_genui_workspace_poc.py": 29.3,
   "tests/anatomy/test_geolibre_serves_atlas.py": 0.8,
+  "tests/anatomy/test_gitea_forge_journey.py": 0.5,
   "tests/anatomy/test_grafana_datasource_provisioned.py": 0.6,
   "tests/anatomy/test_halt_has_a_break_glass.py": 3.0,
   "tests/anatomy/test_health_wait_names_the_cause.py": 1.1,

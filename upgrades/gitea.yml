@@ -269,7 +269,7 @@ recipes:
           Authentik token exchange is DENIED unless named = SSO lockout. The
           [webhook] key is deprecated. apply.egress_allow_list adds the [security]
           key to the rendered override; the role template renders it from the pin
-          (version-gated, tests/anatomy/test_gitea_28_egress_names_auth.py).
+          (version-gated, tests/anatomy/test_gitea_forge_journey.py).
           Lax lets PUBLIC webhook targets through (1.27 allowed only the CI host).
           Wildcards in BLOCKED_* are now fatal at boot: pre.preflight_config refuses.
         - go-gitea#38855 [actions] RUN_RETENTION_DAYS=400 deletes old Actions
