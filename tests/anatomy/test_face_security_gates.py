@@ -41,7 +41,7 @@ def test_no_at_html_anywhere_in_shell():
     assert offenders == [], f"{{@html}} used in: {offenders}"
 
 
-# The pupil gate's set (test_pupil_webview_is_closed.py RAW_HTML): Iris's components draw here too.
+# The same set as test_iris_renders_text_as_text.py RAW_HTML: Iris's components draw here too.
 RAW_HTML = re.compile(r"\{@html|innerHTML|outerHTML|insertAdjacentHTML|document\.write|DOMParser")
 
 

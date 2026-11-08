@@ -1,4 +1,4 @@
-"""Code copied into Iris (pupil + face) keeps its upstream MIT notice whole.
+"""Code copied into Iris (face) keeps its upstream MIT notice whole.
 
 MIT allows reuse only if the permission notice ships in full; a header cut after
 "EXPRESS OR IMPLIED." drops the liability limitation (layout.ts, 8984916a).

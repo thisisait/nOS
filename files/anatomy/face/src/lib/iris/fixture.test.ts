@@ -1,5 +1,5 @@
 // Every to_shell sample of the contract fixture, rendered: each string the wire
-// carried must reach the page as text (gate: tests/anatomy/test_pupil_renders_the_fixture.py).
+// carried must reach the page as text (gate: tests/anatomy/test_iris_renders_the_fixture.py).
 import { readFileSync } from 'node:fs';
 import { render } from 'svelte/server';
 import { describe, expect, it } from 'vitest';
@@ -9,7 +9,7 @@ import ApprovalCard from './ApprovalCard.svelte';
 import Message from './Message.svelte';
 import type { Component, ToShell, Value } from './wire';
 
-// PUPIL_FIXTURE: a planted copy (tests/anatomy/test_pupil_renders_the_fixture.py) must go red here.
+// PUPIL_FIXTURE: a planted copy (tests/anatomy/test_iris_renders_the_fixture.py) must go red here.
 const FIXTURE =
 	process.env.PUPIL_FIXTURE ??
 	new URL('../../../../contracts/thalamus-shell.fixture.json', import.meta.url);

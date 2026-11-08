@@ -4,9 +4,10 @@ WHY. Each piece (widget runs, aggregation, form submit, commit insert, table_cha
 the workspace reducers) has its own gate, but the PoC is the claim that they join:
 a submit stores a row, and the two readers re-run and answer what KEAP now holds,
 with no model call and a ledger that says who read and wrote what. This runs the
-cargo script over the stateful fake (tests/serve.rs genui_workspace_poc), the
-pupil's decode of the PoC layout, and checks poc.test.ts is in the vitest lane
-(test_pupil_and_thalamus_lanes_run.py runs every face and pupil *.test.ts). genui I5i.
+cargo script over the stateful fake (tests/serve.rs genui_workspace_poc) and checks
+poc.test.ts is in the vitest lane (test_thalamus_and_face_lanes_run.py runs every face
+*.test.ts). The pupil's Rust decode of the PoC layout retired with it (2026-11-08); the
+face's workspace.ts reducers decode it in poc.test.ts. genui I5i.
 """
 from __future__ import annotations
 
@@ -21,7 +22,6 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 POC = REPO / "state/fixtures/genui-workspace-poc"
 THALAMUS = REPO / "files/anatomy/thalamus/thalamus"
-PUPIL = REPO / "files/anatomy/pupil"
 
 
 def test_the_poc_fixture_is_the_expenses_table_and_one_tab():
@@ -47,8 +47,3 @@ def test_the_poc_script_runs_over_the_stateful_fake():
     out = _cargo(THALAMUS, "--test", "serve", "genui_workspace_poc")
     assert re.search(r"test genui_workspace_poc \.\.\. ok", out), out[-2000:]
 
-
-@pytest.mark.skipif(not shutil.which("cargo"), reason="cargo runs the pupil's decoder")
-def test_the_pupil_loads_the_poc_layout():
-    out = _cargo(PUPIL / "src-tauri", "-p", "nos-pupil", "--no-default-features", "the_poc_workspace_decodes")
-    assert re.search(r"the_poc_workspace_decodes \.\.\. ok", out), out[-2000:]

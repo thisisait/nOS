@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 // The eye shows what the thalamus says it is doing (wire `activity`), plus one local
 // input — the person typing — labelled as local. Pure reducer; timers are `settle`.
-// Gate: tests/anatomy/test_pupil_eye_reads_the_wire.py.
+// Gate: tests/anatomy/test_iris_eye_reads_the_wire.py.
 import { mount, unmount } from 'svelte';
 import { afterEach, describe, expect, it } from 'vitest';
 import Eye from './Eye.svelte';

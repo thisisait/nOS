@@ -1,4 +1,4 @@
-"""The pupil's eye shows what the thalamus says it is doing, and nothing it guessed.
+"""The face Iris's eye shows what the thalamus says it is doing, and nothing it guessed.
 
 WHY. The eye is the person's only cue that Iris is working, waiting on them, or gone.
 A state the wire did not name (a "thinking" assumed on send) or an approval hidden
@@ -16,8 +16,8 @@ import pytest
 FACE = pathlib.Path(__file__).resolve().parents[2] / "files/anatomy/face"
 
 
-@pytest.mark.skipif(not shutil.which("npx"), reason="npx runs the pupil's vitest")
-def test_pupil_eye_follows_the_wire():
+@pytest.mark.skipif(not shutil.which("npx"), reason="npx runs the face's vitest")
+def test_iris_eye_follows_the_wire():
     assert (FACE / "node_modules").is_dir(), "run `npm ci --ignore-scripts` in files/anatomy/face first"
     r = subprocess.run(["npx", "vitest", "run", "src/lib/iris/eye.test.ts"], cwd=FACE,
                        capture_output=True, text=True, timeout=600, check=False)

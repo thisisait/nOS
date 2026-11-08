@@ -388,14 +388,14 @@ def test_verify_warns_on_an_unbound_model_and_fails_on_anything_else():
 
 def test_the_decider_list_names_the_medulla_and_nos_app_on_macos():
     """Operator ruling 2026-10-28: `nos halt` goes through the medulla and nOS.app decides, so both are
-    listed by default; the pupil and the terminal stay listed (they decided while the list was off).
+    listed by default; the terminal stays listed (it decided while the list was off), the pupil retired 2026-11-08.
     Linux stays empty: SO_PEERCRED fails a set list closed (src/serve.rs decider_refusal). The app is
     signed with the medulla's identity, so the decider it lists is the one the role installed."""
     from jinja2.nativetypes import NativeEnvironment
     env = NativeEnvironment(undefined=jinja2.StrictUndefined)
     defaults = yaml.safe_load((ROLE / "defaults" / "main.yml").read_text())
     ctx: dict = {"ansible_facts": {"env": {"HOME": "/h"}}}
-    for k in ("thalamus_home", "thalamus_bin", "thalamus_pupil_app", "thalamus_pupil_exe", "thalamus_nos_app", "thalamus_nos_app_exe"):
+    for k in ("thalamus_home", "thalamus_bin", "thalamus_nos_app", "thalamus_nos_app_exe"):
         ctx[k] = env.from_string(defaults[k]).render(**ctx)
     mdef = yaml.safe_load((MEDULLA / "defaults" / "main.yml").read_text())
     ctx["medulla_bin_dir"] = env.from_string(mdef["medulla_bin_dir"]).render(**ctx)
@@ -404,7 +404,8 @@ def test_the_decider_list_names_the_medulla_and_nos_app_on_macos():
     raw = defaults["thalamus_decider_exes"]
     assert env.from_string(raw).render(**ctx, nos_service_manager="systemd") == []
     exes = env.from_string(raw).render(**ctx, nos_service_manager="launchd")
-    assert exes == [ctx["thalamus_pupil_exe"], ctx["thalamus_bin"], medulla_bin, ctx["thalamus_nos_app_exe"]]
+    assert exes == [ctx["thalamus_bin"], medulla_bin, ctx["thalamus_nos_app_exe"]]
+    assert not any(k.startswith("thalamus_pupil") for k in defaults), "a retired pupil default came back"
     assert _plist(thalamus_decider_exes=exes)["EnvironmentVariables"]["NOS_DECIDER_EXES"] == ":".join(exes)
     assert "NOS_DECIDER_EXES" not in _plist(thalamus_decider_exes=[])["EnvironmentVariables"]
     main = (REPO / "files/anatomy/thalamus/thalamus/src/cli.rs").read_text()
@@ -423,7 +424,7 @@ def test_the_decider_list_names_the_medulla_and_nos_app_on_macos():
 def test_a_decider_list_that_admits_nobody_is_refused_at_render():
     """Row thalamus-decider-guard-followups: a string joins its characters, an empty or relative
     entry and a missing file each admit nobody; the role refuses them, before the plist and after
-    the pupil is built, rather than serve a guard that silently refuses every decision."""
+    the medulla and nOS.app are built, rather than serve a guard that silently refuses every decision."""
     env = jinja2.Environment()
     env.tests["match"] = lambda v, pat: re.match(pat, v) is not None
     tasks = _tasks()
@@ -431,17 +432,18 @@ def test_a_decider_list_that_admits_nobody_is_refused_at_render():
     shape = next(t for t in tasks if t.get("name", "").endswith("is a list of absolute paths"))
     exists = next(t for t in tasks if t.get("name", "").endswith("A decider that names no file is refused"))
     assert names.index(shape["name"]) < names.index("[pazny.thalamus] Render launchd plist")
-    pupil = next(i for i, t in enumerate(tasks) if t.get("ansible.builtin.import_tasks") == "pupil.yml")
-    assert pupil < names.index(exists["name"]), "the existence check runs before the pupil is built"
+    built = next(i for i, t in enumerate(tasks) if (t.get("ansible.builtin.include_role") or {}).get("name") == "pazny.medulla")
+    assert built < names.index(exists["name"]), "the existence check runs before nOS.app is built"
+    assert not any(t.get("ansible.builtin.import_tasks") == "pupil.yml" for t in tasks), "the retired pupil build came back"
 
     def ok(that, **ctx) -> bool:
         that = that if isinstance(that, list) else [that]
         return all(env.from_string("{{ (" + e + ") }}").render(**ctx) == "True" for e in that)
 
-    good = ["/h/thalamus/bin/nos-pupil", "/h/thalamus/bin/thalamus"]
+    good = ["/h/Applications/nOS.app/Contents/MacOS/nOS", "/h/thalamus/bin/thalamus"]
     assert ok(shape["ansible.builtin.assert"]["that"], thalamus_decider_exes=[])
     assert ok(shape["ansible.builtin.assert"]["that"], thalamus_decider_exes=good)
-    for bad in ("/h/thalamus/bin/nos-pupil", ["/h/x", ""], ["rel/exe"], ["/a:/b"], [7], {"/h/x": 1}):
+    for bad in ("/h/thalamus/bin/thalamus", ["/h/x", ""], ["rel/exe"], ["/a:/b"], [7], {"/h/x": 1}):
         assert not ok(shape["ansible.builtin.assert"]["that"], thalamus_decider_exes=bad), bad
     reg = lambda *e: {"results": [{"item": p, "stat": {"exists": x}} for p, x in e]}
     assert ok(exists["ansible.builtin.assert"]["that"], _thalamus_deciders=reg())
@@ -500,12 +502,6 @@ def test_a_sign_that_cannot_reach_the_key_says_the_one_command(tmp_path):
     r = _run_sign(tmp_path, t, ctx)
     assert r.returncode != 0
     assert "security set-key-partition-list -S apple-tool:,apple:,codesign: -s /k/login.keychain-db" in r.stderr, r.stderr
-    pupil = yaml.safe_load((ROLE / "tasks" / "pupil.yml").read_text())
-    p = next(x for x in pupil if "sign the pupil" in x.get("name", "").lower())
-    (tmp_path / "p").mkdir()
-    r = _run_sign(tmp_path / "p", p, {**ctx, "thalamus_pupil_app": str(tmp_path / "Iris.app"),
-                                      "thalamus_pupil_identifier": "eu.thisisait.nos.pupil"})
-    assert r.returncode != 0 and "set-key-partition-list" in r.stderr, r.stderr
 
 
 def test_the_local_seed_is_a_config_knob_unset_by_default():
@@ -590,3 +586,13 @@ def test_the_reader_says_the_relay_is_bound_exactly_when_the_secret_is_set():
         log.write_text("thalamus: relay FAILED 127.0.0.1:1: Address already in use\n")
         assert r.judge_relay(log, plist)["state"] == "RED"
     assert "judge_relay(" in inspect.getsource(r.collect), "the reader never reports the relay line"
+
+
+def test_a_converge_removes_the_retired_pupil():
+    """Row pupil-retire (2026-11-08): a host that ran the pupil keeps no Iris.app that still looks
+    like Iris, nor its multi-GB cargo target, once it converges."""
+    t = next(x for x in _tasks() if "retired pupil" in x.get("name", "").lower())
+    assert t["ansible.builtin.file"]["state"] == "absent"
+    gone = " ".join(t["loop"])
+    for part in ("Applications/Iris.app", "pupil-target", "nos-pupil.sha256", "nos-pupil.source-sha256"):
+        assert part in gone, f"{part} is left on the host: {t['loop']}"

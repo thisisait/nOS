@@ -1,14 +1,14 @@
-"""The pupil's workspace layout: one spec, one fixture, decoded by the pupil's Rust.
+"""The face Iris's workspace layout: one spec, one fixture, decoded by the contract crate's Rust.
 
-WHY. The layout is the one file the pupil writes on the person's Mac, and the face
-is to read the same format later. A layout the decoder accepts past its caps (a
-65th workspace, a widget narrower than 80 px, a spec with two keys, a parent cycle)
-would be saved and restored as if valid; one it refuses must be refused on load,
-never half-drawn. A v2 file a person already has must load as v3, the same in Rust
-and in TypeScript, or one shell would draw it elsewhere. This runs `cargo test
---no-default-features workspace` in the pupil crate, whose test decodes every
-fixture sample, re-encodes it to itself, refuses every `refused` sample and
-migrates every `migrated` v2 sample to its v3 (genui I5h; canvas v3 2026-10-18).
+WHY. The layout is what the person laid out, and the thalamus holds it as theirs. A layout
+the decoder accepts past its caps (a 65th workspace, a widget narrower than 80 px, a spec
+with two keys, a parent cycle) would be saved and restored as if valid; one it refuses must
+be refused at the save, never held. A v2 file a person already has must load as v3, the same
+in Rust and in TypeScript, or one side would draw it elsewhere. This runs `cargo test
+workspace` in the contract crate, whose test decodes every fixture sample, re-encodes it to
+itself, refuses every `refused` sample and migrates every `migrated` v2 sample to its v3
+(genui I5h; canvas v3 2026-10-18). The decoder was the pupil's until it retired (2026-11-08);
+serve now checks every workspace_save with it (tests/serve.rs).
 """
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ import yaml
 REPO = pathlib.Path(__file__).resolve().parents[2]
 SPEC = REPO / "files/anatomy/contracts/workspace-layout.yml"
 FIXTURE = REPO / "files/anatomy/contracts/workspace-layout.fixture.json"
-CRATE = REPO / "files/anatomy/pupil/src-tauri"
+CRATE = REPO / "files/anatomy/thalamus"
 # The cases the definition names; the fixture may hold more, never fewer.
 MUST_REFUSE = {"a 65th workspace", "a board on a workspace that is not its child", "a widget w: 79", "an unknown key", "a spec with two keys", "5 lens conditions",
                "a heading with a spec", "a parent that names no workspace", "a parent cycle", "nesting 7 deep"}
@@ -47,6 +47,7 @@ def test_the_spec_names_this_fixture_and_these_files():
             assert (REPO / path).is_file(), f"{side} names a missing file: {path}"
     names = {pathlib.PurePath(p).name for p in spec["consumer"]["code"]}
     assert {"workspace.rs", "workspace.test.ts"} <= names, names
+    assert not any("pupil" in p for side in ("producer", "consumer") for p in spec[side]["code"]), "a retired pupil path"
 
 
 def test_the_fixture_holds_the_named_refusals():
@@ -65,9 +66,9 @@ def test_the_fixture_migrates_v2_files_and_draws_every_kind():
     assert any("view" in s for s in spaces) and any("parent" in s for s in spaces), "no sample keeps a view or a parent"
 
 
-@pytest.mark.skipif(not shutil.which("cargo"), reason="cargo runs the pupil's decoder")
-def test_the_pupil_decodes_and_refuses_the_fixture():
-    r = subprocess.run(["cargo", "test", "--locked", "-p", "nos-pupil", "--no-default-features", "workspace"],
+@pytest.mark.skipif(not shutil.which("cargo"), reason="cargo runs the contract's decoder")
+def test_the_contract_decodes_and_refuses_the_fixture():
+    r = subprocess.run(["cargo", "test", "--locked", "-p", "nos-contract", "workspace"],
                        cwd=CRATE, capture_output=True, text=True, timeout=1800, check=False)
     out = r.stdout + r.stderr
     assert r.returncode == 0, out[-6000:]

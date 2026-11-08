@@ -1,7 +1,7 @@
 // The approval queue holds the terminal shell's invariants (thalamus/src/shell.rs):
 // oldest first, one shown (30-32); approve only once the whole edit was shown (33, 175,
 // 221-223), reject at any time (176); one decision each (179); closed = not decided (157-161).
-// Gate: tests/anatomy/test_pupil_approvals_hold.py.
+// Gate: tests/anatomy/test_iris_approvals_hold.py.
 import { readFileSync } from 'node:fs';
 import { compile } from 'svelte/compiler';
 import { render } from 'svelte/server';

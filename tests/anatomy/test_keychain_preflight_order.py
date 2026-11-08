@@ -68,7 +68,7 @@ def test_keychain_preflight_tags_are_exactly_the_signing_tags():
     walker = _Signers()
     for section in ("pre_tasks", "tasks", "post_tasks", "handlers"):
         walker.walk(play.get(section) or [], REPO / "main.yml", frozenset(), TOP, 0)
-    assert len(walker.signers) >= 3, f"walk found {sorted(walker.signers)}; medulla binary, nOS.app, pupil sign"
+    assert len(walker.signers) >= 2, f"walk found {sorted(walker.signers)}; medulla binary, nOS.app sign (the pupil retired 2026-11-08)"
     want = set().union(*walker.signers.values())
     assert set(preflight["tags"]) == want, (
         f"preflight tags {sorted(preflight['tags'])} must equal the tags that select a keychain sign "
