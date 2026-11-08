@@ -25,6 +25,11 @@ the completion plan, 2026-08-08). Now it reads code:
    scope selects, and only while BaseApiPresenter confines that scope to an
    $answerActions POST. The medulla's tier-1 + decider check names the person;
    medulla/tests/questions.rs and test_the_inbox_answers_once.py run it.
+   A SECOND, ruled 2026-11-08 (row wing-inc1-inbox-app): the face Inbox app, only on
+   the branch where the face-bff bearer speaks for a Tier-1 end user, and only while
+   `answer` is an $operatorActions entry (startup() runs requireOperator, which refuses
+   anyone below Tier 1). The person is the edge identity, never the body;
+   test_the_face_inbox_answers_once.py runs it over the real presenters.
 
 2. The token path's HTTP endpoint must refuse an ANONYMOUS identity. A
    channel adapter that cannot map its chat identity to an operator must be
@@ -69,12 +74,18 @@ BASE_API = APP / "Presenters/Api/BaseApiPresenter.php"
 
 
 def _the_ruled_relay(path: Path, code: str) -> bool:
-    """Api\\InboxPresenter, the call on the wing.answer branch, and that scope confined to $answerActions POSTs."""
+    """Api\\InboxPresenter, the call on the wing.answer branch (and the face-bff Tier-1 branch), the
+    first scope confined to $answerActions POSTs and the second to an operator action."""
     if path != API_PRESENTER:
         return False
+    call = re.search(r"\$relay(\s*\|\|\s*\$face)?\s*\?\s*\$this->questions->answerAsOperator\(", code)
     branch = re.search(r"\$relay\s*=\s*TokenRepository::grants\([^;]*'wing\.answer'\)\s*;", code) and \
-        re.search(r"\$relay\s*\?\s*\$this->questions->answerAsOperator\(", code) and \
-        len(re.findall(r"->answerAsOperator\s*\(", code)) == 1
+        call and len(re.findall(r"->answerAsOperator\s*\(", code)) == 1
+    if call and call.group(1):
+        face = re.search(r"\$face\s*=\s*\$this->endUser\s*!==\s*null\s*&&\s*\$this->endUser->operator\s*&&"
+                         r"[^;]*===\s*EndUser::TOKEN_NAME\s*;", code)
+        operator = re.search(r"protected\s+array\s+\$operatorActions\s*=\s*\[[^\]]*'answer'[^\]]*\]", code)
+        branch = branch and face and operator
     base = code_only(BASE_API.read_text(encoding="utf-8"))
     confined = re.search(r"grants\([^;]*'wing\.answer'\)\s*&&\s*!\(\$this->getMethod\(\)\s*===\s*'POST'\s*&&\s*"
                          r"in_array\(strtolower\(\$this->getAction\(\)\),\s*\$this->answerActions,\s*true\)\)\)\s*\{\s*"
