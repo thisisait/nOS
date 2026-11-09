@@ -42,6 +42,16 @@ def test_red_status_names_an_overdue_review(tmp_path):
     assert red.reds({"doctrine_reviews": overdue})
 
 
+def test_coderabbit_names_as_many_sections_as_the_checklist_has():
+    """Review 2026-10-04: §6 landed, the config still said "all five sections"."""
+    cfg = yaml.safe_load((REPO / ".coderabbit.yaml").read_text())
+    text = " ".join(p["instructions"] for p in cfg["reviews"]["path_instructions"])
+    words = {"five": 5, "six": 6, "seven": 7, "eight": 8}
+    said = [n for w, n in words.items() if f"all {w}" in text]
+    heads = re.findall(r"^## \d\.", (REPO / CHECKLIST).read_text(), re.M)
+    assert said == [len(heads)], f"config says {said}, checklist has {len(heads)} sections"
+
+
 def test_coderabbit_reviews_prs_into_master_and_dev():
     """PR #35 (2026-10-05): the bot skipped a dev→master PR as a non-default base."""
     auto = yaml.safe_load((REPO / ".coderabbit.yaml").read_text())["reviews"]["auto_review"]

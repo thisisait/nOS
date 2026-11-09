@@ -94,6 +94,14 @@ def test_librarian_runner_live_on_demand():
             f"{name} carries a model pin the bound runner does not read; it "
             "reads like a cost guarantee and decides nothing"
         )
+    # The prompt is the agent's contract with KEAP: each ceremony leg names an endpoint it calls.
+    prompt = (d / "system.md").read_text(encoding="utf-8")
+    assert "/agent/v1/lint/verdict" in prompt
+    assert "/agent/v1/promotions" in prompt
+    assert "/agent/v1/taxonomy/propose" in prompt, (
+        "librarian's system prompt lost the taxonomy-growth leg "
+        "(frog-depth node proposals, Track T)"
+    )
     agent = yaml.safe_load((d / "agent.yml").read_text())
     meta = agent.get("metadata") or {}
     # `scheduled` left the enum (ruling 2, docs/doctrine/agentkit.md §6);
