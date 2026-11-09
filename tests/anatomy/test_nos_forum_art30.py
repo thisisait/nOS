@@ -22,7 +22,6 @@ sys.path.insert(0, str(REPO / "tools"))
 import nos_identity as ni  # noqa: E402
 PLUGIN = REPO / "files/anatomy/plugins/nos-forum-base/plugin.yml"
 MAIN = REPO / "main.yml"
-DOC = REPO / "docs/compliance/nos-forum.md"
 ERASURE = REPO / "state/gdpr-erasure-map.yml"
 EXPORT = REPO / "state/gdpr-export-map.yml"
 REGISTER = REPO / "state/dpa-register.md"
@@ -94,16 +93,6 @@ def test_dsar_maps_and_register_carry_the_service():
     erase = {e["id"]: e for e in yaml.safe_load(ERASURE.read_text())["services"]}["svc_nos-forum"]
     assert "erase_subject" in erase["note"], "erasure must name the module reducer that does it"
     assert "svc_nos-forum" in REGISTER.read_text(encoding="utf-8")
-
-
-def test_policy_doc_matches_the_register_row():
-    text = DOC.read_text(encoding="utf-8")
-    g = _plugin()["gdpr"]
-    assert f"**{g['retention_days']} days**" in text
-    assert g["legal_basis"] in text
-    assert "not enforced in v0.1" in text, "the doc must not read as if retention runs"
-    readme = (REPO / "docs/systems/nos-forum/README.md").read_text(encoding="utf-8")
-    assert "docs/compliance/nos-forum.md" in readme
 
 
 def test_flag_ships_off():

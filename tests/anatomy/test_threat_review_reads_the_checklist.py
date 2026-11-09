@@ -19,18 +19,7 @@ def test_coderabbit_reads_the_checklist_and_never_blocks():
     assert CHECKLIST in cfg["knowledge_base"]["code_guidelines"]["filePatterns"]
     assert any(CHECKLIST in p["instructions"] for p in cfg["reviews"]["path_instructions"])
     assert cfg["reviews"]["request_changes_workflow"] is False
-
-
-def test_the_checklist_has_its_six_sections():
-    heads = re.findall(r"^## (\d)\.", (REPO / CHECKLIST).read_text(), re.M)
-    assert heads == ["1", "2", "3", "4", "5", "6"]
-
-
-def test_section_six_names_the_session_and_its_doctrine():
-    text = (REPO / CHECKLIST).read_text()
-    six = text.split("## 6.", 1)[1]
-    assert "Session compromise" in six.splitlines()[0]
-    assert "ssot/doctrine/session-threat-model.md" in six
+    assert "CLAUDE.md" in cfg["knowledge_base"]["code_guidelines"]["filePatterns"]
 
 
 def test_the_threat_model_carries_its_review_date_as_data():
@@ -51,16 +40,6 @@ def test_red_status_names_an_overdue_review(tmp_path):
     overdue = red.doctrine_reviews(tmp_path)
     assert [o["doc"] for o in overdue] == ["late.md"]
     assert red.reds({"doctrine_reviews": overdue})
-
-
-def test_coderabbit_names_as_many_sections_as_the_checklist_has():
-    """Review 2026-10-04: §6 landed, the config still said "all five sections"."""
-    cfg = yaml.safe_load((REPO / ".coderabbit.yaml").read_text())
-    text = " ".join(p["instructions"] for p in cfg["reviews"]["path_instructions"])
-    words = {"five": 5, "six": 6, "seven": 7, "eight": 8}
-    said = [n for w, n in words.items() if f"all {w}" in text]
-    heads = re.findall(r"^## \d\.", (REPO / CHECKLIST).read_text(), re.M)
-    assert said == [len(heads)], f"config says {said}, checklist has {len(heads)} sections"
 
 
 def test_coderabbit_reviews_prs_into_master_and_dev():

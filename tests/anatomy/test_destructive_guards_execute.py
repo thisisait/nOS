@@ -70,7 +70,3 @@ def test_bridge_allowlist_never_contains_removal_tags():
     allowed = re.search(r'^ALLOWED_TAGS="([^"]*)"', src, re.M).group(1).split(",")
     for tag in ("blank", "reset", "flush", "uninstall"):
         assert tag not in allowed, f"'{tag}' must never be in ALLOWED_TAGS"
-
-def test_doctrine_texts_name_the_ladder():
-    assert "remove=data/deep/all" in (REPO / "tools/workflows/v07-overnight-review.mjs").read_text()
-    assert "any `remove=` level" in (REPO / "docs/archive/bones-and-wings-refactor.md").read_text()

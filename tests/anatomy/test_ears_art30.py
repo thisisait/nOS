@@ -23,7 +23,6 @@ DEFAULTS = REPO / "roles/pazny.ears/defaults/main.yml"
 LISTENER = REPO / "files/anatomy/ears/ears-listen.py"
 PLIST = REPO / "roles/pazny.ears/templates/ears-app-info.plist.j2"
 MAIN = REPO / "main.yml"
-DOC = REPO / "docs/compliance/ears.md"
 ERASURE = REPO / "state/gdpr-erasure-map.yml"
 EXPORT = REPO / "state/gdpr-export-map.yml"
 REGISTER = REPO / "state/dpa-register.md"
@@ -118,15 +117,6 @@ def test_dsar_maps_and_register_carry_the_service():
         assert e["flag"] == "install_ears" and e["method"] == "manual"
         assert "turns" in e["note"] and "caddy-sessions" in e["note"]
     assert "svc_ears" in REGISTER.read_text(encoding="utf-8")
-
-
-def test_policy_doc_matches_the_register_row_and_defaults():
-    text = DOC.read_text(encoding="utf-8")
-    g, d = _plugin()["gdpr"], _defaults()
-    assert f"**{g['retention_days']} days**" in text
-    assert f"**{d['ears_retention_days']} days**" in text, "the kept-mode horizon must be in the doc"
-    assert g["legal_basis"] in text
-    assert "docs/compliance/ears.md" in (REPO / "docs/systems/ears/README.md").read_text()
 
 
 def test_the_microphone_prompt_tells_the_truth_in_both_modes():

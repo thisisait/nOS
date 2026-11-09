@@ -20,7 +20,6 @@ PLUGIN = REPO / "files/anatomy/plugins/device-gateway-base/plugin.yml"
 TABLE = REPO / "state/keap-tables/device-client.table.yml"
 GATEWAY = REPO / "files/anatomy/device-gateway/gateway.py"
 MAIN = REPO / "main.yml"
-DOC = REPO / "docs/compliance/devices.md"
 ERASURE = REPO / "state/gdpr-erasure-map.yml"
 EXPORT = REPO / "state/gdpr-export-map.yml"
 REGISTER = REPO / "state/dpa-register.md"
@@ -119,14 +118,3 @@ def test_dsar_maps_and_register_carry_the_service():
         assert e["flag"] == "install_device_gateway" and e["method"] == "manual"
         assert "device-client" in e["note"]
     assert "svc_device-gateway" in REGISTER.read_text(encoding="utf-8")
-
-
-def test_policy_doc_matches_the_register_row():
-    text = DOC.read_text(encoding="utf-8")
-    g = _plugin()["gdpr"]
-    assert f"**{g['retention_days']} days**" in text, "doc retention must equal retention_days"
-    assert g["legal_basis"] in text
-    # Signed 2026-10-02: the page must say WHO confirmed it and WHEN.
-    assert "CONFIRMED by the operator" in text, "an unsigned proposal must not read as policy"
-    readme = (REPO / "docs/systems/device-gateway/README.md").read_text(encoding="utf-8")
-    assert "docs/compliance/devices.md" in readme

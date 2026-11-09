@@ -1,11 +1,8 @@
-"""Anatomy gates for the git workflow doctrine (2026-05-17).
+"""Anatomy gates for the git workflow (2026-05-17): the pre-push hook.
 
-CLAUDE.md §Git Workflow (summary), docs/git-and-release.md (detail) +
-README.md §Contributing pin the three-tier
-branch model (feat → dev → master) + the pzny local-cross-feature
-branch + the pre-push hook that enforces both server-side rules
-locally. These gates catch silent drift in the doctrine docs and the
-hook script itself.
+The hook enforces the branch model (docs/git-and-release.md) locally: master
+is PR-only, pzny goes to Gitea only. The CLAUDE.md/README phrase checks left
+2026-11-09 (gate-diet): they pinned wording, not the hook.
 """
 
 from __future__ import annotations
@@ -14,51 +11,6 @@ import pathlib
 import stat
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-# Detail moved out of CLAUDE.md 2026-10-02; CLAUDE.md keeps the summary.
-GIT_DOC = REPO / "docs" / "git-and-release.md"
-
-
-def test_claude_md_describes_three_tier_branch_model():
-	src = (REPO / "CLAUDE.md").read_text()
-	# Three long-lived branches named explicitly.
-	assert "`master`" in src and "`dev`" in src and "`pzny`" in src
-	# Master is PR-only + locked on both remotes.
-	assert "PR-only" in src
-	assert "GitHub" in src and "Gitea" in src
-	# The 2026-04-16 "never resurrect dev" rule is explicitly superseded.
-	doc = GIT_DOC.read_text()
-	assert "superseded" in doc.lower() or "no longer" in doc.lower()
-	# CLAUDE.md must still send a reader to the detail.
-	assert "docs/git-and-release.md" in src
-
-
-def test_readme_links_to_branch_model():
-	src = (README := REPO / "README.md").read_text()
-	# Short summary in Contributing.
-	assert "feat/" in src and "dev" in src and "master" in src
-	# Mentions the lock so contributors know direct push fails.
-	assert "lock" in src.lower() or "protect" in src.lower()
-
-
-def test_claude_md_documents_branch_protection_setup():
-	"""The `master` PR-only + fast-forward-only + branch-lock rule is a
-	GitHub repo-settings operation, not a workflow file. docs/git-and-release.md must
-	document the one-time setup steps + a verification command so a fresh
-	operator (or a fork) cannot silently skip it and let direct pushes to
-	master through. Pins the master-branch-protection-not-documented gap."""
-	src = GIT_DOC.read_text()
-	# A dedicated setup subsection exists.
-	assert "Branch protection" in src
-	# It names the GitHub repo-settings surface, not a workflow file.
-	assert "Settings" in src and "Branches" in src
-	# The three load-bearing rules are spelled out.
-	assert "Require a pull request" in src
-	assert "Require branches to be up to date" in src
-	assert "force push" in src.lower()
-	# A verification path exists (API check) so "is it set?" is answerable.
-	assert "branches/master/protection" in src
-	# The Gitea mirror lock is covered too (doctrine says BOTH remotes).
-	assert "Gitea" in src and "force push" in src.lower()
 
 
 def test_pre_push_hook_present_and_executable():
@@ -80,11 +32,3 @@ def test_pre_push_hook_isolates_pzny_to_gitea():
 	# pzny case checks the remote name explicitly.
 	assert "pzny)" in src
 	assert '"$remote" != "gitea"' in src
-
-
-def test_commit_convention_carries_subject_length_rule():
-	"""The 50/72 rule must be in CLAUDE.md so every commit-authoring
-	session (Claude included) honors it from the start of the
-	conversation."""
-	src = (REPO / "CLAUDE.md").read_text()
-	assert "50 chars" in src.lower() or "≤ 50" in src or "<= 50" in src

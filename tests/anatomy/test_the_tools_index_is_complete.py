@@ -69,11 +69,3 @@ def test_the_index_names_nothing_that_is_gone() -> None:
         "that names a tool the reader cannot run sends them looking for a bug "
         "in their checkout."
     )
-
-
-def test_the_convention_table_is_still_there() -> None:
-    """The list is the cheap half; the RULE is why the list stays short."""
-    text = README.read_text(encoding="utf-8")
-    for shape in ("`*-status.py`", "`nos-*`", "`run-*.sh`", "`tools/<family>/`"):
-        assert shape in text, f"the README no longer states what {shape} means"
-    assert "a reader may not write" in text

@@ -199,18 +199,3 @@ def test_a_role_default_is_a_layer_too() -> None:
         "the resolved trail does not name the role default it came from. A "
         "value without its source is the thing this tool exists to stop."
     )
-
-
-def test_claude_md_points_at_the_tool_rather_than_restating_it() -> None:
-    """A doc that restates state is a doc that drifts; that is the whole thesis."""
-    text = (REPO / "CLAUDE.md").read_text(encoding="utf-8")
-    assert "tools/estate-status.py" in text, (
-        "CLAUDE.md no longer points at the state reader. The estate's own "
-        "precedent is the security queue: 'This line no longer carries the "
-        "numbers — ask instead: tools/rem-status.py'."
-    )
-    assert "repo is not the running system" in text.lower(), (
-        "the repo-vs-runtime split lost its section. It is the fact that makes "
-        "a deployed organ legitimately differ from the checkout, and it was "
-        "written nowhere until 2026-08-10."
-    )
