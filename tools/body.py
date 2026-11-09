@@ -39,7 +39,7 @@ def _lexicon() -> dict:
 def _levels(doc: dict) -> tuple[tuple[str, ...], tuple[str, ...]]:
     """(ladder, cross-cutting systems): `order` up to `cross`, then every cross word
     that names a graph kind — the rule tools/body-plan-gen.py applies too
-    (test_body_levels_are_the_lexicon.py)."""
+    (test_lexicon_holds.py)."""
     try:
         order = doc["order"]
         ladder = tuple(order[: order.index("cross")])
@@ -51,7 +51,7 @@ def _levels(doc: dict) -> tuple[tuple[str, ...], tuple[str, ...]]:
         return (), ()
 
 
-#: What each level means is the lexicon's `means` (test_body_glosses_are_the_lexicon.py),
+#: What each level means is the lexicon's `means` (test_lexicon_holds.py),
 #: never a string here; which words ARE levels is the lexicon's too.
 _LADDER, _SYSTEMS = _levels(_lexicon())
 LEVELS = _LADDER + _SYSTEMS

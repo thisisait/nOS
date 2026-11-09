@@ -31,11 +31,18 @@ passes. It reads tracked files only, and ignores code, comments and history
 ("cell" in face grids, Python `self`, sha "digest", docs/archive, devlog,
 RELEASE.md, hidden_fees, the KEAP corpus, state/fixtures/fable) — a gate that cried wolf
 there would be switched off. A comment in code is not seen.
+
+ABSORBED 2026-11-09 (gate-diet), each under its own section at the end, test
+names unchanged: test_body_levels_are_the_lexicon.py,
+test_body_glosses_are_the_lexicon.py, test_symbiosome_words.py.
 """
 from __future__ import annotations
 
 import ast
+import contextlib
 import functools
+import importlib.util
+import io
 import json
 import pathlib
 import re
@@ -394,3 +401,102 @@ def test_the_phrase_matcher_sees_through_markdown():
     assert rx.search("`digest` organs")
     assert not rx.search("digest organism")
     assert not rx.search("mail digest organizer")
+
+
+# ── absorbed: test_body_levels_are_the_lexicon.py ─────────────────────────
+# WHY (row body-plan-levels-complete, 2026-10-07): body.py and body-plan-gen.py
+# each held a tuple of levels; after `heartbeat` joined, a tuple that did not
+# follow drew it as plumbing. The ladder is `order` up to `cross`, and a cross
+# word is a level exactly when it names a graph kind. Compares constants only.
+
+
+def _mod(name: str):
+    spec = importlib.util.spec_from_file_location(name.replace("-", "_"), REPO / "tools" / f"{name}.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _lexicon_levels() -> tuple[tuple[str, ...], tuple[str, ...]]:
+    doc = _yaml(str(LEXICON.relative_to(REPO)))
+    order = doc["order"]
+    ladder = tuple(order[: order.index("cross")])
+    systems = tuple(w for w, v in doc["words"].items()
+                    if v.get("level") == "cross"
+                    and any("graph_kind" in r for r in v.get("names") or []))
+    return ladder, systems
+
+
+def test_body_plan_gen_levels_are_the_lexicon():
+    ladder, systems = _lexicon_levels()
+    gen = _mod("body-plan-gen")
+    assert tuple(gen.LADDER) == ladder, f"body-plan-gen LADDER {gen.LADDER} != lexicon {ladder}"
+    assert tuple(gen.SYSTEMS) == systems, f"body-plan-gen SYSTEMS {gen.SYSTEMS} != lexicon {systems}"
+    assert tuple(gen.ALL_LEVELS) == ladder + systems + ("internal",)
+
+
+def test_body_py_levels_are_the_lexicon():
+    ladder, systems = _lexicon_levels()
+    body = _mod("body")
+    assert tuple(body.LEVELS) == ladder + systems, (
+        f"body.py LEVELS {body.LEVELS} != lexicon {ladder + systems}")
+
+
+# ── absorbed: test_body_glosses_are_the_lexicon.py ────────────────────────
+# WHY (repo-body-plan I-5, 2026-10-07): body.py carried its own one-line meaning
+# per level; four contradicted the lexicon, and IMPRINT.md §3 rendered the wrong
+# ones to every newborn model. body.py may only repeat `means`. Reads what
+# `tools/body.py <level>` prints, not its source.
+
+
+def _printed_gloss(body, level: str) -> str:
+    """The text between `<level> — ` and the trailing `: <count>`."""
+    out, argv = io.StringIO(), sys.argv
+    sys.argv = ["body.py", level]
+    try:
+        with contextlib.redirect_stdout(out):
+            body.main()
+    finally:
+        sys.argv = argv
+    first = out.getvalue().splitlines()[0]
+    return first.split(" — ", 1)[1].rsplit(": ", 1)[0]
+
+
+def test_every_level_gloss_is_the_lexicon_meaning():
+    words = _words()
+    body = _mod("body")
+    bad = []
+    for level in body.LEVELS:
+        want = " ".join(str(words[level]["means"]).split())
+        got = _printed_gloss(body, level)
+        if got != want:
+            bad.append(f"{level}: body.py says {got!r}, lexicon says {want!r}")
+    assert not bad, "\n".join(bad)
+
+
+# ── absorbed: test_symbiosome_words.py ────────────────────────────────────
+# WHY (row symbiosome-words, ruled 2026-10-23): a plugin.yml is the membrane
+# around one hosted symbiont, each wiring block one exchange across it. The
+# words name that without renaming a path; `plugin` points at its successor
+# until the rename row lands; `sanction` is proposed only and must say so.
+
+
+def test_the_membrane_words_are_in_the_lexicon():
+    words = _words()
+    for word in ("symbiosome", "transporter", "sanction"):
+        assert word in words, f"lexicon has no {word!r}"
+        assert words[word]["level"] == "cross", word
+    assert not words["symbiosome"].get("proposed") and not words["transporter"].get("proposed")
+    assert words["sanction"].get("proposed") is True, "sanction is not ruled yet"
+
+
+def test_plugin_points_at_its_successor():
+    words = _words()
+    assert "symbiosome" in words["plugin"]["means"]
+    assert not words["plugin"].get("retired"), "plugin is not retired in this row"
+
+
+def test_the_docs_use_the_words():
+    for rel in ("ssot/doctrine/body-plan.md", "files/anatomy/docs/plugin-wiring-capabilities.md"):
+        text = (REPO / rel).read_text(encoding="utf-8")
+        assert "symbiosome" in text and "transporter" in text, rel
