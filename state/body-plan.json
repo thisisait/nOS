@@ -12,7 +12,7 @@
     "organism": 0,
     "habitat": 9,
     "sense": 87,
-    "limb": 126,
+    "limb": 127,
     "memory": 42,
     "law": 56,
     "reflex": 46,
@@ -626,6 +626,10 @@
       "kind": "effector"
     },
     "effector:ci-local": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:ci-tag-check": {
       "level": "limb",
       "kind": "effector"
     },
