@@ -150,7 +150,7 @@ Do, in order, and report what you changed:
 3. ansible-lint on any role touched; ansible-playbook main.yml --syntax-check
 4. If the anatomy graph changed: python3 tools/anatomy-graph-gen.py, then
    re-freeze the face layout pin by the ritual in
-   tests/anatomy/test_face_layout_pin_binds_the_graph.py, then check whether
+   tests/anatomy/test_face_shell_journey.py, then check whether
    the apex ruling gained UNRULED nodes. If it did, add them as withheld with
    a one-line reason and LEAVE THE SIGNATURE STALE — signing is the operator's
    act, and awaiting-operator.py reports the amendment.

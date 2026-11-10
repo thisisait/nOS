@@ -2165,7 +2165,7 @@ def main() -> int:
           f"({c['nodes']} nodes, {c['edges']} edges)")
     # The face layout pin freezes positions computed FROM this artifact, so a
     # regen that moves the default view moves the pinned hash. Say so at the
-    # moment of causing it — the gate (test_face_layout_pin_binds_the_graph.py)
+    # moment of causing it — the gate (test_face_shell_journey.py)
     # goes red on the sha binding, but this line is the one a human reads.
     # The sha is NOT auto-stamped here: writing it without re-running the
     # vitest hash would silence the gate while the position pin stays stale —
@@ -2177,7 +2177,7 @@ def main() -> int:
             if not args.refreeze:
                 print("anatomy-graph: the face layout pin was frozen against a "
                       "DIFFERENT graph — re-freeze graphLayout.force.pin.json "
-                      "(--refreeze, or see test_face_layout_pin_binds_the_graph.py "
+                      "(--refreeze, or see test_face_shell_journey.py "
                       "for the manual ritual) or the pytest lane goes red",
                       file=sys.stderr)
                 return 0
