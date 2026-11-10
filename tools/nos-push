@@ -84,7 +84,9 @@ for spec in "${REFSPECS[@]}"; do
 	[ "$dst" = HEAD ] && dst="$BRANCH"
 	[ -n "$dst" ] || dst="$src"
 	# The operator lands; an agent never does (roadmap-loop runs unattended, 2026-11-10). Claude Code sets CLAUDECODE.
-	if [ -n "${CLAUDECODE:-}" ] && { [ "$dst" = dev ] || [ "$dst" = master ]; }; then
+	# A local-path remote (the nos-push gates' sandboxes) lands nowhere; only a network remote is guarded.
+	case "$(git -C "$PUSH_DIR" remote get-url "$REMOTE" 2>/dev/null || echo "$REMOTE")" in /*|file:*|.*) agent_land_guard=0 ;; *) agent_land_guard=1 ;; esac
+	if [ -n "${CLAUDECODE:-}" ] && [ "$agent_land_guard" = 1 ] && { [ "$dst" = dev ] || [ "$dst" = master ]; }; then
 		echo "→ nos-push refused: an agent session does not push to $dst — hand the operator the land command"; exit 2
 	fi
 	# CLAUDE.md §Commit convention: no attribution trailers, from any agent or session (operator 2026-11-08).
