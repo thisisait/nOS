@@ -798,7 +798,7 @@ words:
       - path: files/anatomy/cortex/server/cortex-lang.ts
       - path: files/anatomy/wing/app/Cortex/
     not: [memory, KEAP]
-    # Ruling 2026-10-07 (option b); gate: tests/anatomy/test_cortex_store_is_declared_debt.py.
+    # Ruling 2026-10-07 (option b); gate: tests/anatomy/test_cortex_organ_journey.py.
     debt:
       says: >-
         The store inside Cortex is transitional: the Cortex corpus (a replica of memory

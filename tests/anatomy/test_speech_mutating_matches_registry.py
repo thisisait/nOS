@@ -20,7 +20,7 @@ REPO = Path(__file__).resolve().parents[2]
 REGISTRY = REPO / "files/anatomy/cortex/server/cortex-opcodes.ts"
 
 #: `name: 'link', … mutating: true,` — same anchored style as
-#: test_cortex_grammar_matches_registry.py, non-greedy inside one entry.
+#: test_cortex_organ_journey.py, non-greedy inside one entry.
 _OPCODE_RE = re.compile(r"name: '([a-z][a-z0-9-]*)',.*?mutating: (true|false),", re.S)
 
 

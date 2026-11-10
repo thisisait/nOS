@@ -87,7 +87,7 @@ layer up, at the tool boundary instead of the language boundary. **Reviewer
 check:** grep `ExecTool.php` for any array of operands/namespaces/ids
 assembled outside the pass-through of `/validate`'s own body; a gate
 (`test_exec_tool_does_not_enumerate.php` style, mirroring
-`test_cortex_lang_vendor_conditions.py`'s "compare declarations" method) feeds
+`test_cortex_organ_journey.py`'s "compare declarations" method) feeds
 a deliberately-wrong operand and asserts the response body is IDENTICAL in
 shape/length class to a second wrong operand, i.e. no operand-keyed branching.
 
