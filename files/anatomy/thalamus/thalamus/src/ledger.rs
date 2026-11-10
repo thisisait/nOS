@@ -1,6 +1,6 @@
 //! The thalamus ledger (<--data-dir>/ledger.db, from nos_data_root). Its one writer is `thalamus serve`;
 //! the shell never opens it. Columns are a subset of Wing's agent_sessions and events,
-//! held there by tests/anatomy/test_thalamus_ledger_fields.py. prev_hash/row_hash
+//! held there by tests/anatomy/test_thalamus_organ_journey.py. prev_hash/row_hash
 //! stay NULL: the audit chain is off in slice 1, which Wing's schema allows.
 
 use rusqlite::{params, Connection, OptionalExtension};
