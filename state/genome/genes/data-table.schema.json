@@ -30,7 +30,7 @@
             "visibility": {
               "type": "string",
               "enum": ["public", "user", "manager", "admin"],
-              "description": "Tier visibility. Today state/keap-tables/*.table.yml carries this as a bare YAML string with NO validation — test_face_datatable_defs.py checks only that the key is present, never that the value is legal. Being an enum here is the entire point."
+              "description": "Tier visibility. Today state/keap-tables/*.table.yml carries this as a bare YAML string with NO validation — test_face_shell_journey.py checks only that the key is present, never that the value is legal. Being an enum here is the entire point."
             },
             "label_column": {
               "type": "string",

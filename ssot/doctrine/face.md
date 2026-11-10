@@ -3,9 +3,8 @@ in_force: true
 ruled: null
 row: null
 gates:
-  - tests/anatomy/test_face_datatable_defs.py
   - tests/anatomy/test_face_security_gates.py
-  - tests/anatomy/test_face_wiring_contract.py
+  - tests/anatomy/test_face_shell_journey.py
 ---
 # nOS-face Doctrine
 
