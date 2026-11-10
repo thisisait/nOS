@@ -5247,9 +5247,9 @@
     "skill:roadmap-watch": {
       "kind": "skill",
       "source": ".claude/skills/roadmap-watch/SKILL.md",
-      "title": "Read-only watcher for /roadmap-loop — reads the loop ledger, git and CI, sends the operator a short progress report and a push alert on any roadblock or stall. Run in a Sonnet session as `/loop 20m /roadmap-watch`. Never edits, builds, pushes or answers questions for the operator.",
+      "title": "Watcher for /roadmap-loop — reads the loop ledger, git and CI, reports to the operator, alerts on a roadblock or stall, and hands the loop the discrepancies it finds through watch-to-loop.md. Run in a Sonnet session in the operator's dev checkout as `/loop 20m /roadmap-watch`. Never edits code, builds, pushes, lands or answers the loop's questions.",
       "anchor": "02.02.09",
-      "description": "Skill 'roadmap-watch' (.claude/skills/roadmap-watch/SKILL.md): Read-only watcher for /roadmap-loop — reads the loop ledger, git and CI, sends the operator a short progress report and a push alert on any roadblock or stall. Run in a Sonnet session as `/loop 20m /roadmap-watch`. Never edits, builds, pushes or answers questions for the operator."
+      "description": "Skill 'roadmap-watch' (.claude/skills/roadmap-watch/SKILL.md): Watcher for /roadmap-loop — reads the loop ledger, git and CI, reports to the operator, alerts on a roadblock or stall, and hands the loop the discrepancies it finds through watch-to-loop.md. Run in a Sonnet session in the operator's dev checkout as `/loop 20m /roadmap-watch`. Never edits code, builds, pushes, lands or answers the loop's questions."
     },
     "skill:weakness-scan": {
       "kind": "skill",

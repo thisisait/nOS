@@ -11,10 +11,11 @@ change). Input: `## Built` in `~/.cache/nos-roadmap-loop/ledger.md`.
 
 ## 1. Assemble
 
-- Run `git fetch -q origin`. Take every `## Built` branch not yet in
-  `origin/dev`, oldest first.
-- Create `integrate/<YYYY-MM-DD>` off `origin/dev`. Cherry-pick each branch's
-  commits in order (`git cherry-pick origin/dev..origin/<b>`).
+- Run `git fetch -q origin`. The batch is `origin/loop/dev`: every `## Built`
+  row is already in it, in order (roadmap-loop fast-forwards each one).
+- Create `integrate/<YYYY-MM-DD>` at `origin/loop/dev`. If `origin/dev` is not
+  an ancestor of it, merge `origin/dev` in. Add the session's own fix
+  branches by cherry-pick.
 - Generated files conflict by nature (the graph, the body plan, the imprint,
   the pin). Take either side, then run `tools/regenerate.py` after the last
   pick. Commit the result as
@@ -57,7 +58,9 @@ affected lanes. If the fixes touch code, run the full suite once more.
 - Push the batch with `tools/nos-push origin integrate/<date>`.
 - Write `~/.cache/nos-roadmap-loop/batch-<date>.md` with:
   - the land command:
-    `tools/nos-push origin origin/integrate/<date>:dev`;
+    `tools/nos-push origin origin/integrate/<date>:dev`. Afterwards loop/dev
+    already holds every landed commit, so the loop's next fetch sees `dev` as
+    its ancestor and carries on;
   - the branches and rows in the batch, and the ones dropped, with the reason;
   - the suite total line, and what was not verified;
   - one combined e2e checklist, merged from the `notes/` files, ordered by
