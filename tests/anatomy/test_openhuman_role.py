@@ -18,15 +18,23 @@ enabled_tools, user_filter.rs "Empty list means all tools are enabled"), cron on
 and an in-app local re-login resets onboarding_completed (credential.rs). The
 role stores the wizard's default tool list, declares [cron] enabled = false and
 re-asserts onboarding on the next converge.
+
+2026-11-10 (gate-diet): the playbook runs once per distinct input shape, not once per
+test. SHAPES names each shape; a module fixture runs them in parallel (identical
+rendered inputs share one run) and every test asserts over its shape's artifacts.
 """
 import base64
+import http.server
 import importlib.util
 import json
 import os
 import re
 import subprocess
 import sys
+import threading
 import tomllib
+from collections import namedtuple
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -85,11 +93,14 @@ def _exe(path: Path, body: str) -> None:
     path.chmod(0o755)
 
 
-def _converge(tmp: Path, app_present: bool = False, config: str | None = None,
-              caskroom: bool = False, profiles: dict[str, str] | None = None,
-              verify_only: bool = False, ok: bool = True, cli: bool = False, running: bool = False,
-              marker: str | None = None, app_state: dict[str, dict] | None = None,
-              onboard_writes: str | None = None, extra: dict | None = None) -> tuple[Path, str, str]:
+Run = namedtuple("Run", "home calls out rc tail")
+
+
+def _play(tmp: Path, defaults: dict, app_present: bool = False, config: str | None = None,
+          caskroom: bool = False, profiles: dict[str, str] | None = None,
+          verify_only: bool = False, cli: bool = False, running: bool = False,
+          marker: str | None = None, app_state: dict[str, dict] | None = None,
+          onboard_writes: str | None = None, extra: dict | None = None) -> Run:
     home, stubs, brew = tmp / "home", tmp / "stubs", tmp / "brew"
     app = tmp / "Applications/OpenHuman.app"
     log = tmp / "calls.log"
@@ -124,7 +135,6 @@ def _converge(tmp: Path, app_present: bool = False, config: str | None = None,
         f = home / f".openhuman/users/{name}/workspace/state/app-state.json"
         f.parent.mkdir(parents=True, exist_ok=True)
         f.write_text(json.dumps(state))
-    defaults = ni.default_config()
     casks = [dict(c, app=str(app)) for c in defaults["homebrew_symbiont_casks"]]
     play = [{"hosts": "localhost", "connection": "local", "gather_facts": True, "gather_subset": ["!all", "min"],
              "vars": {"ansible_python_interpreter": sys.executable,
@@ -140,37 +150,126 @@ def _converge(tmp: Path, app_present: bool = False, config: str | None = None,
     tags = ["--tags", "verify"] if verify_only else ["--skip-tags", "verify"]
     r = subprocess.run([sys.executable, "-m", "ansible.cli.playbook", "-i", "localhost,", *tags,
                         str(tmp / "play.yml")], capture_output=True, text=True, cwd=tmp, env=env, timeout=300)
-    assert (r.returncode == 0) == ok, r.stdout[-3000:] + r.stderr[-1000:]
-    return home, log.read_text(), r.stdout
+    return Run(home, log.read_text(), r.stdout, r.returncode, r.stdout[-3000:] + r.stderr[-1000:])
+
+
+LSL = "local-studio-local"
+SHELL = {LSL: {"onboardingTasks": {"enabledTools": ["shell"]}}}
+# OpenHuman 0.64.15 (2026-10-09) made [memory.conversations] and [memory.recall] real keys,
+# default on; the role declared only auto_save, and verify went RED on a fresh install.
+V0_64_15_MEMORY = "[memory]\nengine = \"tinyhumans\"\nauto_save = true\n[memory.conversations]\nenabled = true\n" \
+                  "[memory.recall]\nenabled = true\nbudget_tokens = 1200\n"
+# OpenHuman v0.64.15 has no local memory: KEAP's hippocampus (v2.1.0) is the cortexdb engine.
+HIPPO = {"install_keap": True, "keap_port": 8091, "keap_hippocampus_key_openhuman": "SECRET-K"}
+SESSION = dict(cli=True, marker=LSL, profiles={LSL: "onboarding_completed = true\n"}, app_state=SHELL)
+
+#: Every input shape a test converges, by name. Shapes whose rendered inputs are equal share one run.
+SHAPES = {
+    "app": dict(app_present=True),
+    "app+caskroom": dict(app_present=True, caskroom=True),
+    "caskroom": dict(caskroom=True),
+    "absent": {},
+    "foreign-config": dict(app_present=True,
+                           config='schema_version = 7\n[privacy]\nmode = "standard"\n[ui]\ntheme = "dark"\n'),
+    "provider=ollama": dict(app_present=True, extra={"openhuman_provider": "ollama"}),
+    "provider=claude-code": dict(app_present=True, extra={"openhuman_provider": "claude-code"}),
+    "profiles": dict(app_present=True, profiles={"local": 'schema_version = 7\n[ui]\ntheme = "dark"\n', "u-cloud": VENDOR}),
+    "cli": dict(cli=True),
+    "session": SESSION,
+    "cloud-session": dict(cli=True, marker="u-cloud", profiles={"u-cloud": VENDOR}),
+    "running": dict(cli=True, running=True, profiles={LSL: VENDOR}),
+    "relogin": dict(cli=True, marker=LSL, profiles={LSL: "onboarding_completed = false\n"}, app_state=SHELL),
+    "no-tool-list": dict(cli=True, marker=LSL, profiles={LSL: "onboarding_completed = true\n"},
+                         app_state={LSL: {"onboardingTasks": {
+                             "accessibilityPermissionGranted": True, "connectedSources": ["gmail"]}}}),
+    "cron": dict(app_present=True, profiles={"u-cloud": VENDOR + "[cron]\nenabled = true\n"}),
+    "v0.64.15": dict(app_present=True, profiles={"local": V0_64_15_MEMORY}),
+    "onboard-rpc": dict(cli=True, marker=LSL, profiles={LSL: "onboarding_completed = false\n"}, app_state=SHELL,
+                        onboard_writes="onboarding_completed = true\n" + V0_64_15_MEMORY),
+    "hippocampus": dict(SESSION, extra=HIPPO),
+    "no-keap": dict(SESSION, extra={"install_keap": False}),
+    "fresh": dict(app_present=True, config=""),
+}
+
+
+def _key(shape: dict, defaults: dict) -> str:
+    """The rendered inputs: play vars resolved against the defaults, plus every file the run lays down."""
+    rest = {k: v for k, v in shape.items() if k != "extra"}
+    return json.dumps({**rest, "vars": {**{k: defaults[k] for k in KEYS}, **(shape.get("extra") or {})}},
+                      sort_keys=True)
+
+
+def _play_all(factory, shapes: dict, defaults: dict, tmps: dict | None = None) -> dict:
+    tmps, by_key = dict(tmps or {}), {}
+    for name, shape in shapes.items():
+        by_key.setdefault(_key(shape, defaults), []).append(name)
+    jobs = {names[0]: shapes[names[0]] for names in by_key.values()}
+    for name in jobs:
+        tmps.setdefault(name, factory.mktemp(re.sub(r"\W", "-", name)))
+    with ThreadPoolExecutor(max_workers=min(8, os.cpu_count() or 2)) as pool:
+        done = dict(zip(jobs, pool.map(lambda n: _play(tmps[n], defaults, **jobs[n]), jobs)))
+    return {name: done[names[0]] for names in by_key.values() for name in names}
+
+
+@pytest.fixture(scope="module")
+def converged(tmp_path_factory):
+    defaults = ni.default_config()
+    # The role runs before stack-up rebuilds KEAP: this stands in for an old KEAP that answers 404.
+    srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), http.server.SimpleHTTPRequestHandler)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        live = dict(SESSION, extra={**HIPPO, "keap_port": srv.server_port})
+        runs = _play_all(tmp_path_factory, {**SHAPES, "keap-live": live}, defaults)
+        good = runs["app"].home / ".openhuman/users/local/config.toml"
+        users = runs["keap-live"].home / f".openhuman/users/{LSL}"
+        users.mkdir(parents=True, exist_ok=True)
+        (users / "auth-profiles.json").write_text("{}")
+        cfg = users / "config.toml"
+        then = {
+            "verify-bad": dict(app_present=True, verify_only=True,
+                               profiles={"local": good.read_text() if good.is_file() else "", LSL: VENDOR}),
+            "keap-live-verify": dict(live, verify_only=True,
+                                     profiles={LSL: cfg.read_text() if cfg.is_file() else ""}),
+        }
+        runs.update(_play_all(tmp_path_factory, then, defaults,
+                              tmps={"keap-live-verify": runs["keap-live"].home.parent}))
+    finally:
+        srv.shutdown()
+    return runs
+
+
+def _got(runs: dict, name: str, ok: bool = True) -> tuple[Path, str, str]:
+    r = runs[name]
+    assert (r.rc == 0) == ok, f"[{name}] " + r.tail
+    return r.home, r.calls, r.out
 
 
 @needs_ansible
 @pytest.mark.parametrize("caskroom", [False, True])
-def test_an_existing_app_is_not_reinstalled(tmp_path, caskroom):
-    _, calls, out = _converge(tmp_path, app_present=True, caskroom=caskroom)
+def test_an_existing_app_is_not_reinstalled(converged, caskroom):
+    _, calls, out = _got(converged, "app+caskroom" if caskroom else "app")
     assert not calls.strip(), f"an installer ran although OpenHuman.app was there:\n{calls}"
     assert "PRESENT:" in out, "the run did not report which copy it found"
 
 
 @needs_ansible
-def test_a_brew_record_without_its_app_is_reinstalled(tmp_path):
+def test_a_brew_record_without_its_app_is_reinstalled(converged):
     """The app dragged to the Trash leaves Caskroom/openhuman behind; reading
     that as installed skipped the session, the onboarding and the imprint, and
     verify said nothing (blank converge 2026-10-09)."""
-    _, calls, _ = _converge(tmp_path, caskroom=True)
+    _, calls, _ = _got(converged, "caskroom")
     assert calls.splitlines() == ["brew reinstall --cask openhuman"], f"expected one reinstall:\n{calls}"
 
 
 @needs_ansible
-def test_an_absent_app_is_installed_once(tmp_path):
-    _, calls, _ = _converge(tmp_path)
+def test_an_absent_app_is_installed_once(converged):
+    _, calls, _ = _got(converged, "absent")
     assert calls.splitlines() == ["brew install --cask openhuman"], f"expected one cask install:\n{calls}"
 
 
 @needs_ansible
-def test_config_keeps_foreign_keys_and_gets_the_declared_ones(tmp_path):
-    home, _, _ = _converge(tmp_path, app_present=True,
-                           config='schema_version = 7\n[privacy]\nmode = "standard"\n[ui]\ntheme = "dark"\n')
+def test_config_keeps_foreign_keys_and_gets_the_declared_ones(converged):
+    home, _, _ = _got(converged, "foreign-config")
     cfg = tomllib.loads((home / ".openhuman/users/local/config.toml").read_text())
     assert cfg["schema_version"] == 7 and cfg["ui"] == {"theme": "dark"}, f"a foreign key was dropped: {cfg}"
     assert cfg["privacy"]["mode"] == "local_only", "the declared privacy mode did not win"
@@ -180,9 +279,9 @@ def test_config_keeps_foreign_keys_and_gets_the_declared_ones(tmp_path):
 
 @needs_ansible
 @pytest.mark.parametrize("provider,page", [("ollama", "IMPRINT.short.md"), ("claude-code", "IMPRINT.md")])
-def test_agents_md_is_the_imprint_and_no_rw_token_is_written(tmp_path, provider, page):
+def test_agents_md_is_the_imprint_and_no_rw_token_is_written(converged, provider, page):
     """A local model gets the short imprint: the full one evicted the user's message (2026-10-10)."""
-    home, calls, _ = _converge(tmp_path, app_present=True, extra={"openhuman_provider": provider})
+    home, calls, _ = _got(converged, f"provider={provider}")
     head, body = (home / ".openhuman/users/local/workspace/AGENTS.md").read_text().split("\n", 1)
     assert head.startswith("<!-- nOS:") and body == (REPO / page).read_text(), f"AGENTS.md is not {page}"
     assert (home / ".openhuman/skills/nos-datatables/SKILL.md").is_file(), "the skill was not copied"
@@ -223,9 +322,8 @@ def _declared(cfg: dict, small: str) -> list[str]:
 
 
 @needs_ansible
-def test_every_profile_and_the_predicted_one_get_the_declared_keys(tmp_path):
-    home, _, _ = _converge(tmp_path, app_present=True,
-                           profiles={"local": 'schema_version = 7\n[ui]\ntheme = "dark"\n', "u-cloud": VENDOR})
+def test_every_profile_and_the_predicted_one_get_the_declared_keys(converged):
+    home, _, _ = _got(converged, "profiles")
     users = home / ".openhuman/users"
     assert sorted(p.name for p in users.iterdir()) == ["local", "local-studio-local", "u-cloud"], \
         "the profile 'login locally' will create (local-<hostname slug>) was not pre-created"
@@ -245,12 +343,10 @@ def test_every_profile_and_the_predicted_one_get_the_declared_keys(tmp_path):
 
 
 @needs_ansible
-def test_verify_fails_on_a_profile_left_on_the_cloud_route(tmp_path):
-    (tmp_path / "good").mkdir()
-    home, _, _ = _converge(tmp_path / "good", app_present=True)
-    local = (home / ".openhuman/users/local/config.toml").read_text()
-    _, _, out = _converge(tmp_path / "bad", app_present=True, verify_only=True, ok=False,
-                          profiles={"local": local, "local-studio-local": VENDOR})
+def test_verify_fails_on_a_profile_left_on_the_cloud_route(converged):
+    # verify-bad converges the "app" run's local config.toml beside a vendor-default profile.
+    _got(converged, "app")
+    _, _, out = _got(converged, "verify-bad", ok=False)
     assert "[local-studio-local] mode=standard" in out, "verify failed, but not on the cloud profile:\n" + out[-3000:]
 
 
@@ -269,8 +365,8 @@ def _b64(part: str) -> dict:
 
 
 @needs_ansible
-def test_the_local_session_is_made_by_the_vendor_cli_in_order(tmp_path):
-    home, calls, _ = _converge(tmp_path, cli=True)
+def test_the_local_session_is_made_by_the_vendor_cli_in_order(converged):
+    home, calls, _ = _got(converged, "cli")
     got = _cli_calls(calls)
     assert [m for m, _ in got] == ["openhuman.auth_set_credential", "openhuman.app_state_update_local_state",
                                    "openhuman.config_set_onboarding_completed"], got
@@ -290,18 +386,16 @@ def claims_ok(c: dict) -> bool:
 
 
 @needs_ansible
-def test_a_session_already_there_is_not_touched(tmp_path):
-    _, calls, _ = _converge(tmp_path, cli=True, marker="local-studio-local",
-                            profiles={"local-studio-local": "onboarding_completed = true\n"},
-                            app_state={"local-studio-local": {"onboardingTasks": {"enabledTools": ["shell"]}}})
+def test_a_session_already_there_is_not_touched(converged):
+    _, calls, _ = _got(converged, "session")
     assert not _cli_calls(calls), f"the CLI ran against an existing session:\n{calls}"
-    _, calls, _ = _converge(tmp_path / "cloud", cli=True, marker="u-cloud", profiles={"u-cloud": VENDOR})
+    _, calls, _ = _got(converged, "cloud-session")
     assert not _cli_calls(calls), f"a cloud login was replaced by a local session:\n{calls}"
 
 
 @needs_ansible
-def test_nothing_is_written_while_the_app_runs(tmp_path):
-    home, calls, out = _converge(tmp_path, cli=True, running=True, profiles={"local-studio-local": VENDOR})
+def test_nothing_is_written_while_the_app_runs(converged):
+    home, calls, out = _got(converged, "running")
     assert not _cli_calls(calls), f"the CLI ran while the app was running:\n{calls}"
     cfg = tomllib.loads((home / ".openhuman/users/local-studio-local/config.toml").read_text())
     assert cfg["privacy"]["mode"] == "standard", "config.toml was rewritten under a running app"
@@ -309,20 +403,15 @@ def test_nothing_is_written_while_the_app_runs(tmp_path):
 
 
 @needs_ansible
-def test_a_local_relogin_reset_is_reasserted(tmp_path):
+def test_a_local_relogin_reset_is_reasserted(converged):
     # credential.rs (CredentialKind::Local) set onboarding_completed=false; the tool list survived.
-    _, calls, _ = _converge(tmp_path, cli=True, marker="local-studio-local",
-                            profiles={"local-studio-local": "onboarding_completed = false\n"},
-                            app_state={"local-studio-local": {"onboardingTasks": {"enabledTools": ["shell"]}}})
+    _, calls, _ = _got(converged, "relogin")
     assert _cli_calls(calls) == [("openhuman.config_set_onboarding_completed", {"value": True})], calls
 
 
 @needs_ansible
-def test_a_session_without_a_tool_list_gets_the_wizard_one_and_keeps_its_tasks(tmp_path):
-    _, calls, _ = _converge(tmp_path, cli=True, marker="local-studio-local",
-                            profiles={"local-studio-local": "onboarding_completed = true\n"},
-                            app_state={"local-studio-local": {"onboardingTasks": {
-                                "accessibilityPermissionGranted": True, "connectedSources": ["gmail"]}}})
+def test_a_session_without_a_tool_list_gets_the_wizard_one_and_keeps_its_tasks(converged):
+    _, calls, _ = _got(converged, "no-tool-list")
     got = _cli_calls(calls)
     assert [m for m, _ in got] == ["openhuman.app_state_update_local_state"], got
     tasks = got[0][1]["onboardingTasks"]
@@ -332,49 +421,33 @@ def test_a_session_without_a_tool_list_gets_the_wizard_one_and_keeps_its_tasks(t
 
 
 @needs_ansible
-def test_the_twin_is_quiet_cron_is_off_in_every_profile(tmp_path):
-    home, _, _ = _converge(tmp_path, app_present=True, profiles={"u-cloud": VENDOR + "[cron]\nenabled = true\n"})
+def test_the_twin_is_quiet_cron_is_off_in_every_profile(converged):
+    home, _, _ = _got(converged, "cron")
     for name in ("local", "local-studio-local", "u-cloud"):
         cfg = tomllib.loads((home / f".openhuman/users/{name}/config.toml").read_text())
         assert cfg.get("cron", {}).get("enabled") is False, f"{name}: cron left on (config/schema/cron.rs defaults it on)"
 
 
-# OpenHuman 0.64.15 (2026-10-09) made [memory.conversations] and [memory.recall] real keys,
-# default on; the role declared only auto_save, and verify went RED on a fresh install.
-V0_64_15_MEMORY = "[memory]\nengine = \"tinyhumans\"\nauto_save = true\n[memory.conversations]\nenabled = true\n" \
-                  "[memory.recall]\nenabled = true\nbudget_tokens = 1200\n"
-
-
 @needs_ansible
-def test_conversations_and_recall_are_declared_off(tmp_path):
-    home, _, _ = _converge(tmp_path, app_present=True, profiles={"local": V0_64_15_MEMORY})
+def test_conversations_and_recall_are_declared_off(converged):
+    home, _, _ = _got(converged, "v0.64.15")
     mem = tomllib.loads((home / ".openhuman/users/local/config.toml").read_text())["memory"]
     assert mem["conversations"]["enabled"] is False and mem["recall"]["enabled"] is False, mem
     assert mem["recall"]["budget_tokens"] == 1200, "a vendor key beside the declared one was dropped"
 
 
 @needs_ansible
-def test_the_declared_keys_outlive_the_onboarding_rpc(tmp_path):
+def test_the_declared_keys_outlive_the_onboarding_rpc(converged):
     """config_set_onboarding_completed saves the whole profile with the app's defaults;
     the merge ran before it, so the fresh install of 2026-10-09 kept auto_save on."""
-    home, _, _ = _converge(tmp_path, cli=True, marker="local-studio-local",
-                           profiles={"local-studio-local": "onboarding_completed = false\n"},
-                           app_state={"local-studio-local": {"onboardingTasks": {"enabledTools": ["shell"]}}},
-                           onboard_writes="onboarding_completed = true\n" + V0_64_15_MEMORY)
+    home, _, _ = _got(converged, "onboard-rpc")
     cfg = tomllib.loads((home / ".openhuman/users/local-studio-local/config.toml").read_text())
     assert cfg["memory"]["engine"] == "none" and cfg["onboarding_completed"] is True, cfg
 
 
-# OpenHuman v0.64.15 has no local memory: KEAP's hippocampus (v2.1.0) is the cortexdb engine.
-HIPPO = {"install_keap": True, "keap_port": 8091, "keap_hippocampus_key_openhuman": "SECRET-K"}
-
-
 @needs_ansible
-def test_memory_is_bound_to_the_keap_hippocampus(tmp_path):
-    home, calls, _ = _converge(tmp_path, cli=True, marker="local-studio-local",
-                               profiles={"local-studio-local": "onboarding_completed = true\n"},
-                               app_state={"local-studio-local": {"onboardingTasks": {"enabledTools": ["shell"]}}},
-                               extra=HIPPO)
+def test_memory_is_bound_to_the_keap_hippocampus(converged):
+    home, calls, _ = _got(converged, "hippocampus")
     raw = (home / ".openhuman/users/local-studio-local/config.toml").read_text()
     mem = tomllib.loads(raw)["memory"]
     assert mem["engine"] == "cortexdb", mem
@@ -386,43 +459,26 @@ def test_memory_is_bound_to_the_keap_hippocampus(tmp_path):
 
 
 @needs_ansible
-def test_without_keap_memory_stays_off(tmp_path):
-    home, calls, _ = _converge(tmp_path, cli=True, marker="local-studio-local",
-                               profiles={"local-studio-local": "onboarding_completed = true\n"},
-                               app_state={"local-studio-local": {"onboardingTasks": {"enabledTools": ["shell"]}}},
-                               extra={"install_keap": False})
+def test_without_keap_memory_stays_off(converged):
+    home, calls, _ = _got(converged, "no-keap")
     mem = tomllib.loads((home / ".openhuman/users/local-studio-local/config.toml").read_text())["memory"]
     assert mem["engine"] == "none" and "memory_engine_set" not in calls, mem
 
 
 @needs_ansible
-def test_role_verify_does_not_judge_a_keap_it_ran_before(tmp_path):
+def test_role_verify_does_not_judge_a_keap_it_ran_before(converged):
     """The role runs before stack-up rebuilds KEAP: an old KEAP answers 404 on /hippocampus.
     That line is KEAP's post-start verify to own, not this role's."""
-    import http.server
-    import threading
-    srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), http.server.SimpleHTTPRequestHandler)
-    threading.Thread(target=srv.serve_forever, daemon=True).start()
-    try:
-        home, _, out = _converge(tmp_path, cli=True, marker="local-studio-local",
-                                 profiles={"local-studio-local": "onboarding_completed = true\n"},
-                                 app_state={"local-studio-local": {"onboardingTasks": {"enabledTools": ["shell"]}}},
-                                 extra={**HIPPO, "keap_port": srv.server_port})
-        (home / ".openhuman/users/local-studio-local/auth-profiles.json").write_text("{}")
-        _, _, out = _converge(tmp_path, verify_only=True, cli=True, marker="local-studio-local",
-                              profiles={"local-studio-local": (home / ".openhuman/users/local-studio-local/config.toml").read_text()},
-                              app_state={"local-studio-local": {"onboardingTasks": {"enabledTools": ["shell"]}}},
-                              extra={**HIPPO, "keap_port": srv.server_port})
-    finally:
-        srv.shutdown()
+    _got(converged, "keap-live")
+    _got(converged, "keap-live-verify")
 
 
 # 2026-10-10: default_model = "hermes3:8b" (no provider) — the session clones it over chat_provider
 # (web_chat/session.rs), local_only refused provider `hermes3`, the first chat failed. And an 8192
 # window under a 35 kB system prompt evicted the user's own message (tinyagents message_trim).
 @needs_ansible
-def test_a_fresh_install_chats_on_the_declared_route(tmp_path):
-    home, _, _ = _converge(tmp_path, app_present=True, config="")
+def test_a_fresh_install_chats_on_the_declared_route(converged):
+    home, _, _ = _got(converged, "fresh")
     cfg = tomllib.loads((home / ".openhuman/users/local/config.toml").read_text())
     assert cfg["default_model"] == cfg["chat_provider"], (cfg["default_model"], cfg["chat_provider"])
     window = cfg["local_ai"]["num_ctx"]
@@ -445,7 +501,7 @@ def test_the_merge_keeps_the_apps_own_model_registry_entries():
 # 2026-10-10: asked to "add a note", a 27B model with only a read-only nOS tool wrote a shell
 # command appending to notes.txt. The twin needs the procedure: what nOS holds, what it may do.
 @needs_ansible
-def test_the_twin_gets_the_nos_procedure_skill(tmp_path):
-    home, _, _ = _converge(tmp_path, app_present=True, config="")
+def test_the_twin_gets_the_nos_procedure_skill(converged):
+    home, _, _ = _got(converged, "fresh")
     skill = home / ".openhuman/skills/nos-for-openhuman/SKILL.md"
     assert skill.is_file() and not skill.parent.is_symlink(), "the nOS procedure skill was not copied"
