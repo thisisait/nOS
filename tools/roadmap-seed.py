@@ -35,6 +35,16 @@ import urllib.request
 from keap_api import human_base, human_headers, paged, write_row  # noqa: E402 — sibling helper in tools/
 from roadmap_seed_lib import GIT_OWNED, invalid, is_estate_checkout, load_rows, restore_table_owned, seed_dir, write_index  # noqa: E402
 
+# An unknown flag used to be ignored, so `--help` seeded the live table (loop dry run 2026-11-10).
+if {"-h", "--help"} & set(sys.argv[1:]):
+    sys.exit(print(__doc__) or 0)
+_args = iter(sys.argv[1:])
+for _a in _args:
+    if _a in ("--only", "--restore-from"):
+        next(_args, None)
+    elif _a not in ("--dry-run", "--sync") and not _a.startswith("--only="):
+        sys.exit(f"roadmap-seed: unknown argument {_a!r}; see --help. Nothing was written.")
+
 _REPO = __import__("os").path.abspath(__import__("os").path.join(
     __import__("os").path.dirname(__file__), ".."))
 #: NOS_ROADMAP_TABLE_ID overrides for an estate whose roadmap table was minted
