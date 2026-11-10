@@ -427,7 +427,9 @@
     apps_root: "{{ playbook_dir }}/apps"
     agent_profiles_root: "{{ playbook_dir }}/files/anatomy/agents"
     template_vars: "{{ nos_plugin_ctx }}"
-  tags: ['anatomy', 'anatomy.plugins']
+  # `authentik`: its blueprints are plugin renders (authentik-base); without it `--tags authentik`
+  # verified a 47-estate-brand that was never rendered (2026-11-10).
+  tags: ['anatomy', 'anatomy.plugins', 'authentik']
 
 # Re-enumerate overrides after pre_compose hook may have rendered new fragments.
 - name: "[Core] Re-enumerate infra compose overrides (after plugin loader)"
