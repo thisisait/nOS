@@ -51,11 +51,17 @@ for arg in "$@"; do
   esac
 done
 
+# The tools venv the playbook builds (tools/requirements.txt carries pytest): a fresh host's
+# python3 has none (the Linux mini, 11-01). NOS_JOURNEY_PY overrides.
+# Resolved once, here: the env block below imports yaml, which a bare system python3 lacks too.
+PY="${NOS_JOURNEY_PY:-$HOME/.nos/tools-venv/bin/python}"
+[ -x "$PY" ] || PY=python3
+
 # ── resolve the estate's own answers ────────────────────────────────────────
 # `config.yml` last, because it wins (CLAUDE.md: the LAST layer wins). Reading
 # `default.config.yml` alone is the defect `tools/estate-status.py` was written
 # to end, and it would silently point these journeys at `dev.local`.
-eval "$(python3 - <<'PY'
+eval "$("$PY" - <<'PY'
 import os, pathlib, re, shlex, sys
 
 repo = pathlib.Path.cwd()
@@ -158,10 +164,6 @@ set +e
 # The estate has this exact scar already (`pulse-run-agent.sh` scope_args, and
 # the sibling `${#arr[@]}` Jinja trap in backup.sh); it is written down and it
 # still caught this file on its first run.
-# The tools venv the playbook builds (tools/requirements.txt carries pytest): a fresh host's
-# python3 has none (the Linux mini, 11-01). NOS_JOURNEY_PY overrides.
-PY="${NOS_JOURNEY_PY:-$HOME/.nos/tools-venv/bin/python}"
-[ -x "$PY" ] || PY=python3
 "$PY" -c 'import pytest' 2>/dev/null || {
   echo "[journeys] $PY has no pytest: converge (tasks/tools-venv.yml installs tools/requirements.txt) or set NOS_JOURNEY_PY" >&2
   exit 2; }
