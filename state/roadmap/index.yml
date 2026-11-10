@@ -12,6 +12,9 @@
 - slug: actor-attribution
   parent: state-surface
   track: platform
+- slug: advisory-covers-hosts-and-browsers
+  parent: ''
+  track: security
 - slug: advisory-patrol
   parent: rel-018
   track: security
@@ -75,6 +78,9 @@
 - slug: agents-nos-skill
   parent: agents
   track: agents
+- slug: agents-run-away-from-the-secrets
+  parent: security-review-1103
+  track: security
 - slug: all-on-linux-nextcloud-config
   parent: ''
   track: release
@@ -132,6 +138,9 @@
 - slug: backup-drill-keap-db
   parent: ''
   track: platform
+- slug: backup-fat-and-eggs
+  parent: restic-prune-runs
+  track: filesystem
 - slug: backup-nas-restic-copy
   parent: backup-restic-store
   track: platform
@@ -159,6 +168,9 @@
 - slug: bff-table-read-tier-gate
   parent: consulting-firm-deployment
   track: security
+- slug: blank-forgets-disabled-services
+  parent: ''
+  track: platform
 - slug: blank-keeps-nextcloud-user-files
   parent: managed-resources-manifest
   track: platform
@@ -195,6 +207,12 @@
 - slug: body-tissue
   parent: body-plan
   track: platform
+- slug: bootstrap-fresh-linux
+  parent: ''
+  track: platform
+- slug: bot-pr-runs-ci
+  parent: ''
+  track: release
 - slug: brew-deps-deterministic-pin
   parent: ''
   track: platform
@@ -264,6 +282,9 @@
 - slug: client-facing-plain-language
   parent: ''
   track: face
+- slug: client-ip-survives-docker-desktop
+  parent: ''
+  track: security
 - slug: client-offboarding-mechanic
   parent: consulting-firm-deployment
   track: security
@@ -417,6 +438,9 @@
 - slug: cortex-vendor-staleness
   parent: ''
   track: cortex
+- slug: cortex-zod-4
+  parent: security-review-1103
+  track: security
 - slug: credential-doubles-collapse
   parent: repo-body-plan
   track: security
@@ -429,6 +453,9 @@
 - slug: datatables-survive-a-blank
   parent: ''
   track: platform
+- slug: decider-is-a-signature
+  parent: security-review-1103
+  track: security
 - slug: declare-playbook-started-daemons
   parent: workload-allowlist
   track: platform
@@ -714,6 +741,9 @@
 - slug: edge-outside-journey
   parent: edge-two-doors
   track: release
+- slug: edge-secrets-file-mode
+  parent: security-review-1103
+  track: security
 - slug: edge-tailscale-wiring
   parent: edge-two-doors
   track: platform
@@ -726,6 +756,9 @@
 - slug: edge-two-doors
   parent: rel-016
   track: platform
+- slug: efferent-queue
+  parent: ''
+  track: face
 - slug: egress-containment
   parent: digest
   track: digest
@@ -750,8 +783,14 @@
 - slug: espocrm-retire-cleanup
   parent: ''
   track: platform
+- slug: estate-brand
+  parent: ''
+  track: face
 - slug: estate-dev-split
   parent: rel-018
+  track: platform
+- slug: estate-dir-one-source
+  parent: ''
   track: platform
 - slug: estate-service-login
   parent: ''
@@ -825,6 +864,9 @@
 - slug: face-i4-connectors
   parent: face-the-endpoint
   track: face
+- slug: face-inbox-visual-polish
+  parent: face
+  track: face
 - slug: face-licence-split
   parent: body-organ
   track: face
@@ -846,6 +888,9 @@
 - slug: face-mobile-shell
   parent: ''
   track: face
+- slug: face-operator-apps-build-flag
+  parent: wing-organ-without-face
+  track: face
 - slug: face-planner
   parent: face
   track: face
@@ -861,6 +906,9 @@
 - slug: face-styles
   parent: face
   track: face
+- slug: face-sveltekit-3
+  parent: face
+  track: face
 - slug: face-tauri
   parent: face
   track: face
@@ -871,6 +919,9 @@
   parent: face
   track: face
 - slug: face-tree
+  parent: face
+  track: face
+- slug: face-widgets-movable-removable
   parent: face
   track: face
 - slug: findings-code-hides-a-crash
@@ -921,6 +972,9 @@
 - slug: frankenphp-nightly-digest
   parent: ''
   track: security
+- slug: fresh-host-first-login
+  parent: ''
+  track: platform
 - slug: from-blank-fixture-marker-orphan
   parent: consulting-firm-deployment
   track: platform
@@ -942,6 +996,21 @@
 - slug: fs-user-home-bridge
   parent: ''
   track: filesystem
+- slug: gate-diet
+  parent: ''
+  track: platform
+- slug: gate-diet-cold-files
+  parent: gate-diet
+  track: platform
+- slug: gate-diet-freshness-one
+  parent: gate-diet
+  track: platform
+- slug: gate-diet-proxies-nightly
+  parent: gate-diet
+  track: platform
+- slug: gate-diet-role-journeys
+  parent: gate-diet
+  track: platform
 - slug: gates-reach-live-or-break-in-worktree
   parent: review-v015-followups
   track: security
@@ -1122,6 +1191,15 @@
 - slug: iris-app-toolchain
   parent: face-app-builder
   track: face
+- slug: iris-approvals-e2e-plan
+  parent: face-the-endpoint
+  track: face
+- slug: iris-approvals-in-readers
+  parent: face-the-endpoint
+  track: face
+- slug: iris-approvals-native-notify
+  parent: face-the-endpoint
+  track: face
 - slug: iris-bench-harbor-export
   parent: iris-genui-bench
   track: agents
@@ -1173,6 +1251,9 @@
 - slug: iris-eye-affect
   parent: ''
   track: agents
+- slug: iris-face-answers-questions
+  parent: face-the-endpoint
+  track: face
 - slug: iris-face-app
   parent: pupil-web-remote
   track: face
@@ -1251,6 +1332,9 @@
 - slug: iris-speaks-cortex-lang
   parent: iris-genui-bench
   track: cortex
+- slug: iris-subagent-journey-gaps
+  parent: ''
+  track: agents
 - slug: iris-subagents-finish
   parent: rel-018
   track: agents
@@ -1274,6 +1358,9 @@
   track: security
 - slug: jellyfin-sso-provider-missing
   parent: identities-from-install
+  track: platform
+- slug: jellyfin-tv-login
+  parent: ''
   track: platform
 - slug: jobs-that-read-secrets-yml
   parent: secrets-at-rest
@@ -1332,7 +1419,16 @@
 - slug: keap-tables-after-a-blank
   parent: ''
   track: platform
+- slug: keychain-asks-first
+  parent: ''
+  track: platform
+- slug: keychain-asks-only-when-signing
+  parent: keychain-asks-first
+  track: platform
 - slug: kiwix-init-zim-fails-silently
+  parent: ''
+  track: platform
+- slug: kiwix-library-stays-current
   parent: ''
   track: platform
 - slug: kpro
@@ -1350,6 +1446,9 @@
 - slug: kpro-table-access
   parent: kpro
   track: cortex
+- slug: lan-access-is-behind-the-edge
+  parent: security-review-1103
+  track: security
 - slug: law-one-home-ssot-doctrine
   parent: repo-body-plan
   track: platform
@@ -1509,6 +1608,9 @@
 - slug: loop-steps-match-run
   parent: loop-definition-model
   track: agents
+- slug: loop-validator-catches-a-loop-that-never-runs
+  parent: ''
+  track: agents
 - slug: loop-verdict-vacuity
   parent: ''
   track: agents
@@ -1539,6 +1641,9 @@
 - slug: medulla-agent-runner
   parent: medulla
   track: agents
+- slug: medulla-app-1101-leftovers
+  parent: medulla
+  track: platform
 - slug: medulla-apply-verbs
   parent: medulla
   track: platform
@@ -1635,6 +1740,9 @@
 - slug: nos-forum
   parent: ''
   track: platform
+- slug: nos-immune
+  parent: ''
+  track: security
 - slug: nos-linux-fhs-layout
   parent: nos-system-user-linux
   track: platform
@@ -1776,6 +1884,9 @@
 - slug: operator-session-threat-model
   parent: ''
   track: security
+- slug: operator-task-on-condition
+  parent: ''
+  track: platform
 - slug: organ-health-carries-a-version
   parent: ''
   track: platform
@@ -1809,12 +1920,21 @@
 - slug: paperclip-company-dna
   parent: ''
   track: agents
+- slug: paperclip-keap-table-token
+  parent: ''
+  track: agents
+- slug: paperclip-linked-worktree-refused
+  parent: ''
+  track: agents
 - slug: paperclip-restore-per-db
   parent: pulse-redact-gaps
   track: platform
 - slug: paperclip-state-to-repo
   parent: paperclip-company-dna
   track: agents
+- slug: paperclip-workspace-mounts-no-git
+  parent: security-review-1103
+  track: security
 - slug: party-ares-verify
   parent: digest
   track: digest
@@ -1965,6 +2085,9 @@
 - slug: praxis-pack
   parent: backoffice-organ
   track: platform
+- slug: prepush-score-calibrate
+  parent: operator-session-threat-model
+  track: security
 - slug: prewipe-fresh-keap-dump
   parent: backup-restic-store
   track: platform
@@ -1976,6 +2099,9 @@
   track: platform
 - slug: profile-builder-v3
   parent: profile-builder
+  track: platform
+- slug: profile-outranks-config
+  parent: ''
   track: platform
 - slug: prom-rules-never-reload
   parent: ''
@@ -1992,6 +2118,9 @@
 - slug: pulse-lineage
   parent: ''
   track: agents
+- slug: pulse-php-jobs-on-linux
+  parent: ''
+  track: platform
 - slug: pulse-prefix-allowlist
   parent: workload-allowlist
   track: security
@@ -2007,11 +2136,17 @@
 - slug: pupil-chart-renderer-library
   parent: iris-genui
   track: face
+- slug: pupil-glib-020
+  parent: face
+  track: face
 - slug: pupil-pin-from-render
   parent: pupil-workspace-widgets
   track: face
 - slug: pupil-push-to-talk
   parent: voice-organ-tts
+  track: face
+- slug: pupil-retire
+  parent: face-the-endpoint
   track: face
 - slug: pupil-web-remote
   parent: ''
@@ -2088,12 +2223,21 @@
 - slug: rel-018
   parent: ''
   track: release
+- slug: release-018-diff-review-lows
+  parent: security-review-1103
+  track: security
+- slug: release-installer-usb
+  parent: ''
+  track: release
 - slug: release-to-release-upgrades
   parent: multi-firm-distribution-hardening
   track: release
 - slug: rem-queue-commit-256-260-261
   parent: ''
   track: security
+- slug: remote-inference-weak-host
+  parent: ''
+  track: cortex
 - slug: repo-body-plan
   parent: rel-017
   track: platform
@@ -2115,6 +2259,9 @@
 - slug: research-agent-desktop
   parent: ''
   track: face
+- slug: restic-prune-runs
+  parent: ''
+  track: platform
 - slug: retire-healing-words
   parent: body-plan
   track: platform
@@ -2133,6 +2280,9 @@
 - slug: roadmap-table-id-literals
   parent: ''
   track: platform
+- slug: row-edit-journey-decider
+  parent: ''
+  track: agents
 - slug: rsi-days-after-blank
   parent: rsi-evals
   track: agents
@@ -2250,6 +2400,9 @@
 - slug: secrets-at-rest
   parent: ''
   track: security
+- slug: security-review-1103
+  parent: ''
+  track: security
 - slug: security-scan-staleness-missed-a-live-critical
   parent: ''
   track: security
@@ -2276,6 +2429,9 @@
   track: platform
 - slug: sere-hosts
   parent: sere
+  track: platform
+- slug: set-point-stray-file
+  parent: ''
   track: platform
 - slug: set-points-outside-home
   parent: nos-linux-fhs-layout
@@ -2361,6 +2517,9 @@
 - slug: storage-genome
   parent: rel-018
   track: platform
+- slug: suite-prune-one-site-tests
+  parent: ''
+  track: platform
 - slug: suite-prune-to-joints
   parent: ''
   track: platform
@@ -2403,12 +2562,18 @@
 - slug: tester-hardware-readiness
   parent: consulting-firm-deployment
   track: release
+- slug: thalamus-clippy-lane
+  parent: ''
+  track: platform
 - slug: thalamus-decider-guard-followups
   parent: thalamus-pupil-peer-exe
   track: security
 - slug: thalamus-ledger-backup
   parent: ''
   track: platform
+- slug: thalamus-linux-deciders
+  parent: face-the-endpoint
+  track: face
 - slug: thalamus-otel
   parent: ''
   track: agents
@@ -2502,6 +2667,9 @@
 - slug: undeclared-status
   parent: workload-allowlist
   track: security
+- slug: unknown-tag-is-refused
+  parent: ''
+  track: platform
 - slug: v0-1
   parent: ''
   track: release
@@ -2610,6 +2778,9 @@
 - slug: wing-api-has-no-tier
   parent: wing-organ-without-face
   track: security
+- slug: wing-apply-through-medulla
+  parent: ''
+  track: security
 - slug: wing-cortex-executor-to-cortex
   parent: medulla
   track: cortex
@@ -2632,6 +2803,9 @@
   parent: ''
   track: platform
 - slug: wing-inc1-inbox-app
+  parent: wing-organ-without-face
+  track: face
+- slug: wing-inc1-latte-gone
   parent: wing-organ-without-face
   track: face
 - slug: wing-inc2-agents-timeline
@@ -2679,6 +2853,9 @@
 - slug: wing-to-medulla-waves
   parent: medulla
   track: platform
+- slug: woodpecker-runs-cortex-tests
+  parent: ''
+  track: release
 - slug: wordpress-client-portal
   parent: consulting-firm-deployment
   track: face
@@ -2697,6 +2874,9 @@
 - slug: workload-allowlist
   parent: ''
   track: security
+- slug: worktree-and-build-cache-pruner
+  parent: ''
+  track: platform
 - slug: zod4-serde-yaml-debt
   parent: ''
   track: security
