@@ -27,9 +27,10 @@ change). Input: `## Built` in `~/.cache/nos-roadmap-loop/ledger.md`.
 
 For each branch whose notes flag **GATE CONFLICT**, read the gate and the
 ruling it cites.
-- The ruling is the operator's, in the row or the ledger: write a separate
-  `test: GATE CHANGE <what>` commit. Show the gate red against `origin/dev`'s
-  code and green on the batch, and cite both runs in the commit body.
+- The ruling is the operator's, in the row or the ledger: change the gate in a
+  commit whose subject says `GATE CHANGE` and whose body cites the ruling. It
+  may be the same commit as the code (gates.md §7, 2026-11-10). Show the gate
+  red against `origin/dev`'s code and green on the batch.
 - There is no ruling: drop the branch and put the question in
   `## Questions`.
 

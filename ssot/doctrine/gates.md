@@ -107,12 +107,16 @@ its source. That is where a change on one side breaks the other silently.
 A gate that covers a whole class (every job, every writer, every role) is
 worth more than one per instance.
 
-- A fix that crosses a joint ships with the gate that would have caught it,
-  shown red against the broken state.
-- A fix on one site — one task, one script, one line — is checked red and
-  green **locally** (a throwaway check in the job's tmp dir) and the commit
-  says what was run. It **shall** not become a suite file: if it recurs, the
-  joint it keeps breaking is the gate to write.
+- A new gate **shall** be written only where the defect could leak data,
+  lose data or harm the live estate: security and destructive paths
+  (operator 2026-11-10). It is shown red against the broken state.
+- Every other fix, a joint or a site, is checked red and green **once**
+  (a throwaway check in the job's tmp dir) and the commit says what ran. It
+  **shall** not become a suite file. Behaviour across tags and hosts is the
+  nightly lanes' job (tag check-mode, Bonus, integration), not pytest's.
+- A gate edit rides in the same commit as the code that needs it only when
+  the commit cites the operator's ruling and its subject says GATE CHANGE;
+  otherwise it is its own commit, shown red and green.
 - A new gate **shall** find its branch in the tree (the organ and joint it
   guards). One that has none is guarding a site, not a joint.
 - Deep checks — penetration tests, per-lexicon journeys, slow end-to-end —
