@@ -35,7 +35,7 @@ requires:
 pulse:
   jobs:
     - name: nightly
-      category: maintenance
+      category: platform
       runner: subprocess
       command: "{{ playbook_dir }}/tools/ci-circadian.py"
       schedule: "30 2 * * *"

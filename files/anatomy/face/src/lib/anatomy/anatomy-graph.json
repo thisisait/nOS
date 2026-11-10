@@ -2812,7 +2812,7 @@
       "schedule": "30 2 * * *",
       "jitter_min": 5,
       "max_runtime_s": 300,
-      "category": "maintenance",
+      "category": "platform",
       "paused": false,
       "findings_exit_codes": [
         11
@@ -2820,8 +2820,8 @@
       "command_name": "ci-circadian.py",
       "claims": [],
       "runs_agent": null,
-      "anchor": "02.02.04",
-      "description": "Pulse scheduled job (maintenance): runs ci-circadian.py on cron `30 2 * * *` — exits [11] mean findings, not failure"
+      "anchor": "02.02.06",
+      "description": "Pulse scheduled job (platform): runs ci-circadian.py on cron `30 2 * * *` — exits [11] mean findings, not failure"
     },
     "pulse:conductor:scan-state-record": {
       "kind": "pulse",
