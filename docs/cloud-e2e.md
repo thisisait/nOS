@@ -267,7 +267,7 @@ found **twelve** tasks `changed` on a steady estate. All fixed:
 | plugin `pre_compose` / `post_compose` | any note ≠ "no-op" counted | `note_changed()` reads the counts |
 | `app.deployed` event mirror | log append | `changed_when: false` |
 
-Gates: `test_plugin_hook_changed_is_measured.py`,
+Gates: `test_plugin_wiring_journey.py (§test_plugin_hook_changed_is_measured)`,
 `test_recovery_key_persists_across_reruns.py` (contract inverted, with the
 evidence), `test_cloud_e2e_contract.py`.
 

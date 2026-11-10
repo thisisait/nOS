@@ -199,7 +199,7 @@ after wave-2 ALL_READY).
 `hmac_selftest.py` is 0.13 s. The 112.7 s was eager-finalize of live `vars`
 on `nos_plugin_loader` post_compose. Cut: snapshot `nos_plugin_ctx` before
 compose registers bloat it; every loader passes that fact. Gate
-`test_plugin_loader_ctx_is_a_snapshot.py`. Next `nos` is the reader (gap
+`test_plugin_wiring_journey.py (§test_plugin_loader_ctx_is_a_snapshot)`. Next `nos` is the reader (gap
 between bone post and post_compose).
 
 ### S4. Detect running cask apps — cut in tree 2026-09-14

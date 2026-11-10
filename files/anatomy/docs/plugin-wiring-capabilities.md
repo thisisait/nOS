@@ -1,7 +1,7 @@
 # Plugin wiring capabilities — the uniform contract
 
 > Status: 2026-05-23. Companion to `plugin-loader-spec.md` and
-> `role-thinning-recipe.md`. Pinned by `tests/anatomy/test_plugin_wiring_contract.py`;
+> `role-thinning-recipe.md`. Pinned by `tests/anatomy/test_plugin_wiring_journey.py`;
 > measured by `tools/plugin-wiring-report.py`.
 >
 > **The counts below are as-measured on their dates and have drifted** (the
@@ -57,7 +57,7 @@ normalized to the canonical shape on 2026-05-23.
 
 ## Uniform contract (enforced by CI)
 
-`test_plugin_wiring_contract.py` pins:
+`test_plugin_wiring_journey.py` pins:
 
 1. Every `plugin.yml` validates against `state/schema/plugin.schema.json`.
 2. Every `service` plugin declares a gate — `requires.feature_flag` **or**

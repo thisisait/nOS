@@ -36,7 +36,7 @@ backup or blank baseline first.
 ## Framework-feature test checklist (exact commands)
 
 - **Offline gates (fast, no services)** — every change:
-  `python3 -m pytest tests/anatomy/test_config_stock_jinja_only.py tests/upgrades/test_template_vars_resolvable.py tests/anatomy/test_lockfile_sync.py tests/anatomy/test_plugin_wiring_contract.py tests/anatomy/test_security_presenter_gates.py -v`
+  `python3 -m pytest tests/anatomy/test_config_stock_jinja_only.py tests/upgrades/test_template_vars_resolvable.py tests/anatomy/test_lockfile_sync.py tests/anatomy/test_plugin_wiring_journey.py tests/anatomy/test_security_presenter_gates.py -v`
 - **Smoke (HTTP, all tiers)** — `tools/nos-smoke.py --failed-only` then
   `tools/nos-smoke.py --json`. Expect every Tier-1/2 service in
   {200,204,401,redirect}.

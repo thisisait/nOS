@@ -81,7 +81,7 @@ Authoritative release notes: [`RELEASE.md`](../RELEASE.md). Bundle = **A19**:
 
 | Area | Shipped |
 |---|---|
-| **Plugin wiring** | Notification routing canonicalized to the A9 severity shape across **55/55** plugins; CI gate `tests/anatomy/test_plugin_wiring_contract.py`; report `tools/plugin-wiring-report.py`; doctrine `files/anatomy/docs/plugin-wiring-capabilities.md` (live-consumer vs forward-ready). qdrant-base gained a `feature_flag`; gitleaks gdpr/schema conformed. |
+| **Plugin wiring** | Notification routing canonicalized to the A9 severity shape across **55/55** plugins; CI gate `tests/anatomy/test_plugin_wiring_journey.py`; report `tools/plugin-wiring-report.py`; doctrine `files/anatomy/docs/plugin-wiring-capabilities.md` (live-consumer vs forward-ready). qdrant-base gained a `feature_flag`; gitleaks gdpr/schema conformed. |
 | **Orchestration** | Blocking `up --wait` → `up -d` + in-stream STRICT health-wait heartbeat (`tasks/stacks/wait-stacks-healthy.yml` / `health-tick.yml` / `files/anatomy/scripts/stack-health-probe.py`); `stack_up_parallel` sequential cold-blank; `profiles/all-on.yml`; sudo-free `tools/nos-stacks.sh`. |
 | **Autowiring** | Single-run `authentik_bootstrap_token` (Wing /users + invitations on ONE blank, no 2nd-pass fetch tool); Woodpecker↔Gitea OAuth2 auto-create. |
 | **Security** | A1–A18 hardening continued; Wing Latte CSRF tokens on every browser POST (SEC-14). |

@@ -250,7 +250,7 @@ sso_autologin_timeout_ms: 5000
 
 ## Testy / gates
 
-Všechny pod `tests/anatomy/`, vzor existujících `test_plugin_wiring_contract.py` / `test_sso_doctrine.py`. **Žádný z těchto gates dnes v repu neexistuje — Batch 0 je zavádí jako novou test-suite. Bez nich projdou nevalidní konfigurace (forward_auth s autologinem, supports:no flipnuté na enabled).**
+Všechny pod `tests/anatomy/`, vzor existujících `test_plugin_wiring_journey.py` / `test_sso_doctrine.py`. **Žádný z těchto gates dnes v repu neexistuje — Batch 0 je zavádí jako novou test-suite. Bez nich projdou nevalidní konfigurace (forward_auth s autologinem, supports:no flipnuté na enabled).**
 
 | Gate | Pinuje |
 |---|---|
@@ -317,4 +317,4 @@ Uspořádané, batchované. Každý batch = soudržný shippable kus.
 - **Files:** code-server (REMOTE_USER trusted-proxy), paperclip/openclaw/puter/woodpecker (header-provision config/patch), calibre-web (LDAP-header / no-auth+gate); `files/anatomy/docs/plugin-wiring-capabilities.md` + `tools/plugin-wiring-report.py` (autologin sloupec); `docs/native-sso-survey.md` (**per-service break-glass matrix pro všech 20 native_oidc + 1 header_oidc — tested param NEBO dokumentovaná alternativa**); `docs/upstream-pr-opportunities.md` (influxdb/metabase/uptime-kuma upstream waits).
 - **Effort:** M (rozprostřené; header-provisiony jsou per-service patche).
 - **Unblocks:** eliminace 6 z 11 forward_auth second-loginů; čestné zaznamenání 3 upstream-blocked + 1 by-design (snappymail).
-- **Verify:** `test_plugin_wiring_contract.py`; per-service: po Authentik loginu žádný druhý login na `code-server.<tld>` apod.; `tools/plugin-wiring-report.py` zobrazí autologin pokrytí; `docs/native-sso-survey.md` má break-glass řádek pro každou native_oidc službu, ověřeno na blank instanci.
+- **Verify:** `test_plugin_wiring_journey.py`; per-service: po Authentik loginu žádný druhý login na `code-server.<tld>` apod.; `tools/plugin-wiring-report.py` zobrazí autologin pokrytí; `docs/native-sso-survey.md` má break-glass řádek pro každou native_oidc službu, ověřeno na blank instanci.
