@@ -44,7 +44,9 @@ decision for the operator, not a default.
    - `tools/ci-local.sh` (frozen toolchain, syntax-check).
    - **A blank is the gate** (memory `blank-is-the-gate`): the release names the
      newest blank converge (`nos --remove=data --confirm`, then `nos`) and its
-     `nos-smoke --strict` result. None since the last release → BLOCKER; the
+     `nos-smoke --strict` result (the blank's own, or a later strict unfiltered run
+     within `--blank-window-hours`, which re-records it with `at`/`by`). None since
+     the last release → BLOCKER; the
      operator runs it (destructive), the skill only asks and reads the result.
      Read it from `tools/estate-status.py` (the BLANK axis, `~/.nos/blank-runs.jsonl`);
      UNKNOWN there means no blank was recorded since the record existed (2026-10-16) -
