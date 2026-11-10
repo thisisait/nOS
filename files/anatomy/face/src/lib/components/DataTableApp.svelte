@@ -43,7 +43,11 @@
 	let submitting = $state(false);
 	let saveErr = $state('');
 
-	const view = $derived(data ? resolveView(data) : null);
+	// The viewer may drop a declared style back to the grid (face-styles). Local to
+	// this window and this table: the declaration in KEAP is not touched.
+	let asGrid = $state(false);
+	const declared = $derived(data ? resolveView(data) : null);
+	const view = $derived(declared && asGrid ? { ...declared, style: 'grid' as const } : declared);
 	const ordered = $derived(data && view ? orderRows(data.rows, view) : []);
 
 	// ── Facets: the two filter levels ────────────────────────────────────────
@@ -61,6 +65,7 @@
 		void data?.slug;
 		picked = {};
 		dismissed = false;
+		asGrid = false;
 	});
 
 	const cellOf = (row: DataTableRow, key: string): string =>
@@ -307,6 +312,17 @@
 				</Badge>
 			{/if}
 			<span class="spacer"></span>
+			{#if declared && declared.style !== 'grid'}
+				<select
+					class="style-pick"
+					aria-label="View style"
+					value={asGrid ? 'grid' : declared.style}
+					onchange={(e) => (asGrid = e.currentTarget.value === 'grid')}
+				>
+					<option value={declared.style}>{declared.style}</option>
+					<option value="grid">grid</option>
+				</select>
+			{/if}
 			{#if data.canWrite}
 				<button class="add" onclick={() => open(null)}>＋ Add row</button>
 			{/if}
@@ -669,6 +685,9 @@
 	}
 	.spacer {
 		flex: 1;
+	}
+	.style-pick {
+		font-size: 12px;
 	}
 	.add {
 		background: rgba(90, 150, 255, 0.85);
