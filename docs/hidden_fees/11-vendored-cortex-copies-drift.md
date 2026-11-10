@@ -34,7 +34,7 @@ Deleting one of the two implementations. That is **S5** in
 `docs/archive/cortex-self-core.md`, and it is the only real answer; everything
 before it is mitigation.
 
-One mitigation landed 2026-07-26: `tests/anatomy/test_cortex_vendored_docs.py`
+One mitigation landed 2026-07-26: `tests/anatomy/test_cortex_organ_journey.py`
 asserts every vendored spec carries a provenance header. It stops the failure
 mode where someone edits the copy, believes the spec is fixed, and loses the
 change at the next re-vendor.
