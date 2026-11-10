@@ -24,7 +24,8 @@ def test_all_on_runs_on_master_prs_and_dispatch_only() -> None:
     job = _wf()["jobs"].get("all-on")
     assert job, "ci.yml has no all-on job"
     cond = " ".join(str(job.get("if", "")).split())
-    assert cond == ("github.event_name == 'workflow_dispatch' || "
+    # A nightly dispatch (ci-circadian, nightly=true) runs what the schedule runs, so no all-on (2026-11-10).
+    assert cond == ("(github.event_name == 'workflow_dispatch' && github.event.inputs.nightly != 'true') || "
                     "(github.event_name == 'pull_request' && github.base_ref == 'master')"), cond
 
 
