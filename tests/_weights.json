@@ -233,7 +233,7 @@
   "tests/anatomy/test_oneshot_systemone.py": 2.0,
   "tests/anatomy/test_oneshot_unconstrained.py": 2.3,
   "tests/anatomy/test_openhuman_remembers_in_keap.py": 2.5,
-  "tests/anatomy/test_openhuman_role.py": 133.0,
+  "tests/anatomy/test_openhuman_role.py": 30.2,
   "tests/anatomy/test_operator_hints_say_nos.py": 2.2,
   "tests/anatomy/test_origin_pull_is_a_second_door.py": 13.4,
   "tests/anatomy/test_orphan_compose_extension_excluded.py": 0.9,

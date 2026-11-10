@@ -6,7 +6,7 @@
 # Spawns cargo, vitest/node or a real ansible-playbook run. CI's `thalamus` (cargo test) and
 # `face` (vitest) jobs run those toolchains on every push; the playbook harnesses run nightly.
 nightly:
-  tests/anatomy/test_openhuman_role.py: playbook, 25 runs
+  tests/anatomy/test_openhuman_role.py: playbook, 22 runs (one per input shape, 8 in parallel)
   tests/anatomy/test_run_mode_journey.py: playbook harness plays
   tests/anatomy/test_thalamus_and_face_lanes_run.py: cargo workspace + face vitest (own CI jobs)
   tests/anatomy/test_genui_workspace_poc.py: cargo
