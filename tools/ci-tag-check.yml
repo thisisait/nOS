@@ -1,0 +1,16 @@
+---
+# The tags the nightly `tag-check` lane runs as `ansible-playbook main.yml --check --tags <tag>`
+# (tools/ci-tag-check.py; ruling 2026-11-10). The tags operators pass to `nos --tags`.
+# A tag maps to extra `-e` vars for its run ({} = the CI sandbox alone: profiles/core.yml).
+# thalamus is absent: macOS-only, so the Linux runner would only see its skip path.
+tags:
+  authentik: {}
+  wing: {}
+  face: {}
+  pulse: {}
+  medulla: {}
+  keap: {}
+  bone: {}
+  traefik: {}
+  stacks: {}
+  nginx: {}

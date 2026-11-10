@@ -941,6 +941,89 @@ jobs:
           ANSIBLE_PYTHON_INTERPRETER: ${{ steps.python-setup.outputs.python-path }}
 
   # ──────────────────────────────────────────────────────────────────────────
+  # TAG CHECK – nightly `--check --tags <tag>` per operator tag (tools/ci-tag-check.yml).
+  # Red only on an evaluation error (undefined var, missing file/include): on 2026-11-10
+  # `--tags authentik` died on an undefined nos_plugin_ctx that 9359 offline tests passed.
+  # No docker, no secrets; it sees up to infra bring-up. Wrapper: tools/ci-tag-check.py.
+  # ──────────────────────────────────────────────────────────────────────────
+  tag-check-select:
+    name: Tag check (select)
+    if: github.event_name == 'schedule' || github.event.inputs.nightly == 'true'
+    runs-on: ubuntu-24.04
+    outputs:
+      tags: ${{ steps.pick.outputs.tags }}
+    steps:
+      - name: Check out the codebase.
+        uses: actions/checkout@v7
+
+      - name: Set up Python 3.
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+
+      - name: Read the tag list.
+        id: pick
+        run: |
+          pip3 install pyyaml
+          echo "tags=$(python3 tools/ci-tag-check.py --list)" >> "$GITHUB_OUTPUT"
+
+  tag-check:
+    name: Tag check (--tags ${{ matrix.tag }})
+    needs: tag-check-select
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      PYTHONNOUSERSITE: '1'
+    strategy:
+      fail-fast: false
+      matrix:
+        tag: ${{ fromJSON(needs.tag-check-select.outputs.tags) }}
+    steps:
+      - name: Check out the codebase.
+        uses: actions/checkout@v7
+
+      - name: Set up Python 3.
+        id: python-setup
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+
+      - name: Install test dependencies.
+        env:
+          PY: ${{ steps.python-setup.outputs.python-path }}
+        run: |
+          . "${GITHUB_WORKSPACE}/tools/ci-freeze.env"
+          "$PY" -m venv "$RUNNER_TEMP/nosvenv"
+          grep -v '^ansible-core' "${GITHUB_WORKSPACE}/bootstrap/requirements-controller.txt" > "$RUNNER_TEMP/controller.txt"
+          "$RUNNER_TEMP/nosvenv/bin/pip" install "$NOS_ANSIBLE_CORE" -r "$RUNNER_TEMP/controller.txt"
+          echo "$RUNNER_TEMP/nosvenv/bin" >> "$GITHUB_PATH"
+          "$PY" -m pip install --break-system-packages "$NOS_ANSIBLE_CORE" pyyaml jsonschema
+
+      - name: Set up the test environment.
+        env:
+          PY: ${{ steps.python-setup.outputs.python-path }}
+        run: |
+          cp tests/ansible.cfg ./ansible.cfg
+          echo "interpreter_python = $PY" >> ./ansible.cfg
+          cp tests/inventory ./inventory
+          cp tests/config.yml ./config.yml
+          for attempt in 1 2 3 4 5 6; do
+            ansible-galaxy install -r requirements.lock.yml && exit 0
+            echo "ansible-galaxy attempt ${attempt} failed; sleeping ${attempt}0s"
+            sleep "${attempt}0"
+          done
+          exit 1
+
+      # No ANSIBLE_FORCE_COLOR: the wrapper reads the plain callback output.
+      - name: Check-mode run under the tag.
+        run: >-
+          python3 tools/ci-tag-check.py "$TAG"
+          -e ansible_python_interpreter="${{ steps.python-setup.outputs.python-path }}"
+        env:
+          TAG: ${{ matrix.tag }}
+          ANSIBLE_PYTHON_INTERPRETER: ${{ steps.python-setup.outputs.python-path }}
+
+  # ──────────────────────────────────────────────────────────────────────────
   # ALL-ON – every known-good service at once, the only lane that proves the
   # bundles together. Expected cost (unmeasured): ~60-90 min, may exceed the
   # hosted runner's ~14 GB free disk or 16 GB RAM. Non-blocking until one
