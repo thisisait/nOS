@@ -95,6 +95,10 @@ into `## To capture`.
 - Branch `feat/<slug>` or `fix/<slug>` off `origin/dev`, in this session's
   worktree. `export CARGO_TARGET_DIR=~/.cache/nos-cargo`.
 - Read the row body and all the code it touches before editing.
+- Never run a tool that reaches a live table or service. The only live calls
+  are `nos dtt status`, `nos dtt update` and `gh`. To learn a tool's usage,
+  read its docstring; do not run it with `--help`. On 2026-11-10,
+  `roadmap-seed.py --help` seeded the live table.
 - **Write no new tests and edit no gate.** The operator runs e2e from your
   notes. The code must hold without tests:
   - **Wing (Nette):**
