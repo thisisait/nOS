@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+# ── nOS — the estate brand on the Authentik login page (row estate-brand) ─────
+# The first login page every SSO user sees carries the estate's name, not
+# "authentik". A partial update of the same default brand 46-brand-auth-flow
+# routes; that file owns the flows, this one owns the look. Logo: next slice.
+version: 1
+metadata:
+  name: nos-estate-brand
+  labels:
+    managed-by: nos
+    blueprint-version: "1"
+
+entries:
+  - model: authentik_brands.brand
+    state: present
+    identifiers:
+      domain: authentik-default
+    attrs:
+      branding_title: {{ estate_brand_title | to_json }}

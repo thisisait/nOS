@@ -534,6 +534,8 @@ authentik_web_workers: 2
 authentik_web_threads: 4
 authentik_worker_processes: 1
 authentik_worker_threads: 2
+# The estate brand (row estate-brand): the name on the Authentik login page and tab title.
+estate_brand_title: "This is AIT"
 # The smallest Docker VM (GiB, as `docker info` MemTotal reports it) a converge
 # starts on. Measured 2026-10-10, all-on: 10 GB (9.7 GiB) died on timeouts an
 # hour in, 11.5 GB (11.17 GiB) ran failed=0. A smaller estate may lower it.

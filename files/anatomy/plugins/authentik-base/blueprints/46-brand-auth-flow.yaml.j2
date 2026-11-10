@@ -23,7 +23,8 @@
 # Partial update: default, flow_authentication (both enforce_mfa states),
 # AND flow_device_code. Authentik 2026.5 Brand field is flow_device_code (UI:
 # "Default code flow"; schema title "Flow device code"). Other brand fields
-# (branding_title, default_application, flow_recovery, …) stay unmanaged here.
+# (default_application, flow_recovery, …) stay unmanaged here; branding_title
+# is 47-estate-brand's.
 # flow_recovery is intentionally NOT set yet (CLI `ak create_recovery_key`
 # is the live escape — see docs/break-glass-runbook.md).
 version: 1

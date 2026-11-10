@@ -227,6 +227,21 @@
     - _verify_ak_brand.json is defined
   tags: ['always', 'verify']
 
+- name: "[Verify] The login page carries the estate brand (47-estate-brand)"
+  ansible.builtin.assert:
+    that:
+      - (_verify_ak_brand.json.results | default([{}]) | first).branding_title | default('') == estate_brand_title
+    fail_msg: |
+      The default brand's title is not estate_brand_title ({{ estate_brand_title }}). Re-run:
+        {{ docker_bin | default('docker') }} compose -p infra exec authentik-worker \
+          ak apply_blueprint /blueprints/custom/47-estate-brand.yaml
+    success_msg: "login page titled {{ estate_brand_title }}."
+  when:
+    - install_authentik | default(false) | bool
+    - nos_docker_ready | default(true)
+    - (_verify_ak_brand.json.results | default([])) | length > 0
+  tags: ['always', 'verify']
+
 # ── Verify: 00-admin-groups and 05-synthetic-identities imported, and every
 # declared identity can log in. MEASURED 2026-10-18: `pazny` could not sign in
 # with the derived password while identity-status said ok — an import is
