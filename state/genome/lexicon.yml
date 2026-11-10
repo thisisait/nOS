@@ -560,7 +560,7 @@ words:
       Its ruled word is now symbiosome; the path keeps "plugins" until the rename row.
     names:
       - path: files/anatomy/plugins/
-      - path: tests/anatomy/test_a_plugin_loads_when_its_role_runs.py
+      - path: tests/anatomy/test_plugin_wiring_journey.py
     not: [tissue, gene]
     counter_example: "an apps/<name>.yml manifest app (it deploys a service; a plugin only wires one)"
 
