@@ -76,14 +76,19 @@
     groups: "{{ _unix_tier_group[item.tier] }}"
     append: true
     shell: "{{ linux_users_shell }}"
-    comment: "{{ omit if item.name in (linux_users_adopted | default([])) else linux_users_marker }}"
+    # Appended, never replacing: an adopted colleague keeps their full name beside the marker.
+    comment: "{{ _gecos if _gecos is search(linux_users_marker | regex_escape) else ([_gecos, linux_users_marker] | select | join(',')) }}"
     create_home: true
     password: "{{ item.password | password_hash('sha512', (item.name | hash('sha256'))[:16]) }}"
     update_password: "{{ linux_users_update_password }}"
     password_lock: "{{ not item.active }}"
+  vars:
+    _gecos: "{{ (ansible_facts['getent_passwd'][item.name] | default(['', '', '', '']))[3] | default('', true) }}"
   loop: "{{ _unix_people }}"
   loop_control:
     label: "{{ item.name }} (tier {{ item.tier }}{{ '' if item.active else ', locked' }})"
+  # An off persona that is absent stays absent (userdel bob must hold); a present one is locked.
+  when: item.active or item.name in ansible_facts['getent_passwd']
   no_log: true
   become: true
 
@@ -119,6 +124,8 @@
   loop: "{{ _unix_people }}"
   loop_control:
     label: "{{ item.name }}"
+  # Absent under --check (the run would create it) or an off persona left absent: no home to fix.
+  when: item.name in ansible_facts['getent_passwd']
   become: true
 
 # The medulla's run-as (pazny.medulla). Same rule as a person: a `nos` nOS did not make is refused.
