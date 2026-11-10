@@ -7,7 +7,7 @@
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { StatusNote, Badge } from '$lib/components/ui';
+	import { StatusNote, Badge, severityTone as tone } from '$lib/components/ui';
 	import { answerQuestion, loadInbox, markRead, type Inbox } from '$lib/api/inbox';
 	import type { AnswerOutcome } from '$lib/inbox/project';
 
@@ -15,10 +15,7 @@
 	let failed = $state<string | null>(null);
 	let busy = $state<string | null>(null);
 	let draft: Record<string, string> = $state({});
-	let said: Record<string, string> = $state({});
-
-	const tone = (s: string) =>
-		s === 'critical' || s === 'high' ? 'bad' : s === 'medium' ? 'warn' : 'info';
+	let said: Record<string, { text: string; ok: boolean }> = $state({});
 
 	function words(o: AnswerOutcome): string {
 		switch (o.outcome) {
@@ -48,9 +45,10 @@
 		if (!a || busy) return;
 		busy = uuid;
 		try {
-			said = { ...said, [uuid]: words(await answerQuestion(uuid, a)) };
+			const o = await answerQuestion(uuid, a);
+			said = { ...said, [uuid]: { text: words(o), ok: o.outcome === 'answered' } };
 		} catch (e) {
-			said = { ...said, [uuid]: `NOT answered: ${e}` };
+			said = { ...said, [uuid]: { text: `NOT answered: ${e}`, ok: false } };
 		} finally {
 			busy = null;
 		}
@@ -64,7 +62,7 @@
 			if (inbox)
 				inbox = { ...inbox, notifications: inbox.notifications.filter((n) => n.uuid !== uuid) };
 		} catch (e) {
-			said = { ...said, [uuid]: `not marked read: ${e}` };
+			said = { ...said, [uuid]: { text: `not marked read: ${e}`, ok: false } };
 		} finally {
 			busy = null;
 		}
@@ -88,10 +86,10 @@
 		<section aria-label="agents' questions">
 			<h3>Waiting for you ({inbox.questions.length})</h3>
 			{#if inbox.questions.length === 0}
-				<p class="none">No agent is waiting for an answer.</p>
+				<StatusNote kind="empty" title="No agent is waiting for an answer." />
 			{/if}
 			{#each inbox.questions as q (q.uuid)}
-				<article>
+				<article class:done={!!said[q.uuid]?.ok}>
 					<p class="who">
 						<Badge tone={tone(q.severity)}>{q.severity}</Badge>
 						{q.agent} asks ({q.kind}){#if q.expires}<span>
@@ -100,7 +98,7 @@
 					</p>
 					<p class="prompt">{q.prompt}</p>
 					{#if said[q.uuid]}
-						<p class="said">{said[q.uuid]}</p>
+						<p class="said" class:ok={said[q.uuid].ok} role="status">{said[q.uuid].text}</p>
 					{:else if q.options}
 						<div class="options">
 							{#each q.options as o (o)}
@@ -128,10 +126,10 @@
 		<section aria-label="unread notifications">
 			<h3>Unread ({inbox.notifications.length})</h3>
 			{#if inbox.notifications.length === 0}
-				<p class="none">Nothing unread.</p>
+				<StatusNote kind="empty" title="Nothing unread." />
 			{/if}
 			{#each inbox.notifications as n (n.uuid)}
-				<article>
+				<article class="unread">
 					<p class="who">
 						<Badge tone={tone(n.severity)}>{n.severity}</Badge>
 						{n.title}
@@ -141,7 +139,7 @@
 							<summary>detail</summary>
 							<pre>{n.body}</pre>
 						</details>{/if}
-					{#if said[n.uuid]}<p class="said">{said[n.uuid]}</p>{/if}
+					{#if said[n.uuid]}<p class="said" role="status">{said[n.uuid].text}</p>{/if}
 					<button class="ghost" disabled={busy !== null} onclick={() => read(n.uuid)}
 						>mark read</button
 					>
@@ -154,11 +152,13 @@
 <style>
 	.inbox {
 		display: grid;
-		gap: 12px;
+		align-content: start;
+		gap: 14px;
 		padding: 12px;
 		overflow: auto;
 		height: 100%;
 		box-sizing: border-box;
+		container-type: inline-size;
 	}
 	header {
 		display: flex;
@@ -168,32 +168,74 @@
 	header button {
 		margin-left: auto;
 	}
+	section {
+		display: grid;
+		gap: 6px;
+	}
 	h3 {
-		margin: 4px 0;
-		font-size: 0.95em;
+		margin: 0;
+		font-size: 0.8em;
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: var(--muted);
 	}
 	article {
 		display: grid;
-		gap: 4px;
-		padding: 8px 0;
-		border-bottom: 1px solid var(--line, currentColor);
+		gap: 6px;
+		padding: 8px 10px;
+		border: 1px solid var(--glass-brd);
+		border-left: 3px solid var(--accent);
+		border-radius: 8px;
+		background: var(--glass);
+	}
+	article.unread {
+		border-left-color: var(--info);
+	}
+	article.done {
+		border-left-color: var(--glass-brd);
+		opacity: 0.7;
+	}
+	.who {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+		align-items: center;
+	}
+	.who span,
+	.meta {
+		font-size: 0.85em;
+		color: var(--muted);
 	}
 	.who,
 	.prompt,
 	.meta,
-	.said,
-	.none {
+	.said {
 		margin: 0;
 		overflow-wrap: anywhere;
 	}
-	.meta {
+	.prompt {
+		white-space: pre-wrap;
+	}
+	.said {
+		color: var(--bad);
+	}
+	.said.ok {
+		color: var(--ok);
+	}
+	summary {
+		cursor: pointer;
+		color: var(--muted);
 		font-size: 0.85em;
-		opacity: 0.7;
 	}
 	pre {
 		white-space: pre-wrap;
 		overflow-wrap: anywhere;
-		margin: 4px 0;
+		margin: 4px 0 0;
+		font-size: 0.85em;
+	}
+	article > button {
+		justify-self: start;
 	}
 	.options,
 	form {
@@ -212,5 +254,17 @@
 	input {
 		flex: 1;
 		min-width: 0;
+	}
+	@container (max-width: 360px) {
+		.inbox {
+			padding: 8px;
+		}
+		form {
+			flex-direction: column;
+			align-items: stretch;
+		}
+		.options button {
+			flex: 1 1 100%;
+		}
 	}
 </style>
