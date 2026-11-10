@@ -119,7 +119,7 @@
 # A recreate kills every run in flight, and its working files with it (2026-10-23:
 # six runs lost to one restart). Wait until no run is going; on timeout refuse, so
 # the operator chooses: wait more, or `-e paperclip_drain_timeout_s=0` to restart now.
-# No database yet (first install) counts as idle. Gate: test_paperclip_drains_before_a_restart.py.
+# No database yet (first install) counts as idle. Gate: test_paperclip_role_journey.py.
 - name: "[pazny.paperclip] Drain: wait until no agent run is in flight"
   ansible.builtin.shell: >
     {{ docker_bin }} exec infra-postgresql-1 psql -U postgres -d {{ paperclip_db_name }} -tA -c

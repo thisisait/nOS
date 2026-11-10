@@ -166,7 +166,7 @@
 # its environment lease"): upstream paperclipai/paperclip#14672, 9 issues stuck
 # on 2026-10-24. Release only leases whose run is over (interrupted). A schema
 # without the table (upstream fixed it differently) skips, not fails.
-# Gate: test_paperclip_releases_orphaned_leases.py.
+# Gate: test_paperclip_role_journey.py.
 - name: "[pazny.paperclip Post] Release leases a restart orphaned (upstream #14672)"
   ansible.builtin.shell: >
     {{ docker_bin }} exec infra-postgresql-1 psql -U postgres -d {{ paperclip_db_name }} -tA -v ON_ERROR_STOP=1 -c
