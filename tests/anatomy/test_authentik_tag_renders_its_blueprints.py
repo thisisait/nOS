@@ -26,6 +26,20 @@ def test_the_authentik_tag_reaches_the_plugin_render():
         "authentik-base blueprints it applies are never rendered")
 
 
+def test_a_tag_that_reaches_a_loader_reaches_its_ctx():
+    """2026-11-10, the next converge: the hook ran under `authentik` but the set_fact of
+    nos_plugin_ctx did not ('nos_plugin_ctx' is undefined). Every tag on a task that reads
+    the ctx must also select the task that writes it."""
+    import yaml
+    core = yaml.safe_load((REPO / "tasks/stacks/core-up.yml").read_text(encoding="utf-8"))
+    writer = next(t["name"] for t in core if "nos_plugin_ctx" in str((t.get("ansible.builtin.set_fact") or {})))
+    readers = [t["name"] for t in core if "nos_plugin_ctx" in str(t.get("nos_plugin_loader") or {})]
+    alive = _walk._analyse().alive
+    tags = lambda name: {tag for f, n, tag in alive if f == LOADER[0] and n == name[:90]}
+    missing = {r: sorted(tags(r) - tags(writer)) for r in readers if tags(r) - tags(writer)}
+    assert readers and not missing, f"tags that run the loader but not the ctx snapshot: {missing}"
+
+
 def test_every_applied_blueprint_has_a_template():
     handler = (REPO / "roles/pazny.authentik/handlers/main.yml").read_text(encoding="utf-8")
     names = set(re.findall(r"\b(\d\d-[a-z0-9-]+)\b", handler.split("for bp in", 1)[1].split("; do", 1)[0]))

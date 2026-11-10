@@ -36,7 +36,7 @@
 - name: "[Core] Snapshot plugin-loader ctx before compose registers bloat vars"
   ansible.builtin.set_fact:
     nos_plugin_ctx: "{{ vars }}"
-  tags: ['anatomy', 'anatomy.plugins']
+  tags: ['anatomy', 'anatomy.plugins', 'authentik']  # the loader chain --tags authentik needs
 
 - name: "[Core] Plugin loader — pre_render hook"
   nos_plugin_loader:
@@ -45,7 +45,7 @@
     apps_root: "{{ playbook_dir }}/apps"
     agent_profiles_root: "{{ playbook_dir }}/files/anatomy/agents"
     template_vars: "{{ nos_plugin_ctx }}"
-  tags: ['anatomy', 'anatomy.plugins']
+  tags: ['anatomy', 'anatomy.plugins', 'authentik']  # the loader chain --tags authentik needs
 
 # ── Flush handlers - nginx must listen on 443 before HTTPS services are verified ─
 - name: "[Core] Flush handlers before core stack deployment"
