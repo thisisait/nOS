@@ -54,6 +54,24 @@
 > A known hole with no fix yet can be cut at the edge without removing the symbiont:
 > `tools/nos-sanction.py jellyfin --level stop --reason <id> --confirm` (stop also closes LAN 8096).
 
+## TV and phone apps
+
+A native Jellyfin app cannot do the browser's OIDC dance. It signs in with **Quick Connect**
+(enabled by default, `GET /QuickConnect/Enabled` → `true`):
+
+1. On the TV or phone, choose **Quick Connect**; the app shows a 6-character code.
+2. In a browser, sign in to `https://media.<tenant>` with **Sign in with Authentik** (the button on the
+   login page), open **Profile → Quick Connect**, enter the code.
+3. The app is now signed in as that person, with that person's Authentik tier.
+
+Reaching the server from a TV depends on the tenant's TLD:
+
+- **Public TLD with a real certificate:** the app uses `https://media.<tenant>` through Traefik. Jellyfin
+  has no forward-auth in front of it, so native apps work; the LAN port is not needed.
+- **`.local` tenant:** most TVs resolve no mDNS and trust no mkcert CA, so the only path is the plain LAN
+  port, `http://<host-ip>:8096`. That is why `jellyfin_lan_access` defaults to `true`; turning it off
+  on a `.local` estate cuts the TVs off.
+
 ## API Access
 
 - **Base URL:** `https://media{host_alias_seg}.{tenant_domain}`
