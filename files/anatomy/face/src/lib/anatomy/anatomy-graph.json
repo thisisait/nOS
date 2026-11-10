@@ -4,7 +4,7 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 583,
+    "nodes": 584,
     "edges": 564,
     "nodes_pulse": 46,
     "nodes_judge": 5,
@@ -27,7 +27,7 @@
     "nodes_agent": 17,
     "nodes_tasktype": 9,
     "nodes_skill": 16,
-    "nodes_reader": 68,
+    "nodes_reader": 69,
     "nodes_effector": 119,
     "nodes_article": 28,
     "nodes_organ_system": 13,
@@ -3801,6 +3801,13 @@
       "title": "What the security queue says, right now.",
       "anchor": "02.02.04",
       "description": "Reader tools/rem-status.py: What the security queue says, right now."
+    },
+    "reader:roadmap-stale": {
+      "kind": "reader",
+      "source": "tools/roadmap-stale.py",
+      "title": "READER: next/active roadmap rows whose work is already on dev (a merged `feat|fix/<slug>`, or CLOSED/SHIPPED/Built in/Propose: shipped in the body; never a row with open children). The loop skips them; the session reconciles. UNKNOWN when the board is unreadable.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/roadmap-stale.py: READER: next/active roadmap rows whose work is already on dev (a merged `feat|fix/<slug>`, or CLOSED/SHIPPED/Built in/Propose: shipped in the body; never a row with open children). The loop skips them; the session reconciles. UNKNOWN when the board is unreadable."
     },
     "reader:roadmap-status": {
       "kind": "reader",

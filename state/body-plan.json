@@ -11,7 +11,7 @@
     "organ system": 13,
     "organism": 0,
     "habitat": 9,
-    "sense": 86,
+    "sense": 87,
     "limb": 126,
     "memory": 42,
     "law": 56,
@@ -1578,6 +1578,10 @@
       "kind": "reader"
     },
     "reader:rem-status": {
+      "level": "sense",
+      "kind": "reader"
+    },
+    "reader:roadmap-stale": {
       "level": "sense",
       "kind": "reader"
     },

@@ -25,7 +25,7 @@ nOS is built so an AI agent can do real work here, and so that a mistake — the
 
 ## 3. The body plan
 
-Levels, smallest to largest, then the cross-cutting systems: genome (25), cell (17), tissue (1), organ (83), organ system (13), organism (0), habitat (9), sense (86), limb (126), memory (42), law (56), reflex (46), heartbeat (1). Look closer: `tools/body.py <level>` or `tools/body.py <node>`.
+Levels, smallest to largest, then the cross-cutting systems: genome (25), cell (17), tissue (1), organ (83), organ system (13), organism (0), habitat (9), sense (87), limb (126), memory (42), law (56), reflex (46), heartbeat (1). Look closer: `tools/body.py <level>` or `tools/body.py <node>`.
 
 ## 4. How to ask — the senses
 

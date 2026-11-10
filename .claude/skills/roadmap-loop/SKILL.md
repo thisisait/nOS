@@ -74,9 +74,13 @@ outside two parents fell behind 141 platform rows):
 
 Within a group, take `next` before `active`, then board order. Skip a row
 that:
-- is already done: a `feat/<slug>` or `fix/<slug>` branch (local or origin) is
-  an ancestor of `origin/dev`, or the body says "built" or "Propose: shipped".
-  Put it in `## Questions` as "move to review?";
+- is listed by `tools/roadmap-stale.py`, which you run once per pick. Its
+  evidence is a branch already in dev, or "CLOSED", "SHIPPED", "Built in" or
+  "Propose: shipped" in the body. Skip the row without asking and without
+  proving it again. Write one line under `## Roadblocks`, `stale: N rows`, and
+  the session reconciles them;
+- looks done but the reader missed it (you found the work on dev): skip it and
+  add it to that same `stale` line. Never spend more than one look on it;
 - has an unmerged `origin/feat/<slug>` or `origin/fix/<slug>`: someone is on it;
 - is gate work: its deliverable is a gate, a ratchet or a judge. The loop edits
   no gate, so leave it for the session;

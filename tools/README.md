@@ -43,6 +43,7 @@ A reader only reads: no mutating command, no file write, no POST/PUT/PATCH/DELET
 no SQL that changes a table (`tests/anatomy/test_readers_section_only_reads.py`).
 Each line here is a `reader:` node of the anatomy graph, a sense.
 
+- `roadmap-stale.py` — READER: next/active roadmap rows whose work is already on dev (a merged `feat|fix/<slug>`, or CLOSED/SHIPPED/Built in/Propose: shipped in the body; never a row with open children). The loop skips them; the session reconciles. UNKNOWN when the board is unreadable.
 - `agent-capability.py` — Derive each agent's nos-work:// capability address from its manifest (the routing projection).
 - `agent-status.py` — What the agents are doing, and what came of the last ones.
 - `advisory-status.py` — READER: which version pins and organ lockfiles sit inside a published advisory range: every `*_version`/`*_tag` pin routed by `state/genome/advisory-receptors.yml` (GitHub repo advisories, OSV), the thalamus/wing/face/cortex lockfiles through OSV querybatch, `tech:` pins through the cve.now feed, KEV/EPSS from cve.now by CVE id; exact ranges per release line. Each source and each advisory UNKNOWN on its own, never "no findings"; `--cache-dir` keeps ETags (`_advisory_cache.py`).
