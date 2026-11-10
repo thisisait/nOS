@@ -77,7 +77,7 @@
     append: true
     shell: "{{ linux_users_shell }}"
     # Appended, never replacing: an adopted colleague keeps their full name beside the marker.
-    comment: "{{ _gecos if _gecos is search(linux_users_marker | regex_escape) else ([_gecos, linux_users_marker] | select | join(',')) }}"
+    comment: "{{ _gecos if _gecos is search(linux_users_marker | regex_escape) else ([_gecos | regex_replace(',+$', ''), linux_users_marker] | select | join(',')) }}"
     create_home: true
     password: "{{ item.password | password_hash('sha512', (item.name | hash('sha256'))[:16]) }}"
     update_password: "{{ linux_users_update_password }}"
