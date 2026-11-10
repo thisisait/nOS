@@ -33,17 +33,8 @@ import urllib.error
 import urllib.request
 
 from keap_api import human_base, human_headers, paged, write_row  # noqa: E402 — sibling helper in tools/
-from roadmap_seed_lib import GIT_OWNED, invalid, is_estate_checkout, load_rows, restore_table_owned, seed_dir, write_index  # noqa: E402
-
-# An unknown flag used to be ignored, so `--help` seeded the live table (loop dry run 2026-11-10).
-if {"-h", "--help"} & set(sys.argv[1:]):
-    sys.exit(print(__doc__) or 0)
-_args = iter(sys.argv[1:])
-for _a in _args:
-    if _a in ("--only", "--restore-from"):
-        next(_args, None)
-    elif _a not in ("--dry-run", "--sync") and not _a.startswith("--only="):
-        sys.exit(f"roadmap-seed: unknown argument {_a!r}; see --help. Nothing was written.")
+from roadmap_seed_lib import GIT_OWNED, invalid, only_arg, refuse_unknown_args, is_estate_checkout, load_rows, restore_table_owned, seed_dir, write_index  # noqa: E402
+refuse_unknown_args(sys.argv[1:], __doc__)  # an unknown flag used to seed live (loop dry run 2026-11-10)
 
 _REPO = __import__("os").path.abspath(__import__("os").path.join(
     __import__("os").path.dirname(__file__), ".."))
@@ -79,9 +70,7 @@ DRY_RUN = "--dry-run" in sys.argv
 SYNC = "--sync" in sys.argv
 # --only: file chosen rows without the rest (2026-10-28: one new row could not reach the table
 # without 789 inserts riding along — rows the 10-17 blank had lost, see --restore-from).
-_only_arg = next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--only=")), None)
-if _only_arg is None and "--only" in sys.argv[:-1]:
-    _only_arg = sys.argv[sys.argv.index("--only") + 1]
+_only_arg = only_arg(sys.argv[1:])
 ONLY = {x.strip() for x in _only_arg.split(",") if x.strip()} if _only_arg else None
 if ONLY is not None and ONLY - slugs:
     sys.exit(f"REFUSING: --only names slugs no seed file has: {sorted(ONLY - slugs)}")

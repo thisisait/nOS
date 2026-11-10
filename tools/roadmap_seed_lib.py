@@ -39,6 +39,7 @@ from __future__ import annotations
 import datetime
 import os
 import re
+import sys
 
 import yaml
 
@@ -50,6 +51,24 @@ SHIPPED = "shipped"
 #: refuses to write a column that does not exist. When roadmap.table.yml gains
 #: task_type and it is applied, add it here and to the emitted row dict.
 GIT_OWNED = ("title", "parent", "track", "refs", "body")
+
+
+def refuse_unknown_args(argv: list[str], doc: str) -> None:
+    """--help prints `doc`; any argument roadmap-seed does not know exits before a write."""
+    if {"-h", "--help"} & set(argv):
+        sys.exit(print(doc) or 0)
+    it = iter(argv)
+    for a in it:
+        if a in ("--only", "--restore-from"):
+            next(it, None)
+        elif a not in ("--dry-run", "--sync") and not a.startswith("--only="):
+            sys.exit(f"roadmap-seed: unknown argument {a!r}; see --help. Nothing was written.")
+
+
+def only_arg(argv: list[str]) -> str | None:
+    """The value of `--only X` or `--only=X`, else None."""
+    eq = next((a.split("=", 1)[1] for a in argv if a.startswith("--only=")), None)
+    return eq if eq is not None or "--only" not in argv[:-1] else argv[argv.index("--only") + 1]
 
 
 def seed_dir() -> str:
