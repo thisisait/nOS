@@ -20,7 +20,13 @@ name: CI
   schedule:
     - cron: "0 5 * * *"
   # By hand: runs everything a PR would, plus the all-on and macOS install lanes.
+  # nightly=true (tools/ci-circadian.py, dev's nightly): exactly what the schedule runs, no all-on.
   workflow_dispatch:
+    inputs:
+      nightly:
+        description: "Run as the nightly schedule would (ci-circadian)"
+        type: boolean
+        default: false
 
 # Default minimum permissions for every job — read-only access to the
 # repository. Closes GitHub Code Scanning's actions/missing-workflow-
@@ -674,7 +680,7 @@ jobs:
     env:
       PYTHONNOUSERSITE: '1'   # keep the venv ansible's sys.path clean (see macOS job)
     if: |
-      github.event_name == 'schedule' ||
+      github.event_name == 'schedule' || github.event.inputs.nightly == 'true' ||
       (github.event_name == 'push' && github.ref != 'refs/heads/dev') ||
       (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
 
@@ -853,10 +859,11 @@ jobs:
         id: pick
         env:
           EVENT: ${{ github.event_name }}
+          NIGHTLY: ${{ github.event.inputs.nightly }}
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
           pip3 install pyyaml
-          if [ "$EVENT" = schedule ]; then
+          if [ "$EVENT" = schedule ] || [ "$NIGHTLY" = true ]; then
             lanes=$(python3 tools/test-tiers.py --select --nightly)
           else
             # A new branch has no `before`; fall back to the last commit.
@@ -946,7 +953,7 @@ jobs:
     continue-on-error: true
     env:
       PYTHONNOUSERSITE: '1'
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.base_ref == 'master')
+    if: (github.event_name == 'workflow_dispatch' && github.event.inputs.nightly != 'true') || (github.event_name == 'pull_request' && github.base_ref == 'master')
     # ponytail: setup copies the bonus job's; extract a composite action when it next changes.
     steps:
       - name: Check out the codebase.
