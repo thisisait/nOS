@@ -83,6 +83,10 @@ for spec in "${REFSPECS[@]}"; do
 	[ -n "$src" ] || continue  # `:branch` is a delete, it carries nothing
 	[ "$dst" = HEAD ] && dst="$BRANCH"
 	[ -n "$dst" ] || dst="$src"
+	# The operator lands; an agent never does (roadmap-loop runs unattended, 2026-11-10). Claude Code sets CLAUDECODE.
+	if [ -n "${CLAUDECODE:-}" ] && { [ "$dst" = dev ] || [ "$dst" = master ]; }; then
+		echo "→ nos-push refused: an agent session does not push to $dst — hand the operator the land command"; exit 2
+	fi
 	# CLAUDE.md §Commit convention: no attribution trailers, from any agent or session (operator 2026-11-08).
 	if git -C "$PUSH_DIR" log --format=%B "$src" --not --remotes="$REMOTE" | grep -qiE '^(co-authored-by|claude-session):'; then
 		echo "→ nos-push refused: a commit in $src carries a Co-Authored-By/Claude-Session trailer — reword it"; exit 2
