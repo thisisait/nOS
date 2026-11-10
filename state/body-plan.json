@@ -12,13 +12,13 @@
     "organism": 0,
     "habitat": 9,
     "sense": 86,
-    "limb": 125,
+    "limb": 126,
     "memory": 42,
     "law": 56,
-    "reflex": 45,
+    "reflex": 46,
     "heartbeat": 1,
     "internal": 78,
-    "edges": 443
+    "edges": 445
   },
   "nodes": {
     "agent:conductor": {
@@ -621,6 +621,10 @@
       "level": "limb",
       "kind": "effector"
     },
+    "effector:ci-circadian": {
+      "level": "limb",
+      "kind": "effector"
+    },
     "effector:ci-local": {
       "level": "limb",
       "kind": "effector"
@@ -1218,6 +1222,10 @@
       "kind": "pulse"
     },
     "pulse:backup:backup-restore-drill": {
+      "level": "reflex",
+      "kind": "pulse"
+    },
+    "pulse:ci-circadian:nightly": {
       "level": "reflex",
       "kind": "pulse"
     },
@@ -2858,6 +2866,11 @@
       "kind": "governed_by"
     },
     {
+      "from": "pulse:ci-circadian:nightly",
+      "to": "effector:ci-circadian",
+      "kind": "trigger"
+    },
+    {
       "from": "pulse:conductor:scan-state-record",
       "to": "effector:scan-state-snapshot",
       "kind": "trigger"
@@ -3745,6 +3758,11 @@
     {
       "from": "service:pulse",
       "to": "pulse:backup:backup-restore-drill",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:ci-circadian:nightly",
       "kind": "trigger"
     },
     {

@@ -501,6 +501,11 @@ restic_launchd_label: "eu.thisisait.nos.backup.offsite"
 # ── Vulnerability Scanner (NOS Security Auditor) ─────────────────────────────
 configure_vulnerability_scan: false
 
+# ── CI circadian (plugin ci-circadian) ────────────────────────────────────────
+# Nightly `gh workflow run` of every scheduled workflow on dev: GitHub fires schedules only on
+# master. The maintainer's estate only; a client estate never dispatches this repo's CI.
+install_ci_circadian: false
+
 # ── Version Policy ────────────────────────────────────────────────────────────
 # "stable" = pinned CVE-patched versions (default, recommended for production)
 # "latest" = always pull newest available images/packages

@@ -30,8 +30,11 @@ def checks() -> list[list[str]]:
     return out
 
 
-def run(argv: list[str]) -> bool:
-    return subprocess.run([sys.executable, *argv], cwd=REPO, capture_output=True).returncode == 0
+def run(argv: list[str], say: bool = False) -> bool:
+    r = subprocess.run([sys.executable, *argv], cwd=REPO, capture_output=True, text=True)
+    if r.returncode and say:
+        print((r.stdout + r.stderr)[-1200:], file=sys.stderr)
+    return r.returncode == 0
 
 
 def main() -> int:
@@ -51,7 +54,7 @@ def main() -> int:
             writer = [a for a in check if a != "--check"]
             if writer[0] == "tools/anatomy-graph-gen.py":
                 writer.append("--refreeze")
-            if not run(writer) or not run(check):
+            if not run(writer, say=True) or not run(check, say=True):
                 print(f"regenerate: {' '.join(writer)} did not make its check pass", file=sys.stderr)
                 return 1
             wrote = True

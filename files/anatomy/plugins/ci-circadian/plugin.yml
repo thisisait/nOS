@@ -1,0 +1,64 @@
+# =============================================================================
+# ci-circadian — the nightly rhythm GitHub only keeps on master, kept on dev
+#
+# BORN 2026-11-10 (row ci-circadian). GitHub fires `schedule` from the default
+# branch alone, so between releases dev's nightly lane (NOS_LANE=all), the
+# FrankenPHP re-pin and the cold-file watch never ran; the Bonus lanes then
+# failed on a stale FrankenPHP pin. This job dispatches each scheduled
+# workflow on dev every night (tools/ci-circadian.py).
+#
+# Off by default (install_ci_circadian): only the maintainer's estate runs it.
+# =============================================================================
+
+name: ci-circadian
+version: 0.1.0
+description: |
+  Nightly `gh workflow run --ref dev` of every GitHub workflow that has both a
+  schedule and workflow_dispatch. Uses the host's `gh` login; sends only the
+  workflow names and the ref.
+
+type:
+  - scheduled-job
+
+requires:
+  feature_flag: install_ci_circadian
+  variables:
+    - playbook_dir         # repo root → tools/ci-circadian.py
+
+# =============================================================================
+# PULSE JOB — the verdict is pulse_runs.exit_code, written by the dispatcher:
+#   0  every scheduled workflow dispatched on dev
+#   11 gh missing or logged out, or GitHub refused a dispatch
+# 02:30 UTC: after upstream FrankenPHP's ~01:10 re-upload, before the 03:40 cron.
+# =============================================================================
+
+pulse:
+  jobs:
+    - name: nightly
+      category: maintenance
+      runner: subprocess
+      command: "{{ playbook_dir }}/tools/ci-circadian.py"
+      schedule: "30 2 * * *"
+      jitter_min: 5
+      max_runtime_s: 300
+      max_concurrent: 1
+      findings_exit_codes: [11]
+      env: {}
+
+gdpr:
+  purpose: "Starting this repository's own CI workflows on the dev branch"
+  legal_basis: legitimate_interests
+  data_categories:
+    - software_inventory      # workflow file names and a branch name only
+  data_subjects: [operators]
+  retention_days: 30
+  processors: []              # GitHub receives a dispatch, no personal data
+  eu_residency: true
+
+e2e:
+  enabled: "{{ (install_ci_circadian | default(false)) and (install_wing | default(false)) }}"
+  probes:
+    - name: ci-circadian-registered-in-wing
+      url: http://127.0.0.1:{{ wing_port }}/api/v1/pulse_jobs
+      auth: {bearer: wing_api_token, headers: {X-Wing-Edge-Token: wing_edge_token}}
+      expect: {json_equals: {"jobs.ci-circadian:nightly.id": "ci-circadian:nightly"}}
