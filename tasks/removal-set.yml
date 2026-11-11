@@ -46,10 +46,6 @@
     label: "{{ item.id }}"
   when: query('vars', *item.forced_by, default=false) | map('bool') | select | list | length > 0
 
-# Ungated (ruling 2026-11-10, blank-forgets-disabled-services): a service off at
-# blank kept its dirs over the wiped DB and booted "installed" on an empty schema
-# (Dolibarr install.lock). Only pi/openclaw/hermes stay gated: their dirs are the
-# tools' own homes (~/.pi, ~/.openclaw, ~/.hermes), no DB, maybe used outside nOS.
 - name: "[Removal-set] Build list of data directories to remove (level: data)"
   ansible.builtin.set_fact:
     _blank_dirs: >-
@@ -65,122 +61,172 @@
         +
         [redis_data_dir | default(ansible_facts['env']['HOME'] + '/redis/data')]
         +
-        [wordpress_dir | default(ansible_facts['env']['HOME'] + '/projects/wordpress')]
+        (install_wordpress | default(false)) | ternary(
+          [wordpress_dir | default(ansible_facts['env']['HOME'] + '/projects/wordpress')], [])
         +
-        [nextcloud_dir | default(ansible_facts['env']['HOME'] + '/projects/nextcloud'),
-         nextcloud_data_dir | default(ansible_facts['env']['HOME'] + '/nextcloud-data')]
+        (install_nextcloud | default(false)) | ternary(
+          [nextcloud_dir | default(ansible_facts['env']['HOME'] + '/projects/nextcloud'),
+           nextcloud_data_dir | default(ansible_facts['env']['HOME'] + '/nextcloud-data')], [])
         +
-        [n8n_data_dir | default(ansible_facts['env']['HOME'] + '/n8n')]
+        (install_n8n | default(false)) | ternary(
+          [n8n_data_dir | default(ansible_facts['env']['HOME'] + '/n8n')], [])
         +
-        [maps_data_dir | default(ansible_facts['env']['HOME'] + '/maps')]
+        (install_offline_maps | default(false)) | ternary(
+          [maps_data_dir | default(ansible_facts['env']['HOME'] + '/maps')], [])
         +
-        [geolibre_data_dir | default(ansible_facts['env']['HOME'] + '/geolibre')]
+        (install_geolibre | default(false)) | ternary(
+          [geolibre_data_dir | default(ansible_facts['env']['HOME'] + '/geolibre')], [])
         +
-        [traefik_config_dir | default(ansible_facts['env']['HOME'] + '/iiab/traefik')]
+        (install_traefik | default(false)) | ternary(
+          [traefik_config_dir | default(ansible_facts['env']['HOME'] + '/iiab/traefik')], [])
         +
         (install_pi_agents | default(false)) | ternary(
           [pi_config_dir | default(ansible_facts['env']['HOME'] + '/.pi/agent')], [])
         +
-        [gitea_data_dir | default(ansible_facts['env']['HOME'] + '/gitea')]
+        (install_gitea | default(false)) | ternary(
+          [gitea_data_dir | default(ansible_facts['env']['HOME'] + '/gitea')], [])
         +
-        [gitlab_data_dir | default(ansible_facts['env']['HOME'] + '/gitlab'),
-         gitlab_config_dir | default(ansible_facts['env']['HOME'] + '/gitlab-config')]
+        (install_gitlab | default(false)) | ternary(
+          [gitlab_data_dir | default(ansible_facts['env']['HOME'] + '/gitlab'),
+           gitlab_config_dir | default(ansible_facts['env']['HOME'] + '/gitlab-config')], [])
         +
-        [jellyfin_config_dir | default(ansible_facts['env']['HOME'] + '/jellyfin/config'),
-         jellyfin_cache_dir | default(ansible_facts['env']['HOME'] + '/jellyfin/cache')]
+        (install_jellyfin | default(false)) | ternary(
+          [jellyfin_config_dir | default(ansible_facts['env']['HOME'] + '/jellyfin/config'),
+           jellyfin_cache_dir | default(ansible_facts['env']['HOME'] + '/jellyfin/cache')], [])
         +
-        [openwebui_data_dir | default(ansible_facts['env']['HOME'] + '/openwebui')]
+        (install_openwebui | default(false)) | ternary(
+          [openwebui_data_dir | default(ansible_facts['env']['HOME'] + '/openwebui')], [])
         +
-        [uptime_kuma_data_dir | default(ansible_facts['env']['HOME'] + '/uptime-kuma')]
+        (install_uptime_kuma | default(false)) | ternary(
+          [uptime_kuma_data_dir | default(ansible_facts['env']['HOME'] + '/uptime-kuma')], [])
         +
-        [portainer_data_dir | default(ansible_facts['env']['HOME'] + '/portainer')]
+        (install_portainer | default(false)) | ternary(
+          [portainer_data_dir | default(ansible_facts['env']['HOME'] + '/portainer')], [])
         +
-        [woodpecker_data_dir | default(ansible_facts['env']['HOME'] + '/woodpecker')]
+        (install_woodpecker | default(false)) | ternary(
+          [woodpecker_data_dir | default(ansible_facts['env']['HOME'] + '/woodpecker')], [])
         +
-        [calibreweb_config_dir | default(ansible_facts['env']['HOME'] + '/calibre-web/config')]
+        (install_calibreweb | default(false)) | ternary(
+          [calibreweb_config_dir | default(ansible_facts['env']['HOME'] + '/calibre-web/config')], [])
         +
-        [homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant')]
+        (install_homeassistant | default(false)) | ternary(
+          [homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant')], [])
         +
-        [rustfs_data_dir | default(ansible_facts['env']['HOME'] + '/rustfs/data')]
+        (install_rustfs | default(false)) | ternary(
+          [rustfs_data_dir | default(ansible_facts['env']['HOME'] + '/rustfs/data')], [])
         +
-        [ansible_facts['env']['HOME'] + '/observability',
-         grafana_data_dir | default(stacks_dir + '/observability/grafana/data')]
+        (install_observability | default(true)) | ternary(
+          [ansible_facts['env']['HOME'] + '/observability',
+           grafana_data_dir | default(stacks_dir + '/observability/grafana/data')], [])
         +
         (install_openclaw | default(false)) | ternary(
           [ansible_facts['env']['HOME'] + '/.openclaw'], [])
         +
-        [freescout_data_dir | default(ansible_facts['env']['HOME'] + '/freescout/data')]
+        (install_freescout | default(false)) | ternary(
+          [freescout_data_dir | default(ansible_facts['env']['HOME'] + '/freescout/data')], [])
         +
-        [outline_data_dir | default(ansible_facts['env']['HOME'] + '/outline/data')]
+        (install_outline | default(false)) | ternary(
+          [outline_data_dir | default(ansible_facts['env']['HOME'] + '/outline/data')], [])
         +
-        [mikopbx_data_dir | default(ansible_facts['env']['HOME'] + '/mikopbx')]
+        (install_mikopbx | default(false)) | ternary(
+          [mikopbx_data_dir | default(ansible_facts['env']['HOME'] + '/mikopbx')], [])
         +
-        [qgis_data_dir | default(ansible_facts['env']['HOME'] + '/qgis')]
+        (install_qgis_server | default(false)) | ternary(
+          [qgis_data_dir | default(ansible_facts['env']['HOME'] + '/qgis')], [])
         +
-        [metabase_data_dir | default(ansible_facts['env']['HOME'] + '/metabase')]
+        (install_metabase | default(false)) | ternary(
+          [metabase_data_dir | default(ansible_facts['env']['HOME'] + '/metabase')], [])
         +
-        [superset_data_dir | default(ansible_facts['env']['HOME'] + '/superset')]
+        (install_superset | default(false)) | ternary(
+          [superset_data_dir | default(ansible_facts['env']['HOME'] + '/superset')], [])
         +
-        [bluesky_pds_data_dir | default(ansible_facts['env']['HOME'] + '/bluesky-pds')]
+        (install_bluesky_pds | default(false)) | ternary(
+          [bluesky_pds_data_dir | default(ansible_facts['env']['HOME'] + '/bluesky-pds')], [])
         +
-        [paperclip_data_dir | default(ansible_facts['env']['HOME'] + '/paperclip')]
+        (install_paperclip | default(false)) | ternary(
+          [paperclip_data_dir | default(ansible_facts['env']['HOME'] + '/paperclip')], [])
         +
-        [keap_data_dir | default(nos_data_root + '/platform/services/keap/data')]
+        (install_keap | default(false)) | ternary(
+          [keap_data_dir | default(nos_data_root + '/platform/services/keap/data')], [])
         +
-        [thalamus_data_dir | default(nos_data_root + '/platform/services/thalamus/data')]
+        (install_thalamus | default(false)) | ternary(
+          [thalamus_data_dir | default(nos_data_root + '/platform/services/thalamus/data')], [])
         +
-        [authentik_data_dir | default(ansible_facts['env']['HOME'] + '/authentik')]
+        (install_authentik | default(false)) | ternary(
+          [authentik_data_dir | default(ansible_facts['env']['HOME'] + '/authentik')], [])
         +
-        [infisical_data_dir | default(ansible_facts['env']['HOME'] + '/infisical')]
+        (install_infisical | default(false)) | ternary(
+          [infisical_data_dir | default(ansible_facts['env']['HOME'] + '/infisical')], [])
         +
-        [vaultwarden_data_dir | default(ansible_facts['env']['HOME'] + '/vaultwarden')]
+        (install_vaultwarden | default(false)) | ternary(
+          [vaultwarden_data_dir | default(ansible_facts['env']['HOME'] + '/vaultwarden')], [])
         +
-        [ntfy_data_dir | default(ansible_facts['env']['HOME'] + '/ntfy/data')]
+        (install_ntfy | default(false)) | ternary(
+          [ntfy_data_dir | default(ansible_facts['env']['HOME'] + '/ntfy/data')], [])
         +
-        [nodered_data_dir | default(ansible_facts['env']['HOME'] + '/nodered/data')]
+        (install_nodered | default(false)) | ternary(
+          [nodered_data_dir | default(ansible_facts['env']['HOME'] + '/nodered/data')], [])
         +
-        [influxdb_data_dir | default(ansible_facts['env']['HOME'] + '/influxdb/data'),
-         influxdb_config_dir | default(ansible_facts['env']['HOME'] + '/influxdb/config')]
+        (install_influxdb | default(false)) | ternary(
+          [influxdb_data_dir | default(ansible_facts['env']['HOME'] + '/influxdb/data'),
+           influxdb_config_dir | default(ansible_facts['env']['HOME'] + '/influxdb/config')], [])
         +
-        [code_server_data_dir | default(ansible_facts['env']['HOME'] + '/code-server/config'),
-         code_server_workspace_dir | default(ansible_facts['env']['HOME'] + '/code-server/workspace')]
+        (install_code_server | default(false)) | ternary(
+          [code_server_data_dir | default(ansible_facts['env']['HOME'] + '/code-server/config'),
+           code_server_workspace_dir | default(ansible_facts['env']['HOME'] + '/code-server/workspace')], [])
         +
-        [bookstack_data_dir | default(ansible_facts['env']['HOME'] + '/bookstack/config')]
+        (install_bookstack | default(false)) | ternary(
+          [bookstack_data_dir | default(ansible_facts['env']['HOME'] + '/bookstack/config')], [])
         +
-        [firefly_upload_dir | default(ansible_facts['env']['HOME'] + '/firefly/upload'),
-         firefly_export_dir | default(ansible_facts['env']['HOME'] + '/firefly/export')]
+        (install_firefly | default(false)) | ternary(
+          [firefly_upload_dir | default(ansible_facts['env']['HOME'] + '/firefly/upload'),
+           firefly_export_dir | default(ansible_facts['env']['HOME'] + '/firefly/export')], [])
         +
-        [dolibarr_data_dir | default(ansible_facts['env']['HOME'] + '/dolibarr/documents'),
-         dolibarr_custom_dir | default(ansible_facts['env']['HOME'] + '/dolibarr/custom')]
+        (install_dolibarr | default(false)) | ternary(
+          [dolibarr_data_dir | default(ansible_facts['env']['HOME'] + '/dolibarr/documents'),
+           dolibarr_custom_dir | default(ansible_facts['env']['HOME'] + '/dolibarr/custom')], [])
         +
-        [hedgedoc_data_dir | default(ansible_facts['env']['HOME'] + '/hedgedoc/uploads'),
-         hedgedoc_config_dir | default(ansible_facts['env']['HOME'] + '/hedgedoc/config')]
+        (install_hedgedoc | default(false)) | ternary(
+          [hedgedoc_data_dir | default(ansible_facts['env']['HOME'] + '/hedgedoc/uploads'),
+           hedgedoc_config_dir | default(ansible_facts['env']['HOME'] + '/hedgedoc/config')], [])
         +
-        [mailpit_data_dir | default(ansible_facts['env']['HOME'] + '/mailpit')]
+        (install_mailpit | default(false)) | ternary(
+          [mailpit_data_dir | default(ansible_facts['env']['HOME'] + '/mailpit')], [])
         +
-        [watchtower_data_dir | default(ansible_facts['env']['HOME'] + '/watchtower')]
+        (install_watchtower | default(false)) | ternary(
+          [watchtower_data_dir | default(ansible_facts['env']['HOME'] + '/watchtower')], [])
         +
-        [stalwart_data_dir | default(ansible_facts['env']['HOME'] + '/stalwart')]
+        (install_smtp_stalwart | default(false)) | ternary(
+          [stalwart_data_dir | default(ansible_facts['env']['HOME'] + '/stalwart')], [])
         +
-        [onlyoffice_data_dir | default(ansible_facts['env']['HOME'] + '/onlyoffice/data'),
-         onlyoffice_logs_dir | default(ansible_facts['env']['HOME'] + '/onlyoffice/logs'),
-         onlyoffice_lib_dir | default(ansible_facts['env']['HOME'] + '/onlyoffice/lib'),
-         onlyoffice_db_dir | default(ansible_facts['env']['HOME'] + '/onlyoffice/db')]
+        (install_onlyoffice | default(false)) | ternary(
+          [onlyoffice_data_dir | default(ansible_facts['env']['HOME'] + '/onlyoffice/data'),
+           onlyoffice_logs_dir | default(ansible_facts['env']['HOME'] + '/onlyoffice/logs'),
+           onlyoffice_lib_dir | default(ansible_facts['env']['HOME'] + '/onlyoffice/lib'),
+           onlyoffice_db_dir | default(ansible_facts['env']['HOME'] + '/onlyoffice/db')], [])
         +
-        [snappymail_data_dir | default(ansible_facts['env']['HOME'] + '/snappymail')]
+        (install_miniflux | default(false)) | ternary(
+          [], [])
         +
-        [spacetimedb_data_dir | default(ansible_facts['env']['HOME'] + '/spacetimedb/data'),
-         spacetimedb_keys_dir | default(ansible_facts['env']['HOME'] + '/spacetimedb/keys')]
+        (install_snappymail | default(false)) | ternary(
+          [snappymail_data_dir | default(ansible_facts['env']['HOME'] + '/snappymail')], [])
         +
-        [nos_forum_data_dir | default(ansible_facts['env']['HOME'] + '/nos_forum/data')]
+        (install_spacetimedb | default(false)) | ternary(
+          [spacetimedb_data_dir | default(ansible_facts['env']['HOME'] + '/spacetimedb/data'),
+           spacetimedb_keys_dir | default(ansible_facts['env']['HOME'] + '/spacetimedb/keys')], [])
         +
-        [mcpo_data_dir | default(ansible_facts['env']['HOME'] + '/mcpo')]
+        (install_nos_forum | default(false)) | ternary(
+          [nos_forum_data_dir | default(ansible_facts['env']['HOME'] + '/nos_forum/data')], [])
+        +
+        (install_mcp_gateway | default(false)) | ternary(
+          [mcpo_data_dir | default(ansible_facts['env']['HOME'] + '/mcpo')], [])
         +
         (install_hermes | default(false)) | ternary(
           [hermes_home | default(ansible_facts['env']['HOME'] + '/agents/hermes'),
            hermes_config_dir | default(ansible_facts['env']['HOME'] + '/.hermes')], [])
         +
-        [wing_app_dir | default(ansible_facts['env']['HOME'] + '/wing/app')]
+        (install_wing | default(true)) | ternary(
+          [wing_app_dir | default(ansible_facts['env']['HOME'] + '/wing/app')], [])
         +
         ['/Library/LaunchDaemons/eu.thisisait.nos.dnsmasq-tailnet.plist',
          dnsmasq_tailnet_conf | default(homebrew_prefix + '/etc/dnsmasq-tailnet.conf')]
