@@ -96,6 +96,7 @@
       changed_when: false
       failed_when: false
       check_mode: false
+      timeout: 30   # a full VM disk hung this 50 min (2026-10-22); a stopped daemon answers at once
 
     - name: "[macOS27] Fallback — read the Docker.app bundle version from Info.plist"
       ansible.builtin.command: >-
@@ -145,4 +146,12 @@
       ansible.builtin.debug:
         msg: "[macOS27] Docker version probe returned nothing (daemon slow / app path moved) — skipping floor check, run continues."
       when: (_docker_observed_ver | default('')) == ''
+      tags: ['preflight', 'macos', 'always']
+  rescue:
+    - name: "[macOS27] Docker did not answer — fail with the command, never wait"
+      ansible.builtin.fail:
+        msg: |-
+          {{ ansible_failed_task.name }}: {{ ansible_failed_result.msg | default('failed') }}
+          A timeout here means the Docker daemon is wedged (a full VM disk hung this 50 min on 2026-10-22).
+          Check it:  docker system df   — then free space or restart Docker Desktop, and re-run.
       tags: ['preflight', 'macos', 'always']

@@ -87,12 +87,23 @@
 
 # ── 2. Start Docker daemon ──────────────────────────────────────────────────
 
+# A stopped daemon answers at once (rc != 0, started below); a wedged one hung 50 min
+# on a full VM disk (2026-10-22), so the probe times out and fails with the command.
 - name: "[Docker] Check if Docker daemon is responding"
-  ansible.builtin.command: "{{ docker_bin }} info"
-  register: docker_info
-  changed_when: false
-  failed_when: false
-  check_mode: false
+  block:
+    - name: "[Docker] Check if Docker daemon is responding (30 s)"
+      ansible.builtin.command: "{{ docker_bin }} info"
+      register: docker_info
+      changed_when: false
+      failed_when: false
+      check_mode: false
+      timeout: 30
+  rescue:
+    - name: "[Docker] Docker daemon is wedged — fail with the command, never wait"
+      ansible.builtin.fail:
+        msg: |-
+          `{{ docker_bin }} info` did not answer in 30 s: {{ ansible_failed_result.msg | default('timed out') }}
+          Check it:  docker system df   — then free space or restart Docker Desktop, and re-run.
 
 # Docker Desktop's GUI app is only present on a macOS host that installed it.
 # GitHub macOS CI runners (Docker Desktop removed for licensing, 2024) and Linux
