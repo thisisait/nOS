@@ -24,6 +24,7 @@
 		registerBuiltinNativeApps,
 		registerHubFrames,
 		openableApps,
+		appFromQuery,
 		setViewer,
 		launchNative,
 		initFilePickerBridge
@@ -64,6 +65,9 @@
 		// Window keyboard control. Bindings avoid the browser's own (Cmd+W is
 		// tab-close) and bail inside text fields — see wm/shortcuts.ts.
 		const stopKeys = initShortcuts();
+		// A deep link (?app=inbox) opens that app once the restored windows are back.
+		const linked = appFromQuery(new URLSearchParams(location.search));
+		if (linked) launchNativeApp(linked);
 
 		void (async () => {
 			try {

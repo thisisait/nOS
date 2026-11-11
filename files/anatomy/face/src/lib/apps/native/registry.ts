@@ -119,6 +119,15 @@ export function openableApps(...forms: readonly AppForm[]): FaceApp[] {
 	return appsOfForm(...forms).filter(mayOpen);
 }
 
+/** `?app=<slug>`: a face link that opens one app (rows wing-inc1-latte-gone, wing-inc2-face-cutover).
+ *  Only a window the viewer may open; an unknown slug, a frame or a widget is null, never guessed. */
+export function appFromQuery(params: URLSearchParams): string | null {
+	const slug = params.get('app');
+	return slug !== null && openableApps('view', 'utility').some((a) => a.slug === slug)
+		? slug
+		: null;
+}
+
 /**
  * Register the hub catalog as frames. Their form is not a declaration the
  * catalog makes — it is what the shell DOES with them (`ServiceFrame`) — so it

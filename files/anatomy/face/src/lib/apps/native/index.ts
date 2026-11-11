@@ -31,6 +31,7 @@ export {
 	faceApps,
 	appsOfForm,
 	openableApps,
+	appFromQuery,
 	setViewer,
 	mayOpen,
 	appForm,
