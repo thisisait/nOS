@@ -337,7 +337,11 @@ cd "$WING_APP"
 if [ -n "${WING_PHP_CLI:-}" ] || ! command -v php >/dev/null 2>&1; then
   php() { ${WING_PHP_CLI:-$(command -v nos-php || echo "$HOME/.local/bin/nos-php")} "$@"; }
 fi
-php bin/run-agent.php "${PASSTHRU[@]}" | tee "$SUMMARY_FILE"
+# Scrubbed BEFORE it reaches the summary file or the caller's log (row agent-output-observed-not-kept):
+# pulse's own scrub_text, one list (tests/fixtures/pulse_redact.json). pipefail keeps the agent's rc.
+_scrub=(python3 -u -c 'import sys; sys.path.insert(0, sys.argv[1]); from redact import scrub_text
+for line in sys.stdin: sys.stdout.write(scrub_text(line))' "$REPO_ROOT/files/anatomy/pulse/pulse")
+php bin/run-agent.php "${PASSTHRU[@]}" | "${_scrub[@]}" | tee "$SUMMARY_FILE"
 
 # ── MR post-step ─────────────────────────────────────────────────────────────
 # The agent has no forge tool and must not get one: a session that can push is a
