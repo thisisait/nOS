@@ -77,3 +77,24 @@
       BookStack HTTP {{ _bookstack_http.status | default('N/A') }} after
       {{ _bookstack_migration_tries_used | default('?') }} migration recovery
       attempts (partial_state={{ _bookstack_partial | default('unknown') }}).
+
+# OIDC_USER_TO_GROUPS matches a group to a role by the role's External Auth IDs (comma list) or,
+# when empty, by its name — "nos-admins" matched neither, so a tier-1 SSO login landed as a viewer.
+# The Admin role (system_name admin) takes every tier-1 group, as GitLab's admin_groups does.
+- name: "[pazny.bookstack] The Admin role takes the tier-1 groups from the OIDC groups claim"
+  ansible.builtin.shell: >
+    {{ docker_bin }} exec infra-mariadb-1 mariadb -u root -p'{{ mariadb_root_password }}' -N -e
+    "UPDATE {{ bookstack_db_name | default('bookstack') }}.roles SET external_auth_id='{{ _bookstack_admin_ids }}'
+    WHERE system_name='admin' AND COALESCE(external_auth_id,'') <> '{{ _bookstack_admin_ids }}'; SELECT ROW_COUNT();"
+  vars:
+    _bookstack_admin_ids: >-
+      {{ (authentik_rbac_tiers | default([]) | selectattr('tier', 'equalto', 1) | map(attribute='groups') | first
+          | default(['nos-providers', 'nos-admins'])) | join(',') }}
+  register: _bookstack_admin_map
+  changed_when: (_bookstack_admin_map.stdout | default('') | trim) not in ['', '0']
+  no_log: true   # root password on the command line
+  check_mode: false
+  when:
+    - install_authentik | default(false) | bool
+    - (_bookstack_running.stdout | default('')) != ''
+    - _bookstack_http.status | default(0) in [200, 302, 401]
