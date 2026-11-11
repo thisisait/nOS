@@ -1,0 +1,25 @@
+# The homes nOS owns OUTSIDE its two roots (nos_data_root, stacks_dir) — row nos-owned-paths,
+# operator 2026-11-11. remove=data deletes a path only when it lies under a root or under one of
+# these DEFAULT paths (tasks/removal-set.yml asserts it before any rm). A config.yml *_dir moved
+# elsewhere (~/Documents) is therefore named and refused, not trusted. Rendered as a template, so
+# a path may use the playbook's vars. Adding a home is a proposal, like a gate.
+#
+#   kind  data        nOS created it and a blank may wipe it
+#         other-tool  another tool's own home; wiped only while nOS installs that tool (its
+#                     _blank_dirs entry stays install-gated)
+#         cache       re-fetchable (never in _blank_dirs; listed for the reader)
+#         user-content  the operator's own files (never in _blank_dirs)
+version: 1
+homes:
+  - { path: "{{ ansible_facts['env']['HOME'] }}/projects/wordpress", kind: data, why: "wordpress_dir app checkout" }
+  - { path: "{{ ansible_facts['env']['HOME'] }}/projects/nextcloud", kind: data, why: "nextcloud_dir app checkout" }
+  - { path: "{{ ansible_facts['env']['HOME'] }}/n8n", kind: data, why: "n8n_data_dir" }
+  - { path: "{{ ansible_facts['env']['HOME'] }}/observability", kind: data, why: "the observability stack's host side" }
+  - { path: "{{ ansible_facts['env']['HOME'] }}/wing/app", kind: data, why: "wing_app_dir, the deployed Wing" }
+  - { path: "/Library/LaunchDaemons/eu.thisisait.nos.dnsmasq-tailnet.plist", kind: data, why: "nOS-written launchd daemon" }
+  - { path: "{{ homebrew_prefix | default('/opt/homebrew') }}/etc/dnsmasq-tailnet.conf", kind: data, why: "nOS-written dnsmasq config" }
+  - { path: "/etc/avahi/hosts", kind: data, why: "nOS-written mDNS hosts (Linux, .local tenant)" }
+  - { path: "{{ ansible_facts['env']['HOME'] }}/.pi/agent", kind: other-tool, why: "pi's own config dir" }
+  - { path: "{{ ansible_facts['env']['HOME'] }}/.openclaw", kind: other-tool, why: "OpenClaw's own home" }
+  - { path: "{{ ansible_facts['env']['HOME'] }}/.hermes", kind: other-tool, why: "Hermes's own config" }
+  - { path: "{{ ansible_facts['env']['HOME'] }}/agents/hermes", kind: other-tool, why: "hermes_home" }

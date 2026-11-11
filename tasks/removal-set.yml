@@ -232,6 +232,42 @@
       - { var: iiab_terminal_config_dir, level: all, why: "under homebrew_prefix/etc but written by nOS, not a formula — a leave takes it with the home user (2026-09-29 exit audit)" }
       - { var: medulla_data_dir, level: all, why: "the medulla's settings (a job paused by hand): set-points a person chose, kept across a blank like ~/.nos/halt; uninstall takes them with nos_data_root" }
 
+# Row nos-owned-paths: a data-level path must lie under a root nOS owns, or the run stops here,
+# before any rm, naming it. A config.yml *_dir moved onto a shared path (~/Documents) is caught
+# because state/genome/owned-paths.yml declares DEFAULT homes, not variables.
+- name: "[Removal-set] The roots a data-level removal may touch (state/genome/owned-paths.yml)"
+  ansible.builtin.set_fact:
+    _removal_roots: >-
+      {{ ([nos_data_root, stacks_dir]
+          + ([external_storage_root] if (configure_external_storage | default(false)) and (external_storage_root | default('') | length > 0) else [])
+          + ((lookup('template', '../state/genome/owned-paths.yml') | from_yaml).homes
+             | selectattr('kind', 'in', ['data', 'other-tool']) | map(attribute='path') | list))
+         | map('regex_replace', '/+$', '') | list }}
+
+- name: "[Removal-set] Every data-level path lies under a root nOS owns"
+  ansible.builtin.assert:
+    that:
+      - (_removal_outside | from_json) | length == 0
+      - "'' not in _removal_roots"
+      - (ansible_facts['env']['HOME'] | regex_replace('/+$', '')) not in _removal_roots
+    fail_msg: >-
+      remove=data refused before deleting anything. Outside every nOS root
+      ({{ _removal_roots | join(', ') }}): {{ (_removal_outside | from_json) | join(', ') or 'none' }}.
+      A root may not be empty, / or $HOME itself. Point the *_dir back under nos_data_root, or
+      declare the home in state/genome/owned-paths.yml (a proposal, like a gate).
+  vars:
+    _removal_outside: >-
+      {%- set ns = namespace(out=[]) -%}
+      {%- for d in _blank_dirs -%}
+        {%- set dn = d | regex_replace('/+$', '') -%}
+        {%- set hit = namespace(ok=false) -%}
+        {%- for r in _removal_roots if r -%}
+          {%- if dn == r or dn.startswith(r ~ '/') -%}{%- set hit.ok = true -%}{%- endif -%}
+        {%- endfor -%}
+        {%- if not hit.ok or '/../' in (dn ~ '/') -%}{%- set ns.out = ns.out + [dn] -%}{%- endif -%}
+      {%- endfor -%}
+      {{ ns.out | to_json }}
+
 - name: "[Removal-set] Resolve source paths (level: all)"
   ansible.builtin.set_fact:
     _uninstall_source:
