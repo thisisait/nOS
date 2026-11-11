@@ -53,6 +53,18 @@ indicators:
     tolerance: state/genome/advisory-judgements.yml
     verdicts: ~/.nos/advisory/last.json
     definition: none
+  net-raw-status:
+    source: tools/net-raw-status.py
+    kind: sentinel
+    antigen: a running container that still holds NET_RAW (not dropped, re-added, or privileged)
+    receptor: docker inspect HostConfig.CapDrop / CapAdd / Privileged (read-only)
+    effector: report
+    signal: none (not wired into red-status until the cap_drop slice lands)
+    heartbeat: none (read on demand)
+    lifespan: none
+    tolerance: none (every running container is expected to drop it)
+    verdicts: none
+    definition: none
   host-patch-status:
     source: tools/host-patch-status.py
     kind: sentinel
