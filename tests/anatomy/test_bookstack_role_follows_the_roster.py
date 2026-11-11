@@ -1,4 +1,4 @@
-"""BookStack drops the Admin role when a person leaves nos-admins (SSO, gates.md §7).
+"""BookStack drops the Admin role when a person leaves nos-admins (SSO, ssot/doctrine/gates.md §7).
 
 Ruling 2026-11-11 (row sso-admin-claims-long-tail): the declared roster wins. With
 OIDC_USER_TO_GROUPS alone BookStack only ever ADDS roles, so a demoted person kept admin for

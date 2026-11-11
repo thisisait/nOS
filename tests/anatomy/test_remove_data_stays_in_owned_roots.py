@@ -1,4 +1,4 @@
-"""remove=data refuses a path outside the nOS roots or on a protected path (destructive, gates.md §7).
+"""remove=data refuses a path outside the nOS roots or on a protected path (destructive, ssot/doctrine/gates.md §7).
 
 2026-11-11 review: the owned-roots guard took the whole external SSD as a root, so a *_dir pointed
 at the restic repo beside the service dirs (/Volumes/SSD1TB/nos-restic) passed. This runs the real
@@ -6,10 +6,8 @@ assert task from tasks/removal-set.yml, not a copy of its logic, on the five sha
 """
 from __future__ import annotations
 
-import json
 import shutil
 import subprocess
-import textwrap
 from pathlib import Path
 
 import pytest
