@@ -295,6 +295,52 @@ SQL
     log "${name}: OK (${actual}in $((SECONDS - t0))s)"
 }
 
+# ── postgres-all-<db>: the pg_dumpall, every database in it (row backup-dna) ───
+# The per-db drill above covers only backup_postgres_dbs; the dumpall holds every
+# other database (authentik, infisical, outline, ...). Its sections share the roles
+# its header creates, so it is replayed WHOLE into one scratch postgres (no
+# network, no port, drill- name) and each \connect section is then checked: the
+# tables its CREATE TABLE lines declare exist after the replay. A truncated dump
+# drops the tail databases, which then FAIL while the rest pass.
+verify_postgres_all() {
+    local stem="postgres.sql.gz" ctr="drill-all-$$" t0="${SECONDS}" db want got rc=0
+    log "postgres-all: fetching ${DATE_STR}/${stem}"
+    if ! fetch "${stem}"; then
+        record "postgres-all" 0 "no dumpall at ${DATE_STR}"; log "postgres-all: MISSING"; return 1
+    fi
+    command -v docker >/dev/null 2>&1 || { record "postgres-all" 0 "docker not on PATH"; return 1; }
+    gunzip -c "${WORKDIR}/${stem}" | awk '
+      /^\\connect / { db = $2; gsub(/"/, "", db); if (!(db in n)) { n[db] = 0; order[++k] = db } next }
+      db != "" && /^CREATE TABLE / { n[db]++ }
+      END { for (i = 1; i <= k; i++) if (order[i] !~ /^(template0|template1|postgres)$/) print order[i], n[order[i]] }' \
+      > "${WORKDIR}/dumpall.expected" \
+      || { record "postgres-all" 0 "gunzip failed"; log "postgres-all: gunzip FAILED"; return 1; }
+    [[ -s "${WORKDIR}/dumpall.expected" ]] || { record "postgres-all" 0 "the dumpall names no database"; return 1; }
+
+    DRILL_LEFT="${DRILL_LEFT} ${ctr}"
+    qa() { docker exec -i "${ctr}" psql -U postgres -Atq "$@"; }
+    if ! { docker network create --internal "${ctr}" \
+           && docker run -d --rm --name "${ctr}" --network "${ctr}" -e POSTGRES_HOST_AUTH_METHOD=trust \
+                "${PG_DRILL_IMAGE}"; } >/dev/null 2>>"${LOG_FILE}"; then
+        drill_down "${ctr}"; record "postgres-all" 0 "scratch postgres ${PG_DRILL_IMAGE} did not start"; return 1
+    fi
+    for i in $(seq 60); do qa -h 127.0.0.1 -c 'select 1' >/dev/null 2>&1 && break; sleep 1; done
+    # No ON_ERROR_STOP: the dumpall re-creates roles that exist in a fresh cluster (postgres).
+    gunzip -c "${WORKDIR}/${stem}" | qa >/dev/null 2>>"${LOG_FILE}"
+    while read -r db want; do
+        got="$(qa -d "${db}" -c "select count(*) from pg_tables where schemaname not in ('pg_catalog', 'information_schema')" 2>>"${LOG_FILE}")"
+        if [[ "${got}" == "${want}" ]]; then
+            record "postgres-all-${db}" 1 "replayed from the dumpall, ${got} tables" "$((SECONDS - t0))" "tables=${got}"
+        else
+            record "postgres-all-${db}" 0 "the dumpall declares ${want} tables, ${got:-none} restored" "$((SECONDS - t0))" "tables=${got:-0}"
+            log "postgres-all-${db}: FAILED (${got:-none} of ${want})"; rc=1
+        fi
+    done < "${WORKDIR}/dumpall.expected"
+    drill_down "${ctr}"
+    log "postgres-all: done in $((SECONDS - t0))s"
+    return "${rc}"
+}
+
 write_result() {
     python3 - <<PY
 import json, os, time
@@ -399,6 +445,9 @@ main() {
         read -r db owner tables <<< "${spec}"
         verify_postgres_db "${db}" "${owner}" "${tables}" || rc=1
     done
+{% if backup_databases_postgresql | default(false) | bool %}
+    verify_postgres_all || rc=1
+{% endif %}
 
     write_result
     notify
