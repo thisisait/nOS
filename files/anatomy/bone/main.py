@@ -13,7 +13,7 @@ from pathlib import Path
 
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Header
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 import otel
 
@@ -180,6 +180,22 @@ async def health():
         "version": app.version,
         "git_ref": _deployed_ref(),
     }
+
+
+@app.get("/nos-root-ca.crt")
+async def root_ca():
+    """The estate's PUBLIC mkcert root CA (ruling 2026-11-11), so a LAN device fetches it in one
+    step and checks the sha256 the converge printed. Unauthenticated: it is a public certificate.
+    Fail closed: exactly one certificate and no key in the file, else 404."""
+    path = os.environ.get("NOS_ROOT_CA_PATH", "")
+    try:
+        pem = Path(path).read_bytes() if path else b""
+    except OSError:
+        pem = b""
+    if pem.count(b"-----BEGIN CERTIFICATE-----") != 1 or b"PRIVATE KEY" in pem:
+        raise HTTPException(status_code=404, detail="no root CA on this host")
+    return Response(pem, media_type="application/x-x509-ca-cert",
+                    headers={"Content-Disposition": 'attachment; filename="nos-root-ca.crt"'})
 
 
 @app.get("/api/health/aggregate")

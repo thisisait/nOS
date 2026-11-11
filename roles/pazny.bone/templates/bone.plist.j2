@@ -85,6 +85,9 @@
         <string>{{ nos_tenant_slug | default('pazny') }}</string>
         <key>BONE_VFS_TOKEN</key>
         <string>{{ face_vfs_token | default('') }}</string>
+        <!-- The public mkcert root CA served at /nos-root-ca.crt (ruling 2026-11-11). -->
+        <key>NOS_ROOT_CA_PATH</key>
+        <string>{{ stacks_dir }}/shared-certs/rootCA.pem</string>
 
         <!-- Agentic loop (ssot/doctrine/loop-contract.md). Three tokens,
              three identities: the proposer may read + propose, the evaluator

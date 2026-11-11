@@ -22,6 +22,7 @@
              ['Password (scheme v1, derived from the prefix in credentials.yml): key authentik_admin, the rule in docs/secrets-p1-hkdf.md'])
           + ((['This host signs its own https (mkcert). Trust it once on another machine — CA '
                ~ stacks_dir ~ '/shared-certs/rootCA.pem, ' ~ (_login_ca.stdout | default('') | trim),
+               'Fetch it from another machine: curl -fsSLo nos-root-ca.crt http://' ~ tenant_domain ~ '/nos-root-ca.crt  (compare the sha256 above)',
                'macOS: sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain <ca.pem>',
                'Linux: sudo cp <ca.pem> /usr/local/share/ca-certificates/nos.crt && sudo update-ca-certificates'])
              if (tenant_domain_is_local | bool) and (_login_ca.rc | default(1)) == 0 else [])) }}

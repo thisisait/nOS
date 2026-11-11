@@ -2157,3 +2157,18 @@ paths:
       summary: Vfs Write
       tags:
       - vfs
+  /nos-root-ca.crt:
+    get:
+      description: 'The estate''s PUBLIC mkcert root CA (ruling 2026-11-11), so a LAN device fetches it in one
+
+        step and checks the sha256 the converge printed. Unauthenticated: it is a public certificate.
+
+        Fail closed: exactly one certificate and no key in the file, else 404.'
+      operationId: root_ca_nos_root_ca_crt_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: Root Ca

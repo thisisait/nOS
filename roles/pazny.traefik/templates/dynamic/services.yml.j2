@@ -190,6 +190,24 @@ http:
 {% endfor %}
 {% endif %}
 
+{# ── The public root CA, from Bone (ruling 2026-11-11) ──────────────────── #}
+{# One exact path on the apex, no SSO: a device that does not trust the CA yet #}
+{# must fetch it over plain http (the rule outranks the web->https redirect). #}
+{# Bone stays in traefik_skip_ids: this router reaches no other Bone path.    #}
+{% if tenant_domain_is_local | default(false) | bool %}
+    nos-root-ca-web:
+      rule: "Host(`{{ tenant_domain }}`) && Path(`/nos-root-ca.crt`)"
+      entryPoints: ["web"]
+      service: "nos-root-ca"
+{% for _sfx, _ep, _tls in _doors %}
+    nos-root-ca-websecure{{ _sfx }}:
+      rule: "Host(`{{ tenant_domain }}`) && Path(`/nos-root-ca.crt`)"
+      entryPoints: ["{{ _ep }}"]
+      service: "nos-root-ca"
+      tls: {{ _tls | to_json }}
+{% endfor %}
+{% endif %}
+
 {# ── REM-194: SSO-gated Traefik dashboard (api@internal) ─────────────────── #}
 {# The dashboard/API is NO LONGER anonymous on :8080 (api.insecure:false). This #}
 {# router is the ONLY way in, and it is gated by authentik@file. It is NOT the  #}
@@ -262,6 +280,12 @@ http:
           - url: "{{ r.upstream }}"
 {% endif %}
 {% endfor %}
+{% if tenant_domain_is_local | default(false) | bool %}
+    nos-root-ca:
+      loadBalancer:
+        servers:
+          - url: "http://{{ traefik_host_gateway_ip | default('192.168.65.254') }}:{{ bone_port | default(8099) }}"
+{% endif %}
 {# ── stripPrefix middlewares for machine lanes that declare strip_prefix ── #}
 {% set _strip_lanes = [] %}
 {% for _sid, _lanes in (traefik_machine_lanes | default({})).items() %}
