@@ -63,7 +63,10 @@ Update the heartbeat and the ledger after every phase.
 - Run `git fetch -q origin`. Drop from `## Built` every branch that is already
   in `origin/dev`. The integrator moves the row's status; the loop does not.
 - Bring `loop/dev` up to date:
-  - if `origin/loop/dev` does not exist, create it at `origin/dev` and push it;
+  - if `origin/loop/dev` does not exist, create it at `origin/dev` and push it
+    with `tools/nos-push origin origin/dev:refs/heads/loop/dev`. Every push goes
+    through `tools/nos-push`, never raw `git push`: it checks trailers and
+    refuses dev;
   - if `origin/dev` is not an ancestor of `origin/loop/dev`, merge `origin/dev`
     into `loop/dev` (`git merge --no-edit`), run the lanes of the files that
     conflicted, and push. Never rebase it and never force-push;

@@ -4,7 +4,7 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 590,
+    "nodes": 591,
     "edges": 567,
     "nodes_pulse": 47,
     "nodes_judge": 5,
@@ -27,7 +27,7 @@
     "nodes_agent": 17,
     "nodes_tasktype": 9,
     "nodes_skill": 16,
-    "nodes_reader": 70,
+    "nodes_reader": 71,
     "nodes_effector": 121,
     "nodes_article": 28,
     "nodes_organ_system": 13,
@@ -3725,6 +3725,13 @@
       "title": "identity-status — the declared account roster vs what each realm holds.",
       "anchor": "02.02.04",
       "description": "Reader tools/identity-status.py: identity-status — the declared account roster vs what each realm holds."
+    },
+    "reader:immune-drill": {
+      "kind": "reader",
+      "source": "tools/immune-drill.py",
+      "title": "the immune drill: plants inert samples in a temp tree, runs the estate's own detector (gitleaks with this repo's config), records caught / missed / no detector, removes every sample (row immune-drill-known-samples). Operator only.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/immune-drill.py: the immune drill: plants inert samples in a temp tree, runs the estate's own detector (gitleaks with this repo's config), records caught / missed / no detector, removes every sample (row immune-drill-known-samples). Operator only."
     },
     "reader:iris-trace": {
       "kind": "reader",
