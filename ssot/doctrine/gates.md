@@ -3,10 +3,12 @@ in_force: true
 ruled: null
 row: null
 gates:
+  - tests/anatomy/test_bookstack_role_follows_the_roster.py
   - tests/anatomy/test_e2e_results_persist.py
   - tests/anatomy/test_keap_role_journey.py
   - tests/anatomy/test_loop_budget_forbids_its_own_gates.py
   - tests/anatomy/test_nos_app_reads_state.py
+  - tests/anatomy/test_remove_data_stays_in_owned_roots.py
   - tests/anatomy/test_traefik_https_upstream_binds_tls.py
 ---
 # Gates — a check that cannot fail is not a check

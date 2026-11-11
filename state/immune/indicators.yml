@@ -270,6 +270,7 @@ not_indicators:
   kiwix-status.py: how far each local ZIM lags its upstream book (freshness)
   loop-status.py: loop proposals and verdicts
   managed-status.py: blank and backup coverage per dir
+  net-raw-status.py: containers still holding NET_RAW, read on demand; not yet a red-status signal (row net-raw-drop-audit)
   permission-status.py: what macOS lets the estate do
   red-status.py: the aggregator the sentinels signal into
   rem-status.py: the remediation queue

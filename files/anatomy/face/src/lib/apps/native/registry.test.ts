@@ -94,10 +94,10 @@ describe('form + build are two independent axes', () => {
 		}
 	});
 
-	it('the population is 9 views and 1 widget until the hub arrives', () => {
+	it('the population is 10 views and 1 widget until the hub arrives', () => {
 		registerBuiltinNativeApps();
-		// 9 views: files, tables, anatomy, planner, inbox, agents, keap-explore, books, iris.
-		expect(formCounts()).toEqual({ view: 9, utility: 0, widget: 1, frame: 0 });
+		// 10 views: files, tables, anatomy, planner, inbox, agents, keap-explore, books, iris, awaiting.
+		expect(formCounts()).toEqual({ view: 10, utility: 0, widget: 1, frame: 0 });
 	});
 
 	it('neither axis determines the other', () => {

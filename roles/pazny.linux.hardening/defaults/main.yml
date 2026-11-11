@@ -36,7 +36,9 @@ hardening_ufw_allowed_services:
   - { proto: "tcp", port: 22,    comment: "SSH" }
   - { proto: "tcp", port: 80,    comment: "HTTP (nginx)" }
   - { proto: "tcp", port: 443,   comment: "HTTPS (nginx)" }
-  - { proto: "udp", port: 41641, comment: "Tailscale", enabled: "{{ install_tailscale | default(false) }}" }
+  # nOS installs Tailscale on macOS only; install_tailscale (default true) said nothing about this
+  # Linux host, so 41641 stayed open. Set linux_tailscale_installed where you run it here.
+  - { proto: "udp", port: 41641, comment: "Tailscale", enabled: "{{ (install_tailscale | default(false)) and (linux_tailscale_installed | default(false)) }}" }
 
 # ── fail2ban jails ────────────────────────────────────────────────────────────
 # 2-hour ban on 4 failed SSH attempts is the ANSSI default for human users.
