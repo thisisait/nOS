@@ -33,6 +33,8 @@ from __future__ import annotations
 import argparse
 import collections
 import json
+import os
+import re
 import sys
 from pathlib import Path
 
@@ -141,6 +143,61 @@ def blocked_and_severe(items: list[dict]) -> list[dict]:
             and i.get("severity") in ("CRITICAL", "HIGH")]
 
 
+#: The nightly advisory patrol's report (tools/advisory-patrol.py), the same file red-status reads.
+ADVISORY_SNAPSHOT = Path(os.environ.get("NOS_ADVISORY_SNAPSHOT") or Path.home() / ".nos" / "advisory" / "last.json")
+
+
+def _norm(s: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", s.lower())
+
+
+def _grade(m: dict) -> str:
+    """A match's severity as a queue grade: a label, a CVSS score, or KEV (at least HIGH)."""
+    s = m.get("severity")
+    g = "LOW"
+    if isinstance(s, (int, float)):
+        g = "CRITICAL" if s >= 9 else "HIGH" if s >= 7 else "MEDIUM" if s >= 4 else "LOW"
+    elif str(s).upper() in SEVERITY_ORDER:
+        g = str(s).upper()
+    if m.get("kev") and SEVERITY_ORDER.index(g) > SEVERITY_ORDER.index("HIGH"):
+        g = "HIGH"
+    return g
+
+
+def regrade(items: list[dict], report: dict | None) -> list[dict] | None:
+    """Pending rows the advisory report grades worse than the queue does (row
+    security-scan-staleness-missed-a-live-critical): the scanner filed WordPress LOW eight days before
+    it became a 9.2. A proposal for the operator, never a rewrite. None = the report is unreadable."""
+    if not isinstance(report, dict):
+        return None
+    by_subject: dict[str, list[dict]] = {}
+    for r in report.get("pins") or []:
+        stem = re.sub(r"_(version|image|tag)$", "", str(r.get("var") or ""))
+        by_subject.setdefault(_norm(stem), []).extend(r.get("matches") or [])
+    for lf in report.get("lockfiles") or []:
+        for m in lf.get("matches") or []:
+            by_subject.setdefault(_norm(str(m.get("package") or "")), []).append(m)
+    out = []
+    for i in items:
+        if i.get("status") != "pending" or i.get("severity") not in SEVERITY_ORDER:
+            continue
+        hits = by_subject.get(_norm(str(i.get("component") or "")), [])
+        if not hits:
+            continue
+        worst = min(hits, key=lambda m: SEVERITY_ORDER.index(_grade(m)))
+        if SEVERITY_ORDER.index(_grade(worst)) < SEVERITY_ORDER.index(i["severity"]):
+            out.append({"id": i.get("id"), "component": i.get("component"), "from": i["severity"],
+                        "to": _grade(worst), "by": worst.get("cve") or worst.get("id")})
+    return sorted(out, key=lambda r: (SEVERITY_ORDER.index(r["to"]), str(r["id"])))
+
+
+def _report() -> dict | None:
+    try:
+        return json.loads(ADVISORY_SNAPSHOT.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--all", action="store_true", help="list every pending row, not only HIGH+")
@@ -177,6 +234,7 @@ def main() -> int:
                 "pending_by_severity": dict(by_sev),
                 "scan_cycle": cycle,
                 "unproven_closures": len(unproven(items)),
+                "regrade": regrade(items, _report()),   # null = advisory report unreadable (UNKNOWN)
                 "pending": [
                     {k: i.get(k) for k in ("id", "severity", "component",
                                            "current_version", "fix_version")}
@@ -262,6 +320,13 @@ def main() -> int:
         rest = len(pending) - len(show)
         if rest:
             print(f"\n  +{rest} pending below HIGH — `--all` lists them.")
+
+    rg = regrade(items, _report())
+    if rg is None:
+        print(f"\n  regrade: UNKNOWN — no advisory report at {ADVISORY_SNAPSHOT}")
+    for r in rg or []:
+        print(f"\n  REGRADE: {r['id']} {r['from']}->{r['to']} by {r['by']} ({r['component']}) — a proposal; apply it in the queue"
+              if r is rg[0] else f"  REGRADE: {r['id']} {r['from']}->{r['to']} by {r['by']} ({r['component']})")
 
     # A pending row may simply be stale: the estate can be fixed while the queue
     # is not. Say so here rather than letting a count imply exposure.
