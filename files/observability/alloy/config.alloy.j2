@@ -323,7 +323,7 @@ loki.source.file "agent_logs" {
 {% endif %}
 
 {% if alloy_tail_host_daemon_logs %}
-// ── The four host daemons (2026-08-31) ───────────────────────────────────────
+// ── The host daemons (four on 2026-08-31; the thalamus since 2026-11-11) ───────
 //
 // Wing, Bone, Pulse and the cortex organ are nOS's OWN daemons and their logs
 // were the only ones not reaching Loki. Measured that day: Alloy tailed five
@@ -372,6 +372,9 @@ local.file_match "host_daemon_logs" {
     {__path__ = "{{ ansible_facts['env']['HOME'] }}/bone/log/*.log",      job = "host_daemon", service = "bone"},
     {__path__ = "{{ ansible_facts['env']['HOME'] }}/pulse/log/*.log",     job = "host_daemon", service = "pulse"},
     {__path__ = "{{ ansible_facts['env']['HOME'] }}/cortex/log/*.log",    job = "host_daemon", service = "cortex"},
+    // The thalamus (Iris) logs connect/close and "<status> as <user> <METHOD> /<path> <ms>": never a body,
+    // query or secret (serve.rs keap_as), so its turns reach Loki without content (row thalamus-otel).
+    {__path__ = "{{ ansible_facts['env']['HOME'] }}/thalamus/log/*.log",  job = "host_daemon", service = "thalamus"},
   ]
 }
 
