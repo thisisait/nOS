@@ -53,7 +53,6 @@ Each line here is a `reader:` node of the anatomy graph, a sense.
 - `awaiting-operator.py` — What is waiting for a HUMAN right now, across every source that asks for one.
 - `container-status.py` — READER: which containers Docker keeps restarting — restarting now, or restarted by its policy within the hour (a crash loop reads `healthy` between deaths: Loki 2026-10-29, 741 restarts); red-status lists them; UNKNOWN when docker does not answer.
 - `net-raw-status.py` — READER: which running containers still hold NET_RAW (not in CapDrop, re-added, or privileged) — the effect check for cap_drop (row net-raw-drop-audit); UNKNOWN when docker does not answer.
-- `immune-drill.py` — the immune drill: plants inert samples in a temp tree, runs the estate's own detector (gitleaks with this repo's config), records caught / missed / no detector, removes every sample (row immune-drill-known-samples). Operator only.
 - `host-patch-status.py` — READER: does this Linux host run what it installed: `/var/run/reboot-required` older than a day (`reboot pending N days`), a running kernel older than the newest in `/boot`, `-security` upgrades `apt list --upgradable` still lists; red-status lists them; UNKNOWN off Linux or when a source does not answer.
 - `docker-pressure-status.py` — READER: is the Docker VM short of memory now (`/proc/pressure/memory` full avg60 vs `docker_memory_pressure_max_full_avg60`; on macOS via a throwaway alpine container); starved = red with the top 5 containers, UNKNOWN when unreadable. main.yml refuses a converge on its verdict.
 - `caddy-status.py` — Can the caddy answer, is the ear listening, and what did it hear.
@@ -139,6 +138,7 @@ posts, restarts or renders something.
 
 ### Estate state, renders and records
 
+- `immune-drill.py` — the immune drill: plants inert samples in a temp tree, runs the estate's own detector (gitleaks with this repo's config), records caught / missed / no detector, removes every sample (row immune-drill-known-samples). Operator only.
 - `current-state.py` — The claim board's WRITE side: file/claim/release/progress; a claim is refused unless the match says you are capable.
 - `geo-load.py` — Load ČÚZK open data (RÚIAN address points, INSPIRE parcels + buildings) for the configured kraje into PostGIS `geo`; staged + swapped per layer.
 - `geo-project-sites.py` — Nightly one-way projection of KEAP party-site rows (+ ARES seats) into PostGIS `geo.party_site`; `--erase-party` for GDPR (called by digest-teardown).
