@@ -101,15 +101,8 @@ backup_espocrm_volumes:
   - apps_espocrm_data
   - apps_espocrm_client_custom
 
-# Host-bind service data dirs (filesystem state NO DB dump can reconstruct).
-# gitea/gitlab hold git REPOS on disk — covered by NEITHER the DB dumps nor the
-# named-volume list before this. name → restore target path (derived from the
-# role's *_data_dir var so external-storage redirects are honoured).
-backup_dirs_to_dump:
-  - { name: "gitea", path: "{{ gitea_data_dir | default(ansible_facts['env']['HOME'] + '/gitea') }}" }
-  - { name: "gitlab", path: "{{ gitlab_data_dir | default(ansible_facts['env']['HOME'] + '/gitlab') }}" }
-  - { name: "gitlab-config", path: "{{ gitlab_config_dir | default(ansible_facts['env']['HOME'] + '/gitlab-config') }}" }
-  - { name: "tenants", path: "{{ nos_data_root }}/tenants" }
+# backup_dirs_to_dump lives in the default layers only (vars_files outrank a role default;
+# the stale 4-entry copy here was dead — ruling 2026-11-11, row backup-dna).
 
 # -- Container names (match the project-wide convention) -----------------------
 backup_mariadb_container: "{{ mariadb_container_name | default('nos-mariadb') }}"

@@ -189,11 +189,39 @@ into `## To capture`.
 - Append the branch to `## Built`, and append a Log line.
 - No message to the operator: the watcher reports.
 
-## 6. Pacing and stopping
+## 6. Explore when nothing is buildable
 
-- Next wakeup: if a row is left to build, 60s with `noop: false`. If the loop
-  is only blocked, 1800s with `noop: true`. After three idle iterations in a
-  row, stop with `stop: true`.
+When §2 finds no buildable row, the iteration does not idle. It explores
+(operator 2026-11-11): it prepares work for the next nights, and the top agent,
+the session that integrates, answers.
+
+- Read `~/.cache/nos-roadmap-loop/top-to-loop.md` first. The top agent writes
+  it and the loop never edits it. Each entry names a draft and says one of:
+  - `accepted`: the top agent captured it; delete your draft file;
+  - `revise: <what>`: rewrite the draft accordingly, as round 2 or later;
+  - `operator`: it went to the operator; leave the draft alone.
+- Then take up to 3 rows that are worth doing but too vague to build: next or
+  active, not stale, not blocked, not gate-only, not live-estate. Write one
+  draft each, `~/.cache/nos-roadmap-loop/explore/<slug>.md`, containing:
+  - the goal;
+  - the files and organs it touches;
+  - the smallest shippable slice;
+  - the e2e acceptance the operator checks;
+  - what it must not do (security);
+  - the open choices, each with 2–3 options and a recommendation.
+  Read the code first. A draft that guesses at code it did not read is worse
+  than none.
+- Never capture a row and never change a row's status. The top agent does
+  both.
+- Add `explore · <slugs> · drafted|revised` to the Log.
+
+## 7. Pacing and stopping
+
+- Next wakeup: if a row is left to build, 60s with `noop: false`. After an
+  explore iteration, 1800s with `noop: false`. If there is nothing left to
+  build and nothing left to explore (no vague rows, every draft waiting on the
+  top agent), 3600s with `noop: true`. After three such iterations in a row,
+  stop with `stop: true`.
 - Stop at once with `stop: true`, after a Roadblocks line, if any of these
   happens:
   - the work needs something destructive on the live estate;

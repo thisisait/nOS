@@ -319,7 +319,9 @@ def test_nightly_set_is_not_only_the_keap_db():
     """Filesystem originals need a dir tar; keap-db.gz is not that tar."""
     main = _fn("main")
     assert "run_dirs" in main and "run_keap_db" in main
-    for src, text in ((BACKUP_DEFAULTS, BACKUP_DEFAULTS.read_text(encoding="utf-8")), ("the default layers", ni.default_config_text())):
+    # The default layers only (ruling 2026-11-11, backup-dna): vars_files outrank the role default,
+    # whose stale copy of backup_dirs_to_dump was dead and is gone.
+    for src, text in (("the default layers", ni.default_config_text()),):
         start = text.index("backup_dirs_to_dump:")
         names = re.findall(r'\{ name: "([a-z0-9-]+)"', text[start:])
         assert names, f"{src} backup_dirs_to_dump parsed empty"
