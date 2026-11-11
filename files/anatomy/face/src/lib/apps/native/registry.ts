@@ -120,12 +120,10 @@ export function openableApps(...forms: readonly AppForm[]): FaceApp[] {
 }
 
 /** `?app=<slug>`: a face link that opens one app (rows wing-inc1-latte-gone, wing-inc2-face-cutover).
- *  Only a window the viewer may open; an unknown slug, a frame or a widget is null, never guessed. */
-export function appFromQuery(params: URLSearchParams): string | null {
+ *  Only a slug among `windows` (the caller's openable window apps); anything else is null, never guessed. */
+export function appFromQuery(params: URLSearchParams, windows: readonly FaceApp[]): string | null {
 	const slug = params.get('app');
-	return slug !== null && openableApps('view', 'utility').some((a) => a.slug === slug)
-		? slug
-		: null;
+	return slug !== null && windows.some((a) => a.slug === slug) ? slug : null;
 }
 
 /**

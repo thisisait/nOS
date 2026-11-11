@@ -66,7 +66,7 @@
 		// tab-close) and bail inside text fields — see wm/shortcuts.ts.
 		const stopKeys = initShortcuts();
 		// A deep link (?app=inbox) opens that app once the restored windows are back.
-		const linked = appFromQuery(new URLSearchParams(location.search));
+		const linked = appFromQuery(new URLSearchParams(location.search), natives);
 		if (linked) launchNativeApp(linked);
 
 		void (async () => {
