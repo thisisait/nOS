@@ -10,6 +10,11 @@
       "blurb": "The estate improving itself: a model proposes a change, code alone judges it against the gate set, and only a pass may land — merge, converge, and rescan happen outside this engine. Doctrine: files/anatomy/bone/ledger.py."
     },
     {
+      "id": "grafana-check",
+      "label": "grafana-check — observability health digest",
+      "blurb": "Every six hours, read the firing Prometheus alerts and the Loki error count over the window, compare with the previous digest, write the digest and tell the operator once when the firing set changed. An unreachable source is UNKNOWN in the digest, never a calm \"nothing firing\"."
+    },
+    {
       "id": "news-scout",
       "label": "news-scout — feed scouting + consolidation",
       "blurb": "On a daily cadence, fetch the declared external feeds, extract and dedup, then consolidate the signal into the KEAP corpus and hand the operator a digest. The consolidation is the point — raw fetch is easy; corpus-linked knowledge is the loop. GDPR/EU-residency applies to anything stored."
@@ -229,6 +234,43 @@
       "loop": "sere",
       "x": 1360,
       "y": 92
+    },
+    {
+      "id": "trigger:grafana-check",
+      "kind": "trigger",
+      "label": "⏱ 23 */6 * * *",
+      "loop": "grafana-check",
+      "x": 0,
+      "y": 0,
+      "cadence": "23 */6 * * *",
+      "event": null
+    },
+    {
+      "id": "step:grafana-check:alerts",
+      "kind": "step",
+      "label": "firing alerts (Prometheus)",
+      "loop": "grafana-check",
+      "x": 300,
+      "y": 0,
+      "runner": "tool"
+    },
+    {
+      "id": "step:grafana-check:errors",
+      "kind": "step",
+      "label": "error lines over 6 h (Loki)",
+      "loop": "grafana-check",
+      "x": 600,
+      "y": 0,
+      "runner": "tool"
+    },
+    {
+      "id": "step:grafana-check:digest",
+      "kind": "step",
+      "label": "digest + trend → file, A9 on change",
+      "loop": "grafana-check",
+      "x": 900,
+      "y": 0,
+      "runner": "tool"
     },
     {
       "id": "trigger:news-scout",
@@ -552,6 +594,27 @@
       "target": "route:POST /api/v1/events",
       "kind": "may-write",
       "loop": "sere"
+    },
+    {
+      "id": "trigger:grafana-check=>step:grafana-check:alerts",
+      "source": "trigger:grafana-check",
+      "target": "step:grafana-check:alerts",
+      "kind": "flow",
+      "loop": "grafana-check"
+    },
+    {
+      "id": "step:grafana-check:alerts=>step:grafana-check:errors",
+      "source": "step:grafana-check:alerts",
+      "target": "step:grafana-check:errors",
+      "kind": "flow",
+      "loop": "grafana-check"
+    },
+    {
+      "id": "step:grafana-check:errors=>step:grafana-check:digest",
+      "source": "step:grafana-check:errors",
+      "target": "step:grafana-check:digest",
+      "kind": "flow",
+      "loop": "grafana-check"
     },
     {
       "id": "trigger:news-scout=>step:news-scout:fetch:lwn",

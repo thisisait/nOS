@@ -15,10 +15,10 @@
     "limb": 128,
     "memory": 42,
     "law": 56,
-    "reflex": 46,
+    "reflex": 47,
     "heartbeat": 1,
     "internal": 79,
-    "edges": 445
+    "edges": 446
   },
   "nodes": {
     "agent:conductor": {
@@ -1338,6 +1338,10 @@
       "kind": "pulse"
     },
     "pulse:loop:drive": {
+      "level": "reflex",
+      "kind": "pulse"
+    },
+    "pulse:loop:grafana-check": {
       "level": "reflex",
       "kind": "pulse"
     },
@@ -3908,6 +3912,11 @@
     {
       "from": "service:pulse",
       "to": "pulse:loop:drive",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:loop:grafana-check",
       "kind": "trigger"
     },
     {

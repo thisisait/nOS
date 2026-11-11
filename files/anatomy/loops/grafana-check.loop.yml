@@ -1,0 +1,42 @@
+# grafana-check — a default operational loop (row loop-grafana-check, ruling 2026-11-11: every 6 h).
+# alert-relay already couriers each firing alert every 15 min; this loop writes ONE consolidated
+# health digest with its trend (what started and stopped firing, the Loki error count), keeps it on
+# disk, and notifies only when the firing SET changed since the last digest. No KEAP write.
+---
+id: grafana-check
+owner: install_loops
+label: "grafana-check — observability health digest"
+blurb: >-
+  Every six hours, read the firing Prometheus alerts and the Loki error count over the window, compare
+  with the previous digest, write the digest and tell the operator once when the firing set changed.
+  An unreachable source is UNKNOWN in the digest, never a calm "nothing firing".
+
+trigger:
+  cadence: "23 */6 * * *"  # every 6 h
+
+steps:
+  - id: alerts
+    runner: tool
+    label: "firing alerts (Prometheus)"
+  - id: errors
+    runner: tool
+    label: "error lines over 6 h (Loki)"
+  - id: digest
+    runner: tool
+    label: "digest + trend → file, A9 on change"
+    writes:
+      - target: "file:~/.nos/loops/grafana-check"
+        via: "one JSON digest per run"
+      - target: "notification:wing-inbox"
+        via: "one note when the firing set changed"
+
+run: "{{ playbook_dir }}/tools/loops/grafana-check.py"
+pulse:
+  category: platform
+  max_runtime_s: 120
+  jitter_min: 10
+  env:
+    # BARE tokens: the catalog does a literal replace (alert-relay-base explains why).
+    PROMETHEUS_URL: "http://127.0.0.1:{{ prometheus_port }}"
+    BONE_API_URL: "http://127.0.0.1:{{ bone_port }}"
+    WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"
