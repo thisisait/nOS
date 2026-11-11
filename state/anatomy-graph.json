@@ -4,7 +4,7 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 586,
+    "nodes": 587,
     "edges": 564,
     "nodes_pulse": 46,
     "nodes_judge": 5,
@@ -27,7 +27,7 @@
     "nodes_agent": 17,
     "nodes_tasktype": 9,
     "nodes_skill": 16,
-    "nodes_reader": 69,
+    "nodes_reader": 70,
     "nodes_effector": 121,
     "nodes_article": 28,
     "nodes_organ_system": 13,
@@ -3738,6 +3738,13 @@
       "title": "PREPARE a weekly KEAP moderation batch: classify proposed briefs into retarget/human-review/per-domain batchable fills with a deterministic spot-check (9/10). Reader only — drafts the plan; apply is the operator's (human /api) + the dump.mjs backport.",
       "anchor": "02.02.04",
       "description": "Reader tools/moderation-drain.py: PREPARE a weekly KEAP moderation batch: classify proposed briefs into retarget/human-review/per-domain batchable fills with a deterministic spot-check (9/10). Reader only — drafts the plan; apply is the operator's (human /api) + the dump.mjs backport."
+    },
+    "reader:net-raw-status": {
+      "kind": "reader",
+      "source": "tools/net-raw-status.py",
+      "title": "READER: which running containers still hold NET_RAW (not in CapDrop, re-added, or privileged) — the effect check for cap_drop (row net-raw-drop-audit); UNKNOWN when docker does not answer.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/net-raw-status.py: READER: which running containers still hold NET_RAW (not in CapDrop, re-added, or privileged) — the effect check for cap_drop (row net-raw-drop-audit); UNKNOWN when docker does not answer."
     },
     "reader:nos-guide": {
       "kind": "reader",
