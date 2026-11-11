@@ -1472,10 +1472,6 @@ qgis_version: "latest@sha256:f825a56109bea5a9b7bee50d43bdec472aa614276ea2fbd44e5
 #                    → Tempo (traces)         →
 # ==============================================================================
 
-# ── Ports ─────────────────────────────────────────────────────────────────────
-grafana_port: 3000
-prometheus_port: 9090
-loki_port: 3100
 tempo_version: "2.10.8"           # REM-232: head of 2.10. Prior REM-036 CVE-2026-28377 at 2.10.3. [swept 2.10.3 2026-09-17]
 nginx_prometheus_exporter_version: "1.4.1"  # github.com/nginxinc/nginx-prometheus-exporter/releases – no Homebrew formula
 # SHA256 from nginx-prometheus-exporter_1.4.1_checksums.txt on the same release.
@@ -1487,17 +1483,6 @@ phpfpm_exporter_version: "2.2.0"         # github.com/hipages/php-fpm_exporter/r
 phpfpm_exporter_checksums:
   arm64: "93bdc79d2a306d5567dbe7af6eba89df94e4f08ff1c781c273b293a4b5931858"
   amd64: "42cec68addaf34c1303018b1426edb9cc4dea649dfe77d5359cdf832493eb83d"
-tempo_http_port: 3200
-tempo_otlp_grpc_port: 4327    # Tempo internal OTLP gRPC (Alloy → Tempo)
-tempo_otlp_http_port: 4328    # Tempo internal OTLP HTTP (Alloy → Tempo)
-alloy_ui_port: 12345
-alloy_otlp_grpc_port: 4317    # Alloy public OTLP gRPC (apps → Alloy)
-alloy_otlp_http_port: 4318    # Alloy public OTLP HTTP (apps → Alloy)
-
-# ── Domains ───────────────────────────────────────────────────────────────────
-grafana_domain: "grafana{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-# Other services are not publicly exposed (localhost only), accessed via Grafana
-observability_hostname: "{{ ansible_facts['hostname'] }}"  # Hostname in Grafana labels
 
 # ── Docker image versions (observability + devops) ───────────────────────────
 grafana_version: "12.4.14"              # CVE-2026-100105, -88858, -88967 (12.4.14). Prior REM-252 12.4.10. Prior REM-226 CVE-2026-17183 at 12.4.9. [swept 12.4.9 2026-09-17]
@@ -1512,50 +1497,7 @@ loki_version: "3.7.6"           # synced to role default (cleared version-pin sh
 # Gitea Docker
 gitea_version: "28.3.0"                 # 2026-11-01: 7 high (GHSA-32h8, -9v6p, -6h2f, -jh8p, -37xv, -8g99, -8p3x) + 15 medium fixed in 28.3.0; prior 28.2.0
 
-# ── Grafana ───────────────────────────────────────────────────────────────────
-grafana_admin_user: "admin"
-grafana_admin_password: "{{ nos_derived_secrets.grafana }}"
-grafana_allow_embedding: false
-grafana_analytics: false    # Disable telemetry
-
-# ── Prometheus ────────────────────────────────────────────────────────────────
-prometheus_retention: "30d"
-prometheus_storage_path: "{{ nos_data_root }}/platform/services/prometheus/storage"
-
-# ── Loki ──────────────────────────────────────────────────────────────────────
-loki_retention: "744h"   # 31 days
-loki_storage_path: "{{ nos_data_root }}/platform/services/loki/storage"
-
-# ── Tempo ─────────────────────────────────────────────────────────────────────
-tempo_retention: "168h"  # 7 days (traces tend to be larger)
-tempo_storage_path: "{{ nos_data_root }}/platform/services/tempo/storage"
-
-# ── Alloy – what to collect ───────────────────────────────────────────────────
-# Both exporters instrument the HOST-NGINX leg (nginx stub_status + php-fpm
-# FCGI status). On a Traefik-primary host (install_nginx=false) php-fpm does
-# not run AND port 9000 belongs to Wing/FrankenPHP since A3.5 — the exporter
-# was firing FCGI bytes at Wing every Alloy scrape and hanging its own
-# /metrics (found by the W6.4 hub probe, 2026-06-11). Follow install_nginx.
-alloy_scrape_nginx: "{{ install_nginx | default(false) }}"
-alloy_scrape_phpfpm: "{{ install_nginx | default(false) }}"
-phpfpm_exporter_port: 9253         # Port of php-fpm_exporter
-alloy_scrape_redis: true           # Redis metrics → Prometheus
 redis_port: 6379                   # Redis port
-alloy_tail_nginx_logs: true        # Nginx access+error logs → Loki
-alloy_tail_agent_logs: true        # ~/agents/*.log → Loki
-alloy_tail_php_logs: true          # PHP-FPM logs → Loki
-alloy_tail_docker_logs: true       # All Docker container stdout/stderr → Loki
-alloy_tail_host_daemon_logs: true  # ~/{wing,bone,pulse,cortex}/log/*.log → Loki, job="host_daemon"
-alloy_receive_otlp: true          # OTLP receiver for app traces/metrics/logs → Tempo
-
-# ── Exporter containers (observability stack) ─────────────────────────────────
-# Sprint 1 / Wave 1: expand metrics coverage with infra + container exporters.
-# Toggle individual exporters with alloy_scrape_* flags below.
-postgres_exporter_port: 9187       # prometheuscommunity/postgres-exporter
-mysqld_exporter_port: 9104         # prom/mysqld-exporter (requires `mysqld_exporter` MariaDB user)
-redis_exporter_port: 9121          # oliver006/redis_exporter
-cadvisor_port: 8080                # gcr.io/cadvisor/cadvisor — container resource metrics
-blackbox_exporter_port: 9115       # prom/blackbox-exporter — HTTP/TCP probes
 
 postgres_exporter_version: "v0.20.1"  # [swept 2026-08-06]
 mysqld_exporter_version: "v0.19.0"  # [swept 2026-08-06]
@@ -1573,9 +1515,6 @@ redis_exporter_version: "v1.89.0-alpine"  # [swept v1.88.0-alpine 2026-08-11]
 cadvisor_version: "v0.49.1"
 blackbox_exporter_version: "v0.28.0"  # [swept 2026-08-06]
 
-alloy_scrape_postgres_exporter: "{{ install_postgresql | default(false) }}"
-alloy_scrape_mysqld_exporter: "{{ install_mariadb | default(false) }}"
-alloy_scrape_redis_exporter: "{{ redis_docker | default(false) }}"
 # app_secrets is the apps_runner secret-store (its own default is `{}` in
 # roles/pazny.apps_runner/defaults). That role default only materialises during
 # stack-up — AFTER the core-up `template_vars: "{{ vars }}"` loader resolves the
@@ -1598,24 +1537,6 @@ openhuman_provider: ollama        # ollama (local_only) | claude-code (the claud
 openhuman_model: ""               # "" = ollama_small_model on ollama, `sonnet` on claude-code
 openhuman_register_mcp: true      # declare the nOS tables MCP server ([[mcp_client.servers]] in config.toml)
 openhuman_skills: [nos-datatables, nos-for-openhuman]  # copied into ~/.openhuman/skills (it rejects symlinks)
-# Derived from where the cAdvisor CONTAINER exists, not declared beside it.
-# roles/pazny.grafana/templates/compose.yml.j2:221 gates that container on
-# `ansible_os_family != 'Darwin'` — its cgroup and layerdb paths are real only
-# on Linux — and this flag was a second, independent `true`. On this Mac that
-# left Alloy scraping a dead localhost:8080: NosWarningServiceDegraded has been
-# firing since 2026-08-22 and every converge re-rendered the same dead target,
-# which is a synthetic red that would have burned through an unattended night.
-# One truth, one spelling; gate test_cadvisor_scrape_follows_its_container.py.
-alloy_scrape_cadvisor: "{{ ansible_facts['os_family'] | default('') != 'Darwin' }}"
-alloy_scrape_blackbox_self: true   # scrape blackbox-exporter's own /metrics (probe results come from prometheus rules — A2)
-
-# ── Grafana dashboards to download from grafana.com ───────────────────────────
-# Dashboard IDs from https://grafana.com/grafana/dashboards/
-grafana_dashboards:
-  - id: 1860    # Node Exporter Full (system metrics)
-    revision: 37
-  - id: 12708   # NGINX exporter
-    revision: 1
 
 # ==============================================================================
 # IIAB – N8N (workflow automation)

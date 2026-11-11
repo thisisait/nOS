@@ -1,0 +1,93 @@
+# ==============================================================================
+# config.d/50-observability.yml — observability: Grafana, Prometheus, Loki,
+# Tempo, Alloy and the exporters (ports, domain, retention, scrape switches).
+#
+# One of the default layers (config.d/*.yml in order, then default.config.yml;
+# the set is tools/nos_identity.default_layers and main.yml vars_files). Every
+# variable is declared in exactly one of them. config.yml still overrides.
+# The install_* switches and the image pins stay in default.config.yml: the
+# upgrade path writes only that file (test_image_pins_stay_in_default_config).
+# ==============================================================================
+
+# ── Ports ─────────────────────────────────────────────────────────────────────
+grafana_port: 3000
+prometheus_port: 9090
+loki_port: 3100
+tempo_http_port: 3200
+tempo_otlp_grpc_port: 4327    # Tempo internal OTLP gRPC (Alloy → Tempo)
+tempo_otlp_http_port: 4328    # Tempo internal OTLP HTTP (Alloy → Tempo)
+alloy_ui_port: 12345
+alloy_otlp_grpc_port: 4317    # Alloy public OTLP gRPC (apps → Alloy)
+alloy_otlp_http_port: 4318    # Alloy public OTLP HTTP (apps → Alloy)
+
+# ── Domains ───────────────────────────────────────────────────────────────────
+grafana_domain: "grafana{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
+
+# Other services are not publicly exposed (localhost only), accessed via Grafana
+observability_hostname: "{{ ansible_facts['hostname'] }}"  # Hostname in Grafana labels
+
+# ── Grafana ───────────────────────────────────────────────────────────────────
+grafana_admin_user: "admin"
+grafana_admin_password: "{{ nos_derived_secrets.grafana }}"
+grafana_allow_embedding: false
+grafana_analytics: false    # Disable telemetry
+
+# ── Prometheus ────────────────────────────────────────────────────────────────
+prometheus_retention: "30d"
+prometheus_storage_path: "{{ nos_data_root }}/platform/services/prometheus/storage"
+
+# ── Loki ──────────────────────────────────────────────────────────────────────
+loki_retention: "744h"   # 31 days
+loki_storage_path: "{{ nos_data_root }}/platform/services/loki/storage"
+
+# ── Tempo ─────────────────────────────────────────────────────────────────────
+tempo_retention: "168h"  # 7 days (traces tend to be larger)
+tempo_storage_path: "{{ nos_data_root }}/platform/services/tempo/storage"
+
+# ── Alloy – what to collect ───────────────────────────────────────────────────
+# Both exporters instrument the HOST-NGINX leg (nginx stub_status + php-fpm
+# FCGI status). On a Traefik-primary host (install_nginx=false) php-fpm does
+# not run AND port 9000 belongs to Wing/FrankenPHP since A3.5 — the exporter
+# was firing FCGI bytes at Wing every Alloy scrape and hanging its own
+# /metrics (found by the W6.4 hub probe, 2026-06-11). Follow install_nginx.
+alloy_scrape_nginx: "{{ install_nginx | default(false) }}"
+alloy_scrape_phpfpm: "{{ install_nginx | default(false) }}"
+phpfpm_exporter_port: 9253         # Port of php-fpm_exporter
+alloy_scrape_redis: true           # Redis metrics → Prometheus
+alloy_tail_nginx_logs: true        # Nginx access+error logs → Loki
+alloy_tail_agent_logs: true        # ~/agents/*.log → Loki
+alloy_tail_php_logs: true          # PHP-FPM logs → Loki
+alloy_tail_docker_logs: true       # All Docker container stdout/stderr → Loki
+alloy_tail_host_daemon_logs: true  # ~/{wing,bone,pulse,cortex}/log/*.log → Loki, job="host_daemon"
+alloy_receive_otlp: true          # OTLP receiver for app traces/metrics/logs → Tempo
+
+# ── Exporter containers (observability stack) ─────────────────────────────────
+# Sprint 1 / Wave 1: expand metrics coverage with infra + container exporters.
+# Toggle individual exporters with alloy_scrape_* flags below.
+postgres_exporter_port: 9187       # prometheuscommunity/postgres-exporter
+mysqld_exporter_port: 9104         # prom/mysqld-exporter (requires `mysqld_exporter` MariaDB user)
+redis_exporter_port: 9121          # oliver006/redis_exporter
+cadvisor_port: 8080                # gcr.io/cadvisor/cadvisor — container resource metrics
+blackbox_exporter_port: 9115       # prom/blackbox-exporter — HTTP/TCP probes
+alloy_scrape_postgres_exporter: "{{ install_postgresql | default(false) }}"
+alloy_scrape_mysqld_exporter: "{{ install_mariadb | default(false) }}"
+alloy_scrape_redis_exporter: "{{ redis_docker | default(false) }}"
+
+# Derived from where the cAdvisor CONTAINER exists, not declared beside it.
+# roles/pazny.grafana/templates/compose.yml.j2:221 gates that container on
+# `ansible_os_family != 'Darwin'` — its cgroup and layerdb paths are real only
+# on Linux — and this flag was a second, independent `true`. On this Mac that
+# left Alloy scraping a dead localhost:8080: NosWarningServiceDegraded has been
+# firing since 2026-08-22 and every converge re-rendered the same dead target,
+# which is a synthetic red that would have burned through an unattended night.
+# One truth, one spelling; gate test_cadvisor_scrape_follows_its_container.py.
+alloy_scrape_cadvisor: "{{ ansible_facts['os_family'] | default('') != 'Darwin' }}"
+alloy_scrape_blackbox_self: true   # scrape blackbox-exporter's own /metrics (probe results come from prometheus rules — A2)
+
+# ── Grafana dashboards to download from grafana.com ───────────────────────────
+# Dashboard IDs from https://grafana.com/grafana/dashboards/
+grafana_dashboards:
+  - id: 1860    # Node Exporter Full (system metrics)
+    revision: 37
+  - id: 12708   # NGINX exporter
+    revision: 1
