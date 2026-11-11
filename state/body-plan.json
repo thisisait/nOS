@@ -12,7 +12,7 @@
     "organism": 0,
     "habitat": 9,
     "sense": 87,
-    "limb": 127,
+    "limb": 128,
     "memory": 42,
     "law": 56,
     "reflex": 46,
@@ -842,6 +842,10 @@
       "kind": "effector"
     },
     "effector:maps-style-vendor": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:mcp-tables-http": {
       "level": "limb",
       "kind": "effector"
     },

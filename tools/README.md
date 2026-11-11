@@ -238,6 +238,7 @@ posts, restarts or renders something.
 - `keap-recall.py` — Read-only KEAP recall (RO bearer): ranked passages with node ids; wraps keap-semantic-search.py + keap-recall-queries.py; empty recall is a miss.
 - `keap-reid-rows.py` — Make every row of a KEAP DataTable addressable by its own business key.
 - `mcp-tables-server.py` — stdio MCP server giving external agents (Cursor/Codex/Claude Code) the DataTables verb surface.
+- `mcp-tables-http.py` — the HTTP door to the same MCP, read-only, as the Authentik person Traefik forwards (row keap-mcp-door; behind an edge token).
 - `report-chain-synth-gen.py` — synthesize report-prepare training chains from SCHEMA ALONE (keap-tables + relation ontology + frozen opcodes), so the expected.yml needs no live model.
 
 ### Release, CI, git

@@ -158,20 +158,23 @@ def _install_unix_opener() -> None:
         _UNIX_INSTALLED = True
 
 
-def _human_call(args: dict) -> tuple[str, bool]:
-    """The same verbs over the HUMAN door, as the caller, through the identity
-    outpost (KEAP_IDENTITY_URL). A per-user Claude Code / Codex then sees
-    exactly that user's tables — private ones, grants, tier — instead of the
-    estate-wide view the agent bearer has. claim/release are agent-door
-    leases and stay there."""
+def _human_call(args: dict, base: str | None = None, headers: dict | None = None) -> tuple[str, bool]:
+    """The same verbs over the HUMAN door, as the caller. Default: through the identity
+    outpost (KEAP_IDENTITY_URL), which decides who we are. tools/mcp-tables-http.py
+    passes KEAP's own base and the person's forwarded headers instead. A per-user
+    client then sees exactly that user's tables — private ones, grants, tier —
+    instead of the estate-wide view the agent bearer has. claim/release are
+    agent-door leases and stay there."""
     verb = args.get("verb", "")
     if verb not in VERBS:
         return "verb must be one of: " + ", ".join(VERBS), True
     table = str(args.get("table") or "").strip()
     rid = str(args.get("id") or "").strip()
-    base = os.environ["KEAP_IDENTITY_URL"].rstrip("/")
-    hdr = {"Content-Type": "application/json"}   # the outpost decides who we are
-    _install_unix_opener()
+    if base is None:
+        base = os.environ["KEAP_IDENTITY_URL"]
+        _install_unix_opener()
+    base = base.rstrip("/")
+    hdr = {"Content-Type": "application/json", **(headers or {})}
 
     def call(method, path, body=None):
         data = json.dumps(body).encode() if body is not None else None
@@ -185,7 +188,7 @@ def _human_call(args: dict) -> tuple[str, bool]:
             except Exception:  # noqa: BLE001
                 return exc.code, {}
         except urllib.error.URLError as exc:
-            return 0, {"error": f"identity outpost unreachable at {base}: {exc.reason}"}
+            return 0, {"error": f"KEAP human door unreachable at {base}: {exc.reason}"}
 
     def out(st, payload):
         return f"HTTP {st}\n{json.dumps(payload)}", st == 0 or st >= 400
@@ -274,8 +277,9 @@ def _call_keap(args: dict) -> tuple[str, bool]:
         return f"KEAP unreachable at {_base_url()}: {exc.reason}", True
 
 
-def handle(msg: dict) -> dict | None:
-    """One JSON-RPC message -> one response (or None for a notification)."""
+def handle(msg: dict, door=None) -> dict | None:
+    """One JSON-RPC message -> one response (or None for a notification). `door`
+    answers tools/call (default _call_keap, the stdio caller's env decides)."""
     method = msg.get("method")
     mid = msg.get("id")
 
@@ -298,7 +302,7 @@ def handle(msg: dict) -> dict | None:
         params = msg.get("params") or {}
         if params.get("name") != "nos_tables":
             return _err(mid, -32602, f"unknown tool {params.get('name')!r}")
-        text, is_error = _call_keap(params.get("arguments") or {})
+        text, is_error = (door or _call_keap)(params.get("arguments") or {})
         return _ok(mid, {"content": [{"type": "text", "text": text}], "isError": is_error})
     if method == "ping":
         return _ok(mid, {})

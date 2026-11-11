@@ -4,7 +4,7 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 585,
+    "nodes": 586,
     "edges": 564,
     "nodes_pulse": 46,
     "nodes_judge": 5,
@@ -28,7 +28,7 @@
     "nodes_tasktype": 9,
     "nodes_skill": 16,
     "nodes_reader": 69,
-    "nodes_effector": 120,
+    "nodes_effector": 121,
     "nodes_article": 28,
     "nodes_organ_system": 13,
     "nodes_tissue": 1,
@@ -1982,6 +1982,13 @@
       "title": "Vendor an OpenFreeMap style for the offline tileserver: every source, sprite and glyph made local, labels `name:cs`.",
       "anchor": "02.02.04",
       "description": "Effector tools/maps-style-vendor.py: Vendor an OpenFreeMap style for the offline tileserver: every source, sprite and glyph made local, labels `name:cs`."
+    },
+    "effector:mcp-tables-http": {
+      "kind": "effector",
+      "source": "tools/mcp-tables-http.py",
+      "title": "the HTTP door to the same MCP, read-only, as the Authentik person Traefik forwards (row keap-mcp-door; behind an edge token).",
+      "anchor": "02.02.04",
+      "description": "Effector tools/mcp-tables-http.py: the HTTP door to the same MCP, read-only, as the Authentik person Traefik forwards (row keap-mcp-door; behind an edge token)."
     },
     "effector:mcp-tables-server": {
       "kind": "effector",
