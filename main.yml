@@ -1175,7 +1175,7 @@
       # binds to apps by slug via !Find, which resolves the tofu-created apps.
       # Reversible: flip engine back to 'blueprint' to restore 10-oidc-apps.
       ansible.builtin.shell: |
-        for bp in 00-admin-groups 05-synthetic-identities{{ ' 50-mfa-policy' if (enforce_mfa | default(false) | bool) else '' }}{{ ' 10-oidc-apps' if (authentik_engine | default('blueprint')) != 'tofu' else '' }} 20-rbac-policies 30-agent-clients 40-enrollment-flow 46-brand-auth-flow; do
+        for bp in 00-admin-groups 05-synthetic-identities{{ ' 50-mfa-policy' if (enforce_mfa | default(false) | bool) else '' }}{{ ' 10-oidc-apps' if (authentik_engine | default('blueprint')) != 'tofu' else '' }} 20-rbac-policies 30-agent-clients 40-enrollment-flow 46-brand-auth-flow 47-estate-brand; do
           {{ docker_bin }} compose -p infra exec -T -u root authentik-worker \
             ak apply_blueprint "/blueprints/custom/${bp}.yaml" >/dev/null 2>&1 || echo "NOS_BLUEPRINT_FAILED ${bp}"
         done
@@ -1185,6 +1185,7 @@
       register: _ak_blueprint_apply
       changed_when: false
       failed_when: "'NOS_BLUEPRINT_FAILED 00-admin-groups' in _ak_blueprint_apply.stdout"
+      when: install_authentik | default(false) | bool  # core-up's plugin loader notifies it on every estate
 
   roles:
     # ── macOS-only host roles ───────────────────────────────────────────────

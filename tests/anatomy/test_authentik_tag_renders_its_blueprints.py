@@ -40,9 +40,21 @@ def test_a_tag_that_reaches_a_loader_reaches_its_ctx():
     assert readers and not missing, f"tags that run the loader but not the ctx snapshot: {missing}"
 
 
+def _applied(text: str) -> set[str]:
+    return set(re.findall(r"\b(\d\d-[a-z0-9-]+)\b", text.split("for bp in", 1)[1].split("; do", 1)[0]))
+
+
+def test_the_play_and_role_handlers_apply_the_same_blueprints():
+    """2026-11-11: 47-estate-brand was added to the role's copy only; the play-level handler
+    (main.yml) is the one that fires, so the brand never applied and the verify stayed red."""
+    play = _applied((REPO / "main.yml").read_text(encoding="utf-8").split("- name: Reapply authentik blueprints", 1)[1])
+    role = _applied((REPO / "roles/pazny.authentik/handlers/main.yml").read_text(encoding="utf-8"))
+    assert play == role, f"only in main.yml: {sorted(play - role)}; only in the role: {sorted(role - play)}"
+
+
 def test_every_applied_blueprint_has_a_template():
     handler = (REPO / "roles/pazny.authentik/handlers/main.yml").read_text(encoding="utf-8")
-    names = set(re.findall(r"\b(\d\d-[a-z0-9-]+)\b", handler.split("for bp in", 1)[1].split("; do", 1)[0]))
+    names = _applied(handler)
     homes = [REPO / "files/anatomy/plugins/authentik-base/blueprints", REPO / "roles/pazny.authentik/templates/blueprints"]
     missing = sorted(n for n in names if not any((h / f"{n}.yaml.j2").is_file() for h in homes))
     assert names and not missing, f"the apply handler names blueprints no template renders: {missing}"

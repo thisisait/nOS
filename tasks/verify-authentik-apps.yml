@@ -206,6 +206,41 @@
     - nos_docker_ready | default(true)
   tags: ['always', 'verify']
 
+# Repair before the verdict (2026-11-11): a 47 rendered by an earlier run is unchanged, so no
+# handler fires, and on macOS VirtioFS no inotify reaches the worker (~1 h discovery).
+- name: "[Authentik] Apply the estate brand when the login page lacks it"
+  ansible.builtin.command:
+    argv: ["{{ docker_bin }}", compose, -p, infra, exec, -T, -u, root, authentik-worker,
+           ak, apply_blueprint, /blueprints/custom/47-estate-brand.yaml]
+  register: _ak_brand_heal
+  changed_when: _ak_brand_heal.rc == 0
+  failed_when: false  # the assert below is the verdict
+  when:
+    - install_authentik | default(false) | bool
+    - nos_docker_ready | default(true)
+    - _verify_ak_brand.json is defined
+    - (_verify_ak_brand.json.results | default([{}]) | first).branding_title | default('') != estate_brand_title
+  tags: ['always', 'verify']
+
+- name: "[Verify] Read the default brand again after the repair"
+  no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ authentik_port | default(9003) }}/api/v3/core/brands/?domain=authentik-default"
+    headers:
+      Authorization: "Bearer {{ authentik_bootstrap_token | default('') }}"
+    validate_certs: false
+    status_code: [200]
+  register: _verify_ak_brand_healed
+  when: _ak_brand_heal is changed
+  tags: ['always', 'verify']
+
+- name: "[Verify] The re-read is the brand the asserts judge"
+  no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
+  ansible.builtin.set_fact:
+    _verify_ak_brand: "{{ _verify_ak_brand_healed }}"
+  when: _ak_brand_heal is changed
+  tags: ['always', 'verify']
+
 - name: "[Verify] The default brand exists (46-brand-auth-flow)"
   ansible.builtin.assert:
     that:

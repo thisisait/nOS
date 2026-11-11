@@ -428,7 +428,9 @@
     agent_profiles_root: "{{ playbook_dir }}/files/anatomy/agents"
     template_vars: "{{ nos_plugin_ctx }}"
   # `authentik`: its blueprints are plugin renders (authentik-base); without it `--tags authentik`
-  # verified a 47-estate-brand that was never rendered (2026-11-10).
+  # verified a 47-estate-brand that was never rendered (2026-11-10). The notify applies a changed
+  # render now: on macOS VirtioFS no inotify reaches the worker, so Authentik waited ~1 h.
+  notify: Reapply authentik blueprints
   tags: ['anatomy', 'anatomy.plugins', 'authentik']
 
 # Re-enumerate overrides after pre_compose hook may have rendered new fragments.
