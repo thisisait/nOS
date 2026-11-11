@@ -75,3 +75,20 @@ affected lanes. If the fixes touch code, run the full suite once more.
   and anything that needs his decision.
 
 Never land, never converge, never edit config.yml. No attribution trailers.
+
+## The top agent's other duties (operator 2026-11-11)
+
+The session that integrates is the top of the chain: loop → watcher → top → operator.
+It runs on its own cadence (every ~2 h) and needs no prompt from the operator for these:
+- **Integrate** when `watch.md` says `integrate:` or the loop has been idle with Built rows.
+  Landing on dev stays the operator's: hand him one command.
+- **Answer the explore drafts** in `~/.cache/nos-roadmap-loop/explore/`. Read the code the draft
+  names; in `top-to-loop.md` write `revise: <what>` at least once before `accepted`, so every
+  spec gets two rounds. On accept, capture or update the row with `/dtt-capture` (body = the
+  spec, ruling line if any) and commit + `nos dtt seed --sync`.
+- **Rule from precedent.** A choice the operator's earlier rulings or the doctrine already
+  decide (done → review, ssot/doctrine/gates.md §7, organic names, no new Latte page…) is ruled by citing them.
+- **Escalate only what is his:** security posture, money, identity and access, anything
+  destructive on the live estate, a new external account. One questionnaire, at most 4 questions;
+  22:00–07:00 collect them for the morning report instead of waking him.
+- **SECURITY lines in watch.md** are read at once; a real one stops the batch until fixed.

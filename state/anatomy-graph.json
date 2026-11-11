@@ -4,8 +4,8 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 589,
-    "edges": 565,
+    "nodes": 590,
+    "edges": 567,
     "nodes_pulse": 47,
     "nodes_judge": 5,
     "nodes_gateset": 5,
@@ -22,7 +22,7 @@
     "nodes_tofu": 1,
     "nodes_authentik": 61,
     "nodes_table": 42,
-    "nodes_doctrine": 28,
+    "nodes_doctrine": 29,
     "nodes_faceapp": 11,
     "nodes_agent": 17,
     "nodes_tasktype": 9,
@@ -36,11 +36,11 @@
     "edges_trigger": 77,
     "edges_temporal": 5,
     "edges_mutex": 21,
-    "edges_governed_by": 45,
+    "edges_governed_by": 46,
     "edges_may_take": 26,
     "edges_allows": 5,
     "edges_references": 28,
-    "edges_part_of": 111,
+    "edges_part_of": 112,
     "edges_service_dependency": 50,
     "services_survey_declared": 35,
     "services_survey_not_surveyed": 40,
@@ -1364,6 +1364,14 @@
       "heading": "There is a third contract: the application's own",
       "anchor": "09",
       "description": "Constitution paragraph 5.1 of ssot/doctrine/foreign-properties.md: There is a third contract: the application's own"
+    },
+    "doctrine:ssot/doctrine/gates.md#7": {
+      "kind": "doctrine",
+      "source": "ssot/doctrine/gates.md",
+      "section": "7",
+      "heading": "Where a gate lives — at the joints",
+      "anchor": "09",
+      "description": "Constitution paragraph 7 of ssot/doctrine/gates.md: Where a gate lives — at the joints"
     },
     "doctrine:ssot/doctrine/immune-system.md#4.1": {
       "kind": "doctrine",
@@ -5296,9 +5304,9 @@
     "skill:roadmap-watch": {
       "kind": "skill",
       "source": ".claude/skills/roadmap-watch/SKILL.md",
-      "title": "Watcher for /roadmap-loop — reads the loop ledger, git and CI, reports to the operator, alerts on a roadblock or stall, and hands the loop the discrepancies it finds through watch-to-loop.md. Run in a Sonnet session in the operator's dev checkout as `/loop 20m /roadmap-watch`. Never edits code, builds, pushes, lands or answers the loop's questions.",
+      "title": "Watcher for /roadmap-loop — reads the loop ledger, git and CI, writes a compact report for the TOP agent (the session that integrates) and hands the loop the discrepancies it finds through watch-to-loop.md. Run in a Sonnet session in the operator's dev checkout as `/loop 20m /roadmap-watch`. Never addresses the operator, never edits code, builds, pushes, lands or answers questions.",
       "anchor": "02.02.09",
-      "description": "Skill 'roadmap-watch' (.claude/skills/roadmap-watch/SKILL.md): Watcher for /roadmap-loop — reads the loop ledger, git and CI, reports to the operator, alerts on a roadblock or stall, and hands the loop the discrepancies it finds through watch-to-loop.md. Run in a Sonnet session in the operator's dev checkout as `/loop 20m /roadmap-watch`. Never edits code, builds, pushes, lands or answers the loop's questions."
+      "description": "Skill 'roadmap-watch' (.claude/skills/roadmap-watch/SKILL.md): Watcher for /roadmap-loop — reads the loop ledger, git and CI, writes a compact report for the TOP agent (the session that integrates) and hands the loop the discrepancies it finds through watch-to-loop.md. Run in a Sonnet session in the operator's dev checkout as `/loop 20m /roadmap-watch`. Never addresses the operator, never edits code, builds, pushes, lands or answers questions."
     },
     "skill:weakness-scan": {
       "kind": "skill",
@@ -8370,6 +8378,15 @@
       "evidence": "derived"
     },
     {
+      "from": "skill:roadmap-integrate",
+      "to": "doctrine:ssot/doctrine/gates.md#7",
+      "kind": "governed_by",
+      "via": "cited at .claude/skills/roadmap-integrate/SKILL.md:32",
+      "citations": 2,
+      "derived": "doctrine-cite",
+      "evidence": "derived"
+    },
+    {
       "from": "agent:conductor",
       "to": "tasktype:investigate",
       "kind": "may_take",
@@ -8774,6 +8791,14 @@
       "to": "article:foreign-properties",
       "kind": "part_of",
       "via": "paragraph of ssot/doctrine/foreign-properties.md",
+      "derived": "doctrine-paragraph",
+      "evidence": "derived"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/gates.md#7",
+      "to": "article:gates",
+      "kind": "part_of",
+      "via": "paragraph of ssot/doctrine/gates.md",
       "derived": "doctrine-paragraph",
       "evidence": "derived"
     },

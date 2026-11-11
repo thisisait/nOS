@@ -14,11 +14,11 @@
     "sense": 88,
     "limb": 128,
     "memory": 42,
-    "law": 56,
+    "law": 57,
     "reflex": 47,
     "heartbeat": 1,
     "internal": 79,
-    "edges": 446
+    "edges": 448
   },
   "nodes": {
     "agent:conductor": {
@@ -502,6 +502,10 @@
       "kind": "doctrine"
     },
     "doctrine:ssot/doctrine/foreign-properties.md#5.1": {
+      "level": "law",
+      "kind": "doctrine"
+    },
+    "doctrine:ssot/doctrine/gates.md#7": {
       "level": "law",
       "kind": "doctrine"
     },
@@ -2615,6 +2619,11 @@
       "kind": "part_of"
     },
     {
+      "from": "doctrine:ssot/doctrine/gates.md#7",
+      "to": "article:gates",
+      "kind": "part_of"
+    },
+    {
       "from": "doctrine:ssot/doctrine/immune-system.md#4.1",
       "to": "article:immune-system",
       "kind": "part_of"
@@ -4182,6 +4191,11 @@
     {
       "from": "skill:propose",
       "to": "doctrine:ssot/doctrine/loop-contract.md#constraint-A",
+      "kind": "governed_by"
+    },
+    {
+      "from": "skill:roadmap-integrate",
+      "to": "doctrine:ssot/doctrine/gates.md#7",
       "kind": "governed_by"
     },
     {
