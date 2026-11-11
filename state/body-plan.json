@@ -11,8 +11,8 @@
     "organ system": 13,
     "organism": 0,
     "habitat": 9,
-    "sense": 89,
-    "limb": 128,
+    "sense": 88,
+    "limb": 129,
     "memory": 42,
     "law": 57,
     "reflex": 47,
@@ -766,6 +766,10 @@
       "kind": "effector"
     },
     "effector:geo-project-sites": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:immune-drill": {
       "level": "limb",
       "kind": "effector"
     },
@@ -1526,10 +1530,6 @@
       "kind": "reader"
     },
     "reader:identity-status": {
-      "level": "sense",
-      "kind": "reader"
-    },
-    "reader:immune-drill": {
       "level": "sense",
       "kind": "reader"
     },
