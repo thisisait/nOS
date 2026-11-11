@@ -9,6 +9,7 @@
 import type { Tier } from './tier';
 
 export const BFF_TIERS: Record<string, Tier> = {
+	'/bff/awaiting': 1,
 	'/bff/bone': 1,
 	'/bff/inbox': 1,
 	'/bff/loop': 1,
@@ -36,6 +37,7 @@ export const BFF_TIERS: Record<string, Tier> = {
 
 /** A FaceApp.apiScopes name -> the routes it calls; an app's minTier must reach each. */
 export const SCOPE_ROUTES: Record<string, string[]> = {
+	awaiting: ['/bff/awaiting'],
 	agents: ['/bff/agents', '/bff/agents/[name]/sessions', '/bff/agent-sessions/[uuid]/cancel'],
 	config: ['/bff/config'],
 	inbox: ['/bff/inbox'],

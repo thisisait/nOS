@@ -17,7 +17,7 @@
     "law": 56,
     "reflex": 46,
     "heartbeat": 1,
-    "internal": 78,
+    "internal": 79,
     "edges": 445
   },
   "nodes": {
@@ -1090,6 +1090,10 @@
       "kind": "faceapp"
     },
     "faceapp:anatomy-widget": {
+      "level": "internal",
+      "kind": "faceapp"
+    },
+    "faceapp:awaiting": {
       "level": "internal",
       "kind": "faceapp"
     },

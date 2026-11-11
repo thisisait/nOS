@@ -401,6 +401,18 @@ export function registerBuiltinNativeApps(): void {
 		defaultSize: { w: 760, h: 620 },
 		apiScopes: ['inbox']
 	});
+	// What awaits the operator, read-only (row face-app-awaiting); the Inbox app answers.
+	registerNativeApp({
+		slug: 'awaiting',
+		minTier: 1,
+		title: 'Awaiting you',
+		icon: '⏳',
+		form: 'view',
+		build: 'F2',
+		component: () => import('./AwaitingApp.svelte'),
+		defaultSize: { w: 620, h: 520 },
+		apiScopes: ['awaiting']
+	});
 	// Wing's agents page as a face app (row wing-inc2-agents-timeline).
 	registerNativeApp({
 		slug: 'agents',
