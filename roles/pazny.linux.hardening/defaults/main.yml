@@ -27,8 +27,8 @@ hardening_unattended: true       # automatic security updates
 # ── ufw policy ────────────────────────────────────────────────────────────────
 # Default: deny incoming, allow outgoing. SSH always allowed (loopback
 # self-lockout protection). HTTP/HTTPS opened because nginx faces the
-# operator's network. Tailscale port (UDP 41641) opened opportunistically;
-# leave the rule in place even if Tailscale isn't installed yet.
+# operator's network. An entry with `enabled:` is open only while it renders true and
+# deleted otherwise (Tailscale's UDP 41641 stood open on hosts without Tailscale).
 
 hardening_ufw_default_incoming: "deny"
 hardening_ufw_default_outgoing: "allow"
@@ -36,7 +36,7 @@ hardening_ufw_allowed_services:
   - { proto: "tcp", port: 22,    comment: "SSH" }
   - { proto: "tcp", port: 80,    comment: "HTTP (nginx)" }
   - { proto: "tcp", port: 443,   comment: "HTTPS (nginx)" }
-  - { proto: "udp", port: 41641, comment: "Tailscale" }
+  - { proto: "udp", port: 41641, comment: "Tailscale", enabled: "{{ install_tailscale | default(false) }}" }
 
 # ── fail2ban jails ────────────────────────────────────────────────────────────
 # 2-hour ban on 4 failed SSH attempts is the ANSSI default for human users.

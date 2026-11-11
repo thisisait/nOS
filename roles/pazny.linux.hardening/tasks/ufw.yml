@@ -21,6 +21,16 @@
     port: "{{ item.port | string }}"
     comment: "{{ item.comment | default(item.port | string) }}"
   loop: "{{ hardening_ufw_allowed_services }}"
+  when: item.enabled | default(true) | bool
+
+- name: "[hardening.ufw] Close declared services that are off"
+  community.general.ufw:
+    rule: allow
+    proto: "{{ item.proto }}"
+    port: "{{ item.port | string }}"
+    delete: true
+  loop: "{{ hardening_ufw_allowed_services }}"
+  when: not (item.enabled | default(true) | bool)
 
 # tasks/mdns.yml publishes a .local tenant by mDNS; unicast replies need the port open.
 - name: "[hardening.ufw] mDNS for a .local tenant"
