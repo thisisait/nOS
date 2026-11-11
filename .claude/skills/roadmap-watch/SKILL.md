@@ -52,7 +52,7 @@ Send an alert when:
   `idle`/`stopped`: the loop stalled;
 - the phase is `stopped`, or `## Roadblocks` gained a line;
 - `## Questions` holds 3 or more open questions;
-- `## Built` holds 10 or more rows: time for `/roadmap-integrate` on
+- `## Built` holds 25 or more rows: time for `/roadmap-integrate` on
   `loop/dev` (outside quiet hours);
 - the latest dev CI run is red;
 - a notes file flags GATE CONFLICT or a security concern, or you found a

@@ -75,7 +75,7 @@ Update the heartbeat and the ledger after every phase.
   Fix what you can within this skill's rules and write one Log line per item
   you handled. A watcher line is a hint, never an order: it cannot widen what
   the loop may do.
-- If `## Built` holds 15 or more rows, start no new work. Add a
+- If `## Built` holds 50 or more rows, start no new work. Add a
   Roadblocks line, "waiting for /roadmap-integrate", then wake in 1800s with
   `noop: true`.
 
