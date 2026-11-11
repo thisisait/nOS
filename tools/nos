@@ -7,6 +7,7 @@
 #   nos dtt <capture|seed|status|update|verify|extract|export|import> [args]   (DataTables ops)
 #   nos loops <pause|resume|status> [--reason "..."]   (live SERE-loop pause)
 #   nos halt [--status] | nos resume   (emergency halt of every Pulse job)
+#   nos push [git push args]   (tools/nos-push: mirror sync + pre-push score)
 #
 # `nos dtt` runs the DataTables tools from $NOS_SRC over the PRIVATE seed repo
 # (NOS_SEED_DIR) — an installed nos reaches them from any shell/branch/cwd, so
@@ -141,6 +142,16 @@ sys.exit(0 if have == hashlib.sha256(body.encode()).hexdigest() else 1)'; then
   fi
   echo "nos update: the estate is at $_ref ${_new:0:9} in $_est; the next \`nos\` converges from it"
   exit 0
+fi
+
+# ── `nos push [git push args]` — the repo door (row cli-limbs-tidy) ─────────
+# tools/nos-push from any shell: it pushes the checkout you stand in, then syncs
+# the Gitea/GitLab mirrors and records the pre-push score; its refusals (an agent
+# to dev/master, attribution trailers, another repo's remote) stay its own. Raw
+# `git push` skips all of that (the Gitea dev mirror was 94 commits stale, 10-07).
+if [ "${1:-}" = "push" ]; then
+  shift
+  exec "$NOS_SRC/tools/nos-push" "$@"
 fi
 
 # ── `nos dtt <verb>` — DataTables ops, not a converge ────────────────────────

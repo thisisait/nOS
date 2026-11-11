@@ -90,6 +90,18 @@ parser stops at the first unrecognised token (or `--`) and passes the rest to
 ansible verbatim — a `--remove=*` found INSIDE the passthrough is refused
 (exit 64, "put `--remove` before passthrough tokens"), never silently ignored.
 
+## `nos push` — push this checkout (not a converge)
+
+`nos push [git push args]` runs `tools/nos-push` from `$NOS_SRC` on the checkout you stand in: the push,
+then the Gitea/GitLab mirror sync and the pre-push score. Its refusals stay its own: an agent session
+never pushes to `dev`/`master`, a commit with an attribution trailer is refused, and so is a remote that
+is not this repo's. Use it instead of a raw `git push`, which skips the mirror sync.
+
+```bash
+nos push origin feat/my-branch        # push a branch
+nos push -n origin feat/my-branch     # git push --dry-run (the mirror re-fetch still fires when a token is set)
+```
+
 ## `nos dtt` — DataTables ops (not a converge)
 
 `nos dtt <verb>` runs the roadmap/DataTables tools **from `$NOS_SRC`**, so an
