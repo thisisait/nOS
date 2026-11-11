@@ -294,14 +294,33 @@
   ansible.builtin.assert:
     that:
       - (_removal_outside | from_json) | length == 0
+      - (_removal_protected | from_json) | length == 0
       - "'' not in _removal_roots"
       - (ansible_facts['env']['HOME'] | regex_replace('/+$', '')) not in _removal_roots
     fail_msg: >-
       remove=data refused before deleting anything. Outside every nOS root
       ({{ _removal_roots | join(', ') }}): {{ (_removal_outside | from_json) | join(', ') or 'none' }}.
+      On or around a protected path (backup repo, Docker image, Docker.app):
+      {{ (_removal_protected | from_json) | join(', ') or 'none' }}.
       A root may not be empty, / or $HOME itself. Point the *_dir back under nos_data_root, or
       declare the home in state/genome/owned-paths.yml (a proposal, like a gate).
   vars:
+    # The SSD root is a removal root (services live at <root>/<svc>), so its siblings that hold
+    # the backups and Docker itself are named here: never removed, never an ancestor of a removal.
+    _protected_paths: >-
+      {{ ([restic_repo | default('')] if (restic_repo | default('')).startswith('/') else [])
+         + ([external_storage_root ~ '/nos-restic', external_storage_root ~ '/docker', external_storage_root ~ '/Docker.app']
+            if (configure_external_storage | default(false)) and (external_storage_root | default('') | length > 0) else [])
+         | map('regex_replace', '/+$', '') | list }}
+    _removal_protected: >-
+      {%- set ns = namespace(out=[]) -%}
+      {%- for d in _blank_dirs -%}
+        {%- set dn = d | regex_replace('/+$', '') -%}
+        {%- for pp in _protected_paths if pp -%}
+          {%- if dn == pp or dn.startswith(pp ~ '/') or pp.startswith(dn ~ '/') -%}{%- set ns.out = ns.out + [dn] -%}{%- endif -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{ ns.out | unique | list | to_json }}
     _removal_outside: >-
       {%- set ns = namespace(out=[]) -%}
       {%- for d in _blank_dirs -%}
