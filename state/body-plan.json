@@ -15,10 +15,10 @@
     "limb": 129,
     "memory": 42,
     "law": 57,
-    "reflex": 47,
+    "reflex": 48,
     "heartbeat": 1,
     "internal": 79,
-    "edges": 448
+    "edges": 449
   },
   "nodes": {
     "agent:conductor": {
@@ -1228,6 +1228,10 @@
     "organ_system:wits": {
       "level": "organ system",
       "kind": "organ_system"
+    },
+    "pulse:advisory-patrol:image-sbom": {
+      "level": "reflex",
+      "kind": "pulse"
     },
     "pulse:advisory-patrol:nightly": {
       "level": "reflex",
@@ -3776,6 +3780,11 @@
       "from": "service:pulse",
       "to": "organ_system:clockwork",
       "kind": "part_of"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:advisory-patrol:image-sbom",
+      "kind": "trigger"
     },
     {
       "from": "service:pulse",

@@ -51,6 +51,19 @@ pulse:
       max_concurrent: 1
       findings_exit_codes: [10, 11]
       env: {}
+    # The image SBOM (row one-node-and-image-sbom): every running image's packages, which no pin
+    # names. Pinned syft/grype containers, no docker.sock; exits like the patrol (0 / 10 a fixable
+    # critical / 11 UNKNOWN). Before the patrol, so a morning read sees both.
+    - name: image-sbom
+      category: security
+      runner: subprocess
+      command: "{{ playbook_dir }}/tools/image-sbom.py"
+      schedule: "5 3 * * *"
+      jitter_min: 5
+      max_runtime_s: 2400       # docker save + two scans per image; a GB image takes minutes
+      max_concurrent: 1
+      findings_exit_codes: [10, 11]
+      env: {}
 
 gdpr:
   purpose: "Matching installed software versions against public security advisories"

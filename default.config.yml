@@ -626,6 +626,10 @@ install_thalamus: false
 # Linux builds the thalamus in this image (roles/pazny.thalamus/tasks/linux.yml):
 # tag AND digest, so a re-pushed tag cannot change the compiler.
 thalamus_rust_image: "rust:1.90-bookworm@sha256:3914072ca0c3b8aad871db9169a651ccfce30cf58303e5d6f2db16d1d8a7e58f"
+# tools/image-sbom.py (Pulse advisory-patrol:image-sbom) runs these scanners as containers, never as host
+# packages: tag AND digest, like thalamus_rust_image. A bump is a session commit with the new index digest.
+syft_image: "anchore/syft:v1.57.1@sha256:03215d0e98b661d0ecbc8575dbc14d65be1743b5de5df6410aecb7e80f95b060"
+grype_image: "anchore/grype:v0.121.3@sha256:13113eeceab017260370cf540e1d25442c59665fd07d1b09b66d63bb0c282887"
 # The face's door into thalamus serve (src/relay.rs): loopback only, opened with install_face, read by
 # the plist and the face compose env. 8097: free, beside cortex 8098 and Bone 8099.
 thalamus_relay_port: 8097

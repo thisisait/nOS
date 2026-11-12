@@ -4,9 +4,9 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 591,
-    "edges": 567,
-    "nodes_pulse": 47,
+    "nodes": 592,
+    "edges": 568,
+    "nodes_pulse": 48,
     "nodes_judge": 5,
     "nodes_gateset": 5,
     "nodes_weakness": 7,
@@ -33,7 +33,7 @@
     "nodes_organ_system": 13,
     "nodes_tissue": 1,
     "edges_data": 247,
-    "edges_trigger": 77,
+    "edges_trigger": 78,
     "edges_temporal": 5,
     "edges_mutex": 21,
     "edges_governed_by": 46,
@@ -2782,6 +2782,24 @@
       "source": "files/anatomy/apex/ruling.yml",
       "anchor": "02.02.04",
       "description": "Organ system 'wits' — a public group of organs for one function, declared as an `organ_systems:` group in files/anatomy/apex/ruling.yml"
+    },
+    "pulse:advisory-patrol:image-sbom": {
+      "kind": "pulse",
+      "source": "files/anatomy/plugins/advisory-patrol/plugin.yml",
+      "schedule": "5 3 * * *",
+      "jitter_min": 5,
+      "max_runtime_s": 2400,
+      "category": "security",
+      "paused": false,
+      "findings_exit_codes": [
+        10,
+        11
+      ],
+      "command_name": "image-sbom.py",
+      "claims": [],
+      "runs_agent": null,
+      "anchor": "02.02.08",
+      "description": "Pulse scheduled job (security): runs image-sbom.py on cron `5 3 * * *` — exits [10, 11] mean findings, not failure"
     },
     "pulse:advisory-patrol:nightly": {
       "kind": "pulse",
@@ -10210,6 +10228,14 @@
       "kind": "trigger",
       "via": "the job's command is tools/operator-tasks.py",
       "derived": "pulse-command",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:advisory-patrol:image-sbom",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
       "evidence": "derived"
     },
     {
