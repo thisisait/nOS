@@ -119,7 +119,10 @@ export function migrate(l: Layout | Old): Layout {
 }
 
 type ReaderName = Extract<WidgetSpec, { reader: unknown }>['reader']['reader'];
-const READERS: readonly ReaderName[] = ['red_status', 'loop_runs'];
+// A key per ReaderName, so a reader added to wire.ts without one here is a type error, not a
+// widget silently dropped from every loaded layout (review 2026-11-12).
+const READER_SET = { red_status: true, loop_runs: true } satisfies Record<ReaderName, true>;
+const READERS = Object.keys(READER_SET) as ReaderName[];
 
 /** A widget whose reader names none wire.rs ReaderName knows is left out, by title: serve refuses
  *  the whole layout over one such widget, and without naming it. */

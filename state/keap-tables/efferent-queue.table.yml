@@ -11,7 +11,8 @@
 # table controls a row, so a row is data — shown escaped, never obeyed.
 #
 # Slice 1 is this definition only (UNSEEDED: rows are written at runtime by
-# efferent.py with the operator's own token). Slices 2–3 (efferent.py, the nos-cc
+# efferent.py through KEAP's human door — keap_api.human_headers(), the proxy secret plus the
+# operator identity — so anyone who can reach that secret can write the queue). Slices 2–3 (efferent.py, the nos-cc
 # pane) follow; the e2e is in the row body.
 # =============================================================================
 
@@ -27,7 +28,9 @@ anchors: ["nos.loop"]
 schema:
   columns:
     - { key: slug,        label: "Slug",       kind: text,     role: dimension, required: true, concept: identity.slug }
-    - { key: occurred_at, label: "When",       kind: date,     role: dimension, required: true, concept: time.occurred_at }
+    # ISO-8601 UTC text (KEAP has no datetime kind): tick compares it with a converge recap the same day;
+    # time.occurred_at binds date only, so no concept (CONCEPTLESS in test_keap_table_concepts.py).
+    - { key: occurred_at, label: "When",       kind: text,     role: dimension, required: true }
     - { key: machine,     label: "Machine",    kind: text,     role: dimension, required: true, concept: prov.source }
     - { key: app,         label: "App",        kind: text,     role: dimension, concept: class.group }
     - { key: why,         label: "Why",        kind: text,     role: attribute, required: true, concept: identity.description }
