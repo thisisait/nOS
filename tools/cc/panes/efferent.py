@@ -1,12 +1,10 @@
 """tools/efferent.py list — the commands handed to you, until a reader saw them run.
 
 A row is data any table writer controls. efferent.py already escapes every
-unprintable byte; this pane also escapes Rich markup, because app.py hands a str
-cell to Textual and `[link=…]` in a row would otherwise be obeyed. It never
-offers the raw bytes: `copy:` names the command that prints them.
+unprintable byte; app.py renders every cell and detail value as plain text, so
+`[link=…]` in a row stays literal. It never offers the raw bytes: `copy:` names
+the command that prints them.
 """
-from rich.markup import escape
-
 ID, LABEL, TITLE = "efferent", "Efferent queue", "commands handed to you, closed only when seen"
 READER = "tools/efferent.py"
 ARGS = ("list",)
@@ -22,19 +20,19 @@ DEMO = {"ok": True, "unknown": None, "rows": [
 def build_rows(data):
     if not data.get("ok"):
         raise ValueError(data.get("unknown") or "efferent.py answered not ok")
-    return [{c: escape(str(r.get(c, ""))) for c in COLUMNS} for r in data["rows"]]
+    return [{c: str(r.get(c, "")) for c in COLUMNS} for r in data["rows"]]
 
 
 def _src(row, data):
-    return next((r for r in data["rows"] if escape(str(r.get("slug", ""))) == row["slug"]), {})
+    return next((r for r in data["rows"] if str(r.get("slug", "")) == row["slug"]), {})
 
 
 def detail(row, data):
     r = _src(row, data)
-    out = {k: escape(str(r.get(k) or "")) for k in ("command", "reader", "reader_args", "seen_at")}
-    out["copy"] = escape(f"tools/efferent.py show {r.get('slug', '')} | pbcopy")
+    out = {k: str(r.get(k) or "") for k in ("command", "reader", "reader_args", "seen_at")}
+    out["copy"] = f"tools/efferent.py show {r.get('slug', '')} | pbcopy"
     if not r.get("clean", True):
-        out["problem"] = escape(str(r.get("problem", ""))) + " — show refuses to print it raw"
+        out["problem"] = str(r.get("problem", "")) + " — show refuses to print it raw"
     return out
 
 
