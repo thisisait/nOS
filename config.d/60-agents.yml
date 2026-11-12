@@ -1,0 +1,238 @@
+# ==============================================================================
+# config.d/60-agents.yml — agents: OpenClaw, pi, Hermes, Paperclip, KEAP and the LLM backends (MiniMax, Mistral, xAI, Anthropic) (row config-split-agents).
+#
+# One of the default layers (config.d/*.yml in order, then default.config.yml;
+# the set is tools/nos_identity.default_layers and main.yml vars_files). Every
+# variable is declared in exactly one of them. config.yml still overrides.
+# The install_*/configure_* switches and the version/image pins stay in
+# default.config.yml: the upgrade path writes only that file.
+# ==============================================================================
+
+# User and home directory for the agentic environment
+openclaw_user: "{{ ansible_facts['user_id'] }}"
+
+openclaw_base_dir: "{{ ansible_facts['env']['HOME'] }}"
+
+# Agent system directories
+openclaw_agents_dir: "{{ ansible_facts['env']['HOME'] }}/agents"         # agent installation, configuration
+
+openclaw_projects_dir: "{{ ansible_facts['env']['HOME'] }}/projects"     # projects hosted via nginx
+
+openclaw_log_dir: "{{ ansible_facts['env']['HOME'] }}/agents/log"        # structured .md logs
+
+# OpenClaw configuration (~/.openclaw/)
+openclaw_config_dir: "~/.openclaw"
+
+# Ollama model – recommended for 36GB RAM: qwen3:14b
+# Alternatives: qwen3.5:14b (faster), llama3.3:70b (stronger, slower)
+# Since Ollama 0.19 the MLX backend is used automatically on Apple Silicon
+# (57% faster prefill, 93% faster decode vs llama.cpp)
+openclaw_model: "qwen3:14b"
+
+# ── MiniMax cloud backend for scheduled agents — PREPARED, NOT ARMED ─────────
+# REWIRED 2026-08-13: minimax_enabled no longer arms a catalog injection into
+# every agent job (that estate-wide shape is what ruling 1 in
+# docs/minimax-groundwork.md forbids, and it is gone from
+# discover-pulse-catalog.py). The flag now renders into wing.plist as
+# NOS_ARMED_BACKENDS, where App\AgentKit\BindingResolver reads it — and a
+# backend serves a run ONLY when, in addition, (a) that agent's own agent.yml
+# declares `model.backend: minimax`, (b) the agent's gdpr.processors names the
+# MiniMax processor (its Article-30 record — the binding reads the register,
+# never outruns it), (c) the agent is not deferred and not opus-pinned, and
+# (d) the model ids below are set. Every gate is per agent; the shell-bridge
+# path (pulse-run-agent.sh) always runs on the default backend. The registry
+# of backends is state/habitat/llm-backends.yml. It still does NOT touch
+# ~/.claude/settings.json (the operator's own thread stays on Anthropic).
+# The API key is pasted into credentials.yml and persisted as
+# secret nos:minimax_api_key; the cost_basis honesty path in
+# pulse-run-agent.sh is unchanged (foreign backend → dollar figure dropped).
+minimax_enabled: false
+
+# The tier remaps: AgentKit tiers (claude-haiku/-sonnet primaries) map through
+# these to MiniMax model ids. EMPTY by default — the operator fills them from
+# MiniMax's catalog when arming; an armed backend with an empty model id
+# REFUSES at session open rather than sending a blank model. There is no opus
+# remap by design (ruling 1: opus-pinned code-authoring ceremonies stay on the
+# default backend).
+minimax_model: ""              # -> NOS_MINIMAX_MODEL       (sonnet tier)
+
+minimax_small_model: ""        # -> NOS_MINIMAX_SMALL_MODEL (haiku tier)
+
+# ── Mistral EU backend — PREPARED, NOT ARMED (2026-08-16) ────────────────────
+# The first openai-protocol row in state/habitat/llm-backends.yml (its comment carries
+# the residency facts + control-plane caveats). Arming follows the same
+# five-edit shape as MiniMax: key in credentials.yml, this flag, the model ids
+# (from Mistral's catalog — the operator re-decides the tier pins), plus the
+# per-agent backend + gdpr edits. `api.eu.mistral.ai` prices at 1.1x the base
+# endpoint; that is the residency premium, chosen consciously.
+mistral_enabled: false
+
+mistral_model: ""              # -> NOS_MISTRAL_MODEL       (sonnet tier)
+
+mistral_small_model: ""        # -> NOS_MISTRAL_SMALL_MODEL (haiku tier)
+
+# ── xAI (Grok) — PREPARED, NOT ARMED (2026-09-01) ────────────────────────────
+# The second openai-protocol backend, and it needed no adapter: xAI documents
+# api.x.ai/v1 as OpenAI-SDK-compatible, and OpenAiCompatAdapter is vendor-blank
+# by design. Same five-edit arming as Mistral — key as `xai_api_key` in
+# credentials.yml, this flag, the two model ids, plus the per-agent
+# `model.backend: xai` and gdpr processor entry.
+# NON-EU, DELIBERATELY (state/habitat/llm-backends.yml residency.eu: false): gate 8
+# refuses this row to any agent claiming transfers_outside_eu: false, and gate 6
+# refuses it to every opus-primary code-authoring agent. Both refusals are the
+# point — this backend is reachable only where the Article-30 record says so.
+xai_enabled: false
+
+xai_model: ""                  # -> NOS_XAI_MODEL           (sonnet tier)
+
+xai_small_model: ""            # -> NOS_XAI_SMALL_MODEL     (haiku tier)
+
+# ── Anthropic / MiniMax, OpenAI-compatible — PREPARED, NOT ARMED (2026-10-17) ─
+# Rows anthropic-api and minimax-api in state/habitat/llm-backends.yml: Iris uses them like
+# mistral-eu (iris_backend or the picker). NON-EU: they serve Iris only under gdpr_posture: none.
+# Key: anthropic_api_key / minimax_api_key in credentials.yml. minimax-api reuses minimax_model.
+anthropic_api_enabled: false
+
+anthropic_api_model: "claude-haiku-5-5"        # -> NOS_ANTHROPIC_API_MODEL       (sonnet tier)
+
+anthropic_api_small_model: "claude-haiku-5-5"  # -> NOS_ANTHROPIC_API_SMALL_MODEL (haiku tier)
+
+minimax_api_enabled: false
+
+# Run openclaw as a launchd daemon (always running, autorestart)
+openclaw_install_daemon: true
+
+openclaw_domain: "claw{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
+
+openclaw_gateway_port: 18789
+
+# AgentKit backend row `openclaw` (state/habitat/llm-backends.yml) — prepared, not armed.
+openclaw_backend_enabled: false
+
+# Agent name (persona)
+openclaw_agent_name: "Inspektor Klepítko"
+
+# Concurrent sub-agents
+openclaw_max_concurrent_agents: 4
+
+openclaw_max_concurrent_subagents: 8
+
+# ==============================================================================
+# PI AGENTS – coding agent framework (pi.dev / @mariozechner/pi-coding-agent)
+# Documentation: https://github.com/badlogic/pi-mono
+# Autoresearch extension: https://github.com/davebcn87/pi-autoresearch
+# ==============================================================================
+
+# PI agent directory
+pi_config_dir: "{{ ansible_facts['env']['HOME'] }}/.pi/agent"
+
+# Install pi-autoresearch extension (optimization loop for experiments)
+pi_install_autoresearch: true
+
+hermes_web_port: 18790
+
+hermes_enable_memory: true              # Hermes's own MCP memory server (~/.hermes/memory.json); not nOS memory
+
+keap_domain: "keap{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
+
+keap_port: 8091                                # loopback publish; also the AgentKit surface
+
+# The id every tool defaults to (NOS_ROADMAP_TABLE_ID): the estate's roadmap was
+# minted by hand under a UUID, so a fresh one takes the same id and a restored
+# one is not duplicated. Read by pazny.keap (seeds it) and pazny.thalamus (serves it).
+# ponytail: slug `roadmap` (as on the DGX) needs a re-id.
+keap_roadmap_table_id: "2d498264-bc9a-4324-9935-489e5e4d92f3"
+
+# Seed a few illustrative demo data tables (Reading Log / Field Log / Home
+# Inventory, one per share scope) on a fresh install so the TableStore shows
+# real OLAP-shaped content, not an empty grid. Opt-in + once-only (a marker
+# file); the seed is idempotent. Set false to keep a pristine empty install.
+keap_seed_fixtures: true
+
+# The label-printer BUSINESS fixture (w-fixture, docs/archive/idea/15-business-fixture.md)
+# — nine DataTables (EN 16931 party/tax/address/contact + machines, materials,
+# orders, jobs, job-steps with rowRef joins) seeded from
+# state/fixtures/label-printer.seed.yml. NOT the demo tables above: this is the
+# reproducible-tenant fixture whose data someone's week is meant to depend on.
+# Default OFF — a public nOS install does not grow a label printer unasked; the
+# fixture estate flips it in config.yml. Synthetic people only, enforced by
+# tests/anatomy/test_fixture_tables_declare_the_business.py — real customers
+# wait for the fixture's own Article-30 entry + the company's written yes.
+keap_seed_business_fixture: false
+
+# The SECOND business fixture (docs/idea/15): Kolben IT s.r.o., a synthetic
+# Czech IT-services shop whose core object is a ticket with an SLA deadline
+# (state/keap-tables/kolben-*.table.yml + the shared party table, seeded from
+# state/fixtures/kolben-it.seed.yml). Independent opt-in so enabling Kolben
+# does not drag in the label printer; same synthetic-people rule, enforced by
+# tests/anatomy/test_kolben_fixture_declares_the_business.py.
+keap_seed_kolben_fixture: false
+
+# Accounting fixture (accounting-knowledge-graph): a small CZ chart of accounts
+# mapped to the universal reporting skeleton (nos.accounting.*) + one balanced
+# journal entry (state/fixtures/accounting.seed.yml → account/journal-entry/
+# posting tables). Independent opt-in. Reference data, no PII.
+keap_seed_accounting_fixture: false
+
+# Consulting-firm fixture (consulting-firm-deployment epic, D2): 1 processor +
+# 3 client firms (2 s.r.o. + 1 OSVC), each with its own analytical 311/321
+# account pair, dual-intake invoices (ISDOC + image) and a balanced book
+# (state/fixtures/consulting-firm.seed.yml). MODEL C — data isolation only, no
+# controller/tenant column. Independent opt-in. Synthetic people only,
+# enforced by tests/anatomy/test_consulting_firm_fixture_declares_the_business.py.
+# profiles/praxis.yml is the only committed overlay that turns this on.
+keap_seed_consulting_fixture: false
+
+# system regardless of install state) — profiles/all-on.yml sets it true.
+# Live embedder for free-text semantic search (stored vectors come from the
+# keap-embed-sync Pulse job regardless); without it search_knowledge has no
+# vector leg. On by default wherever Ollama is: Linux reaches it on the docker
+# bridge (ollama_bind_host), Docker Desktop (Mac) through host.docker.internal.
+keap_ollama_url: "{{ '' if not install_ollama else ('http://host.docker.internal:11434' if (ansible_system | default('Darwin')) == 'Darwin' else ollama_url) }}"
+
+# Public bearer-only ingest route (keap.<tld>/ingest/v1 WITHOUT the Authentik
+# middleware) — the DEVICE entry point for AR glasses / mobile companions in
+# the field. Token-gated (keap_agent_token_capture, write-only intake) +
+# rate-limited at the edge. Set false to keep ingest loopback/tailnet-only.
+keap_public_ingest: true
+
+# Browser-extension surface: a Traefik router for keap.<tld>/ext/v1 WITHOUT the
+# Authentik middleware (the MV3 companion is cross-origin + cookieless — an
+# SSO-gated /ext route answers pairing with the login page = "non-JSON 200").
+# The server enforces its own auth (pairing bootstrap public + rate-limited;
+# the rest Bearer-credential). Set false to disable the extension entirely.
+keap_extension_surface: true
+
+# FS-doctrine mirror (KEAP v1.7.0 fs-sync): RO-mount the per-user doctrine tree
+# ({{ nos_data_root }}/tenants/<slug>/users) so per-user files (Nextcloud/euro-office
+# documents, library, inbox — class 3) become knowledge objects, per-user attributed.
+# "nOS" = the self-model tree (keap_selfmodel, reserved uid nos-docs) — without
+# it here fs-sync skips the whole digest (this value OVERRIDES the role default).
+keap_fs_sync: true
+
+keap_fs_sync_dirs: "documents,library,inbox,nOS"
+
+keap_fs_sync_interval_s: 300
+
+# ==============================================================================
+# PAPERCLIP – multi-agent orchestration platform
+# Requires: install_postgresql: true
+# Coordinates AI agents (OpenClaw, Claude Code, Codex) through an org-chart structure
+# ==============================================================================
+
+paperclip_domain: "paperclip{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
+paperclip_port: 3006                              # 3100 collides with Loki
+paperclip_db_name: "paperclip"
+paperclip_db_user: "paperclip"
+paperclip_db_password: "{{ nos_derived_secrets.paperclip }}"
+paperclip_deployment_mode: "authenticated"         # Docker requires 0.0.0.0 → local_trusted does not work
+paperclip_auth_secret: "{{ global_password_prefix }}_pw_paperclip_auth"
+paperclip_openclaw_url: "http://host.docker.internal:{{ openclaw_gateway_port | default(18789) }}"
+paperclip_native_oidc_enabled: false
+# Host folders Paperclip's agents may work in, each mounted at /workspaces/<name> (mode rw|ro,
+# default ro; its .git is always ro, so agents never commit there). Empty = isolated. A client's
+# project, never $HOME, ~/.nos, a .git dir or the data root (refused). In config.yml, e.g.:
+#   paperclip_host_workspaces: [{name: hnedweb, path: /Users/<you>/projects/hnedweb, mode: rw},
+#     {name: nos, path: /Users/<you>/projects/nos-agent, mode: ro, follow: dev}]   # follow: kept at origin/dev each converge
+paperclip_host_workspaces: []
+paperclip_drain_timeout_s: 900                     # a converge waits this long for agent runs to finish before a restart; 0 = restart now
