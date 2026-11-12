@@ -2413,6 +2413,9 @@ bluesky_pds_email_from: ""             # Email sender (default: noreply@<bluesky
 face_domain: "os{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 face_port: 5090                                # loopback debug publish (container binds 5090)
 face_version: "latest"                         # nos/face local image tag (source = vendored tree)
+# The face builds FROM this (build arg FACE_NODE_IMAGE): tag AND digest, the same 24.x line as
+# node_nvm_version. KEAP's Node is pinned in the KEAP repo; this var does not reach it.
+face_node_image: "node:24.22.1-alpine@sha256:06d7adf3e0ef61a13f1d28682726366f97a15aa1888c934d3ecec86c33918b53"
 # Config-DataTable source of truth: KEAP /api/tables (with repo/user-state
 # fallback). Empty by default → the shell uses the repo defaults + user-state
 # until KEAP wiring lands (G2). Set to the KEAP tables API URL to go live.

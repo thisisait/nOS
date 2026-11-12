@@ -4,7 +4,10 @@
 # bakes a HEALTHCHECK on /health so the STRICT in-stream health-wait sees a real
 # health state (A19). SEC-02: the container joins ONLY the Traefik gated_net.
 # =============================================================================
-FROM node:22-alpine AS build
+# FACE_NODE_IMAGE (face_node_image, default.config.yml): tag AND digest. No
+# default on purpose: a build without it fails instead of floating.
+ARG FACE_NODE_IMAGE
+FROM ${FACE_NODE_IMAGE} AS build
 WORKDIR /app
 COPY package.json package-lock.json* ./
 # nos_build_ca (optional BuildKit secret): a TLS-intercepting proxy's CA,
@@ -15,7 +18,7 @@ RUN --mount=type=secret,id=nos_build_ca,required=false \
 COPY . .
 RUN npm run build && npm prune --omit=dev
 
-FROM node:22-alpine AS run
+FROM ${FACE_NODE_IMAGE} AS run
 WORKDIR /app
 ENV NODE_ENV=production
 # adapter-node output + the pruned production deps.
