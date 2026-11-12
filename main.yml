@@ -20,6 +20,7 @@
   vars_files:
     - config.d/10-host-desktop.yml
     - config.d/20-host-software.yml
+    - config.d/30-edge.yml
     - config.d/50-observability.yml
     - config.d/70-geo.yml
     - default.config.yml
@@ -287,6 +288,7 @@
       loop:
         - "{{ playbook_dir }}/config.d/10-host-desktop.yml"
         - "{{ playbook_dir }}/config.d/20-host-software.yml"
+        - "{{ playbook_dir }}/config.d/30-edge.yml"
         - "{{ playbook_dir }}/config.d/50-observability.yml"
         - "{{ playbook_dir }}/config.d/70-geo.yml"
         - "{{ playbook_dir }}/default.config.yml"
