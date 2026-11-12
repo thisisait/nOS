@@ -35,6 +35,6 @@ layout:
   ids: "workspace and item ids are [A-Za-z0-9_-]{1,64}, unique in the file; a widget id is its wire token; active names a workspace"
   name: "at most 40 chars"
   title: "a widget's or a frame's title, and a heading's text: at most 120 chars"
-  spec: "a widget's exactly one WidgetSpec of thalamus-shell.yml `widget` (rows | chart | form | kpi); two keys or an unknown key refused; a heading or a frame has none"
+  spec: "a widget's exactly one WidgetSpec of thalamus-shell.yml `widget` (rows|chart|form|kpi|knowledge|reader); two keys or an unknown key refused; a heading or a frame has none"
   chat: "CSS px of the window (integers; w, h >= 0); clampChat keeps it on screen on load and on resize"
   face: "v3 broke v2's promise that integer twelfths map onto face LayoutCellSpec fractions: world px have no column. The face is to read v3 itself (roadmap), reusing the format, not the code"

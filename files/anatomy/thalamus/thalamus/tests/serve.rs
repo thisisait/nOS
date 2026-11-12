@@ -3171,6 +3171,24 @@ fn red_status_for_iris_is_tier_one_only() {
     assert!(tool_result(&rig, 1)["error"].as_str().is_some_and(|e| e.contains("not yours to see")));
 }
 
+/// v18: a reader widget runs the tool's own function, so its tier check: below tier 1 it is Refused, naming the widget.
+#[test]
+fn a_reader_widget_is_tier_one_only_and_names_the_widget() {
+    for (name, reader_name, want) in [("wr-red", "red_status", "not yours to see; the estate's red state is UNKNOWN, not zero"),
+                                       ("wr-loop", "loop_runs", "tier 1 only")] {
+        let rig = rig_n(name, mapped(), vec![], vec![answer("never")]);
+        reader(&rig, "red-status.py", RED);
+        let (session, w) = run_widget(&rig, "w7", serde_json::json!({"reader": {"reader": reader_name}}));
+        assert_eq!((&w["t"], &w["widget"]), (&serde_json::json!("refused"), &serde_json::json!("w7")), "{name}: {w}");
+        assert!(w["reason"].as_str().is_some_and(|r| r.contains(want)), "{name}: {w}");
+        assert!(events(&rig.ledger, &session).iter().any(|e| e.1 == "agent:iris/tool:widget_reader"), "{name}: recorded as widget_reader");
+    }
+    let rig = rig_n("wr-admin", admin(), vec![], vec![answer("never")]);
+    reader(&rig, "red-status.py", RED);
+    let (_, w) = run_widget(&rig, "w7", serde_json::json!({"reader": {"reader": "red_status"}}));
+    assert_eq!((&w["t"], &w["component"]["kind"]), (&serde_json::json!("widget"), &serde_json::json!("red_status")), "{w}");
+}
+
 // --- iris-agent-dendrogram inc.1: read_run draws one Wing agent run as a tree, serve-built ---
 
 const RUN_UUID: &str = "5e2a9c41-7b3d-4f6e-8a1c-2d3e4f5a6b7c";

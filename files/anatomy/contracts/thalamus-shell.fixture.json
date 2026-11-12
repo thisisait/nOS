@@ -1,5 +1,5 @@
 {
-  "contract_version": 17,
+  "contract_version": 18,
   "to_thalamus": [
     {"case": "first turn opens a session", "msg": {"t": "turn", "session": null, "text": "find rows about backups in the roadmap"}},
     {"case": "turn in a session", "msg": {"t": "turn", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "text": "set its status to done"}},
@@ -15,6 +15,7 @@
     {"case": "a widget form is submitted", "msg": {"t": "form_submit", "form": "5f0c1b2a-3d4e-4f5a-8b6c-7d8e9f0a1b2c", "widget": "w4", "values": {"amount": 42, "kind": "tools", "when": "2026-10-13", "paid": true}}},
     {"case": "a widget re-runs a kpi total", "msg": {"t": "widget", "widget": "w5", "spec": {"kpi": {"query": {"table": "expenses", "where": [{"column": "kind", "op": "eq", "value": "travel"}]}, "op": "sum", "y": "amount", "unit": "Kč"}}, "trigger": "table_changed"}},
     {"case": "a pinned knowledge tree re-runs", "msg": {"t": "widget", "widget": "w6", "spec": {"knowledge": {"node": "02.02.03.01.03"}}, "trigger": "restore"}},
+    {"case": "a reader widget re-runs red status", "msg": {"t": "widget", "widget": "w7", "spec": {"reader": {"reader": "red_status"}}, "trigger": "restore"}},
     {"case": "the person answers a choice", "msg": {"t": "choice_reply", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "choice": "3c9e1d2f-4a5b-4c6d-8e7f-9a0b1c2d3e4f", "picked": ["expenses"]}},
     {"case": "the person works for a client", "msg": {"t": "working_for", "scope": {"client": "acme"}}},
     {"case": "the person works on personal data", "msg": {"t": "working_for", "scope": "personal"}},
@@ -113,6 +114,8 @@
     {"case": "a delete of a row other than the one named", "msg": {"t": "approval_request", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "approval": "2c6b7a8f-9d0e-4f1a-8b2c-6d7e8f9a0b1c", "component": {"kind": "row_diff_approval", "props": {
       "table": "iris-bench-2", "title": "iris-bench-2", "op": "delete", "row_id": "r19", "warning": "you asked for \"10\"; this row is \"bench row 19\"",
       "cells": [{"key": "title", "old": "bench row 19", "new": null}]}}}},
+    {"case": "a reader widget's red status", "msg": {"t": "widget", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "widget": "w7", "component": {"kind": "red_status", "props": {"red_count": 0, "reds": [], "hold_count": 1, "holds": ["loop sere paused"]}}}},
+    {"case": "a reader widget refused below tier 1", "msg": {"t": "refused", "reason": "not yours to see; the estate's red state is UNKNOWN, not zero", "widget": "w7"}},
     {"case": "refusal", "msg": {"t": "refused", "reason": "login carol has no row in the identity map"}},
     {"case": "a refused widget names it", "msg": {"t": "refused", "reason": "no column `kinds` in Expenses; columns: when, kind, amount", "widget": "w2"}},
     {"case": "the model is asked", "msg": {"t": "activity", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "phase": "thinking"}},
@@ -304,7 +307,8 @@
     {"case": "a setting key that is not dotted lowercase", "line": "{\"t\":\"setting\",\"key\":\"Pulse.Paused\",\"value\":{}}"},
     {"case": "decision outside the two words", "line": "{\"t\":\"approval_decision\",\"approval\":\"7d1c2b3a-4e5f-4a6b-9c8d-1e2f3a4b5c6d\",\"decision\":\"maybe\",\"note\":null}"},
     {"case": "turn session is not a uuid", "line": "{\"t\":\"turn\",\"session\":\"../x\",\"text\":\"hi\"}"},
-    {"case": "a widget spec with two keys", "line": "{\"t\":\"widget\",\"widget\":\"w1\",\"spec\":{\"rows\":{\"table\":\"expenses\"},\"form\":{\"table\":\"expenses\"}},\"trigger\":\"click\"}"},
+    {"case": "a reader widget naming no known reader", "line": "{\"t\":\"widget\",\"widget\":\"w7\",\"spec\":{\"reader\":{\"reader\":\"rm\"}},\"trigger\":\"click\"}"},
+    {"case": "a widget spec with two keys","line": "{\"t\":\"widget\",\"widget\":\"w1\",\"spec\":{\"rows\":{\"table\":\"expenses\"},\"form\":{\"table\":\"expenses\"}},\"trigger\":\"click\"}"},
     {"case": "a widget chart with an unknown op", "line": "{\"t\":\"widget\",\"widget\":\"w1\",\"spec\":{\"chart\":{\"query\":{\"table\":\"expenses\"},\"chart\":\"bar\",\"x\":\"kind\",\"op\":\"median\"}},\"trigger\":\"click\"}"},
     {"case": "a widget token with a space", "line": "{\"t\":\"widget\",\"widget\":\"w 1\",\"spec\":{\"rows\":{\"table\":\"expenses\"}},\"trigger\":\"click\"}"},
     {"case": "a widget with an unknown trigger", "line": "{\"t\":\"widget\",\"widget\":\"w1\",\"spec\":{\"rows\":{\"table\":\"expenses\"}},\"trigger\":\"timer\"}"},

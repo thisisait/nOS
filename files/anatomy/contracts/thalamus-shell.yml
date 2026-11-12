@@ -2,7 +2,7 @@
 # Protocol: ssot/doctrine/cross-repo-contracts.md §1 (spec + fixture + gates
 # over the same bytes). Both sides link one Rust crate (nos-contract), so the
 # gate is the crate decoding the fixture; one copy only, both sides cite this.
-contract_version: 17   # 17: approvals_open (both ways); 16: questions (both ways), answer, answer_result; 15: setting, state settings; 14: halt, lift_halt, state act; 13: state (both ways); 12: callout, steps, sources, follow_up; 11: dendrogram; 10: knowledge_tree, widget spec knowledge; 9: resume workspace, clear, branch, stop, model_state; 8: catalogue (both ways), limbs, act, acted, action_approval; 7: resume, workspace_load, workspace_save, workspace, said, replay; 6: dashboard, kpi, working_for, model_options, model_pick; 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice, delta, sequence; 5: row_diff_approval op/title/read_from
+contract_version: 18   # 18: widget spec reader, a widget answers red_status, table, timeline; 17: approvals_open (both ways); 16: questions (both ways), answer, answer_result; 15: setting, state settings; 14: halt, lift_halt, state act; 13: state (both ways); 12: callout, steps, sources, follow_up; 11: dendrogram; 10: knowledge_tree, widget spec knowledge; 9: resume workspace, clear, branch, stop, model_state; 8: catalogue (both ways), limbs, act, acted, action_approval; 7: resume, workspace_load, workspace_save, workspace, said, replay; 6: dashboard, kpi, working_for, model_options, model_pick; 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice, delta, sequence; 5: row_diff_approval op/title/read_from
 fixture: files/anatomy/contracts/thalamus-shell.fixture.json
 
 producer:
@@ -28,7 +28,8 @@ wire:
   widget: >-
     A widget is a spec the person placed; the face Iris re-runs it over `widget {widget, spec, trigger}`
     and the thalamus answers as that person, without the model, with `widget {session, widget,
-    component}` (table_results, a chart that may have no points yet, a form or a kpi) or `refused
+    component}` (table_results, a chart that may have no points yet, a form, a kpi, a knowledge_tree, or a
+    reader's red_status, table or timeline) or `refused
     {reason, widget}`. `widget` is the face Iris's token [A-Za-z0-9_-]{1,64}, echoed, never a thalamus
     id. spec is exactly one of {rows: query_rows arguments}, {chart: {query {table, q?, where?},
     chart bar|line|pie, x column, y? number column, op count|sum|avg}} (aggregated by the thalamus:
@@ -38,7 +39,10 @@ wire:
     it answers), {kpi: {query {table, q?, where?}, op count|sum|avg, y? number column, unit?}} (one total
     over the query's rows by the thalamus, as query_rows with op and no group_by; an avg over no number is
     refused, never 0), {knowledge: {node}} (the tree around one taxonomy node, read by the thalamus as the
-    person from KEAP's /api/taxonomy-metadata/<node> and /api/graph). trigger: click|restore|table_changed,
+    person from KEAP's /api/taxonomy-metadata/<node> and /api/graph), {reader: {reader red_status|loop_runs}}
+    (v18: a closed set, an unknown name refused at decode; the thalamus runs the red_status or read_loop_runs
+    tool's own function as the person, loop_runs for loop sere, so tier 1 only and an unread red state is
+    refused as UNKNOWN, never zero; not offered on a dashboard yet). trigger: click|restore|table_changed,
     recorded with the spec in the ledger. A widget's rows never let the model propose an edit.
   pin: >-
     `render {session, component, pin?}`: `pin` is the widget spec (as above, and checked as a widget

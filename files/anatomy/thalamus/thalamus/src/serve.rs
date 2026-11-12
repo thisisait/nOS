@@ -11,7 +11,7 @@ use nos_contract::renderers::{is_date, ActionApproval, ApprovalsList, Axis, Cell
                                Dropped, FieldKind, Form, FormField, InboxItem, InboxList, KnowledgeNode, KnowledgeTree, need_node_id, Lens, LensOp, Lines, List, ListItem, Omitted, Parent, RedStatus,
                                Row, RowDiffApproval, SchemaColumn, ColumnAddApproval, ColumnKind, ExistingColumn, Series, Table, TableResults, TableSchemaApproval, Timeline, TimelineItem, Visibility};
 use nos_contract::wire::{check_params, check_spec, decode_to_thalamus, encode, CatalogueColumn, CatalogueTable, ChartSpec, EstateState, ControlView, Decision, FormSpec,
-                         KnowledgeSpec, KpiSpec, Limb, Op, ParamKind, Phase, Scope, ModelOption, OpenApproval, ToShell, ToThalamus, Trigger, WidgetChart, WidgetSpec, MAX_REPLAY};
+                         KnowledgeSpec, KpiSpec, Limb, ReaderName, Op, ParamKind, Phase, Scope, ModelOption, OpenApproval, ToShell, ToThalamus, Trigger, WidgetChart, WidgetSpec, MAX_REPLAY};
 use nos_contract::uid;
 use crate::store;
 use serde_json::{json, Map, Value};
@@ -3050,7 +3050,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                         send(out, &ToShell::Render { session: o.session.clone(), component: Component::Table(table), pin: None });
                         v
                     }),
-                    "red_status" => self.red(who).map_err(|why| format!("{why}; the estate's red state is UNKNOWN, not zero"))
+                    "red_status" => self.red_said(who)
                         .map(|r| {
                             let v = serde_json::to_value(&r).unwrap_or(Value::Null);
                             let _ = self.record(o, Kind::ToolResult, Some(name), v.clone());
@@ -3139,7 +3139,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                     }),
                     // Checked as the person against the live schema only: no row is read and no widget runs.
                     "offer_dashboard" => self.offer_dashboard(who, &args).map(|d| {
-                        let kind = |s: &WidgetSpec| match s { WidgetSpec::Rows(_) => "rows", WidgetSpec::Chart(_) => "chart", WidgetSpec::Form(_) => "form", WidgetSpec::Kpi(_) => "kpi", WidgetSpec::Knowledge(_) => "knowledge" };
+                        let kind = |s: &WidgetSpec| match s { WidgetSpec::Rows(_) => "rows", WidgetSpec::Chart(_) => "chart", WidgetSpec::Form(_) => "form", WidgetSpec::Kpi(_) => "kpi", WidgetSpec::Knowledge(_) => "knowledge", WidgetSpec::Reader(_) => "reader" };
                         let _ = self.record(o, Kind::ToolResult, Some(name), json!({"name": d.name, "dropped": d.dropped.len(),
                             "widgets": d.widgets.iter().map(|w| json!({"kind": kind(&w.spec), "table": spec_table(&w.spec)})).collect::<Vec<_>>()}));
                         let v = json!({"offered": d.name, "widgets": d.widgets.iter().map(|w| &w.title).collect::<Vec<_>>(), "dropped": d.dropped,
@@ -4101,6 +4101,11 @@ impl Server {
             .map_err(|e| format!("red-status.py: unexpected shape: {e}"))
     }
 
+    /// red() as the red_status tool and a reader widget say it: an unread red state is never zero.
+    fn red_said(&self, who: &Person) -> Result<RedStatus, String> {
+        self.red(who).map_err(|why| format!("{why}; the estate's red state is UNKNOWN, not zero"))
+    }
+
     /// tier 1 is also KEAP's admin set (authentik_rbac_tiers tier 1 = nos-admins, nos-providers).
     fn is_tier1(&self, who: &Person) -> bool {
         who.groups.iter().any(|g| self.tier1.contains(g))
@@ -4233,6 +4238,7 @@ impl Server {
             WidgetSpec::Form(f) => ("widget_form", json!({"table": f.table, "kind": "form"})),
             WidgetSpec::Kpi(k) => ("widget_kpi", json!({"table": k.query.table, "kind": "kpi", "op": k.op})),
             WidgetSpec::Knowledge(k) => ("widget_knowledge", json!({"node": k.node, "kind": "knowledge"})),
+            WidgetSpec::Reader(r) => ("widget_reader", json!({"reader": r.reader, "kind": "reader"})),
         };
         used["widget"] = json!(widget);
         used["trigger"] = json!(trigger);
@@ -4250,6 +4256,11 @@ impl Server {
             WidgetSpec::Knowledge(k) => self.node(who, &k.node).and_then(|(meta, _)| self.knowledge_tree(who, &k.node, &meta))
                 .map(|t| (json!({"node": t.focus, "nodes": t.nodes.len(), "hidden": t.hidden}), t))
                 .map(|(rec, t)| (Component::KnowledgeTree(t), rec)),
+            // The tools' own functions, so the tier check is theirs (is_tier1), not a copy.
+            WidgetSpec::Reader(r) => match r.reader {
+                ReaderName::RedStatus => self.red_said(who).map(|x| (Component::RedStatus(x.clone()), json!(x))),
+                ReaderName::LoopRuns => self.read_loop_runs(who, &json!({"loop": "sere"})),
+            },
             WidgetSpec::Form(_) if o.forms.len() >= MAX_FORMS =>
                 Err(format!("this session holds {MAX_FORMS} forms; remove one first")),
             WidgetSpec::Form(f) => self.form_from_schema(who, &f.table, f.columns.as_deref()).and_then(|x| shaped(x, f)).map(|f| {
@@ -4461,6 +4472,7 @@ impl Server {
             WidgetSpec::Chart(c) => self.matched(who, &lensed(chart_args(c)), false)?.schema,
             WidgetSpec::Kpi(k) => self.matched(who, &lensed(kpi_args(k)), false)?.schema,
             WidgetSpec::Knowledge(_) => return Err("a knowledge tree is pinned from read_node, never offered on a dashboard".into()),
+            WidgetSpec::Reader(_) => return Err("a reader widget is not offered on a dashboard yet".into()),
             WidgetSpec::Form(f) => shaped(self.form_from_schema(who, &f.table, f.columns.as_deref())?, f)?.fields.iter()
                 .map(|f| json!({"key": f.key, "kind": f.kind, "options": f.options}).as_object().cloned().unwrap_or_default()).collect(),
         };
@@ -5154,7 +5166,7 @@ fn spec_table(s: &WidgetSpec) -> String {
         WidgetSpec::Chart(c) => c.query.table.clone(),
         WidgetSpec::Form(f) => f.table.clone(),
         WidgetSpec::Kpi(k) => k.query.table.clone(),
-        WidgetSpec::Knowledge(_) => String::new(),
+        WidgetSpec::Knowledge(_) | WidgetSpec::Reader(_) => String::new(),
     }
 }
 

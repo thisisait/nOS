@@ -30,7 +30,9 @@
 					? 'kpi'
 					: 'knowledge' in s
 						? 'knowledge'
-						: 'form';
+						: 'reader' in s
+							? 'reader'
+							: 'form';
 </script>
 
 <section class="dashboard">
