@@ -48,14 +48,18 @@ ruling it cites.
   after two full runs, drop the guilty branch and put it in `## Roadblocks`.
 - Remove the suite worktree on every exit path.
 
-## 4. Postproduction (optional, larger batches)
+## 4. Postproduction (every batch)
 
-Run a Fable review of the batch diff (`git diff origin/dev...integrate/<date>`)
+Run a Fable review of the batch diff (2026-11-12: 12 findings in 4 batches, none caught by the
+loop's lanes) (`git diff origin/dev...integrate/<date>`)
 for security, simplicity and coherence. Fix what it finds and rerun the
 affected lanes. If the fixes touch code, run the full suite once more.
 
 ## 5. Hand off
 
+- After the LAST commit (review fixes included) run `python3 tools/regenerate.py --check`; stale
+  means regenerate and commit again (2026-11-12: a fix after the regenerate turned dev CI red).
+- A one-off check never reaches a live service: stub the client, or read a fixture.
 - Push the batch with `tools/nos-push origin integrate/<date>`.
 - Write `~/.cache/nos-roadmap-loop/batch-<date>.md` with:
   - the land command:
