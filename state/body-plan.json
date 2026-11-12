@@ -13,7 +13,7 @@
     "habitat": 9,
     "sense": 88,
     "limb": 129,
-    "memory": 42,
+    "memory": 43,
     "law": 57,
     "reflex": 48,
     "heartbeat": 1,
@@ -2146,6 +2146,10 @@
       "kind": "table"
     },
     "table:dock": {
+      "level": "memory",
+      "kind": "table"
+    },
+    "table:efferent-queue": {
       "level": "memory",
       "kind": "table"
     },

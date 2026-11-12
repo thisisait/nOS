@@ -69,6 +69,8 @@ def _vendored_concept_ids() -> set[str] | None:
 # instruction in test_declared_concepts_exist_in_the_vendored_vocabulary,
 # and the concepts to propose upstream are named per row.
 CONCEPTLESS = {
+    "efferent-queue.command": "the exact text a person runs; no concept for it yet — needs action.command (ruling 2026-11-12, efferent-queue)",
+    "efferent-queue.reader_args": "arguments of a closed-list reader; needs evidence.args alongside evidence.verification",
     "party.trading_name": "secondary name; identity.name is (rightly) the legal name — needs identity.alias",
     "party.country": "no geography concept exists — needs place.country",
     "party-address.street": "no postal concepts exist — needs place.street",
@@ -316,6 +318,8 @@ def test_a_concept_binds_only_the_kinds_it_allows():
 # NEXT definition to drift out of the seeder is caught the day it happens
 # instead of being found by hand a release later.
 UNSEEDED = {
+    "efferent-queue": "rows are written at runtime by tools/efferent.py with the operator's own token "
+                      "(ruling 2026-11-12, efferent-queue slice 1); nothing to seed.",
     "apps": "fed by the app generator, not the playbook seeder — wiring it is a decision",
     "systems": "fed by the service registry — same",
     "repo": "digest OUTPUT — rows come from the repos importer (digest-import-repos.py) "

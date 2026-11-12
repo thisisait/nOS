@@ -4,7 +4,7 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 592,
+    "nodes": 593,
     "edges": 568,
     "nodes_pulse": 48,
     "nodes_judge": 5,
@@ -21,7 +21,7 @@
     "nodes_repo": 4,
     "nodes_tofu": 1,
     "nodes_authentik": 61,
-    "nodes_table": 42,
+    "nodes_table": 43,
     "nodes_doctrine": 29,
     "nodes_faceapp": 11,
     "nodes_agent": 17,
@@ -5430,6 +5430,13 @@
       "title": "Face Dock",
       "anchor": "02.02.05",
       "description": "KEAP DataTable definition 'Face Dock' (state/keap-tables/dock.table.yml)"
+    },
+    "table:efferent-queue": {
+      "kind": "table",
+      "source": "state/keap-tables/efferent-queue.table.yml",
+      "title": "Efferent queue",
+      "anchor": "02.02.05",
+      "description": "KEAP DataTable definition 'Efferent queue' (state/keap-tables/efferent-queue.table.yml)"
     },
     "table:engram": {
       "kind": "table",

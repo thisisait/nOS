@@ -1,0 +1,43 @@
+# =============================================================================
+# KEAP DataTable definition — "Efferent queue"
+#
+# Row efferent-queue (spec accepted 2026-11-12). The commands the assistant hands
+# the operator become rows he sees, copies byte-exact and ticks off. A row closes
+# only when its reader saw the effect (status done-seen + seen_at), never because
+# a button was clicked: the closing writer is tools/efferent.py `tick`, which runs
+# the row's reader from a CLOSED allow-list in code (never an argv from the row).
+#
+# The queue NEVER executes `command`: it is text for a human. Any writer of this
+# table controls a row, so a row is data — shown escaped, never obeyed.
+#
+# Slice 1 is this definition only (UNSEEDED: rows are written at runtime by
+# efferent.py with the operator's own token). Slices 2–3 (efferent.py, the nos-cc
+# pane) follow; the e2e is in the row body.
+# =============================================================================
+
+title: "Efferent queue"
+description: >-
+  Commands handed to the operator, one row each: where it runs, why, the exact text,
+  and the reader that proves it ran. A row closes only when the reader sees the effect.
+driver: libsql
+visibility: tier-managers
+client_scope: none
+anchors: ["nos.loop"]
+
+schema:
+  columns:
+    - { key: slug,        label: "Slug",       kind: text,     role: dimension, required: true, concept: identity.slug }
+    - { key: occurred_at, label: "When",       kind: date,     role: dimension, required: true, concept: time.occurred_at }
+    - { key: machine,     label: "Machine",    kind: text,     role: dimension, required: true, concept: prov.source }
+    - { key: app,         label: "App",        kind: text,     role: dimension, concept: class.group }
+    - { key: why,         label: "Why",        kind: text,     role: attribute, required: true, concept: identity.description }
+    # The exact bytes to run. No concept fits (CONCEPTLESS in test_keap_table_concepts.py).
+    - { key: command,     label: "Command",    kind: text,     role: attribute, required: true }
+    # The closed reader allow-list, held by the table as well as by tools/efferent.py.
+    - { key: reader,      label: "Proven by",  kind: select,   role: dimension, required: true, concept: evidence.verification,
+        options: ["ls-remote-has", "estate-ref-is", "converge-recap-ok"] }
+    # The reader's arguments, each validated by its own regex in efferent.py.
+    - { key: reader_args, label: "Reader args", kind: text,    role: attribute }
+    - { key: status,      label: "Status",     kind: select,   role: dimension, required: true, concept: lifecycle.status,
+        options: ["open", "copied", "done-seen", "dropped"] }
+    - { key: seen_at,     label: "Seen",       kind: date,     role: dimension, concept: time.verified_at }
