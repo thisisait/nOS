@@ -237,6 +237,7 @@ posts, restarts or renders something.
 - `dtt-table.py` — Per-user DataTable verbs from the shell (list/create/share/visibility) through the KEAP identity outpost; the `nos dtt` table surface on the DGX recipe.
 - `paperclip-company.py` — A Paperclip company declared in its repo (`ssot/company.yml` + `agents/<name>/AGENTS.md`) made real through Paperclip's API: names, roles, model, budget, concurrency, paused/active, prompts (`login`, `plan`, `apply --confirm`).
 - `keap-tables.py` — Every KEAP DataTable (rows + history) to a bundle before a blank and back after it (`nos dtt export|import`, dry run unless --confirm); the blank runs both.
+- `morning-verdict.py` — What each reader said this morning, one `morning-verdict` row per reader (the reader's own verdict, never a second judge; UNKNOWN on no answer in 60 s); Pulse `keap-base:morning-verdict` runs `--write` at 07:10 UTC, exits 0 / 10 RED / 11 UNKNOWN / 1 write failed.
 - `keap-recall-queries.py` — Emit the KEAP recall-query set from the estate's SKILLS.md trigger lines.
 - `keap-recall.py` — Read-only KEAP recall (RO bearer): ranked passages with node ids; wraps keap-semantic-search.py + keap-recall-queries.py; empty recall is a miss.
 - `keap-reid-rows.py` — Make every row of a KEAP DataTable addressable by its own business key.
