@@ -30,7 +30,8 @@ Usage:
     tools/agent-status.py --json
     tools/agent-status.py --run <uuid>   # one run as JSON, for the thalamus's read_run
 
-Exit 0 always. It reports; it never starts, stops or reaps a run.
+Exit 0 always. It reports; it never starts, stops or reaps a run. `--json` carries
+verdict OK/RED/UNKNOWN + why + counts (RED = a hung run) for tools/morning-verdict.py.
 """
 
 from __future__ import annotations
@@ -204,6 +205,23 @@ def run(uuid: str) -> dict:
     return out
 
 
+def verdict(report: dict) -> tuple[str, str, dict]:
+    """The pane in one word (row morning-verdict), --json only: RED = a run open longer
+    than the wall clock (the pane's own call-out); UNKNOWN = wing.db unreadable; else OK.
+    The tally's shape is reported in `why`, not judged: which stop reasons count as done is
+    not this reader's to rule."""
+    if report.get("error"):
+        return "UNKNOWN", report["error"], {}
+    hung = [r for r in report["running"] if r.get("hung")]
+    counts = {"running": len(report["running"]), "hung": len(hung),
+              "runs_14d": sum(t["n"] for t in report["tally_14d"])}
+    tally = " · ".join(f"{t['how']} {t['n']}" for t in report["tally_14d"][:4]) or "no runs"
+    if hung:
+        h = hung[0]
+        return "RED", f"{len(hung)} run(s) open past the wall clock: {h['agent']} {h['uuid']} {h['age']}", counts
+    return "OK", f"no hung run; 14d: {tally}", counts
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--limit", type=int, default=10)
@@ -217,6 +235,7 @@ def main() -> int:
         return 0
 
     report = collect(args.limit)
+    report["verdict"], report["why"], report["counts"] = verdict(report)
     if args.json:
         json.dump(report, sys.stdout, indent=2, sort_keys=True)
         sys.stdout.write("\n")
