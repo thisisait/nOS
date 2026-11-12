@@ -134,3 +134,8 @@ e2e:
     - name: oidc-start-reaches-authentik
       url: https://{{ jellyfin_domain | default('media' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/sso/OID/start/{{ jellyfin_oidc_provider_name }}
       expect: {status: [302, 303, 307], location_contains: "{{ authentik_domain }}/application/o/authorize"}
+    # A TV or phone app signs in with Quick Connect (row jellyfin-tv-login): the endpoint answers a bare
+    # JSON `true` when it is on, anonymously (measured 2026-11-03). Path "" is the whole body.
+    - name: quick-connect-enabled
+      url: https://{{ jellyfin_domain | default('media' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/QuickConnect/Enabled
+      expect: {status: [200], json_equals: {"": true}}
