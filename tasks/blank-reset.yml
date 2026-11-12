@@ -328,6 +328,13 @@
 # ── 7/8. Auto-deps + _blank_dirs: MOVED to tasks/removal-set.yml (single
 # removal inventory — one list, consumed by dry-run, execution, and verify).
 
+# Row nos-owned-paths-recheck-before-rm: removal-set.yml asserted the owned roots at the start of the
+# run; this delete comes after the whole teardown, minutes later, time enough for a root or an ancestor
+# of one to be swapped for a symlink (file: absent lstats only the last component). Resolve and assert
+# the removal set again here (set_facts, a stat and the assert: no side effect), so check and rm touch.
+- name: "[BLANK] Re-check the removal set right before the delete (tasks/removal-set.yml)"
+  ansible.builtin.include_tasks: removal-set.yml
+
 - name: "[BLANK] Remove data directories (sudo - Docker creates files as www-data)"
   ansible.builtin.file:
     path: "{{ item }}"
