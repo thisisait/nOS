@@ -45,6 +45,7 @@ defect. If you want a hook, read the JSON and decide there.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import pathlib
@@ -1086,6 +1087,61 @@ def advisories() -> dict | None:
             "blind": [n for n, s in rep.get("sources", {}).items() if s.get("state") == "UNKNOWN"]}
 
 
+PREPUSH_LOG = pathlib.Path.home() / ".nos" / "events" / "prepush-scores.jsonl"
+PREPUSH_DEFINITION = {"checker_sha256": "tools/prepush-score.py", "prompt_sha256": "tools/prepush-score.prompt.txt"}
+UNREVIEWED_WINDOW = timedelta(hours=26)   # the nightly heartbeat's window
+
+
+def _committed_sha256(rel: str) -> set[str]:
+    """sha256 of the raw bytes of every version of `rel` committed on ANY ref (prepush-score's own _sha
+    rule). A version only a deleted branch held is gone: no ref holds it, so nobody can read what ran.
+    ponytail: one git show per commit touching the file, O(versions); at a few hundred, cat-file --batch."""
+    commits = subprocess.run(["git", "-C", str(REPO), "log", "--all", "--format=%H", "--", rel],
+                             capture_output=True, text=True, check=True, timeout=30).stdout.split()
+    out = set()
+    for c in commits:
+        r = subprocess.run(["git", "-C", str(REPO), "show", f"{c}:{rel}"], capture_output=True, timeout=30)
+        if r.returncode == 0:   # the path absent at that commit adds nothing
+            out.add(hashlib.sha256(r.stdout).hexdigest())
+    return out
+
+
+def unreviewed_cells(log: pathlib.Path = PREPUSH_LOG) -> list[dict] | None:
+    """Apoptosis, report only (row immune-apoptosis-regulator, slice 1): prepush-score runs of the last
+    26 h whose checker or prompt matches NO committed version. Their scores are not evidence until the
+    definition is committed. A run with a MISSING file is UNKNOWN; a malformed record is counted. A log
+    never written is absent (nothing pushed here), not red; an unreadable log or no git is None."""
+    if not log.exists():
+        return []
+    try:
+        lines = log.read_text(encoding="utf-8").splitlines()
+        known = {key: _committed_sha256(rel) for key, rel in PREPUSH_DEFINITION.items()}
+    except (OSError, subprocess.SubprocessError, UnicodeDecodeError):
+        return None
+    since, seen, bad, judged = _now() - UNREVIEWED_WINDOW, {}, 0, 0
+    for line in reversed(lines):
+        try:
+            rec = json.loads(line)
+            ts = _parse_iso(rec["ts"])
+        except (ValueError, KeyError, TypeError):
+            bad += 1
+            continue
+        if ts is None or ts < since:
+            break
+        judged += 1
+        for key, rel in PREPUSH_DEFINITION.items():
+            sha = str(rec.get(key) or "MISSING")
+            if sha in known[key]:
+                continue
+            row = seen.setdefault((rel, sha), {"cell": "prepush-score", "file": rel, "sha256": sha,
+                                               "state": "UNKNOWN" if sha == "MISSING" else "unreviewed",
+                                               "last_ts": rec["ts"], "runs": 0})
+            row["runs"] += 1
+    if bad and not judged:
+        return None   # every recent line unreadable: cannot ask
+    return list(seen.values()) + ([{"cell": "prepush-score", "unreadable": bad}] if bad else [])
+
+
 def regrades() -> list[dict] | None:
     """rem-status's REGRADE rows (row rem-regrade-red-line): a pending finding the advisory report grades
     worse than the queue does. rem-status's own load + regrade, so both readers say the same. None = UNKNOWN."""
@@ -1213,6 +1269,7 @@ def collect() -> dict:
         ("security_scan", SCAN_STATE, security_scan),
         ("advisories", ADVISORY_SNAPSHOT, advisories),
         ("regrades", pathlib.Path("tools/rem-status.py (queue x advisory report)"), regrades),
+        ("unreviewed_cells", pathlib.Path(f"{PREPUSH_LOG} x git (every ref)"), unreviewed_cells),
         ("backups", pathlib.Path(f"{BACKUP_STATUS} (copy #1) | {BACKUP_RESTIC_STATUS} (direct)"), backups),
         ("orphan_extensions", STACKS_DIR, orphan_extensions),
         ("loop_verdicts", REPO / "tools" / "loop-status.py", stalled_verdicts),
@@ -1346,6 +1403,14 @@ def reds(report: dict) -> list[str]:
                    "(tools/advisory-status.py; judge in state/genome/advisory-judgements.yml)")
     if ad and ad["stale"]:
         out.append(f"advisory patrol stale — last run {ad['age']}")
+    for c in report.get("unreviewed_cells") or []:
+        if "unreadable" in c:
+            out.append(f"immune cell {c['cell']}: {c['unreadable']} unreadable record(s) in the last 26 h of prepush-scores.jsonl")
+        elif c["state"] == "UNKNOWN":
+            out.append(f"immune cell {c['cell']} ran without its {c['file']} ({c['runs']} run(s), last {c['last_ts']})")
+        else:
+            out.append(f"immune cell {c['cell']} ran an unreviewed {c['file']} (sha256 {c['sha256'][:12]}…, "
+                       f"{c['runs']} run(s), last {c['last_ts']}): its scores are not evidence until it is committed")
     rg = report.get("regrades")
     if rg:
         shown = "; ".join(f"{r['id']} {r['from']}->{r['to']} by {r['by']}" for r in rg[:4])
