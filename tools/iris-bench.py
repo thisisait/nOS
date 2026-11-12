@@ -17,6 +17,14 @@ Usage:
     tools/iris-bench.py --sock /tmp/fake.sock --offline --out /tmp/run.json
     NOS_LIVE=1 NOS_ASSAY_DIR=~/projects/nos-assay tools/iris-bench.py --domain home-lab-tables
     NOS_LIVE=1 NOS_ASSAY_DIR=~/projects/nos-assay tools/iris-bench.py --domain accounting --tier smoke
+    NOS_LIVE=1 tools/iris-bench.py --as bob --dry        # who the far side says bob is, then log out
+    NOS_LIVE=1 tools/iris-bench.py --as bob --tier smoke --domain accounting
+
+--as <persona> runs as a declared test persona (profiles/test-users.yml, nos_test_users_enabled on)
+through Authentik's own login and the face BFF, one SSE stream per case, never the socket and never
+a forged header; the password stays in memory. TLS is verified or the run refuses (exit 2); the
+session is ended through Authentik and the end proven (`logout: NOT verified` = exit 1). A bench
+run as a persona closes that persona's oldest Iris tab at the cap (4): personas are test logins.
 
 A turn is a string or {say, checks}: a dict turn's checks see only that turn's slice of the wire,
 and turn N is judged only while every earlier turn passed (else not_reached); case-level `checks`
@@ -118,30 +126,52 @@ def turns_of(case: dict) -> list[str]:
 SLICED = ("tools", "renders", "approvals", "cards", "card_kinds", "refused")
 
 
-def run_case(case: dict, sock: str, timeout: float) -> dict:
-    """Send the case's turns over one connection; what came back, per kind."""
+class SockConn:
+    """The operator's door: one connection to the thalamus socket, one JSON line each way."""
+
+    def __init__(self, sock: str, timeout: float):
+        self.s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.s.settimeout(timeout)
+        try:
+            self.s.connect(sock)
+        except OSError:
+            self.s.close()
+            raise
+        self.f = self.s.makefile("rw", encoding="utf-8")
+
+    def send(self, msg: dict) -> None:
+        self.f.write(json.dumps(msg) + "\n")
+        self.f.flush()
+
+    def readline(self) -> str:
+        return self.f.readline()
+
+    def close(self) -> None:
+        self.s.close()
+
+
+def run_case(case: dict, sock, timeout: float) -> dict:
+    """Send the case's turns over one connection; what came back, per kind.
+    `sock` is the socket path, or an opener(timeout) that gives the connection (a persona's FaceTab)."""
     turns = turns_of(case)
     got = {"tools": [], "renders": [], "approvals": [], "cards": [], "card_kinds": [], "refused": [], "text": "", "texts": [],
            "model_uri": None, "session": None, "error": None, "per_turn": []}
-    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    s.settimeout(timeout)
+    conn = None
     try:
-        s.connect(sock)
-        f = s.makefile("rw", encoding="utf-8")
+        conn = sock(timeout) if callable(sock) else SockConn(sock, timeout)
         session = None
         for text in turns:
             mark = {k: len(got[k]) for k in SLICED}
-            f.write(json.dumps({"t": "turn", "session": session, "text": text}) + "\n")
-            f.flush()
+            conn.send({"t": "turn", "session": session, "text": text})
             want, idle, answer, active = 1, 0, "", None
             while idle < want:
-                line = f.readline()
+                line = conn.readline()
                 if not line:
                     raise ConnectionError("the thalamus closed the connection mid-turn")
                 m = json.loads(line)
                 t = m.get("t")
                 if t == "session":
-                    session, got["model_uri"] = m.get("session"), m.get("model_uri")
+                    session, got["model_uri"], got["actor"] = m.get("session"), m.get("model_uri"), m.get("actor")
                     got["session"] = session
                 elif t == "activity":
                     ph = m.get("phase")
@@ -157,9 +187,8 @@ def run_case(case: dict, sock: str, timeout: float) -> dict:
                     got["cards"].append((m.get("component") or {}).get("props", {}))
                     got["card_kinds"].append((m.get("component") or {}).get("kind"))
                     # The decision the face Iris sends for reject (approvals.ts); serve answers it with text + idle.
-                    f.write(json.dumps({"t": "approval_decision", "approval": m.get("approval"),
-                                        "decision": "reject", "note": None}) + "\n")
-                    f.flush()
+                    conn.send({"t": "approval_decision", "approval": m.get("approval"),
+                               "decision": "reject", "note": None})
                     want += 1
                 elif t == "text" and idle == 0:
                     answer = m.get("text", "")
@@ -174,7 +203,8 @@ def run_case(case: dict, sock: str, timeout: float) -> dict:
     except (OSError, ValueError, ConnectionError) as e:
         got["error"] = f"{type(e).__name__}: {e}"
     finally:
-        s.close()
+        if conn:
+            conn.close()
     return got
 
 
@@ -1104,9 +1134,185 @@ def load_cases(cases, domain, tier=None) -> list[dict]:
     return out
 
 
+# ── the persona door (row persona-e2e-and-bench; operator 2026-11-11: always through the
+# Authentik SSO flow, no forged headers). The bench logs in as a declared synthetic persona
+# and talks to Iris through the face BFF, exactly as that person's browser would; the face
+# hello names the person, never this tool. The socket stays the operator's.
+
+def _plain(text) -> str:
+    """Far-side text for the terminal: printable characters only, 200 at most."""
+    return "".join(ch if ch.isprintable() else " " for ch in str(text))[:200]
+
+
+def persona(name: str) -> tuple[dict | None, str]:
+    """(the persona, "") when this host's resolved layers provision it, else (None, why). No network."""
+    sys.path.insert(0, str(REPO / "tools"))
+    import nos_identity as ni
+    got = ni.resolved([ni.SYNTHETIC_FLAG, "nos_synthetic_identities"])
+    if str(got[ni.SYNTHETIC_FLAG]).lower() not in ("true", "yes", "1"):
+        return None, f"persona {name} not provisioned on this host ({ni.SYNTHETIC_FLAG} is off)"
+    p = next((i for i in ni.synthetic_identities(got) if i.get("name") == name), None)
+    if not p:
+        return None, f"persona {name!r} is not declared (profiles/test-users.yml)"
+    return p, ""
+
+
+def face_door() -> tuple[str, str, str | bool, str]:
+    """(auth host, face host, verify, why): TLS is verified, or the bench does not run."""
+    import nos_identity as ni
+    import nos_sso
+    hosts = ni.resolved(["authentik_domain", "face_domain"])
+    auth, face = (str(hosts[k] or "") for k in ("authentik_domain", "face_domain"))
+    if not auth or not face or "{" in auth + face:
+        return auth, face, False, "authentik_domain / face_domain do not resolve from the layers"
+    if not ni.is_local_host(auth):
+        return auth, face, True, ""
+    ca = nos_sso.mkcert_root_ca()
+    if not ca:
+        return auth, face, False, "no mkcert root CA on this host: refusing unverified TLS"
+    nos_sso.loopback_for_unresolvable()   # a local TLD on Linux has no resolver; the edge is on loopback
+    return auth, face, ca, ""
+
+
+class FaceTab:
+    """One Iris tab on the face BFF as the logged-in persona: the SSE stream in, POST send out.
+    The first event names the tab; a `link` closed while a case runs is the tab taken over
+    (MAX_TABS per person, the newest wins) or the link gone: the case ends with that reason."""
+
+    def __init__(self, sess, face: str, verify, timeout: float):
+        self.sess, self.base, self.verify, self.timeout = sess, f"https://{face}", verify, timeout
+        self.r = sess.get(self.base + "/bff/iris/stream", stream=True, allow_redirects=False, verify=verify,
+                          headers={"Accept": "text/event-stream"}, timeout=(20, timeout))
+        try:
+            if self.r.status_code != 200:
+                raise ConnectionError(f"the face stream answered HTTP {self.r.status_code}")
+            self.events = self._events()
+            ev, data = next((e for e in self.events if e[0] != "beat"), (None, None))
+            if ev != "tab":
+                raise ConnectionError("the face stream opened without a tab event")
+            self.tab = str(json.loads(data)["tab"])
+        except BaseException:
+            self.r.close()
+            raise
+
+    def _events(self):
+        ev, data = "message", []
+        for line in self.r.iter_lines(chunk_size=None, decode_unicode=True):
+            if line.startswith(":"):
+                yield "beat", None   # the face's 15 s heartbeat
+            elif line.startswith("event:"):
+                ev = line[6:].strip()
+            elif line.startswith("data:"):
+                data.append(line[5:].removeprefix(" "))
+            elif not line:
+                if data:
+                    yield ev, "\n".join(data)
+                ev, data = "message", []
+
+    def send(self, msg: dict) -> None:
+        r = self.sess.post(self.base + "/bff/iris/send", json=msg, allow_redirects=False, verify=self.verify,
+                           timeout=20, headers={"Origin": self.base, "x-iris-tab": self.tab})
+        if r.status_code != 204:
+            raise ConnectionError(f"the face refused the line: HTTP {r.status_code}")
+
+    def readline(self) -> str:
+        """The next ToShell line; heartbeats do not count as a line for the case's timeout."""
+        deadline = time.monotonic() + self.timeout
+        for ev, data in self.events:
+            if ev == "beat":
+                if time.monotonic() > deadline:
+                    raise TimeoutError(f"no line in {self.timeout:.0f} s")
+            elif ev == "link":
+                link = json.loads(data)
+                if link.get("state") == "closed":
+                    raise ConnectionError(f"the tab was taken over or closed: {_plain(link.get('reason'))}")
+            elif ev == "message":
+                return data + "\n"
+        return ""
+
+    def close(self) -> None:
+        self.r.close()   # the face's cancel() closes the tab
+
+
+def persona_login(p: dict, auth: str, face: str, verify):
+    """Authentik's own flow as the persona, then the face reached through SSO. Raises RuntimeError."""
+    import nos_sso
+    sys.path.insert(0, str(REPO / "tests" / "e2e"))
+    from lib.estate_secrets import identity_password
+    pw = identity_password(p["password_var"])   # memory only: never argv, log, --out or stdout
+    if not pw:
+        raise RuntimeError(f"{p['password_var']} is neither persisted nor derivable on this host")
+    sess = nos_sso.login(p["name"], pw, auth, verify=verify)
+    w = nos_sso.walk(sess, f"https://{face}/", auth, verify=verify)
+    if w.outcome != nos_sso.REACHED:
+        raise RuntimeError(f"the face through SSO: {w.outcome} at {_plain(w.url)}")
+    return sess
+
+
+def persona_logout(sess, auth: str, face: str, verify) -> str:
+    """End the session through Authentik's invalidation flow, then prove the face no longer lets it in."""
+    try:
+        sess.get(f"https://{auth}/api/v3/flows/executor/default-invalidation-flow/",
+                 headers={"Accept": "application/json"}, verify=verify, timeout=20)
+        r = sess.get(f"https://{face}/bff/iris/stream", stream=True, allow_redirects=False, verify=verify, timeout=20)
+        r.close()
+    except Exception as exc:  # noqa: BLE001 — an unproven logout is reported, never assumed
+        return f"NOT verified ({type(exc).__name__})"
+    return "verified" if r.status_code in (301, 302, 303, 307, 308, 401) else f"NOT verified (HTTP {r.status_code})"
+
+
+def _until(tab, kinds: set) -> dict:
+    while True:
+        line = tab.readline()
+        if not line:
+            raise ConnectionError("the stream ended")
+        m = json.loads(line)
+        if m.get("t") in kinds:
+            return m
+
+
+def dry(opener, tier: int, timeout: float) -> tuple[int, str | None]:
+    """Who the far side says this is: (exit, actor). resume opens or reopens the persona's last
+    session (one ledger session row, as opening Iris in the face does); questions is tier-1 only."""
+    actor, tab = None, None
+    try:
+        tab = opener(timeout)
+        tab.send({"t": "resume"})
+        m = _until(tab, {"session", "refused"})
+        if m["t"] == "refused":
+            print(f"far side: resume refused: {_plain(m.get('reason'))}")
+            return 1, None
+        actor = _plain(m.get("actor"))
+        print(f"far side: actor {actor} session {_plain(m.get('session'))}")
+        tab.send({"t": "questions"})
+        m = _until(tab, {"questions", "refused"})
+    except (OSError, ValueError, KeyError) as exc:   # ConnectionError/TimeoutError/requests are OSError
+        print(f"far side: UNKNOWN ({type(exc).__name__}: {_plain(exc)})")
+        return 1, actor
+    finally:
+        if tab:
+            tab.close()
+    if m["t"] == "questions":
+        one = True
+    elif "is not tier 1" in str(m.get("reason")):
+        one = False
+    else:
+        print(f"far side: tier-1 read unanswered: {_plain(m.get('reason'))}")
+        return 1, actor
+    print(f"far side: tier-1 read {'answered (tier 1)' if one else 'refused (not tier 1)'}")
+    print(f"profile: tier {tier}")
+    if one != (tier == 1):
+        print(f"MISMATCH: profile tier {tier} but the far side {'answered' if one else 'refused'} a tier-1 read")
+        return 1, actor
+    return 0, actor
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--sock")
+    ap.add_argument("--as", dest="persona", metavar="PERSONA",
+                    help="run as a declared test persona, through Authentik SSO and the face (never the socket)")
+    ap.add_argument("--dry", action="store_true", help="with --as: log in, print who the far side says this is, log out")
     ap.add_argument("--offline", action="store_true", help="test path: needs an explicit --sock")
     ap.add_argument("--cases", default=str(CASES))
     ap.add_argument("--domain", help="read $NOS_ASSAY_DIR/domains/<domain>/cases.yml instead of --cases")
@@ -1127,6 +1333,7 @@ def main(argv: list[str] | None = None) -> int:
                     help="pair two saved runs: axes, flips per kind, exact McNemar (offline)")
     ap.add_argument("--json", action="store_true", help="with --compare: print the comparison as JSON")
     a = ap.parse_args(argv)
+    a.argv = argv
     if a.compare:
         try:
             runs = [json.loads(Path(f).read_text(encoding="utf-8")) for f in a.compare]
@@ -1147,6 +1354,15 @@ def main(argv: list[str] | None = None) -> int:
             print("--seed writes a KEAP table; set NOS_LIVE=1.", file=sys.stderr)
             return 2
         return seed_domain(a.domain) if a.domain else seed()
+    who = None
+    if a.persona or a.dry:   # every refusal here comes before any network call
+        if not a.persona or a.sock or a.offline:
+            print("--as runs a persona through the face: no --sock or --offline; --dry needs --as.", file=sys.stderr)
+            return 2
+        who, why = persona(a.persona)
+        if not who:
+            print(f"iris-bench: {why}", file=sys.stderr)
+            return 2
     if not (os.environ.get("NOS_LIVE") == "1" or (a.offline and a.sock)):
         print("iris-bench talks to the live thalamus (a model, KEAP, the ledger); set NOS_LIVE=1, "
               "or pass --offline with an explicit --sock for a fake.", file=sys.stderr)
@@ -1165,14 +1381,41 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         validate = functools.lru_cache(maxsize=None)(functools.partial(validate_report, a.validate_url, token))
     sock = a.sock or str(SOCK)
-    cases = [dict(c, checks=dict(c.get("checks") or {}) | plan_checks(c, a.plan)) for c in load_cases(a.cases, a.domain, a.tier)]
-    results = []
+    if who:
+        auth, face, verify, why = face_door()
+        if why:
+            print(f"iris-bench: {why}", file=sys.stderr)
+            return 2
+        try:
+            sess = persona_login(who, auth, face, verify)
+        except Exception as exc:  # noqa: BLE001 — the reason, never the password or a cookie
+            print(f"iris-bench: login as {a.persona} refused: {_plain(exc)}", file=sys.stderr)
+            return 1
+        opener = functools.partial(FaceTab, sess, face, verify)
+        try:
+            rc = dry(opener, int(who["tier"]), a.timeout)[0] if a.dry else \
+                bench(a, cases_of(a), f"face:{face} as {a.persona}", validate, opener, who)
+        finally:
+            said = persona_logout(sess, auth, face, verify)
+            print(f"logout: {said}")
+        return rc if said == "verified" else 1
+    return bench(a, cases_of(a), sock, validate)
+
+
+def cases_of(a) -> list[dict]:
+    return [dict(c, checks=dict(c.get("checks") or {}) | plan_checks(c, a.plan)) for c in load_cases(a.cases, a.domain, a.tier)]
+
+
+def bench(a, cases: list[dict], where: str, validate, opener=None, who: dict | None = None) -> int:
+    argv, sock = a.argv, opener or where
+    results, actors = [], set()
     n = max(1, a.repeat)
     for case in cases:
         runs = []
         for _ in range(n):
             t0 = time.monotonic()
             got = run_case(case, sock, float(case.get("timeout", a.timeout)))
+            actors.add(got.get("actor"))
             if validate:
                 got |= {"plan": read_plan(a.ledger, got["session"]), "validate": validate}
             judged = case
@@ -1195,9 +1438,12 @@ def main(argv: list[str] | None = None) -> int:
                         # Why an offered widget was left out (round 2: the model only paraphrased it).
                         "dropped": [d for r in got["renders"] if r["component"].get("kind") == "dashboard"
                                     for d in r["component"].get("props", {}).get("dropped") or []]})
-    run = {"ran_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "sock": sock,
+    run = {"ran_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "sock": where,
            "model_uri": sorted({r["model_uri"] for r in results if r["model_uri"]}), "cases": results}
     run["provenance"] = provenance(uri_models(run["model_uri"]), argv=argv) | {"plan": a.plan}
+    if who:   # a bench is comparable only against the same persona
+        run["provenance"]["persona"] = {"name": who["name"], "profile_tier": who["tier"],
+                                        "actor": sorted(_plain(x) for x in actors if x) or None}
     plans = [r["pipeline"] for r in results if isinstance(r["pipeline"], dict)]
     run["plan_path"] = a.plan
     if a.plan == "hybrid":  # the router's accuracy, apart from the pass rate: kind -> {route: n}
