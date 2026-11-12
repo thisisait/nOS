@@ -1,0 +1,190 @@
+{
+  "uid": "nos-28-iris",
+  "title": "nOS — Iris (turns, tools, refusals, model latency)",
+  "description": "The thalamus's OTLP spans per Iris turn, searched in Tempo. Empty while thalamus_otel_spans is off.",
+  "tags": [
+    "nos",
+    "iris",
+    "thalamus",
+    "tempo"
+  ],
+  "timezone": "browser",
+  "editable": true,
+  "graphTooltip": 0,
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "1m",
+  "style": "dark",
+  "weekStart": "",
+  "liveNow": false,
+  "fiscalYearStartMonth": 0,
+  "id": null,
+  "links": [],
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
+  "panels": [
+    {
+      "type": "text",
+      "title": "What this dashboard is",
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**Iris's turns, from the thalamus's own OTLP spans** (row thalamus-otel-panel; spans: src/otel.rs). On only while `thalamus_otel_spans: true`; off, every table here is empty, and that means *off*, not *quiet*.\n\nA turn is `iris.turn`; under it, one `iris.complete` per model request and one `iris.tool` per tool call. Spans carry names, durations, the model id, a tool's name, the outcome and token counts, never what the person typed or a row value: the thalamus ledger stays the place for content, and a trace id here is the ledger's session uuid without dashes.\n\nThese are TraceQL **searches**, not rates: this Tempo runs no metrics generator, so a rate panel would draw nothing and look calm."
+      }
+    },
+    {
+      "type": "table",
+      "title": "Turns: the latest, slowest first in the duration column",
+      "description": "One row per Iris turn with its duration and the turn's token counts.",
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceql",
+          "query": "{resource.service.name=\"thalamus\" && name=\"iris.turn\"} | select(span.gen_ai.usage.input_tokens, span.gen_ai.usage.output_tokens)",
+          "limit": 50,
+          "tableType": "traces"
+        }
+      ],
+      "options": {
+        "showHeader": true
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "type": "table",
+      "title": "Errors and refusals: any span that ended in error",
+      "description": "A model request or tool call that failed, or a turn whose children failed. The ledger says why.",
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceql",
+          "query": "{resource.service.name=\"thalamus\" && status=error}",
+          "limit": 50,
+          "tableType": "spans"
+        }
+      ],
+      "options": {
+        "showHeader": true
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "type": "table",
+      "title": "Tool calls, by name",
+      "description": "Each tool call with its duration and outcome; a name the model invented reads 'unknown'.",
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceql",
+          "query": "{resource.service.name=\"thalamus\" && name=\"iris.tool\"} | select(span.gen_ai.tool.name)",
+          "limit": 50,
+          "tableType": "spans"
+        }
+      ],
+      "options": {
+        "showHeader": true
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "type": "table",
+      "title": "Model latency: each request, its model and tokens",
+      "description": "The duration column is the model's latency for that request.",
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceql",
+          "query": "{resource.service.name=\"thalamus\" && name=\"iris.complete\"} | select(span.gen_ai.request.model, span.gen_ai.usage.input_tokens, span.gen_ai.usage.output_tokens)",
+          "limit": 50,
+          "tableType": "spans"
+        }
+      ],
+      "options": {
+        "showHeader": true
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    }
+  ]
+}
