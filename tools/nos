@@ -8,6 +8,7 @@
 #   nos loops <pause|resume|status> [--reason "..."]   (live SERE-loop pause)
 #   nos halt [--status] | nos resume   (emergency halt of every Pulse job)
 #   nos push [git push args]   (tools/nos-push: mirror sync + pre-push score)
+#   nos stacks|cc|ci|smoke [args]   (tools/nos-stacks.sh, nos-cc.sh, ci-local.sh, nos-smoke.py)
 #
 # `nos dtt` runs the DataTables tools from $NOS_SRC over the PRIVATE seed repo
 # (NOS_SEED_DIR) — an installed nos reaches them from any shell/branch/cwd, so
@@ -153,6 +154,16 @@ if [ "${1:-}" = "push" ]; then
   shift
   exec "$NOS_SRC/tools/nos-push" "$@"
 fi
+
+# ── `nos stacks|cc|ci|smoke [args]` — the daily limbs by name (row cli-limbs-more-verbs) ─────
+# Each runs its tool from $NOS_SRC with the caller's arguments, refusals and exit code intact.
+# The tools/ paths stay: scripts, memories and docs name them (the one-release shim period).
+case "${1:-}" in
+  stacks) shift; exec "$NOS_SRC/tools/nos-stacks.sh" "$@" ;;
+  cc)     shift; exec "$NOS_SRC/tools/nos-cc.sh" "$@" ;;
+  ci)     shift; exec "$NOS_SRC/tools/ci-local.sh" "$@" ;;
+  smoke)  shift; exec "$NOS_SRC/tools/nos-smoke.py" "$@" ;;
+esac
 
 # ── `nos dtt <verb>` — DataTables ops, not a converge ────────────────────────
 # The point of this branch: an INSTALLED `nos` reaches the dtt tools from ANY
@@ -438,7 +449,7 @@ if [ "${1:-}" = "halt" ] || [ "${1:-}" = "resume" ]; then
 fi
 
 usage() {
-  sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 REMOVE=""
