@@ -5,7 +5,7 @@ Row morning-verdict (spec accepted 2026-11-12). Not a second judge: a row's
 verdict is the reader's own `verdict` key (OK | RED | UNKNOWN) and its `why`,
 copied. A reader that gives no such key, no JSON, or no answer in 60 s is
 UNKNOWN with the reason, never OK. advisory-status is not re-run (~800 calls):
-its row reads the 03:50 patrol report, as red-status does.
+its row is the 03:50 patrol's own verdict (`patrol` in the report red-status reads).
 
     tools/morning-verdict.py            the six verdicts, as text; writes nothing
     tools/morning-verdict.py --json     the six would-be rows; writes nothing
@@ -96,7 +96,9 @@ def advisory(now: datetime) -> tuple[str, str, dict]:
         return "UNKNOWN", f"advisory report unreadable: {type(exc).__name__}", {}
     if at.tzinfo is None or now - at > ADVISORY_STALE_AFTER:
         return "UNKNOWN", f"advisory report stale ({clean(rep['at'])[:40]})", {}
-    return judged(rep)
+    if "patrol" not in rep:
+        return "UNKNOWN", "advisory report holds no patrol verdict (written by an older patrol)", {}
+    return judged(rep["patrol"])   # the patrol's judgement; rep["verdict"] is AFFECTED/CLEAR
 
 
 def rows(now: datetime) -> list[dict]:
