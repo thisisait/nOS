@@ -11,7 +11,7 @@
     "organ system": 13,
     "organism": 0,
     "habitat": 9,
-    "sense": 88,
+    "sense": 89,
     "limb": 131,
     "memory": 44,
     "law": 57,
@@ -1686,6 +1686,10 @@
       "kind": "reader"
     },
     "reader:tls-uptake": {
+      "level": "sense",
+      "kind": "reader"
+    },
+    "reader:tool-census": {
       "level": "sense",
       "kind": "reader"
     },

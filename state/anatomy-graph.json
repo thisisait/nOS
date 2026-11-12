@@ -4,7 +4,7 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 598,
+    "nodes": 599,
     "edges": 572,
     "nodes_pulse": 50,
     "nodes_judge": 5,
@@ -27,7 +27,7 @@
     "nodes_agent": 17,
     "nodes_tasktype": 9,
     "nodes_skill": 16,
-    "nodes_reader": 70,
+    "nodes_reader": 71,
     "nodes_effector": 124,
     "nodes_article": 28,
     "nodes_organ_system": 13,
@@ -4035,6 +4035,13 @@
       "title": "How much of the datastore traffic on this estate is actually encrypted.",
       "anchor": "02.02.04",
       "description": "Reader tools/tls-uptake.py: How much of the datastore traffic on this estate is actually encrypted."
+    },
+    "reader:tool-census": {
+      "kind": "reader",
+      "source": "tools/tool-census.py",
+      "title": "every tools/ entry point by body word (this index's section) and by caller (pulse, converge, ci, tool, agent, organ, operator, test, docs), from the files that name it; `--unused` the ones nothing runs, `--json` (row cli-limbs-inventory).",
+      "anchor": "02.02.04",
+      "description": "Reader tools/tool-census.py: every tools/ entry point by body word (this index's section) and by caller (pulse, converge, ci, tool, agent, organ, operator, test, docs), from the files that name it; `--unused` the ones nothing runs, `--json` (row cli-limbs-inventory)."
     },
     "reader:undeclared-status": {
       "kind": "reader",
