@@ -319,7 +319,8 @@
         {%- set dn = d | regex_replace('/+$', '') -%}
         {%- set pn = (dn | realpath) if (dn is exists or dn is link) else dn -%}
         {%- for pp in _protected_paths if pp -%}
-          {%- for a, b in [(dn, pp), (pn, pp | realpath)] -%}
+          {#- APFS is case-insensitive and realpath keeps the caller's case: compare protected paths case-folded. -#}
+          {%- for a, b in [(dn | lower, pp | lower), (pn | lower, pp | realpath | lower)] -%}
             {%- if a == b or a.startswith(b ~ '/') or b.startswith(a ~ '/') -%}{%- set ns.out = ns.out + [dn] -%}{%- endif -%}
           {%- endfor -%}
         {%- endfor -%}
