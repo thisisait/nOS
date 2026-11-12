@@ -345,6 +345,62 @@ def axis_organs(res: Result) -> None:
                     "the checkout is deliberately off the deployed ref", DISAGREE)
 
 
+#: Mirrors tenant_domain_is_local (default.config.yml): only a local TLD has a mkcert CA to serve.
+LOCAL_TLDS = (".local", ".lan", ".test", ".localhost", ".internal", ".home.arpa")
+
+
+def _sha256_fp(der: bytes) -> str:
+    import hashlib
+    return ":".join(f"{b:02X}" for b in hashlib.sha256(der).digest())
+
+
+def axis_root_ca(res: Result) -> None:
+    """Does the edge serve THIS host's root CA (row nos-root-ca-reader)? Plain http, as a LAN
+    device fetches it (traefik nos-root-ca-web -> Bone /nos-root-ca.crt), vs mkcert's rootCA.pem."""
+    import ssl
+    run = ran()
+    tld = str((run.state.get("instance") or {}).get("tld") or "")
+    if run.source != "state.yml" or not tld:
+        res.add("edge", "root CA", f"UNKNOWN — the tenant domain is unread ({run.provenance()})", UNREADABLE)
+        return
+    if not (tld == "localhost" or tld.endswith(LOCAL_TLDS)):
+        res.uncomparable.append(f"root CA ({tld} is public: ACME certs, no local CA)")
+        return
+    try:
+        from nos_sso import mkcert_root_ca
+        local = mkcert_root_ca()
+        want = _sha256_fp(ssl.PEM_cert_to_DER_cert(Path(local).read_text(encoding="ascii"))) if local else None
+    except (ImportError, OSError, ValueError) as exc:
+        res.add("edge", "root CA", f"UNKNOWN — mkcert rootCA.pem unreadable ({type(exc).__name__})", UNREADABLE)
+        return
+    if want is None:
+        res.add("edge", "root CA", "UNKNOWN — no mkcert rootCA.pem on this host", UNREADABLE)
+        return
+    url = f"http://{tld}/nos-root-ca.crt"
+    try:
+        with urllib.request.urlopen(url, timeout=4) as r:
+            body = r.read(20000).decode("ascii", "replace")
+    except urllib.error.HTTPError as exc:
+        res.add("edge", "root CA", f"{url} answered {exc.code}: the edge serves no root CA", DISAGREE)
+        return
+    except (urllib.error.URLError, OSError) as exc:
+        res.add("edge", "root CA", f"UNKNOWN — {url} unreachable ({type(exc).__name__})", UNREADABLE)
+        return
+    if body.count("-----BEGIN CERTIFICATE-----") != 1:
+        res.add("edge", "root CA", f"{url} does not serve exactly one certificate", DISAGREE)
+        return
+    try:
+        got = _sha256_fp(ssl.PEM_cert_to_DER_cert(body.strip()))
+    except ValueError:
+        res.add("edge", "root CA", f"{url} serves an unparseable certificate", DISAGREE)
+        return
+    if got == want:
+        res.add("edge", "root CA", f"{url} serves the mkcert CA (sha256 {got[:23]}…)")
+    else:
+        res.add("edge", "root CA", f"{url} serves sha256 {got[:23]}…, the mkcert CA is {want[:23]}… "
+                "(a stale copy in shared-certs, or another host's CA)", DISAGREE)
+
+
 def axis_blank(res: Result) -> None:
     """The newest confirmed blank (main.yml opens it, callback_plugins/blank_record.py closes it)."""
     path = Path.home() / ".nos" / "blank-runs.jsonl"
@@ -634,6 +690,7 @@ def main() -> int:
     else:
         axis_repos(res, do_fetch=not args.no_fetch)
         axis_organs(res)
+        axis_root_ca(res)
         axis_identity(res)
         axis_blank(res)
         axis_toolchain(res)
