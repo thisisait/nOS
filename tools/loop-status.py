@@ -82,7 +82,7 @@ Usage:
     tools/loop-status.py --unresolved # only ids that no longer join
     tools/loop-status.py --gap        # weaknesses nobody has proposed against
     tools/loop-status.py --awaiting   # passed verdicts and what became of them
-    tools/loop-status.py --json
+    tools/loop-status.py --json       # + verdict OK/RED/UNKNOWN, why, counts (RED = UNRESOLVED)
 
 Exit 0 always. This reports; it does not judge.
 """
@@ -883,6 +883,26 @@ def _print_awaiting(report: dict, *, as_json: bool) -> int:
     return 0
 
 
+def verdict(report: dict) -> tuple[str, str, dict]:
+    """collect() in one word (row morning-verdict), plain --json only: RED = a real
+    proposal id no live source reports (the view's UNRESOLVED); UNKNOWN = no ledger, or
+    the weakness reader did not load so nothing can be called resolved; else OK. A
+    silent source stays information, never RED (the header's reason)."""
+    if report.get("error"):
+        return "UNKNOWN", report["error"], {}
+    srcs = report["sources"]
+    dangling = [w for s in srcs for w in s["unresolved_ids"]]
+    counts = {"proposals": report["proposals"], "sources": len(srcs),
+              "awaiting": sum(len(s["awaiting_ids"]) for s in srcs), "unresolved": len(dangling),
+              "silent_sources": len(report["sources_with_no_proposal"])}
+    if dangling:
+        return "RED", f"{len(dangling)} proposal id(s) no source reports: {dangling[0]}", counts
+    if report["resolve_error"]:
+        return "UNKNOWN", f"weakness reader unavailable: {report['resolve_error']}", counts
+    return "OK", (f"{counts['proposals']} proposal(s) over {counts['sources']} source(s), "
+                  f"every id joins; {counts['awaiting']} awaiting a working proposal"), counts
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--json", action="store_true")
@@ -988,6 +1008,7 @@ def main() -> int:
         return 0
 
     if args.json:
+        report["verdict"], report["why"], report["counts"] = verdict(report)
         json.dump(report, sys.stdout, indent=2, sort_keys=True, default=list)
         sys.stdout.write("\n")
         return 0
