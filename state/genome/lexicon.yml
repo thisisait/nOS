@@ -600,6 +600,41 @@ words:
     not: [verdicts, sense]
     counter_example: "an indicator reporting a symbiont red (a sense reports; a sanction acts)"
 
+  germline:
+    level: cross
+    proposed: true
+    # Operator 2026-11-12 (row roadmap-organic-structure): the word for nOS's evolution.
+    means: >-
+      The lineage that changes nOS's own source: weaknesses proposed against, judged, landed on the
+      trunk, so the next converge grows the next generation. Somatic work repairs the running estate;
+      the germline changes what every later estate is born from. Nothing in it counts as evolved
+      until a reader scores it against a control.
+    no_surface_reason: "planned: rows roadmap-organic-structure and nos-native-loop; today SERE and the roadmap loop."
+    not: [self, organism, reflex]
+    counter_example: "a converge repairing a drifted container (somatic: the source did not change)"
+  reflex arc:
+    level: cross
+    proposed: true
+    # Operator 2026-11-12 (row roadmap-organic-structure): the organic word for what code calls a loop.
+    means: >-
+      A sense, a judge and an effector joined so the estate answers a stimulus without a person in
+      between: SERE's propose -> judge -> drive, or the roadmap loop's pick -> build -> integrate.
+      Pulse fires its steps; each step is a reflex. Code keeps the word loop (loop_runs, *.loop.yml).
+    no_surface_reason: "planned: a prose word first; loop stays the code word."
+    not: [reflex, organ]
+    counter_example: "one Pulse job on its clock (a reflex, not an arc)"
+  autophagy:
+    level: cross
+    proposed: true
+    # Operator 2026-11-12: "something for deleting old, useless DNA".
+    means: >-
+      The body digesting its own obsolete parts: stale roadmap rows, landed worktrees, dead wiring,
+      retired words and code no reader reaches, found by a reader and removed with the operator's
+      consent, so what is left stays legible.
+    no_surface_reason: "planned: today scattered across tools/roadmap-stale.py, tools/worktree-prune.py and tools/plugin-wiring-report.py."
+    not: [sanction, blank]
+    counter_example: "a cell retired by the immune system (apoptosis of one indicator, not the body's housekeeping)"
+
   tier:
     level: cross
     # ssot/doctrine/layers.md §2 and ssot/doctrine/sso.md: RBAC and nothing else.
