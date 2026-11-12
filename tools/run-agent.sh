@@ -344,13 +344,14 @@ for line in sys.stdin: sys.stdout.write(scrub_text(line))' "$REPO_ROOT/files/ana
 # NOS_AGENT_CAPTURE=1 (dev switch, default off; row agent-output-capture-switch): the SCRUBBED stream,
 # stdout and stderr, is also appended to ~/.nos/conductor/<PULSE_RUN_ID>.log, the glob Alloy already
 # tails (job=agent). The run id is the file name, not a Loki label: a label value per run is the
-# cardinality Loki warns against. Only under Pulse (a valid run id); files older than 7 days go first.
+# cardinality Loki warns against. Only under Pulse (a valid run id). Alloy tails as it is written, so a
+# file is kept one hour, not days: the row says the run leaves no file (review 2026-11-12 MEDIUM).
 CAPTURE_FILE=/dev/null
 if [[ "${NOS_AGENT_CAPTURE:-0}" == "1" ]]; then
     if [[ "${PULSE_RUN_ID:-}" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]]; then
         _capdir="$HOME/.nos/conductor"
         (umask 077 && mkdir -p "$_capdir" && : >> "$_capdir/$PULSE_RUN_ID.log")
-        find "$_capdir" -name '*.log' -type f -mtime +7 -delete 2>/dev/null || true
+        find "$_capdir" -name '*.log' -type f -mmin +60 -delete 2>/dev/null || true
         CAPTURE_FILE="$_capdir/$PULSE_RUN_ID.log"
         echo "[run-agent] capture on: the scrubbed output is appended to $CAPTURE_FILE (Loki job=agent)" >&2
     else

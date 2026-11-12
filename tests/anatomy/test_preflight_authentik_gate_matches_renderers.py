@@ -52,6 +52,11 @@ import yaml
 
 REPO = Path(__file__).resolve().parents[2]
 MAIN = REPO / "main.yml"
+sys.path.insert(0, str(REPO / "tools"))
+from nos_identity import default_layers  # noqa: E402
+# The probe reads the same layer set main.yml reads (nos_identity.default_layers(); gate
+# test_config_d_is_one_layer_set). One file alone went red once the edge keys left it.
+VARS_FILES = json.dumps([str(p.relative_to(REPO)) for p in default_layers()])
 FACT_TASK = "[Preflight] Find enabled services that need an Authentik to gate them"
 
 # The probe must sit at the repo root: the predicate under test builds its paths
@@ -60,7 +65,7 @@ PROBE = """---
 - hosts: localhost
   connection: local
   gather_facts: false
-  vars_files: [default.config.yml]
+  vars_files: {VARS_FILES}
   tasks:
     - ansible.builtin.set_fact: {ANSIBLE_FACT}
     - ansible.builtin.include_vars:
@@ -100,7 +105,7 @@ def _render(expression: str, extra: list[str] | None = None) -> dict:
     probe = REPO / f".preflight-gate-{uuid.uuid4().hex[:8]}.yml"
     out = Path(os.environ.get("TMPDIR", "/tmp")) / f"{probe.stem}.json"
     fact = json.dumps({"_nos_gated_without_authentik": expression})
-    probe.write_text(PROBE.format(ANSIBLE_FACT=fact, out=out))
+    probe.write_text(PROBE.format(ANSIBLE_FACT=fact, out=out, VARS_FILES=VARS_FILES))
     try:
         # inventory:4 pins ansible_python_interpreter=/opt/homebrew/bin/python3
         # — correct on the operator's Mac, absent on the Linux pytest runner,
