@@ -241,6 +241,31 @@
 		editing = { row };
 	}
 
+	// ── The row view (row face-row-view-modal): read-only, every column as text,
+	// copied through navigator.clipboard. No {@html}: values are `{expr}` text.
+	let viewing = $state<DataTableRow | null>(null);
+	let copied = $state('');
+	const viewCols = $derived((data?.columns ?? []).filter((c) => c.kind !== 'vector'));
+
+	function rowText(row: DataTableRow): string {
+		return viewCols.map((c) => `${c.label}: ${cell(row, c)}`).join('\n');
+	}
+
+	async function copy(text: string, what: string) {
+		try {
+			await navigator.clipboard.writeText(text);
+			copied = `${what} copied`;
+		} catch {
+			// no clipboard (insecure context, denied permission): say so, never pretend
+			copied = 'copy failed: the browser refused the clipboard';
+		}
+	}
+
+	function show(row: DataTableRow) {
+		copied = '';
+		viewing = row;
+	}
+
 	async function refresh() {
 		if (!data) return;
 		try {
@@ -384,7 +409,7 @@
 							{#each gridCols as col (col.key)}
 								<th>{col.label}</th>
 							{/each}
-							{#if data.canWrite}<th class="edit-col"></th>{/if}
+							<th class="edit-col"></th>
 						</tr>
 					</thead>
 					<tbody>
@@ -393,13 +418,14 @@
 								{#each gridCols as col (col.key)}
 									<td>{cell(row, col)}</td>
 								{/each}
-								{#if data.canWrite}
-									<td class="edit-col">
+								<td class="edit-col">
+									<button class="edit" aria-label="View row" onclick={() => show(row)}>view</button>
+									{#if data.canWrite}
 										<button class="edit" aria-label="Edit row" onclick={() => open(row)}
 											>edit</button
 										>
-									</td>
-								{/if}
+									{/if}
+								</td>
 							</tr>
 						{/each}
 					</tbody>
@@ -424,6 +450,7 @@
 							<!-- pre-wrap, NOT {@html}: the XSS gate forbids author markup here. -->
 							<p class="body">{cell(row, view.body)}</p>
 						{/if}
+						<button class="edit" onclick={() => show(row)}>view</button>
 						{#if data.canWrite}
 							<button class="edit" onclick={() => open(row)}>edit</button>
 						{/if}
@@ -453,6 +480,7 @@
 									</p>
 								{/if}
 								{#if view.body}<p class="body clamp">{cell(row, view.body)}</p>{/if}
+								<button class="edit" onclick={() => show(row)}>view</button>
 								{#if data.canWrite}
 									<button class="edit" onclick={() => open(row)}>edit</button>
 								{/if}
@@ -481,6 +509,7 @@
 							{#each view.meta as m (m.key)}
 								<span class="chip">{m.label}: {cell(row, m)}</span>
 							{/each}
+							<button class="edit" onclick={() => show(row)}>view</button>
 							{#if data.canWrite}
 								<button class="edit" onclick={() => open(row)}>edit</button>
 							{/if}
@@ -499,8 +528,7 @@
 						class="tile"
 						id={rowDomId(row.id)}
 						class:flash={flashed === String(row.id)}
-						onclick={() => data?.canWrite && open(row)}
-						disabled={!data.canWrite}
+						onclick={() => show(row)}
 						type="button"
 					>
 						{#if mediaUrl(row)}
@@ -540,6 +568,41 @@
 			</aside>
 		{/if}
 	</div>
+
+	{#if viewing}
+		{@const row = viewing}
+		<Modal title="{heading(row)} · {data.title}" size="lg" onclose={() => (viewing = null)}>
+			<dl class="rowview">
+				{#each viewCols as col (col.key)}
+					<dt>{col.label}</dt>
+					<dd>
+						<span class="val">{cell(row, col)}</span>
+						{#if cell(row, col)}
+							<button
+								class="edit"
+								aria-label="Copy {col.label}"
+								onclick={() => copy(cell(row, col), col.label)}>copy</button
+							>
+						{/if}
+					</dd>
+				{/each}
+			</dl>
+			{#snippet footer()}
+				<span class="copied" role="status">{copied}</span>
+				<button class="edit" onclick={() => copy(rowText(row), 'row')}>copy row</button>
+				{#if data?.canWrite}
+					<button
+						class="edit"
+						onclick={() => {
+							viewing = null;
+							open(row);
+						}}>edit</button
+					>
+				{/if}
+				<button class="edit" onclick={() => (viewing = null)}>close</button>
+			{/snippet}
+		</Modal>
+	{/if}
 
 	{#if editing}
 		<Modal
@@ -710,6 +773,33 @@
 	}
 	.edit-col {
 		text-align: right;
+		white-space: nowrap;
+	}
+	.rowview {
+		display: grid;
+		grid-template-columns: minmax(90px, max-content) 1fr;
+		gap: 6px 14px;
+		margin: 0;
+	}
+	.rowview dt {
+		opacity: 0.7;
+		font-size: 12px;
+	}
+	.rowview dd {
+		margin: 0;
+		display: flex;
+		gap: 8px;
+		align-items: flex-start;
+	}
+	.rowview .val {
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+		flex: 1;
+	}
+	.copied {
+		flex: 1;
+		font-size: 12px;
+		opacity: 0.8;
 	}
 	/* .badge / .badge.warn / .muted removed 2026-08-05 — they are
 	   $lib/components/ui now, so this component's "offline defaults" marker no
