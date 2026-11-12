@@ -138,6 +138,11 @@ if [ "$SKIP_SYNC" -eq 1 ]; then
 	echo "→ mirror-sync skipped (--skip-sync)"
 	exit 0
 fi
+# A dry run moved nothing, so no forge has anything to fetch: never trigger one (row nos-push-dry-run-no-sync).
+if [ "$DRY_RUN" -eq 1 ]; then
+	echo "→ mirror-sync skipped (dry run: nothing was pushed)"
+	exit 0
+fi
 
 # 2. yaml_lookup <key> <file>... — emit FIRST plain-scalar value for
 #    <key> across the listed YAML files, SKIPPING any value that
