@@ -345,8 +345,6 @@ def axis_organs(res: Result) -> None:
                     "the checkout is deliberately off the deployed ref", DISAGREE)
 
 
-#: Mirrors tenant_domain_is_local (default.config.yml): only a local TLD has a mkcert CA to serve.
-LOCAL_TLDS = (".local", ".lan", ".test", ".localhost", ".internal", ".home.arpa")
 
 
 def _sha256_fp(der: bytes) -> str:
@@ -358,13 +356,14 @@ def axis_root_ca(res: Result) -> None:
     """Does the edge serve THIS host's root CA (row nos-root-ca-reader)? Plain http, as a LAN
     device fetches it (traefik nos-root-ca-web -> Bone /nos-root-ca.crt), vs mkcert's rootCA.pem."""
     import ssl
-    run = ran()
-    tld = str((run.state.get("instance") or {}).get("tld") or "")
-    if run.source != "state.yml" or not tld:
-        res.add("edge", "root CA", f"UNKNOWN — the tenant domain is unread ({run.provenance()})", UNREADABLE)
+    # state.yml records no domain; the router is rendered from the resolved tenant_domain and
+    # tenant_domain_is_local (traefik services.yml.j2), so the reader resolves the same two.
+    tld = (resolve_flag("tenant_domain") or [("", "")])[-1][1]
+    if not tld or "{{" in tld:
+        res.add("edge", "root CA", "UNKNOWN — tenant_domain resolves in no layer", UNREADABLE)
         return
-    if not (tld == "localhost" or tld.endswith(LOCAL_TLDS)):
-        res.uncomparable.append(f"root CA ({tld} is public: ACME certs, no local CA)")
+    if not nos_identity_is_local_host(tld):
+        res.uncomparable.append(f"root CA ({tld} is not local: ACME certs, no local CA)")
         return
     try:
         from nos_sso import mkcert_root_ca
@@ -510,6 +509,7 @@ def axis_toolchain(res: Result) -> None:
 # Layer resolution lives in nos_identity — the same reader discovery-scan and
 # nos-smoke use, so three tools cannot disagree about one flag.
 from nos_identity import UNKNOWN, default_config_text, estate_dir, install_flags, ran, resolve_flag, services  # noqa: E402
+from nos_identity import is_local_host as nos_identity_is_local_host  # noqa: E402
 
 
 def axis_config(res: Result, flag: str) -> None:

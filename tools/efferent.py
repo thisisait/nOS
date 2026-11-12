@@ -137,7 +137,8 @@ def read_ls_remote_has(row: dict, remote: str, ref: str, sha: str):
 
 
 def read_estate_ref_is(row: dict, sha: str):
-    clone = Path.home() / ".nos" / "estate"
+    import nos_identity
+    clone = nos_identity.estate_dir()
     if not (clone / ".git").exists():
         return "unknown", f"no estate clone at {clone}"
     rc, out = _git(["git", "-C", str(clone), "rev-parse", "HEAD"])
