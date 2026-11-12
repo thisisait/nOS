@@ -26,6 +26,7 @@
 	import Modal from './ui/Modal.svelte';
 	import { onMount } from 'svelte';
 	import { splitDock, loadPinned, pinnedSlugs } from '$lib/apps/pinned';
+	import { loadAwaiting } from '$lib/api/awaiting';
 
 	export interface DockApp {
 		/** Matches WindowModel.app (or, for Control Panel, use `isControlPanel`). */
@@ -45,6 +46,46 @@
 	// Pin order from the `face-dock` config table (vendored default until it
 	// resolves; a failure keeps the default — see loadPinned).
 	onMount(() => void loadPinned());
+
+	// The Awaiting tile's badge is what waits for the operator, not its window count (row
+	// face-awaiting-dock-badge). Polled only while the tile is in the dock (Tier 1: the app's
+	// minTier), every 60 s like the menubar; a failed poll keeps the last count, never reads as 0.
+	const AWAITING = 'awaiting';
+	const POLL_MS = 60_000;
+	let awaiting = $state<{ n: number; unread: number } | null>(null);
+	const hasAwaiting = $derived(apps.some((a) => a.key === AWAITING && !a.isControlPanel));
+	async function refreshAwaiting() {
+		try {
+			const a = await loadAwaiting();
+			awaiting = { n: a.items.length, unread: a.unreachable.length };
+		} catch {
+			// keep the last known count; the next tick corrects it
+		}
+	}
+	$effect(() => {
+		if (!hasAwaiting) return;
+		void refreshAwaiting();
+		const timer = setInterval(() => void refreshAwaiting(), POLL_MS);
+		const onVisible = () => {
+			if (document.visibilityState === 'visible') void refreshAwaiting();
+		};
+		document.addEventListener('visibilitychange', onVisible);
+		return () => {
+			clearInterval(timer);
+			document.removeEventListener('visibilitychange', onVisible);
+		};
+	});
+	function badgeOf(app: DockApp, wins: number): { n: number; title: string } {
+		if (app.key !== AWAITING || app.isControlPanel || !awaiting) return { n: wins, title: '' };
+		return {
+			n: awaiting.n,
+			title:
+				`${awaiting.n} awaiting you` +
+				(awaiting.unread
+					? ` (${awaiting.unread} kind(s) the face cannot read are not counted)`
+					: '')
+		};
+	}
 
 	function launchFromList(app: DockApp) {
 		listOpen = false;
@@ -124,6 +165,7 @@
 <nav class="dock glass" aria-label="Dock">
 	{#each split.bar as app (app.key)}
 		{@const n = winsFor(app).length}
+		{@const b = badgeOf(app, n)}
 		<button
 			class="tile"
 			title={app.title}
@@ -137,7 +179,7 @@
 				     Reachable: hub icons come from an operator-authored hub_card glyph
 				     that the BFF passes through untouched. -->
 				<Icon icon={app.icon} title={app.title} size={22} labelled={false} />
-				{#if n > 0}<span class="badge">{n}</span>{/if}
+				{#if b.n > 0}<span class="badge" title={b.title || undefined}>{b.n}</span>{/if}
 			</span>
 			<span class="lbl">{app.title}</span>
 			<span class="run" class:on={n > 0}></span>
