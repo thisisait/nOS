@@ -3,7 +3,12 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+// A fork in the parallel test inherits the fd of a binary still being copied, and its exec fails
+// ETXTBSY (CI 11-12, "Text file busy"; exec.rs had the same race 11-03). Copies take the lock alone.
+static SPAWN: std::sync::RwLock<()> = std::sync::RwLock::new(());
+
 fn named(name: &str) -> PathBuf {
+    let _w = SPAWN.write().unwrap_or_else(|e| e.into_inner());
     let dir = std::env::temp_dir().join(format!("medulla-names-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let to = dir.join(name);
@@ -12,6 +17,7 @@ fn named(name: &str) -> PathBuf {
 }
 
 fn run(exe: &Path, args: &[&str]) -> (Option<i32>, String, String) {
+    let _r = SPAWN.read().unwrap_or_else(|e| e.into_inner());
     let out = Command::new(exe).args(args).output().unwrap();
     (out.status.code(), String::from_utf8_lossy(&out.stdout).into_owned(), String::from_utf8_lossy(&out.stderr).into_owned())
 }

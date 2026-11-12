@@ -47,8 +47,20 @@ pub fn execute(command: &str, args: &[String], env: &[(String, String)], timeout
     if let Err(e) = allow::validate(command, args, home, repo) {
         return done(126, b"", format!("pulse: command rejected by execution-boundary allowlist: {e}").as_bytes(), false);
     }
-    let spawned = Command::new(command).args(args).env_clear().envs(env.iter().cloned())
+    // ETXTBSY: another process's fork still holds a write fd of the script (a converge rewriting it,
+    // a parallel test writing one; CI 11-03 and 11-12). The window is a fork-to-exec: retry briefly.
+    let spawn = || Command::new(command).args(args).env_clear().envs(env.iter().cloned())
         .stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::piped()).process_group(0).spawn();
+    let mut spawned = spawn();
+    for _ in 0..5 {
+        match &spawned {
+            Err(e) if e.kind() == std::io::ErrorKind::ExecutableFileBusy => {
+                std::thread::sleep(Duration::from_millis(20));
+                spawned = spawn();
+            }
+            _ => break,
+        }
+    }
     let mut child = match spawned {
         Ok(c) => c,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return done(127, b"", format!("command not found: '{command}' ({e})").as_bytes(), false),
