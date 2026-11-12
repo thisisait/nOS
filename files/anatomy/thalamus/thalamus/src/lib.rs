@@ -7,6 +7,7 @@ pub mod cli;
 pub mod cortex_plan;
 pub mod inbox;
 pub mod ledger;
+pub mod otel;
 pub mod relay;
 pub mod septum;
 pub mod serve;
