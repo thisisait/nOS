@@ -1086,6 +1086,21 @@ def advisories() -> dict | None:
             "blind": [n for n, s in rep.get("sources", {}).items() if s.get("state") == "UNKNOWN"]}
 
 
+def regrades() -> list[dict] | None:
+    """rem-status's REGRADE rows (row rem-regrade-red-line): a pending finding the advisory report grades
+    worse than the queue does. rem-status's own load + regrade, so both readers say the same. None = UNKNOWN."""
+    import importlib.util  # noqa: PLC0415 — sibling reader, not a package
+
+    try:
+        spec = importlib.util.spec_from_file_location("_rem", REPO / "tools" / "rem-status.py")
+        rem = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(rem)
+        items = rem.load()
+        return None if items is None else rem.regrade(items, rem._report())
+    except Exception:  # noqa: BLE001 — unreadable is the same answer as absent: cannot ask
+        return None
+
+
 def _digest_report() -> dict:
     import importlib.util  # noqa: PLC0415 — sibling reader, not a package
 
@@ -1197,6 +1212,7 @@ def collect() -> dict:
     for label, path, fn in (
         ("security_scan", SCAN_STATE, security_scan),
         ("advisories", ADVISORY_SNAPSHOT, advisories),
+        ("regrades", pathlib.Path("tools/rem-status.py (queue x advisory report)"), regrades),
         ("backups", pathlib.Path(f"{BACKUP_STATUS} (copy #1) | {BACKUP_RESTIC_STATUS} (direct)"), backups),
         ("orphan_extensions", STACKS_DIR, orphan_extensions),
         ("loop_verdicts", REPO / "tools" / "loop-status.py", stalled_verdicts),
@@ -1330,6 +1346,12 @@ def reds(report: dict) -> list[str]:
                    "(tools/advisory-status.py; judge in state/genome/advisory-judgements.yml)")
     if ad and ad["stale"]:
         out.append(f"advisory patrol stale — last run {ad['age']}")
+    rg = report.get("regrades")
+    if rg:
+        shown = "; ".join(f"{r['id']} {r['from']}->{r['to']} by {r['by']}" for r in rg[:4])
+        more = f" +{len(rg) - 4}" if len(rg) > 4 else ""
+        out.append(f"remediation: {len(rg)} REGRADE — {shown}{more} "
+                   "(tools/rem-status.py; a proposal: apply it in the queue)")
     out.extend(f"host: {line} — tools/host-patch-status.py" for line in report.get("host_patch") or [])
     bk = report.get("backups")
     absent = (bk or {}).get("absent")
