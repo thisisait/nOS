@@ -211,6 +211,29 @@ def synthetic_identities(merged: dict | None = None) -> list[dict]:
     return [{**i, "kind": "synthetic"} for i in roster if isinstance(i, dict)]
 
 
+OWNED_PATHS = REPO / "state" / "genome" / "owned-paths.yml"
+
+
+def owned_paths(ctx: dict | None = None) -> list[dict]:
+    """The homes nOS owns OUTSIDE its two roots (state/genome/owned-paths.yml, row nos-owned-paths): the
+    same file tasks/removal-set.yml asserts against before any rm. Each path is rendered against `ctx`
+    (the caller's resolved vars); one that does not render stays as written. [{path, kind, why}]"""
+    import jinja2
+    doc = yaml.safe_load(OWNED_PATHS.read_text(encoding="utf-8")) or {}
+    env = jinja2.Environment()
+    out = []
+    for h in doc.get("homes") or []:
+        if not isinstance(h, dict) or not h.get("path"):
+            continue
+        path = str(h["path"])
+        try:
+            path = env.from_string(path).render(ctx or {})
+        except Exception:  # noqa: BLE001 — unrenderable here (a fact the caller lacks): kept as written
+            pass
+        out.append({"path": path.rstrip("/"), "kind": h.get("kind"), "why": h.get("why", "")})
+    return out
+
+
 def services() -> list[dict]:
     return yaml.safe_load(MANIFEST.read_text(encoding="utf-8"))["services"]
 
