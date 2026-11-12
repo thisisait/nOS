@@ -603,6 +603,9 @@ thalamus_cortex_catalogue: "lean"
 # The most nodes of the ontology Iris draws around a node she read (read_node's knowledge tree: the
 # parent chain, the node, its children, then its siblings; the rest is said). The wire carries at most 200.
 iris_knowledge_tree_max: 50
+# Iris's turns as OTLP spans to Alloy (127.0.0.1:alloy_otlp_http_port): turn, model call, tool; names,
+# durations, outcome and token counts only, never content (row thalamus-otel-spans). Off by default.
+thalamus_otel_spans: false
 # The Wing agents Iris may START (start_agent: a card the person approves, then a Wing session under her
 # run). Read-only by default: they read and file a report event, never change the estate. [] = none.
 # librarian is left out: it holds keap.write.

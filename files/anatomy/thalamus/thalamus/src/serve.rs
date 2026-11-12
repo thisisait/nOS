@@ -343,6 +343,8 @@ struct Open {
     /// This turn's last grouped query_rows: its chart source and the counts it returned. A chart drawn
     /// right after it with exactly those counts is that source's chart, so it can be pinned (2026-10-15).
     last_group: Option<(Value, Vec<(String, f64)>)>,
+    /// This turn's spans while NOS_OTLP_ENDPOINT is set (row thalamus-otel-spans); None otherwise.
+    trace: Option<crate::otel::Trace>,
     /// A card for a row outside whom the person works for, to the record and card its approve asks next (D2 §4.3).
     again: HashMap<String, (Value, Component)>,
     /// An action card waiting, to the {app, action, params} its approve sends as an act.
@@ -1527,7 +1529,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             Err(why) => (Err(why), iris.clone()),
         };
         Ok((Open { session, model, iris, messages: vec![json!({"role": "system", "content": system})], moved: None, tokens,
-                  pending: HashMap::new(), shown: HashMap::new(), tables_seen: HashMap::new(), dates: HashMap::new(), names: HashMap::new(), read_free: vec![], forms: HashMap::new(), choices: HashMap::new(), last_group: None, again: HashMap::new(), acting: HashMap::new(), tab: None, watching: vec![] },
+                  pending: HashMap::new(), shown: HashMap::new(), tables_seen: HashMap::new(), dates: HashMap::new(), names: HashMap::new(), read_free: vec![], forms: HashMap::new(), choices: HashMap::new(), last_group: None, trace: None, again: HashMap::new(), acting: HashMap::new(), tab: None, watching: vec![] },
             resumed.is_some()))
     }
 
@@ -2360,7 +2362,16 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
         true
     }
 
+    /// One turn, wrapped in its spans: every return of turn_steps ends the trace here.
     fn turn(&self, who: &Person, out: &mut dyn Write, o: &mut Open, text: &str, face: &Face) {
+        o.trace = crate::otel::Trace::start(&o.session, o.tokens);
+        self.turn_steps(who, out, o, text, face);
+        if let Some(t) = o.trace.take() {
+            t.finish(o.tokens);
+        }
+    }
+
+    fn turn_steps(&self, who: &Person, out: &mut dyn Write, o: &mut Open, text: &str, face: &Face) {
         if let Err(why) = &o.model {
             return refuse(out, &format!("iris has no model: {why}"));
         }
@@ -2933,6 +2944,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                     continue;
                 }
                 activity(out, o, Phase::Tool { name: name.to_string() });
+                let span = o.trace.as_mut().map(|t| t.begin("iris.tool"));
                 let result = match name {
                     "query_rows" => self.query_rows(who, &args).map(|(t, answer, notes)| {
                         let ids: Vec<&str> = t.rows.iter().map(|r| r.__id.as_str()).collect();
@@ -3154,6 +3166,9 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                     "stop_agent" => self.stop_agent(who, o, &args).inspect(|v| { let _ = self.record(o, Kind::ToolResult, Some(name), v.clone()); }),
                     _ => Err(format!("unknown tool {name:?}")),
                 };
+                if let (Some(i), Some(t)) = (span, o.trace.as_mut()) {
+                    t.end(i, result.is_ok(), vec![("gen_ai.tool.name", json!(crate::otel::tool_name(name)))]);
+                }
                 if name == "show" || name == "offer_dashboard" {
                     match &result {
                         Ok(_) => drew = true,
@@ -3219,7 +3234,14 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
             let head = &mut body["messages"][0]["content"];
             *head = json!(format!("{}\n\n{line}", head.as_str().unwrap_or_default()));
         }
-        let msg = self.chat(model, o, body, Some(face))?;
+        let (span, before) = (o.trace.as_mut().map(|t| t.begin("iris.complete")), o.tokens);
+        let msg = self.chat(model, o, body, Some(face));
+        if let (Some(i), Some(t)) = (span, o.trace.as_mut()) {
+            t.end(i, msg.is_ok(), vec![("gen_ai.request.model", json!(model.model_id)),
+                                       ("gen_ai.usage.input_tokens", json!(o.tokens.0 - before.0)),
+                                       ("gen_ai.usage.output_tokens", json!(o.tokens.1 - before.1))]);
+        }
+        let msg = msg?;
         o.moved = None;
         Ok(msg)
     }

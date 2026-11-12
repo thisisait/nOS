@@ -81,6 +81,11 @@
         <!-- iris_knowledge_tree_max: the most nodes read_node's knowledge tree draws (src/serve.rs knowledge_tree). -->
         <key>NOS_IRIS_KNOWLEDGE_TREE_MAX</key>
         <string>{{ iris_knowledge_tree_max | default(50) }}</string>
+{% if thalamus_otel_spans | default(false) | bool %}
+        <!-- thalamus_otel_spans: a turn's spans go to Alloy's OTLP/HTTP receiver on loopback (src/otel.rs). -->
+        <key>NOS_OTLP_ENDPOINT</key>
+        <string>http://127.0.0.1:{{ alloy_otlp_http_port | default(4318) }}</string>
+{% endif %}
 {% if iris_plan | default('tools') in ['cortex', 'hybrid'] and install_cortex | default(false) | bool %}
 {% if iris_plan == 'hybrid' %}
         <key>NOS_IRIS_INTENTS</key>
