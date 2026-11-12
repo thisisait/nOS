@@ -54,8 +54,8 @@ REPO = Path(__file__).resolve().parents[2]
 MAIN = REPO / "main.yml"
 sys.path.insert(0, str(REPO / "tools"))
 from nos_identity import default_layers  # noqa: E402
-# The probe reads the same layer set main.yml reads (config.d/*.yml, then default.config.yml;
-# gate test_config_d_is_one_layer_set). One file alone went red once config.d held edge keys.
+# The probe reads the same layer set main.yml reads (nos_identity.default_layers(); gate
+# test_config_d_is_one_layer_set). One file alone went red once the edge keys left it.
 VARS_FILES = json.dumps([str(p.relative_to(REPO)) for p in default_layers()])
 FACT_TASK = "[Preflight] Find enabled services that need an Authentik to gate them"
 

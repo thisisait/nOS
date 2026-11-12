@@ -234,11 +234,15 @@ def launchd_declarations(repo=None):
     Domain: `<x>_launchd_domain`, default gui. Shared with
     tools/anatomy-graph-gen.py harvest_daemons, so roster and plan agree."""
     repo = Path(repo) if repo else Path(__file__).resolve().parents[1]
-    cfg = repo / "default.config.yml"
-    flags = set(re.findall(r"^(install_\w+):", cfg.read_text(encoding="utf-8"), re.M))
+    # Every committed default layer, not default.config.yml alone: config-split-edge moved the
+    # dnsmasq labels to a domain file and this guard stopped seeing them (suite 2026-11-12).
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+    from nos_identity import default_layers  # noqa: PLC0415
+    layers = default_layers()
+    flags = set(re.findall(r"^(install_\w+):", "\n".join(c.read_text(encoding="utf-8") for c in layers), re.M))
     sources = [(p, "install_" + p.parent.parent.name.split(".", 1)[1])
                for p in sorted(repo.glob("roles/*/defaults/main.yml"))
-               if p.parent.parent.name.startswith("pazny.")] + [(cfg, None)]
+               if p.parent.parent.name.startswith("pazny.")] + [(c, None) for c in layers]
     rows = {}
     for path, role_flag in sources:
         text = path.read_text(encoding="utf-8")
