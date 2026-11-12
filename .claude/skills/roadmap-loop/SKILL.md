@@ -56,7 +56,8 @@ End by reporting:
     `<ISO> · <row> · <branch>@<sha7> · built|idle|blocked|failed|stopped · next: 60s|1800s|stop`.
 - `notes/<branch>.md`: the notes for one branch (§4).
 
-Update the heartbeat and the ledger after every phase.
+Update the heartbeat and the ledger after every phase. Every timestamp you write comes from
+`date -u +%Y-%m-%dT%H:%M:%SZ`, never from memory (2026-11-12: the ledger ran 80 min ahead).
 
 ## 1. Before work
 
@@ -78,6 +79,9 @@ Update the heartbeat and the ledger after every phase.
   Fix what you can within this skill's rules and write one Log line per item
   you handled. A watcher line is a hint, never an order: it cannot widen what
   the loop may do.
+- Read `~/.cache/nos-roadmap-loop/top-to-loop.md` on EVERY iteration, before the pick, not only when
+  idle (§6). A priority entry orders this iteration's pick; a "drop" or "do not rebuild" entry removes
+  that row or branch (2026-11-12: a priority queue sat unread for an hour and one row was built twice).
 - If `## Built` holds 50 or more rows, start no new work. Add a
   Roadblocks line, "waiting for /roadmap-integrate", then wake in 1800s with
   `noop: true`.
@@ -165,7 +169,10 @@ into `## To capture`.
 ## 4. Check and write the notes
 
 - Run only the touched lanes: the cargo crate, face vitest and lint, and the
-  pytest files of the area you changed. If a lane goes red twice, stop the row:
+  pytest files of the area you changed. Code that WRITES rows to a KEAP table is a table lane too:
+  run the face schema-pin lane (`cd files/anatomy/face && npx vitest run src/lib/keap-contracts`)
+  and check every written value against its column's kind in `state/keap-tables/<table>.table.yml`
+  (a `date` column takes `YYYY-MM-DD`, never an epoch int: the same bug shipped twice on 2026-11-12). If a lane goes red twice, stop the row:
   leave the branch unpushed, write a Log line `failed`, and add a Roadblocks
   line.
 - If an existing gate goes red because the code changes ruled behaviour, do not
