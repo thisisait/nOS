@@ -75,7 +75,7 @@ def test_the_class_cannot_transport() -> None:
 
 
 PROBE = r"""
-require __DIR__ . '/vendor/autoload.php';
+require getenv('NOS_TEST_WING_AUTOLOAD');
 
 use App\AgentKit\Tools\ContractSearchTool;
 use App\AgentKit\Tools\ToolContext;
@@ -98,15 +98,16 @@ echo json_encode($out);
 
 
 @pytest.fixture(scope="module")
-def probe() -> dict:
+def probe(tmp_path_factory) -> dict:
     if not AUTOLOAD.is_file():
         pytest.skip("wing vendor/autoload.php missing — run `composer install` in files/anatomy/wing")
-    p = WING / "contract-search-probe.php"
+    # In a temp dir, never the checkout: a parallel shard asserting a clean tree saw it (suite 11-12).
+    p = tmp_path_factory.mktemp("contract-search") / "contract-search-probe.php"
     p.write_text("<?php\n" + PROBE, encoding="utf-8")
     try:
         out = subprocess.run(
-            ["php", p.name], cwd=WING, capture_output=True, text=True, timeout=120,
-            env={**__import__("os").environ, "NOS_TEST_REPO_ROOT": str(REPO)},
+            ["php", str(p)], cwd=WING, capture_output=True, text=True, timeout=120,
+            env={**__import__("os").environ, "NOS_TEST_REPO_ROOT": str(REPO), "NOS_TEST_WING_AUTOLOAD": str(AUTOLOAD)},
         )
     finally:
         p.unlink(missing_ok=True)
