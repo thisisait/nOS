@@ -97,6 +97,12 @@ parser stops at the first unrecognised token (or `--`) and passes the rest to
 ansible verbatim — a `--remove=*` found INSIDE the passthrough is refused
 (exit 64, "put `--remove` before passthrough tokens"), never silently ignored.
 
+## `nos stacks|cc|ci|smoke` — the daily limbs by name
+
+`nos stacks [tag]` runs `tools/nos-stacks.sh`, `nos cc` runs `tools/nos-cc.sh`, `nos ci` runs
+`tools/ci-local.sh` and `nos smoke` runs `tools/nos-smoke.py`, each from `$NOS_SRC` with your
+arguments, its own refusals and its exit code. The `tools/` paths keep working for one release.
+
 ## `nos push` — push this checkout (not a converge)
 
 `nos push [git push args]` runs `tools/nos-push` from `$NOS_SRC` on the checkout you stand in: the push,
