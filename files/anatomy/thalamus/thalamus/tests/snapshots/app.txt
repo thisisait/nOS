@@ -2,7 +2,7 @@ update nOS Roadmap (roadmap) / backup-restic-fork — nothing is written unless 
 u approve
   status: "open" -> "done"
   note: (empty) -> "landed"
-table expenses changed (row e3)
+ro
 refused: login carol has no row in the identity map
 refused (widget w2): no column `kinds` in Expenses; columns: when, kind, amount
 dashboard Bench board: 3 widgets, place it in the face

@@ -324,6 +324,7 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
                         format!("  kpi: {} ({what}, table {})", w.title, k.query.table)
                     }
                     WidgetSpec::Knowledge(k) => format!("  knowledge: {} (node {})", w.title, k.node),
+                    WidgetSpec::Reader(r) => format!("  reader: {} ({})", w.title, cell(&serde_json::to_value(r.reader).unwrap_or_default())),
                 }));
             }
             out.extend(d.dropped.iter().map(|x| warn(format!("  left out: {} — {}", x.title, x.why))));

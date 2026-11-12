@@ -417,7 +417,8 @@ export type WidgetSpec =
 				unit?: string;
 			};
 	  }
-	| { knowledge: { node: string } };
+	| { knowledge: { node: string } }
+	| { reader: { reader: 'red_status' | 'loop_runs' } };
 
 export type Link = { state: 'connected' | 'closed'; reason: string | null };
 

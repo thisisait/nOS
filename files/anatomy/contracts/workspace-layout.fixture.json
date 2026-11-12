@@ -497,6 +497,56 @@
      }
     ]
    }
+  },
+  {
+   "case": "a morning board: two reader widgets",
+   "layout": {
+    "version": 3,
+    "active": "morning",
+    "chat": {
+     "x": 880,
+     "y": 80,
+     "w": 380,
+     "h": 560,
+     "open": true
+    },
+    "workspaces": [
+     {
+      "id": "morning",
+      "name": "Morning",
+      "items": [
+       {
+        "id": "r1",
+        "kind": "widget",
+        "title": "Red status",
+        "spec": {
+         "reader": {
+          "reader": "red_status"
+         }
+        },
+        "x": 0,
+        "y": 0,
+        "w": 392,
+        "h": 232
+       },
+       {
+        "id": "r2",
+        "kind": "widget",
+        "title": "SERE runs",
+        "spec": {
+         "reader": {
+          "reader": "loop_runs"
+         }
+        },
+        "x": 400,
+        "y": 0,
+        "w": 392,
+        "h": 232
+       }
+      ]
+     }
+    ]
+   }
   }
  ],
  "migrated": [

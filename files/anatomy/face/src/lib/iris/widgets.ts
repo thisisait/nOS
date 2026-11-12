@@ -75,7 +75,7 @@ export const tableOf = (s: WidgetSpec): string =>
 			? s.chart.query.table
 			: 'kpi' in s
 				? s.kpi.query.table
-				: 'knowledge' in s
+				: 'knowledge' in s || 'reader' in s
 					? ''
 					: s.form.table;
 

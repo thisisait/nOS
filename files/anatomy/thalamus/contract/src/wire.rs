@@ -320,7 +320,7 @@ pub const MAX_WORKSPACE: usize = 512 << 10;
 /// The most lines a replay redraws.
 pub const MAX_REPLAY: usize = 200;
 
-/// What a widget re-runs: exactly one of rows (query_rows' arguments), a chart, a form, a kpi.
+/// What a widget re-runs: exactly one of rows (query_rows' arguments), a chart, a form, a kpi, a knowledge tree, a reader.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub enum WidgetSpec {
@@ -329,6 +329,21 @@ pub enum WidgetSpec {
     Form(FormSpec),
     Kpi(KpiSpec),
     Knowledge(KnowledgeSpec),
+    Reader(ReaderSpec),
+}
+
+/// A repo reader serve runs as the person (v18); the name is a closed set, never free text.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ReaderSpec {
+    pub reader: ReaderName,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ReaderName {
+    RedStatus,
+    LoopRuns,
 }
 
 /// The tree around one taxonomy node, read by serve as the person (v10).
@@ -585,6 +600,8 @@ pub fn check_spec(spec: &WidgetSpec) -> Result<(), String> {
             &k.query.table
         }
         WidgetSpec::Knowledge(k) => return crate::renderers::need_node_id(&k.node),
+        // The closed enum is the whole check; the tier is the reader's own (serve red, read_loop_runs).
+        WidgetSpec::Reader(_) => return Ok(()),
     };
     if table.is_empty() { Err("a widget spec names no table".into()) } else { Ok(()) }
 }
@@ -720,7 +737,9 @@ fn check_shell(m: &ToShell) -> Result<(), String> {
             match component {
                 Component::Chart(_) => component.check_allow_empty(),
                 Component::TableResults(_) | Component::Form(_) | Component::Kpi(_) | Component::KnowledgeTree(_) => component.check(),
-                _ => Err("a widget carries table_results, a chart, a form, a kpi or a knowledge tree".into()),
+                // A reader widget's answer (v18): what red_status and read_loop_runs draw.
+                Component::RedStatus(_) | Component::Table(_) | Component::Timeline(_) => component.check(),
+                _ => Err("a widget carries table_results, a chart, a form, a kpi, a knowledge tree or a reader's red_status, table or timeline".into()),
             }
         }
     }
@@ -809,6 +828,13 @@ mod tests {
         assert!(decode_to_thalamus(&save).unwrap_err().contains("at most"));
         assert!(matches!(decode_to_shell(&encode(&ToShell::Workspace { doc: Some(big) })), ToShell::Refused { .. }));
         assert!(decode_to_thalamus(&encode(&ToThalamus::WorkspaceSave { doc: serde_json::json!({"version": 2}) })).is_ok());
+    }
+
+    #[test]
+    fn a_reader_widget_names_only_a_known_reader() {
+        let line = |r: &str| format!(r#"{{"t":"widget","widget":"w7","spec":{{"reader":{{"reader":"{r}"}}}},"trigger":"click"}}"#);
+        assert!(decode_to_thalamus(&line("red_status")).is_ok() && decode_to_thalamus(&line("loop_runs")).is_ok());
+        assert!(decode_to_thalamus(&line("rm")).is_err());
     }
 
     #[test]
