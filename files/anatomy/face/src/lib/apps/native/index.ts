@@ -32,6 +32,7 @@ export {
 	appsOfForm,
 	openableApps,
 	appFromQuery,
+	deepLinkRequest,
 	setViewer,
 	mayOpen,
 	appForm,

@@ -36,7 +36,7 @@ import { APP_FORMS } from '$lib/contracts';
 import type { AppBuild, AppForm, HubApp } from '$lib/contracts';
 import type { LimbDecl } from '$lib/limbs/types';
 import { request } from '$lib/limbs/request';
-import { requestAnatomy, type AnatomyView } from '$lib/anatomy/focus';
+import { ANATOMY_VIEWS, requestAnatomy, type AnatomyView } from '$lib/anatomy/focus';
 import { listTables, loadTable } from '$lib/api/tables';
 import { vfsList, vfsMove } from '$lib/api/vfs';
 import { basename, joinPath, parentPath } from './paths';
@@ -124,6 +124,28 @@ export function openableApps(...forms: readonly AppForm[]): FaceApp[] {
 export function appFromQuery(params: URLSearchParams, windows: readonly FaceApp[]): string | null {
 	const slug = params.get('app');
 	return slug !== null && windows.some((a) => a.slug === slug) ? slug : null;
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const AGENT = /^[a-z0-9][a-z0-9_-]{0,63}$/;
+
+/** What a deep link asks of the app it just opened (row wing-inc2-repoint-producers, ruling c), so a
+ *  Wing link can land on the same place in the face: `?app=anatomy&view=wing[&thread=<uuid>]` and
+ *  `?app=agents&agent=<name>[&session=<uuid>]`. Every value is checked by shape; one that fails is
+ *  dropped and the app opens plainly, never guessed at. */
+export function deepLinkRequest(slug: string, params: URLSearchParams): void {
+	const uuid = (k: string) => {
+		const v = params.get(k);
+		return v && UUID.test(v) ? v.toLowerCase() : undefined;
+	};
+	if (slug === 'anatomy') {
+		const view = params.get('view') as AnatomyView | null;
+		if (view && ANATOMY_VIEWS.includes(view)) requestAnatomy(view, uuid('thread'));
+	} else if (slug === 'agents') {
+		const agent = params.get('agent');
+		if (agent && AGENT.test(agent))
+			request('agents', 'show', { agent, session: uuid('session') ?? null });
+	}
 }
 
 /**
