@@ -24,8 +24,11 @@ Usage:
     tools/rem-status.py --all      # every pending row
     tools/rem-status.py --json     # for a caller
 
-Exit 0 always. This reports; it does not judge. A gate that went red because
-upstream published a CVE would be red on a calendar, not on a defect.
+Exit 0 always. This reports; it does not judge. `--json` carries the reader's
+one-word summary (verdict OK/RED/UNKNOWN + why + counts: RED = the act-now lane
+or a REGRADE) for tools/morning-verdict.py; it is never an exit code. A gate
+that went red because upstream published a CVE would be red on a calendar, not
+on a defect.
 """
 
 from __future__ import annotations
@@ -198,6 +201,22 @@ def _report() -> dict | None:
         return None
 
 
+def verdict(items: list[dict], rg: list[dict] | None) -> tuple[str, str, dict]:
+    """The queue in one word (row morning-verdict), for --json only; the exit stays 0.
+    RED = the act-now lane (pending CRITICAL/HIGH) or a REGRADE; UNKNOWN = the advisory
+    report is unreadable, so a regrade cannot be ruled out; else OK."""
+    act, blocked = lanes(items)["act_now"], blocked_and_severe(items)
+    counts = {"act_now": len(act), "regrade": len(rg or []), "blocked_severe": len(blocked),
+              "pending": sum(1 for i in items if i.get("status") == "pending")}
+    if act or rg:
+        first = act[0] if act else rg[0]
+        name = f"{first.get('id')} {first.get('component')}"
+        return "RED", f"{len(act)} CRITICAL/HIGH pending, {len(rg or [])} regrade: {name}", counts
+    if rg is None:
+        return "UNKNOWN", f"advisory report unreadable at {ADVISORY_SNAPSHOT}: regrade UNKNOWN", counts
+    return "OK", f"nothing CRITICAL/HIGH pending, {counts['pending']} below HIGH", counts
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--all", action="store_true", help="list every pending row, not only HIGH+")
@@ -214,7 +233,8 @@ def main() -> int:
         msg = f"UNKNOWN: live queue absent at {path} — not green"
         if args.json:
             json.dump({"file": str(path), "status": "UNKNOWN",
-                       "reason": "runtime_queue_absent"}, sys.stdout, indent=1)
+                       "reason": "runtime_queue_absent", "verdict": "UNKNOWN",
+                       "why": f"live queue absent at {path}", "counts": {}}, sys.stdout, indent=1)
             print()
         else:
             print(msg)
@@ -226,15 +246,17 @@ def main() -> int:
     cycle = max((i.get("scan_cycle") or 0) for i in items) if items else 0
 
     if args.json:
+        rg = regrade(items, _report())
         json.dump(
             {
+                **dict(zip(("verdict", "why", "counts"), verdict(items, rg))),
                 "file": str(path),
                 "total": len(items),
                 "by_status": dict(by_status),
                 "pending_by_severity": dict(by_sev),
                 "scan_cycle": cycle,
                 "unproven_closures": len(unproven(items)),
-                "regrade": regrade(items, _report()),   # null = advisory report unreadable (UNKNOWN)
+                "regrade": rg,   # null = advisory report unreadable (UNKNOWN)
                 "pending": [
                     {k: i.get(k) for k in ("id", "severity", "component",
                                            "current_version", "fix_version")}
