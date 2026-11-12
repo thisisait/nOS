@@ -96,3 +96,11 @@ notification:
   on_medium:   []
   on_low:      []
   on_info:     []
+
+# install_thalamus comes from requires.feature_flag; the journey edits a KEAP cell, so KEAP too.
+e2e:
+  enabled: "{{ (install_keap | default(false)) }}"
+  journeys:
+    - name: thalamus-edits-a-row
+      spec: test_thalamus_row_edit.py
+      runner: pytest

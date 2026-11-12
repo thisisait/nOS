@@ -181,3 +181,9 @@ e2e:
     - name: anonymous-is-sent-to-authentik
       url: https://{{ face_domain | default('os' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/
       expect: {status: [302], location_contains: "{{ authentik_domain }}/application/o/authorize"}
+  # Specs under tests/e2e/journeys, printed by tools/e2e-plan.py --journeys; the operator runs them.
+  journeys:
+    - name: iris-approves-a-move     # test 5: files.move card -> approve -> Files shows the archive
+      spec: iris-face.spec.ts
+      runner: playwright
+      env: {FACE_E2E: "1"}
