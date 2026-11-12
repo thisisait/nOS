@@ -95,6 +95,37 @@
   loop_control:
     index_var: _i
 
+# Row paperclip-nested-git-rw: the overlay above covers the TOP .git only. A nested repo or a
+# submodule's .git file under a writable mount stays writable (a planted hook or core.fsmonitor runs
+# when the operator next uses git there), so a writable workspace holding one is refused. Anything
+# but mode ro counts as writable. ponytail: depth-bounded walk (paperclip_nested_git_depth, 6);
+# deeper repos and ones the agent creates later are the rw mount's own ceiling: mount ro.
+- name: "[pazny.paperclip] Find nested .git under each writable host workspace"
+  ansible.builtin.find:
+    paths: "{{ item.path }}"
+    patterns: ".git"
+    file_type: any
+    hidden: true
+    recurse: true
+    depth: "{{ paperclip_nested_git_depth | default(6) }}"
+  register: _paperclip_ws_nested
+  loop: "{{ paperclip_host_workspaces | default([]) | rejectattr('mode', 'undefined') | rejectattr('mode', 'equalto', 'ro') | list }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: "[pazny.paperclip] A writable host workspace holds no nested repo"
+  ansible.builtin.assert:
+    that: _nested | length == 0
+    fail_msg: >-
+      Paperclip host workspace {{ item.item.name }} is refused: it mounts {{ item.item.mode }} and holds
+      a nested repo ({{ _nested[:3] | join(', ') }}{{ ' …' if _nested | length > 3 else '' }}) whose .git the
+      read-only overlay does not cover. Mount it ro, or move the nested repo out.
+  vars:
+    _nested: "{{ item.files | map(attribute='path') | map('dirname') | map('realpath') | reject('equalto', item.item.path | realpath) | list }}"
+  loop: "{{ _paperclip_ws_nested.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+
 # `follow: <branch>`: the agents read origin/<branch>, not the day someone cloned it
 # (11-01: an oponent reviewed against a 24-10 clone and flagged shipped fixes as missing).
 # Detached at the tip; a dirty clone is refused, never reset.
