@@ -182,6 +182,8 @@ def _build_substitutions() -> dict[str, str]:
         "{{ mariadb_root_password }}":    "secret:mariadb_root_password",
         # backup-restore-drill (2026-08-01): the weekly DR round-trip.
         "{{ backup_verify_script_path }}": _env("NOS_BACKUP_VERIFY_SCRIPT"),
+        # keap-tables-export: bundles follow a moved staging dir (row pulse-env-backup-staging-dir).
+        "{{ backup_staging_dir }}":       _env("NOS_BACKUP_STAGING_DIR"),
         "{{ consolidate_fs_roots }}":     _env("NOS_CONSOLIDATE_FS_ROOTS"),
         "{{ consolidate_db_exclude }}":   _env("NOS_CONSOLIDATE_DB_EXCLUDE"),
         # geo-load (maps & GIS P0): the open-data loader's cache + kraj codes.

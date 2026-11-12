@@ -280,10 +280,10 @@ pulse:
       max_runtime_s: 600
       max_concurrent: 1
       env:
-        # Bundles go to keap-tables.py's default, ~/backups/staging/keap-tables
-        # (= backup_staging_dir's default; the runner's env allow-list has no
-        # KEAP_TABLES_BUNDLE_DIR and the catalog no token for an override).
+        # The same subpath tasks/keap-tables-export.yml uses, so a moved
+        # backup_staging_dir still carries the bundles.
         KEAP_API_URL: "http://127.0.0.1:{{ keap_port }}"
+        KEAP_TABLES_BUNDLE_DIR: "{{ backup_staging_dir }}/keap-tables"
 
     # What each reader said this morning, one morning-verdict row per reader (row
     # morning-verdict): the reader's own verdict copied, never a second judge.
