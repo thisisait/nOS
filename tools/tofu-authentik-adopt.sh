@@ -29,7 +29,10 @@ command -v tofu >/dev/null || { echo "[adopt] tofu not on PATH — install OpenT
 [ -f "$SECRETS" ] || { echo "[adopt] $SECRETS not found"; exit 2; }
 
 TOKEN="$(grep '^authentik_bootstrap_token' "$SECRETS" | awk '{print $2}' | tr -d '"')"
-PORT="$(grep '^authentik_port' "$REPO_ROOT/default.config.yml" | head -1 | awk '{print $2}' | sed 's/#.*//' | tr -d ' ' || echo 9000)"
+# Every layer, last wins: authentik_port moved to config.d (config-split-identity); a grep of
+# default.config.yml alone returned nothing and the API URL had no port (review 2026-11-12).
+PORT="$(python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); import nos_identity as n; print((n.resolve_flag("authentik_port") or [("", "")])[-1][1])' "$REPO_ROOT/tools")"
+[[ "$PORT" =~ ^[0-9]+$ ]] || { echo "[adopt] authentik_port unresolved ($PORT)"; exit 2; }
 API="http://127.0.0.1:${PORT}/api/v3"
 auth=(-H "Authorization: Bearer ${TOKEN}")
 
