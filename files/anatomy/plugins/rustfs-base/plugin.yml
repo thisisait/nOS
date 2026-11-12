@@ -7,10 +7,10 @@
 # Bluesky blobstore, etc.).
 #
 # Has a real web console at fs.<tld> (port 9001) — operators get a
-# Wing /hub card. App-level identity is access_key / secret_key, not OIDC,
-# so no `authentik:` block. Native OIDC support landed upstream in
-# alpha.91+ but the operator-blocking work to wire it (org claim mapping,
-# bucket policy attach) is queued separately.
+# Wing /hub card. The edge routes ONLY the console; every S3 client (backup,
+# restore, Outline) speaks to the loopback API port (rustfs_api_port). So the console sits
+# behind forward-auth, Tier 1 (row lan-rustfs-spacetimedb-sso), and RustFS's own
+# access-key login stays behind it. Native OIDC (upstream alpha.91+) is queued.
 # =============================================================================
 
 name: rustfs-base
@@ -37,6 +37,26 @@ requires:
     - rustfs_data_dir
     - tenant_domain
     - host_alias
+
+authentik:
+  mode: forward_auth
+  provider_type: forward_auth
+  client_id: nos-rustfs
+  client_secret: "{{ nos_derived_secrets.oidc_rustfs }}"
+  slug: rustfs
+  name: 'RustFS'
+  enabled: "{{ install_rustfs | default(false) }}"
+  launch_url: "https://{{ rustfs_domain }}"
+  tier: 1   # admin: the console holds every backup
+
+e2e:
+  probes:
+    - name: anonymous-is-sent-to-authentik
+      url: https://{{ rustfs_domain }}/
+      expect: {status: [302], location_contains: "{{ authentik_domain }}/application/o/authorize"}
+    - name: s3-health-stays-on-loopback
+      url: "http://127.0.0.1:{{ rustfs_api_port | default(9010) }}/health"
+      expect: {status: [200]}
 
 lifecycle:
   post_compose:

@@ -104,7 +104,7 @@ traefik_auth_modes:
   authentik: none           # IS the auth provider
   bone: none                # JWT-validated API
   bluesky_pds: none         # AT Protocol federation
-  rustfs: none              # S3 API, own credentials
+  rustfs: proxy             # the CONSOLE (9001) is what the edge routes; S3 clients use loopback 9010
   onlyoffice: none          # DocServer for collab (JWT-secured)
   spacetimedb: none         # binary protocol
   # REM-144: this said "LAN-only via 127.0.0.1 bind" and was FALSE from batch-21
@@ -292,9 +292,6 @@ traefik_auth_none_justification:
     DocServer is called by Nextcloud/BookStack/Outline server-side and secured by
     a shared JWT (onlyoffice_jwt_secret); a browser session gate would break the
     editor iframe without adding a check the JWT does not already make.
-  rustfs: >-
-    S3 API with its own signed-request credentials. A forward-auth gate cannot be
-    satisfied by an S3 client and would break every backup target.
   offline_maps: >-
     Public tile server by design — read-only, no user data, no Authentik provider
     entry exists for it.
