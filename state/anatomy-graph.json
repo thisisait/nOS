@@ -2788,7 +2788,7 @@
       "source": "files/anatomy/plugins/advisory-patrol/plugin.yml",
       "schedule": "5 3 * * *",
       "jitter_min": 5,
-      "max_runtime_s": 2400,
+      "max_runtime_s": 3600,
       "category": "security",
       "paused": false,
       "findings_exit_codes": [

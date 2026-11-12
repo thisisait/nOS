@@ -58,14 +58,19 @@ def run(argv: list[str], timeout: int = STEP_S) -> tuple[int, str, str]:
     try:
         r = subprocess.run(argv, capture_output=True, text=True, timeout=timeout)
     except (OSError, subprocess.TimeoutExpired) as e:
+        # Killing the docker client leaves the container running with its mounts: remove it by name.
+        if "--name" in argv:
+            subprocess.run([argv[0], "rm", "-f", argv[argv.index("--name") + 1]], capture_output=True, timeout=60)
         return 1, "", str(e)
     return r.returncode, r.stdout, r.stderr
 
 
-def jail(docker: str, *, network: bool = False) -> list[str]:
-    """The scanner container's flags: never the socket, no caps, your uid."""
-    return [docker, "run", "--rm", *([] if network else ["--network", "none"]), "--cap-drop", "ALL",
-            "--security-opt", "no-new-privileges", "--user", f"{os.getuid()}:{os.getgid()}", *QUIET]
+def jail(docker: str, *, network: bool = False, name: str | None = None) -> list[str]:
+    """The scanner container's flags: never the socket, no caps, your uid, a read-only root whose only
+    scratch is a tmpfs, so an unpacked layer (secrets baked into an image) never reaches the host disk."""
+    return [docker, "run", "--rm", *(["--name", name] if name else []), *([] if network else ["--network", "none"]),
+            "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--user", f"{os.getuid()}:{os.getgid()}",
+            "--read-only", "--tmpfs", "/tmp:rw,mode=1777", "-e", "TMPDIR=/tmp", "-e", "HOME=/tmp", *QUIET]
 
 
 def running_images(containers: list[dict]) -> list[dict]:
@@ -122,13 +127,13 @@ def scan(docker: str, img: dict, syft: str, grype: str) -> dict:
         if rc:
             return {**row, "state": "UNKNOWN", "why": f"docker save: {err.strip()[-200:]}"}
         tar.chmod(0o600)
-        rc, out, err = run([*jail(docker), "-e", "TMPDIR=/work", "-v", f"{tar}:/in.tar:ro", "-v", f"{work}:/work",
+        rc, out, err = run([*jail(docker, name=f"image-sbom-syft-{key}"), "-v", f"{tar}:/in.tar:ro",
                             syft, "docker-archive:/in.tar", "-o", "syft-json", "-q"])
         if rc:
             return {**row, "state": "UNKNOWN", "why": f"syft: {err.strip()[-200:]}"}
         write(sbom, out)
         packages = len((json.loads(out) or {}).get("artifacts") or [])
-        rc, out, err = run([*jail(docker), "-e", "GRYPE_DB_CACHE_DIR=/db", "-e", "TMPDIR=/db/.tmp",
+        rc, out, err = run([*jail(docker, name=f"image-sbom-grype-{key}"), "-e", "GRYPE_DB_CACHE_DIR=/db", "-e", "TMPDIR=/db/.tmp",
                             "-e", "GRYPE_DB_AUTO_UPDATE=false", "-e", "GRYPE_DB_VALIDATE_AGE=false",
                             "-v", f"{ROOT / 'grype-db'}:/db", "-v", f"{sbom}:/sbom.json:ro",
                             grype, "sbom:/sbom.json", "-o", "json", "-q"])
@@ -162,6 +167,8 @@ def collect(only: str | None, update: bool) -> dict:
     for d in (ROOT, ROOT / "grype-db", ROOT / "grype-db" / ".tmp", ROOT / "work", ROOT / "sboms"):
         d.mkdir(mode=0o700, parents=True, exist_ok=True)
         d.chmod(0o700)
+    for left in (ROOT / "work").iterdir():  # a killed run's image tar (it can hold baked-in secrets)
+        shutil.rmtree(left, ignore_errors=True) if left.is_dir() else left.unlink(missing_ok=True)
     def grype_db(*sub: str, network: bool = False) -> list[str]:
         return [*jail(docker, network=network), "-e", "GRYPE_DB_CACHE_DIR=/db", "-e", "TMPDIR=/db/.tmp",
                 "-v", f"{ROOT / 'grype-db'}:/db", pins["grype_image"], "db", *sub]
@@ -177,8 +184,15 @@ def collect(only: str | None, update: bool) -> dict:
     if containers is None:
         return {**base, "db": db, "refused": "docker inspect unreadable", "status": "UNKNOWN", "exit": 11}
     imgs = [i for i in running_images(containers) if only in (None, i["ref"], i["id"])]
+    if not imgs:  # nothing found is not clean: no container, or a wrong docker context under launchd
+        return {**base, "db": db, "refused": "no running image to scan", "status": "UNKNOWN", "exit": 11}
     rows = [scan(docker, i, pins["syft_image"], pins["grype_image"]) if db["usable"]
             else {"ref": i["ref"], "id": i["id"], "state": "UNKNOWN", "why": "no usable grype DB"} for i in imgs]
+    if only is None:  # an SBOM of an image no longer running is history nobody reads
+        keep = {i["id"].split(":")[-1][:12] for i in imgs}
+        for old in (ROOT / "sboms").glob("*.syft.json"):
+            if old.name.split(".")[0] not in keep:
+                old.unlink(missing_ok=True)
     status_, code = verdict(rows, db, None)
     return {**base, "db": db, "images": rows, "status": status_, "exit": code}
 
@@ -209,6 +223,8 @@ def selftest() -> int:
     assert PINNED.match("anchore/syft:v1.57.1@sha256:" + "0" * 64) and not PINNED.match("anchore/syft:latest")
     assert "--network" in jail("docker") and "--network" not in jail("docker", network=True)
     assert not any("docker.sock" in a for a in jail("docker"))
+    assert "--read-only" in jail("docker") and "/tmp:rw,mode=1777" in jail("docker")
+    assert jail("docker", name="n")[jail("docker", name="n").index("--name") + 1] == "n"
     print("selftest OK: images / DB usable+stale / tally / verdict 0-10-11 / digest pin / jail")
     return 0
 

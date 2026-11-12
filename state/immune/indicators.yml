@@ -151,6 +151,18 @@ indicators:
     tolerance: state/genome/advisory-judgements.yml
     verdicts: Wing pulse_runs.exit_code
     definition: none
+  advisory-patrol:image-sbom:
+    source: files/anatomy/plugins/advisory-patrol/plugin.yml
+    kind: patrol
+    antigen: a running image whose packages carry a fixable CRITICAL (exit 10); no image, no usable or a stale grype DB (exit 11)
+    receptor: tools/image-sbom.py (syft + grype in pinned, read-only containers)
+    effector: report
+    signal: wing-inbox (pulse_runs findings exit code)
+    heartbeat: {every_hours: 26, last_report: "pulse:advisory-patrol:image-sbom"}  # 5 3 * * *
+    lifespan: none
+    tolerance: none
+    verdicts: ~/.nos/sbom/last.json
+    definition: none
   authentik-tofu-drift:tofu-drift-plan:
     source: files/anatomy/plugins/authentik-tofu-drift-base/plugin.yml
     kind: patrol

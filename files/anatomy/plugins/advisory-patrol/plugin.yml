@@ -60,7 +60,7 @@ pulse:
       command: "{{ playbook_dir }}/tools/image-sbom.py"
       schedule: "5 3 * * *"
       jitter_min: 5
-      max_runtime_s: 2400       # docker save + two scans per image; a GB image takes minutes
+      max_runtime_s: 3600       # docker save + two scans per image; ~50 images, a GB image takes minutes (the daemon cap)
       max_concurrent: 1
       findings_exit_codes: [10, 11]
       env: {}
@@ -82,3 +82,7 @@ e2e:
       url: http://127.0.0.1:{{ wing_port }}/api/v1/pulse_jobs
       auth: {bearer: wing_api_token, headers: {X-Wing-Edge-Token: wing_edge_token}}
       expect: {json_equals: {"jobs.advisory-patrol:nightly.id": "advisory-patrol:nightly"}}
+    - name: advisory-patrol-image-sbom-registered-in-wing
+      url: http://127.0.0.1:{{ wing_port }}/api/v1/pulse_jobs
+      auth: {bearer: wing_api_token, headers: {X-Wing-Edge-Token: wing_edge_token}}
+      expect: {json_equals: {"jobs.advisory-patrol:image-sbom.id": "advisory-patrol:image-sbom"}}
