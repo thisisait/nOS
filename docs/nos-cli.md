@@ -85,6 +85,13 @@ outranks config.yml; `nos` names each toggle it overrides.
 | `deep` | data + docker images/build cache + brew/npm/pip caches (today's `flush=deep` scope; `~/.ollama` still opt-in via `flush_ollama`) |
 | `all` | deep + user SOURCE: the full uninstall source set (`nos_data_root`, `~/.nos`, `~/bone`, `~/pulse`, `~/wing`, `~/keap`, hermes dirs, `~/.openclaw`, service registry). With `leave=false` this then REINSTALLS from zero. |
 
+**A data-level removal touches only what nOS owns.** Every path `remove=data` would delete must lie
+under `nos_data_root`, `stacks_dir`, the external storage root (when configured) or a home declared in
+`state/genome/owned-paths.yml`; anything else stops the run before any `rm` ("remove=data refused before
+deleting anything. Outside every nOS root …"). A `*_dir` moved in config.yml to `~/Documents` is the
+case it catches. `tools/managed-status.py` shows each managed dir's root, and `--gaps` lists a
+blank-data dir that lies OUTSIDE every root, so the refusal is visible before a blank.
+
 **Flag-ordering rule:** `nos` flags come BEFORE any passthrough tokens. The
 parser stops at the first unrecognised token (or `--`) and passes the rest to
 ansible verbatim — a `--remove=*` found INSIDE the passthrough is refused

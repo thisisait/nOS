@@ -11,6 +11,9 @@ Sources (all rendered, nothing grepped):
   tasks/removal-set.yml   `_blank_dirs` (level data), `_uninstall_source`
                           (level all), `_removal_keep` (declared, with why)
   default layers          `backup_dirs_to_dump` + `backup_coverage`
+  state/genome/owned-paths.yml   the homes outside the two roots a removal may touch
+                          (`root` per row; a blank-data dir OUTSIDE every root is a gap:
+                          remove=data refuses the whole run before any rm)
 The two gates that keep the declarations honest import this module:
 tests/anatomy/test_blank_reset_data_dirs.py and test_backup_coverage_is_declared.py.
 A reader: exit 0 whatever it finds.
@@ -27,7 +30,7 @@ import yaml
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "tools"))
-from nos_identity import default_config, default_config_text  # noqa: E402
+from nos_identity import default_config, default_config_text, owned_paths  # noqa: E402
 REMOVAL = REPO / "tasks/removal-set.yml"
 DIR_VAR = re.compile(r"^([a-z0-9_]+_(?:data_dir|config_dir|cache_dir|certs_dir|books_dir|dir)):\s*(.*)$", re.M)
 FAKE_HOME = "/H"
@@ -85,12 +88,23 @@ def backup_sets(env, ctx):
     return backed, cfg.get("backup_coverage") or {}
 
 
+def removal_roots(ctx) -> list[tuple[str, str]]:
+    """(root, name) as tasks/removal-set.yml builds `_removal_roots`: the two roots, the external
+    storage root when configured, and the owned homes of kind data / other-tool."""
+    base = [(ctx.get("nos_data_root"), "nos_data_root"), (ctx.get("stacks_dir"), "stacks_dir")]
+    if ctx.get("configure_external_storage") is True:
+        base.append((ctx.get("external_storage_root"), "external_storage_root"))
+    base += [(h["path"], f"owned:{h['kind']}") for h in owned_paths(ctx) if h["kind"] in ("data", "other-tool")]
+    return [(r.rstrip("/"), n) for r, n in base if isinstance(r, str) and r.startswith("/") and "{{" not in r]
+
+
 def table() -> list[dict]:
     env = jinja()
     ctx = config_ctx(env)
     dirs = dir_vars(ctx)
     data, all_, keep = removal_levels(env, ctx)
     backed, cov = backup_sets(env, ctx)
+    roots = removal_roots(ctx)
     rows = []
     for var, path in sorted(dirs.items()):
         if covered(path, data):
@@ -105,23 +119,26 @@ def table() -> list[dict]:
             backup, backup_why = cov[var]["class"], cov[var]["why"]
         else:
             backup, backup_why = "UNDECLARED", "outside the set and nothing says why"
+        root = next((n for r, n in roots if path == r or path.startswith(r + "/")), "OUTSIDE")
         rows.append({"var": var, "path": path.replace(FAKE_HOME, "~"), "blank": blank,
-                     "backup": backup, "why": backup_why or blank_why})
+                     "backup": backup, "root": root, "why": backup_why or blank_why})
     return rows
 
 
 def main() -> int:
     rows = table()
-    gaps = [r for r in rows if r["blank"] != "data" or r["backup"] in ("unbacked", "UNDECLARED")]
+    gaps = [r for r in rows if r["blank"] != "data" or r["backup"] in ("unbacked", "UNDECLARED")
+            or (r["blank"] == "data" and r["root"] == "OUTSIDE")]
     counts = {"dirs": len(rows), "blank_data": sum(r["blank"] == "data" for r in rows),
               "backup_set": sum(r["backup"] == "set" for r in rows),
               "unbacked": sum(r["backup"] == "unbacked" for r in rows),
-              "undeclared": sum("UNDECLARED" in (r["blank"], r["backup"]) for r in rows)}
+              "undeclared": sum("UNDECLARED" in (r["blank"], r["backup"]) for r in rows),
+              "outside_roots": sum(r["blank"] == "data" and r["root"] == "OUTSIDE" for r in rows)}
     if "--json" in sys.argv:
         json.dump({"rows": rows, "gaps": gaps, "counts": counts}, sys.stdout, indent=2)
         return 0
     for r in (gaps if "--gaps" in sys.argv else rows):
-        print(f"{r['var']:28} blank={r['blank']:<10} backup={r['backup']:<9} {r['why'][:70]}")
+        print(f"{r['var']:28} blank={r['blank']:<10} backup={r['backup']:<9} root={r['root']:<18} {r['why'][:60]}")
     print("\n" + " · ".join(f"{k} {v}" for k, v in counts.items()))
     return 0
 
