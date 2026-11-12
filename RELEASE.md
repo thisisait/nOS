@@ -6,6 +6,55 @@ Versioning is by git tag `v<semver>` cut from `master`. The latest tag is `v0.18
 
 ---
 
+## v0.19-beta (2026-11-03 … ) — DRAFT
+
+> **The face becomes the endpoint, and the night writes down what it saw.**
+> Not tagged yet. 318 commits on dev since `v0.18-beta` at `de47b3f1`
+> (733 files, +28.1k/−23.6k), measured with `git log v0.18-beta..de47b3f1`. Still `-beta`.
+> **Why now:** upstream re-uploads the FrankenPHP 1.13.5 assets every night, so the checksum pins
+> go stale nightly; the `frankenphp-digest` workflow that re-pins them can only be dispatched from
+> `master`. Until this cut, every night needs a hand re-pin.
+
+Exit criteria, proposed (roadmap row `rel-019`; the operator rules them):
+
+- [ ] a blank converge of the operator host (`nos --remove=data --confirm`) with
+  `nos-smoke --strict` green in the run's own record (`~/.nos/blank-runs.jsonl`)
+- [ ] CI green on every blocking lane at the release PR
+- [ ] the first `morning-verdict` rows written by Pulse (six readers, one morning)
+- [ ] one face approval journey run on the estate (`tools/e2e-plan.py --journeys`, row
+  `iris-approvals-e2e-plan`)
+
+### The face is the endpoint
+- Face apps declare `minTier`; the BFF routes carry a tier. The Agents, Inbox and Awaiting-you
+  apps moved in from Wing; `?app=<slug>` opens one face app.
+- Iris lives in the face: it answers agents' questions in place and holds a morning board of
+  reader widgets (contract v18). nOS.app holds the face Iris; the pupil is retired.
+- Widgets move by a grip and hide; a styled table can drop back to the grid.
+
+### The night writes down what it saw
+- `morning-verdict`: each morning, at 07:10 UTC, a Pulse job writes what each of six readers said
+  (OK / RED / UNKNOWN, why, counts) into its own DataTable. The readers run without the write token.
+- `keap-tables-export`: every DataTable exported each night, the last seven kept.
+- The efferent queue: the commands handed to the operator are rows that close only when a reader
+  sees the effect.
+
+### Safer removal and backup
+- `remove=data` refuses the backup repo and Docker's own data, compares each path's realpath with the
+  roots nOS owns (a symlink out of a root is refused), and wipes the directories of disabled services. The backup drill replays every database of the dump.
+- A wedged Docker fails in 30 s, not 50 minutes. The keychain prompt appears only when a run signs.
+
+### Supply chain
+- nos-cc shows reader text as text: a `[link=…]` or `[@click=…]` in a row no longer styles the pane or
+  plants an action.
+- The face Node image and the scanner images are pinned by digest; the SBOM scanner containers run read-only.
+- The immune drill plants a known secret and asks gitleaks to find it.
+
+### Known open
+- The `frankenphp-digest` workflow, the reason for this cut (see above).
+- `estate-status` looks for DataTable bundles in the default dir, not a moved `backup_staging_dir`.
+
+---
+
 ## v0.18-beta (2026-10-17 … 2026-11-03)
 
 > **The medulla wakes, and a blank teaches the backup to keep what it was given.**

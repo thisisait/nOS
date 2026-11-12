@@ -105,6 +105,10 @@ def export(confirm, since, keep=0):
     if not confirm:
         print(f"DRY RUN — nothing written; --confirm writes a bundle under {BUNDLE_DIR}")
         return 0
+    # The dir is job env (Pulse): a relative or ..-bearing value would write and prune elsewhere.
+    if not os.path.isabs(BUNDLE_DIR) or ".." in BUNDLE_DIR.split(os.sep):
+        print(f"refused: KEAP_TABLES_BUNDLE_DIR must be an absolute path without '..' (got {BUNDLE_DIR!r})", file=sys.stderr)
+        return 2
     stamp = now()
     final = os.path.join(BUNDLE_DIR, stamp.replace(":", ""))
     part = final + ".part"

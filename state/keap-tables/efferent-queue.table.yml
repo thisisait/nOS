@@ -42,5 +42,8 @@ schema:
     # The reader's arguments, each validated by its own regex in efferent.py.
     - { key: reader_args, label: "Reader args", kind: text,    role: attribute }
     - { key: status,      label: "Status",     kind: select,   role: dimension, required: true, concept: lifecycle.status,
-        options: ["open", "copied", "done-seen", "dropped"] }
+        options: ["open", "copied", "done-seen", "unknown", "dropped"] }
     - { key: seen_at,     label: "Seen",       kind: date,     role: dimension, concept: time.verified_at }
+    # Why tick could not judge the row (status unknown): scrubbed, escaped, <=300 chars.
+    # No concept fits (CONCEPTLESS in test_keap_table_concepts.py).
+    - { key: seen_why,    label: "Unjudged because", kind: text, role: attribute }

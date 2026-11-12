@@ -73,8 +73,10 @@ def judged(rep: object) -> tuple[str, str, dict]:
 
 def run(name: str) -> tuple[str, str, dict]:
     try:
+        # The readers only read: the job's write bearer stays out of their env (and their helpers' logs).
+        env = {k: v for k, v in os.environ.items() if k != "KEAP_AGENT_TOKEN_RW"}
         p = subprocess.run([sys.executable, str(REPO / "tools" / f"{name}.py"), "--json"],
-                           capture_output=True, text=True, timeout=TIMEOUT_S, cwd=REPO)
+                           capture_output=True, text=True, timeout=TIMEOUT_S, cwd=REPO, env=env)
     except subprocess.TimeoutExpired:
         return "UNKNOWN", f"no answer in {TIMEOUT_S} s", {}
     except OSError as exc:
@@ -102,9 +104,9 @@ def advisory(now: datetime) -> tuple[str, str, dict]:
 
 
 def rows(now: datetime) -> list[dict]:
-    day, epoch = now.strftime("%Y-%m-%d"), int(now.timestamp())
+    day = now.strftime("%Y-%m-%d")    # occurred_at is kind date: an epoch int there is refused
     said = {n: run(n) for n in RUN} | {ADVISORY: advisory(now)}
-    return [{"slug": f"{day}-{n}", "occurred_at": epoch, "reader": n,
+    return [{"slug": f"{day}-{n}", "occurred_at": day, "reader": n,
              "verdict": v, "why": why, "counts": counts}
             for n, (v, why, counts) in said.items()]
 

@@ -280,10 +280,10 @@ pulse:
       max_runtime_s: 600
       max_concurrent: 1
       env:
-        # Under backup_staging_dir, the dir Backrest encrypts: a moved staging dir moves the
-        # bundles too (row dtt-export-follows-backup-staging). "" = keap-tables.py's default.
+        # The same subpath tasks/keap-tables-export.yml uses, so a moved
+        # backup_staging_dir still carries the bundles.
         KEAP_API_URL: "http://127.0.0.1:{{ keap_port }}"
-        KEAP_TABLES_BUNDLE_DIR: "{{ keap_tables_bundle_dir }}"
+        KEAP_TABLES_BUNDLE_DIR: "{{ backup_staging_dir }}/keap-tables"
 
     # What each reader said this morning, one morning-verdict row per reader (row
     # morning-verdict): the reader's own verdict copied, never a second judge.
@@ -295,7 +295,7 @@ pulse:
       args: ["--write"]
       schedule: "10 7 * * *"
       jitter_min: 3
-      max_runtime_s: 420        # five readers x 60 s each, then six writes
+      max_runtime_s: 540        # five readers x 60 s, then six writes x 30 s HTTP timeout
       max_concurrent: 1
       findings_exit_codes: [10, 11]
       env:

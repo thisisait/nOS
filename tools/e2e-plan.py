@@ -38,7 +38,7 @@ from nos_identity import SYNTHETIC_FLAG, installed_apps, plugin_installed, ran, 
 MODES = ("native_oidc", "forward_auth", "header_oidc")
 JOURNEYS = REPO / "tests/e2e/journeys"
 JOURNEY_ENV = {"FACE_E2E"}      # flags only: tokens stay with the conftest / run-playwright.sh
-JOURNEY_SPEC = {"playwright": re.compile(r"[A-Za-z0-9_.-]+\.spec\.ts"), "pytest": re.compile(r"test_[A-Za-z0-9_]+\.py")}
+JOURNEY_SPEC = {"playwright": re.compile(r"[A-Za-z0-9_][A-Za-z0-9_.-]*\.spec\.ts"), "pytest": re.compile(r"test_[A-Za-z0-9_]+\.py")}
 RUNNER = {"playwright": ["tools/run-playwright.sh", "journeys/{spec}"],
           "pytest": ["python3", "-m", "pytest", "tests/e2e/journeys/{spec}", "-q"]}
 

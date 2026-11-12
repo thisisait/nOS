@@ -92,6 +92,12 @@ def text_refusal(field: str, value: str, limit: int) -> str | None:
     return None
 
 
+def seen_why(why: str) -> str:
+    """A reader's reason as stored text: scrubbed, every unprintable char escaped, <= MAX_WHY.
+    The reason can quote row data (a remote's ref, a timestamp), so it is data, never markup."""
+    return shown(scrub_text(str(why)))[:MAX_WHY]
+
+
 def args_refusal(reader: str, args: list[str]) -> str | None:
     """Why this reader + args may not run, or None."""
     if reader not in READERS:
@@ -246,7 +252,8 @@ def listing() -> dict:
         problem = row_problem(r)
         # scrub too: a row written past `add` may hold a secret; list never shows it
         out.append({k: shown(scrub_text(str(r.get(k) or ""))) for k in
-                    ("slug", "status", "machine", "app", "why", "command", "reader", "reader_args")}
+                    ("slug", "status", "machine", "app", "why", "command", "reader", "reader_args",
+                     "seen_why")}
                    | {"occurred_at": r.get("occurred_at"), "seen_at": r.get("seen_at"),
                       "clean": problem is None, "problem": shown(problem or "")})
     return {"ok": True, "unknown": None, "rows": out}
@@ -293,12 +300,16 @@ def cmd_tick(a) -> int:
         print(f"UNKNOWN — {TABLE} unreadable: {type(e).__name__}", file=sys.stderr)
         return 1
     for r in got:
-        if r.get("status") not in ("open", "copied"):
+        if r.get("status") not in ("open", "copied", "unknown"):
             continue
         verdict, why = judge(r)
+        # The only fields tick writes; `command` is never touched.
         if verdict == "done":
-            # The only fields tick writes; `command` is never touched.
-            write(r["slug"], {"status": "done-seen", "seen_at": dt.date.today().isoformat()})
+            write(r["slug"], {"status": "done-seen", "seen_at": dt.date.today().isoformat(), "seen_why": ""})
+        elif verdict == "unknown":
+            write(r["slug"], {"status": "unknown", "seen_why": seen_why(why)})
+        elif r.get("status") == "unknown":   # judgeable again: back on the open list
+            write(r["slug"], {"status": "open", "seen_why": ""})
         print(f"{shown(r['slug']):6} {verdict:8} {shown(why)}")
     return 0
 

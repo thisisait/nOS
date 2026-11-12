@@ -21,6 +21,7 @@ from __future__ import annotations
 
 from functools import partial
 
+from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.command import DiscoveryHit, Hit, Hits, Provider
@@ -122,13 +123,16 @@ class ControlCentreApp(App):
         for col in t["columns"]:
             dt.add_column(col.upper(), key=col)
         for row in t["rows"]:
-            dt.add_row(*[str(row.get(c, "")) for c in t["columns"]])
+            # READER TEXT IS DATA. Textual parses a str as markup, so `[link=…]`
+            # in a KEAP row would be obeyed; Text (and Text.assemble's plain
+            # parts, below) never is. The app's own styling rides in style=.
+            dt.add_row(*[Text(str(row.get(c, ""))) for c in t["columns"]])
         if dt.row_count:
             dt.move_cursor(row=min(keep, dt.row_count - 1))
 
         banner = self.query_one("#banner", Static)
         if not t["ok"]:
-            banner.update(f"[b red]UNKNOWN[/] — {t['error']}")
+            banner.update(Text.assemble(("UNKNOWN", "bold red"), f" — {t['error']}"))
         elif not t["rows"]:
             banner.update("[dim]0 rows — the reader answered, with nothing. "
                           "That is an answer, not a failure.[/]")
@@ -137,9 +141,9 @@ class ControlCentreApp(App):
 
         meta = "  ".join(f"{k}={v}" for k, v in (t.get("meta") or {}).items()
                          if v not in (None, [], {}))
-        self.query_one("#status", Static).update(
-            f" [{'DEMO' if self.demo else 'LIVE'}] {pane.TITLE}   {meta}"
-            f"   [dim]ctrl+p panes · enter row · r refresh[/]")
+        self.query_one("#status", Static).update(Text.assemble(
+            f" [{'DEMO' if self.demo else 'LIVE'}] {pane.TITLE}   {meta}   ",
+            ("ctrl+p panes · enter row · r refresh", "dim")))
         self.title = f"nos-cc — {pane.LABEL}"
 
         rec = self.query_one("#rec", Static)
@@ -188,7 +192,7 @@ class ControlCentreApp(App):
         try:
             said = toggle(self.table.get("raw") or {})
         except Exception as exc:                                # noqa: BLE001
-            said = f"[b red]{type(exc).__name__}[/] {exc}"
+            said = Text.assemble((type(exc).__name__, "bold red"), f" {exc}")
         self.query_one("#banner", Static).update(said or "")
         self.action_reload()
 
@@ -197,7 +201,8 @@ class ControlCentreApp(App):
         if dt.cursor_row is None or not self.table["rows"]:
             return
         info = self.table["detail"].get(dt.cursor_row, {})
-        body = "\n".join(f"[b]{k}:[/] {v}" for k, v in info.items()) or "(no detail)"
+        body = Text("\n").join(Text.assemble((f"{k}:", "bold"), f" {v}")
+                               for k, v in info.items()) or "(no detail)"
         detail = self.query_one("#detail", Static)
         detail.update(body)
         detail.add_class("shown")

@@ -278,9 +278,10 @@
       - { var: iiab_terminal_config_dir, level: all, why: "under homebrew_prefix/etc but written by nOS, not a formula — a leave takes it with the home user (2026-09-29 exit audit)" }
       - { var: medulla_data_dir, level: all, why: "the medulla's settings (a job paused by hand): set-points a person chose, kept across a blank like ~/.nos/halt; uninstall takes them with nos_data_root" }
 
-# Row nos-owned-paths: a data-level path must lie under a root nOS owns, or the run stops here,
-# before any rm, naming it. A config.yml *_dir moved onto a shared path (~/Documents) is caught
-# because state/genome/owned-paths.yml declares DEFAULT homes, not variables.
+# Row nos-owned-paths: a data-level path must lie under a root nOS owns (state/genome/owned-paths.yml
+# declares DEFAULT homes, so a *_dir moved to ~/Documents is caught), or the run stops before any rm.
+# An existing path is compared by realpath against resolved roots, so a symlink out of a root is
+# refused; a resolve error fails the task. realpath runs on the controller: the inventory is local.
 - name: "[Removal-set] The roots a data-level removal may touch (state/genome/owned-paths.yml)"
   ansible.builtin.set_fact:
     _removal_roots: >-
@@ -316,8 +317,12 @@
       {%- set ns = namespace(out=[]) -%}
       {%- for d in _blank_dirs -%}
         {%- set dn = d | regex_replace('/+$', '') -%}
+        {%- set pn = (dn | realpath) if (dn is exists or dn is link) else dn -%}
         {%- for pp in _protected_paths if pp -%}
-          {%- if dn == pp or dn.startswith(pp ~ '/') or pp.startswith(dn ~ '/') -%}{%- set ns.out = ns.out + [dn] -%}{%- endif -%}
+          {#- APFS is case-insensitive and realpath keeps the caller's case: compare protected paths case-folded. -#}
+          {%- for a, b in [(dn | lower, pp | lower), (pn | lower, pp | realpath | lower)] -%}
+            {%- if a == b or a.startswith(b ~ '/') or b.startswith(a ~ '/') -%}{%- set ns.out = ns.out + [dn] -%}{%- endif -%}
+          {%- endfor -%}
         {%- endfor -%}
       {%- endfor -%}
       {{ ns.out | unique | list | to_json }}
@@ -325,9 +330,12 @@
       {%- set ns = namespace(out=[]) -%}
       {%- for d in _blank_dirs -%}
         {%- set dn = d | regex_replace('/+$', '') -%}
+        {%- set real = dn is exists or dn is link -%}
+        {%- set pn = (dn | realpath) if real else dn -%}
         {%- set hit = namespace(ok=false) -%}
         {%- for r in _removal_roots if r -%}
-          {%- if dn == r or dn.startswith(r ~ '/') -%}{%- set hit.ok = true -%}{%- endif -%}
+          {%- set pr = (r | realpath) if real else r -%}
+          {%- if pn == pr or pn.startswith(pr ~ '/') -%}{%- set hit.ok = true -%}{%- endif -%}
         {%- endfor -%}
         {%- if not hit.ok or '/../' in (dn ~ '/') -%}{%- set ns.out = ns.out + [dn] -%}{%- endif -%}
       {%- endfor -%}

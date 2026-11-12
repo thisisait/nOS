@@ -71,6 +71,7 @@ def _vendored_concept_ids() -> set[str] | None:
 CONCEPTLESS = {
     "efferent-queue.command": "the exact text a person runs; no concept for it yet — needs action.command (ruling 2026-11-12, efferent-queue)",
     "efferent-queue.occurred_at": "ISO-8601 UTC text (KEAP has no datetime kind; tick compares it within a day) — needs a datetime kind + concept",
+    "efferent-queue.seen_why": "why tick could not judge a row; evidence.observation is json-only — needs a text evidence.reason",
     "efferent-queue.reader_args": "arguments of a closed-list reader; needs evidence.args alongside evidence.verification",
     "party.trading_name": "secondary name; identity.name is (rightly) the legal name — needs identity.alias",
     "party.country": "no geography concept exists — needs place.country",
@@ -319,8 +320,10 @@ def test_a_concept_binds_only_the_kinds_it_allows():
 # NEXT definition to drift out of the seeder is caught the day it happens
 # instead of being found by hand a release later.
 UNSEEDED = {
-    "efferent-queue": "rows are written at runtime by tools/efferent.py with the operator's own token "
+    "efferent-queue": "rows are written at runtime by tools/efferent.py through KEAP's human door "
                       "(ruling 2026-11-12, efferent-queue slice 1); nothing to seed.",
+    "morning-verdict": "rows are written each morning by the keap-base job tools/morning-verdict.py with the "
+                       "agent RW bearer (ruling 2026-11-12, morning-verdict 2a); nothing to seed.",
     "apps": "fed by the app generator, not the playbook seeder — wiring it is a decision",
     "systems": "fed by the service registry — same",
     "repo": "digest OUTPUT — rows come from the repos importer (digest-import-repos.py) "

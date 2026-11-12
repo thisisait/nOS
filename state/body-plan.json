@@ -13,7 +13,7 @@
     "habitat": 9,
     "sense": 88,
     "limb": 131,
-    "memory": 43,
+    "memory": 44,
     "law": 57,
     "reflex": 50,
     "heartbeat": 1,
@@ -2210,6 +2210,10 @@
       "kind": "table"
     },
     "table:loop-config": {
+      "level": "memory",
+      "kind": "table"
+    },
+    "table:morning-verdict": {
       "level": "memory",
       "kind": "table"
     },
