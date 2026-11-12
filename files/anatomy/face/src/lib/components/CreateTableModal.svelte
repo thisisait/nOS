@@ -15,8 +15,14 @@
 		defaultColumns,
 		CREATE_COLUMN_KINDS,
 		CREATE_VISIBILITIES,
+		CREATE_STYLES,
+		STYLE_ROLES,
+		validateStyle,
+		viewBlock,
+		type CreateStyle,
 		type CreateVisibility,
-		type DraftColumn
+		type DraftColumn,
+		type StylePicks
 	} from '$lib/tables/createtable';
 
 	let { oncreated, oncancel }: { oncreated: (slug: string) => void; oncancel: () => void } =
@@ -29,6 +35,8 @@
 	let anchor = $state('');
 	let visibility = $state<CreateVisibility>('tier-managers');
 	let columns = $state<DraftColumn[]>(defaultColumns());
+	let style = $state<CreateStyle>('grid');
+	let picks = $state<StylePicks>({});
 	let submitting = $state(false);
 	let err = $state('');
 
@@ -56,9 +64,15 @@
 			err = v;
 			return;
 		}
+		const sv = validateStyle(style, picks, columns);
+		if (sv) {
+			err = sv;
+			return;
+		}
 		submitting = true;
 		try {
-			const body = buildCreateBody({ slug, title, description, anchor, columns, visibility });
+			const view = viewBlock(style, picks);
+			const body = buildCreateBody({ slug, title, description, anchor, columns, visibility, view });
 			// The BFF derives the id from you + slug (a UUID); open the table by it.
 			const t = (await tablesCreateTable(body)) as { id?: unknown } | null;
 			oncreated(typeof t?.id === 'string' && t.id ? t.id : body.slug);
@@ -117,6 +131,29 @@
 					{/each}
 				</select>
 			</label>
+
+			<label class="field">
+				<span class="lbl">Style <span class="hint">how rows are shown</span></span>
+				<select bind:value={style}>
+					{#each CREATE_STYLES as s (s)}
+						<option value={s}>{s}</option>
+					{/each}
+				</select>
+			</label>
+			{#each STYLE_ROLES[style] as r (r.role)}
+				<label class="field">
+					<span class="lbl"
+						>{r.label} column {#if r.required}<span class="req">*</span>{/if}
+						<span class="hint">{r.kinds.join(' / ')}</span></span
+					>
+					<select bind:value={picks[r.role]}>
+						<option value="">{r.required ? 'pick a column' : '—'}</option>
+						{#each columns.filter((c) => c.key.trim() && r.kinds.includes(c.kind)) as c (c.key)}
+							<option value={c.key.trim()}>{c.label || c.key}</option>
+						{/each}
+					</select>
+				</label>
+			{/each}
 
 			<div class="cols">
 				<div class="cols-head">

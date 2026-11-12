@@ -5,7 +5,7 @@
  * with slug matching `^[a-z0-9][a-z0-9-]{0,62}$` (dashes only — NO dots in the
  * v1.12.x contract). These helpers derive/validate the slug + column keys and
  * assemble the body so the modal stays declarative. */
-import type { ColumnKind } from '$lib/contracts';
+import type { ColumnKind, TableView } from '$lib/contracts';
 
 /** A column being authored in the builder (pre-validation form shape). */
 export interface DraftColumn {
@@ -134,6 +134,62 @@ export interface CreateTableBody {
 	visibility: CreateVisibility;
 	columns: CreateColumn[];
 	schema: { columns: CreateColumn[] };
+	/** The KEAP view block (row face-style-at-create); absent = the grid. */
+	view?: TableView;
+}
+
+// ── The style, chosen at create (row face-style-at-create) ──────────────────
+// Each non-grid style names the columns it renders; a style missing a required
+// one would be degraded to the grid by resolveView, so the form refuses it here.
+export const CREATE_STYLES = ['grid', 'blog', 'timeline', 'tiles', 'chat'] as const;
+export type CreateStyle = (typeof CREATE_STYLES)[number];
+export type StyleRole = 'titleColumn' | 'bodyColumn' | 'dateColumn' | 'mediaColumn' | 'askColumn';
+export type StylePicks = Partial<Record<StyleRole, string>>;
+type RoleSpec = { role: StyleRole; label: string; kinds: ColumnKind[]; required: boolean };
+const T = (role: StyleRole, label: string, required = false): RoleSpec => ({
+	role,
+	label,
+	kinds: ['text'],
+	required
+});
+export const STYLE_ROLES: Record<CreateStyle, RoleSpec[]> = {
+	grid: [],
+	blog: [T('titleColumn', 'Title'), T('bodyColumn', 'Body', true)],
+	timeline: [
+		{ role: 'dateColumn', label: 'Date', kinds: ['date'], required: true },
+		T('titleColumn', 'Title')
+	],
+	tiles: [T('titleColumn', 'Title'), T('mediaColumn', 'Image URL')],
+	chat: [T('askColumn', 'Asked', true), T('bodyColumn', 'Answer', true)]
+};
+
+/** '' when the picks fit the style and the draft's columns, else the reason. */
+export function validateStyle(style: CreateStyle, picks: StylePicks, cols: DraftColumn[]): string {
+	for (const r of STYLE_ROLES[style]) {
+		const key = (picks[r.role] ?? '').trim();
+		if (!key) {
+			if (r.required) return `The ${style} style needs a ${r.label} column.`;
+			continue;
+		}
+		const col = cols.find((c) => c.key.trim() === key);
+		if (!col) return `${r.label}: no column "${key}".`;
+		if (!r.kinds.includes(col.kind))
+			return `${r.label} column "${key}" must be ${r.kinds.join(' or ')}.`;
+	}
+	if (style === 'chat' && picks.askColumn && picks.askColumn === picks.bodyColumn)
+		return 'Asked and Answer must be two different columns.';
+	return '';
+}
+
+/** The view block for a validated style; undefined for the grid (KEAP's default). */
+export function viewBlock(style: CreateStyle, picks: StylePicks): TableView | undefined {
+	if (style === 'grid') return undefined;
+	const view: TableView = { style };
+	for (const r of STYLE_ROLES[style]) {
+		const key = (picks[r.role] ?? '').trim();
+		if (key) view[r.role] = key;
+	}
+	return view;
 }
 
 /** Assemble the KEAP create-table body from validated draft inputs. Call only
@@ -145,6 +201,7 @@ export function buildCreateBody(input: {
 	anchor: string;
 	columns: DraftColumn[];
 	visibility?: CreateVisibility;
+	view?: TableView;
 }): CreateTableBody {
 	const columns: CreateColumn[] = input.columns.map((c) => {
 		const key = c.key.trim();
@@ -169,5 +226,6 @@ export function buildCreateBody(input: {
 	if (desc) body.description = desc;
 	const anchor = input.anchor.trim();
 	if (anchor) body.anchors = [anchor];
+	if (input.view) body.view = input.view;
 	return body;
 }
