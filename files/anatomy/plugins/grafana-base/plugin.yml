@@ -153,6 +153,7 @@ provisioning:
       # here until 2026-08-29. Its first question is the one a notification
       # cannot answer — which declared job has gone quiet.
       - 27-pulse.json
+      - 28-iris.json
       # Shipped 2026-05-07 with the E2E journey layer, documented in
       # docs/e2e-tester-identity.md as "surfaces in Grafana dashboard
       # 40-e2e-journeys" — and never added here, so the loader has never
