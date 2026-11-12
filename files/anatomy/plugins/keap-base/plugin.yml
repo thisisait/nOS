@@ -266,6 +266,25 @@ pulse:
         NOS_NOTIFY_ORIGIN: "keap"
         NOS_NOTIFY_ACTOR: "pulse:keap-lint"
 
+    # Every DataTable out to a bundle each night (row dtt-nightly-export): before,
+    # only a blank exported, so a KEAP loss took the roadmap's statuses with it.
+    # Lands in backup staging, which the 03:00 backup carries; newest 7 kept.
+    # Human door as admin: the proxy secret comes from `docker exec` (keap_api).
+    - name: keap-tables-export
+      category: platform
+      runner: subprocess
+      command: "{{ playbook_dir }}/tools/keap-tables.py"
+      args: ["export", "--confirm", "--keep", "7"]
+      schedule: "30 0 * * *"    # 00:30 UTC — well before the 03:00 backup
+      jitter_min: 5
+      max_runtime_s: 600
+      max_concurrent: 1
+      env:
+        # Bundles go to keap-tables.py's default, ~/backups/staging/keap-tables
+        # (= backup_staging_dir's default; the runner's env allow-list has no
+        # KEAP_TABLES_BUNDLE_DIR and the catalog no token for an override).
+        KEAP_API_URL: "http://127.0.0.1:{{ keap_port }}"
+
 # =============================================================================
 # OBSERVABILITY — Loki labels
 # =============================================================================

@@ -15,10 +15,10 @@
     "limb": 130,
     "memory": 43,
     "law": 57,
-    "reflex": 48,
+    "reflex": 49,
     "heartbeat": 1,
     "internal": 79,
-    "edges": 449
+    "edges": 451
   },
   "nodes": {
     "agent:conductor": {
@@ -1338,6 +1338,10 @@
       "kind": "pulse"
     },
     "pulse:keap:keap-lint": {
+      "level": "reflex",
+      "kind": "pulse"
+    },
+    "pulse:keap:keap-tables-export": {
       "level": "reflex",
       "kind": "pulse"
     },
@@ -3160,6 +3164,11 @@
       "kind": "temporal"
     },
     {
+      "from": "pulse:keap:keap-tables-export",
+      "to": "effector:keap-tables",
+      "kind": "trigger"
+    },
+    {
       "from": "pulse:librarian:brief-taxonomy",
       "to": "agent:librarian",
       "kind": "trigger"
@@ -3922,6 +3931,11 @@
     {
       "from": "service:pulse",
       "to": "pulse:keap:keap-lint",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:keap:keap-tables-export",
       "kind": "trigger"
     },
     {

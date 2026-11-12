@@ -401,6 +401,36 @@ def axis_root_ca(res: Result) -> None:
                 "(a stale copy in shared-certs, or another host's CA)", DISAGREE)
 
 
+def axis_tables_export(res: Result) -> None:
+    """The newest DataTables bundle (tools/keap-tables.py; Pulse keap-tables-export, row
+    dtt-nightly-export). Older than a night and a blank or a KEAP loss erases what came after."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("nos_keap_tables", REPO / "tools" / "keap-tables.py")
+    kt = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(kt)
+    keap = ran().flag("install_keap")
+    if keap and all(v is False for _, v in keap):
+        res.uncomparable.append("DataTables export (KEAP is not installed)")
+        return
+    newest = kt.newest_bundle()
+    if newest is None:
+        res.add("tables", "DataTables export", f"UNKNOWN — no bundle under {kt.BUNDLE_DIR}", UNREADABLE)
+        return
+    try:
+        manifest = json.loads((Path(newest) / "manifest.json").read_text(encoding="utf-8"))
+        at = manifest["exported_at"]
+        age = datetime.now(timezone.utc) - datetime.strptime(at, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+        n, rows = len(manifest["tables"]), sum(int(t.get("rows") or 0) for t in manifest["tables"])
+    except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
+        res.add("tables", "DataTables export", f"UNKNOWN — unreadable manifest ({type(exc).__name__}: {newest})", UNREADABLE)
+        return
+    detail = f"{at} ({age.total_seconds() / 3600:.0f}h ago) · {n} tables, {rows} rows"
+    if age.total_seconds() > 36 * 3600:
+        res.add("tables", "DataTables export", f"{detail} — older than a night: did Pulse keap-tables-export run?", DISAGREE)
+    else:
+        res.add("tables", "DataTables export", detail)
+
+
 def axis_blank(res: Result) -> None:
     """The newest confirmed blank (main.yml opens it, callback_plugins/blank_record.py closes it)."""
     path = Path.home() / ".nos" / "blank-runs.jsonl"
@@ -693,6 +723,7 @@ def main() -> int:
         axis_root_ca(res)
         axis_identity(res)
         axis_blank(res)
+        axis_tables_export(res)
         axis_toolchain(res)
 
     if args.json:

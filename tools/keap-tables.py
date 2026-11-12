@@ -5,7 +5,7 @@ The seed files carry only the git-owned half of a row; the table-owned half
 (status, verified, occurred_at — what `nos dtt update` writes) lived only in
 keap.db, which a blank wipes. The 10-09 and 10-17 blanks lost it for every table.
 
-    keap-tables.py export [--dry-run|--confirm] [--since ISO]   # list / write a bundle
+    keap-tables.py export [--dry-run|--confirm] [--since ISO] [--keep N]   # list / write a bundle
     keap-tables.py import [--dry-run|--confirm] [--since ISO] [--bundle DIR]
 
 Dry run is the default and writes nothing. A bundle is a dir under
@@ -16,6 +16,8 @@ export/import route, so this walks the human door (/api/tables, paged rows,
 (same id; owner kept where a door allows it), adds bundle-only columns, and
 upserts only the cells that differ — a re-run writes nothing. History is
 archived, not replayed: the store only appends, it cannot be written back.
+`--keep N` (the nightly Pulse job, row dtt-nightly-export) then deletes all but the
+newest N bundles; only after this export WROTE, and only stamp-named bundle dirs.
 Exit: 0 ok, 2 KEAP unreachable / a write failed, 3 refused (stale bundle).
 """
 from __future__ import annotations
@@ -25,6 +27,7 @@ import datetime as dt
 import json
 import os
 import re
+import shutil
 import sys
 import urllib.error
 import urllib.parse
@@ -91,7 +94,7 @@ def parse(ts):
 
 
 # ── export ───────────────────────────────────────────────────────────────────
-def export(confirm, since):
+def export(confirm, since, keep=0):
     tables = get("/api/tables")["data"]
     print(f"KEAP DataTables at {keap_api.human_base()}: {len(tables)} tables")
     total = 0
@@ -124,17 +127,30 @@ def export(confirm, since):
         json.dump(manifest, fh, indent=1)
     os.rename(part, final)   # a half-written bundle never looks like a bundle
     print(f"WROTE {final} ({len(tables)} tables, {sum(x['rows'] for x in manifest['tables'])} rows)")
+    if keep > 0:
+        for old in bundles()[:-keep]:
+            shutil.rmtree(old)
+            print(f"PRUNED {old}")
     return 0
 
 
 # ── import ───────────────────────────────────────────────────────────────────
-def newest_bundle():
+STAMP_DIR = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{6}Z$")   # export()'s own name; nothing else is pruned
+
+
+def bundles():
+    """Every finished bundle, oldest first: a stamp-named dir holding a manifest."""
     try:
         dirs = sorted(d for d in os.listdir(BUNDLE_DIR)
-                      if not d.endswith(".part") and os.path.isfile(os.path.join(BUNDLE_DIR, d, "manifest.json")))
+                      if STAMP_DIR.match(d) and os.path.isfile(os.path.join(BUNDLE_DIR, d, "manifest.json")))
     except FileNotFoundError:
         dirs = []
-    return os.path.join(BUNDLE_DIR, dirs[-1]) if dirs else None
+    return [os.path.join(BUNDLE_DIR, d) for d in dirs]
+
+
+def newest_bundle():
+    found = bundles()
+    return found[-1] if found else None
 
 
 def last_blank_start():
@@ -271,10 +287,11 @@ def main(argv=None):
     mode.add_argument("--confirm", action="store_true", help="write the bundle / apply it")
     ap.add_argument("--since", help="ISO-8601 UTC start of the blank this bundle belongs to")
     ap.add_argument("--bundle", help="import this bundle dir (default: the newest)")
+    ap.add_argument("--keep", type=int, default=0, help="export: then keep only the newest N bundles")
     a = ap.parse_args(argv)
     try:
         if a.verb == "export":
-            return export(a.confirm, a.since)
+            return export(a.confirm, a.since, a.keep)
         return import_(a.bundle, a.confirm, a.since)
     except Unreachable as e:
         print(f"UNKNOWN: {e}")
