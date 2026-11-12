@@ -23,9 +23,9 @@ import datetime as dt
 import importlib.util
 import json
 import re
+import secrets
 import subprocess
 import sys
-import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -137,7 +137,8 @@ def read_ls_remote_has(row: dict, remote: str, ref: str, sha: str):
 
 
 def read_estate_ref_is(row: dict, sha: str):
-    clone = Path.home() / ".nos" / "estate"
+    import nos_identity
+    clone = nos_identity.estate_dir()
     if not (clone / ".git").exists():
         return "unknown", f"no estate clone at {clone}"
     rc, out = _git(["git", "-C", str(clone), "rev-parse", "HEAD"])
@@ -159,7 +160,9 @@ def read_converge_recap_ok(row: dict):
         ran_at = dt.datetime.fromisoformat(at.replace("Z", "+00:00")).timestamp()
     except ValueError:
         return "unknown", f"last_run.at {shown(at)!r} is not a timestamp"
-    handed = float(row.get("occurred_at") or 0)
+    handed = _epoch(row.get("occurred_at"))
+    if handed is None:
+        return "unknown", "occurred_at is not a timestamp"
     if ran_at > handed:
         return "done", f"a converge started {at} and wrote its recap"
     return "open", f"last recap {at} predates the row"
@@ -196,11 +199,20 @@ def write(slug: str, values: dict) -> None:
     _req("POST", f"/api/tables/{TABLE}/rows", {"id": slug, "values": values})
 
 
-def _next_slug(existing: list[dict]) -> str:
-    # ponytail: read-then-write increment; two adds in the same instant pick one
-    # slug and the second merges into the first. A KEAP-side sequence if that bites.
-    n = [int(m.group(1)) for r in existing if (m := re.match(r"^e(\d+)$", str(r.get("slug"))))]
-    return f"e{max(n, default=0) + 1}"
+def _new_slug() -> str:
+    # Random, not a read-then-write counter: the write is an upsert, so two adds that picked one
+    # slug silently replaced the first row's command (review 2026-11-12). 32 bits per add.
+    return f"e-{secrets.token_hex(4)}"
+
+
+def _epoch(v) -> float | None:
+    """occurred_at as written by add (ISO-8601 UTC) or an older epoch int; None if neither."""
+    if isinstance(v, (int, float)) and not isinstance(v, bool):
+        return float(v)
+    try:
+        return dt.datetime.fromisoformat(str(v).replace("Z", "+00:00")).timestamp()
+    except ValueError:
+        return None
 
 
 # ── verbs ────────────────────────────────────────────────────────────────────
@@ -214,8 +226,9 @@ def cmd_add(a) -> int:
     if why:
         print(f"refused: {why}; nothing was written", file=sys.stderr)
         return 2
-    slug = _next_slug(rows())
-    write(slug, {"slug": slug, "occurred_at": int(time.time()), "machine": a.machine, "app": a.app,
+    slug = _new_slug()
+    write(slug, {"slug": slug, "occurred_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                 "machine": a.machine, "app": a.app,
                  "why": a.why, "command": a.command, "reader": a.reader,
                  "reader_args": " ".join(args), "status": "open"})
     print(f"{slug}  copy: tools/efferent.py show {slug}")
@@ -229,7 +242,7 @@ def listing() -> dict:
     except (OSError, urllib.error.URLError, ValueError, KeyError) as e:
         return {"ok": False, "unknown": f"{TABLE} unreadable: {type(e).__name__}", "rows": []}
     out = []
-    for r in sorted(got, key=lambda r: int(r.get("occurred_at") or 0)):
+    for r in sorted(got, key=lambda r: _epoch(r.get("occurred_at")) or 0.0):
         problem = row_problem(r)
         # scrub too: a row written past `add` may hold a secret; list never shows it
         out.append({k: shown(scrub_text(str(r.get(k) or ""))) for k in
@@ -285,7 +298,7 @@ def cmd_tick(a) -> int:
         verdict, why = judge(r)
         if verdict == "done":
             # The only fields tick writes; `command` is never touched.
-            write(r["slug"], {"status": "done-seen", "seen_at": int(time.time())})
+            write(r["slug"], {"status": "done-seen", "seen_at": dt.date.today().isoformat()})
         print(f"{shown(r['slug']):6} {verdict:8} {shown(why)}")
     return 0
 

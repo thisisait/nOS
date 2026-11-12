@@ -70,6 +70,7 @@ def _vendored_concept_ids() -> set[str] | None:
 # and the concepts to propose upstream are named per row.
 CONCEPTLESS = {
     "efferent-queue.command": "the exact text a person runs; no concept for it yet — needs action.command (ruling 2026-11-12, efferent-queue)",
+    "efferent-queue.occurred_at": "ISO-8601 UTC text (KEAP has no datetime kind; tick compares it within a day) — needs a datetime kind + concept",
     "efferent-queue.reader_args": "arguments of a closed-list reader; needs evidence.args alongside evidence.verification",
     "party.trading_name": "secondary name; identity.name is (rightly) the legal name — needs identity.alias",
     "party.country": "no geography concept exists — needs place.country",
