@@ -14,6 +14,17 @@
     - { direction: incoming, policy: "{{ hardening_ufw_default_incoming }}" }
     - { direction: outgoing, policy: "{{ hardening_ufw_default_outgoing }}" }
 
+# Row lan-tailscale-rule-on-fact: the Tailscale port follows the binary on this host, not a toggle.
+- name: "[hardening.ufw] Is tailscaled on this host?"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop: [/usr/sbin/tailscaled, /usr/bin/tailscaled, /snap/bin/tailscaled]
+  register: _hardening_tailscaled
+
+- name: "[hardening.ufw] Record it as a fact"
+  ansible.builtin.set_fact:
+    _hardening_tailscaled_present: "{{ _hardening_tailscaled.results | selectattr('stat.exists') | list | length > 0 }}"
+
 - name: "[hardening.ufw] Allow declared services"
   community.general.ufw:
     rule: allow
