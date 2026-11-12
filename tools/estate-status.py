@@ -49,6 +49,8 @@ Exit codes
   0  every comparison made agreed, or was honestly reported as uncomparable
   1  at least one real disagreement
   2  a side could not be read — NOTHING was compared on that axis
+--json carries the same judgement as verdict RED / UNKNOWN / OK + why + counts
+(row morning-verdict).
 """
 
 from __future__ import annotations
@@ -695,6 +697,18 @@ def render(res: Result, fetched: bool) -> None:
     print(f"  {n} disagreement(s). Absence of a comparison is not agreement.")
 
 
+def verdict(res: Result) -> tuple[str, str, dict]:
+    """The exit code in one word (row morning-verdict), --json only: 1 = RED, 2 = UNKNOWN, 0 = OK."""
+    bad, gone = res.disagreements, res.unreadable
+    counts = {"lines": len(res.lines), "disagree": len(bad), "unreadable": len(gone),
+              "uncomparable": len(res.uncomparable)}
+    if bad:
+        return "RED", f"{len(bad)} disagreement(s): {bad[0].axis} {bad[0].subject} — {bad[0].detail}", counts
+    if gone:
+        return "UNKNOWN", f"{len(gone)} side(s) unreadable: {gone[0].axis} {gone[0].subject} — {gone[0].detail}", counts
+    return "OK", f"{len(res.lines)} comparison(s) agree, {len(res.uncomparable)} uncomparable", counts
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--no-fetch", action="store_true",
@@ -732,6 +746,7 @@ def main() -> int:
             "lines": [vars(x) for x in res.lines],
             "uncomparable": res.uncomparable,
             "disagreements": len(res.disagreements),
+            **dict(zip(("verdict", "why", "counts"), verdict(res))),
         }, indent=2))
     else:
         render(res, fetched=not args.no_fetch)
