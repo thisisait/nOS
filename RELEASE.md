@@ -39,17 +39,19 @@ Exit criteria, proposed (roadmap row `rel-019`; the operator rules them):
   sees the effect.
 
 ### Safer removal and backup
-- `remove=data` refuses the backup repo and Docker's own data, and wipes the directories of disabled
-  services. The backup drill replays every database of the dump.
+- `remove=data` refuses the backup repo and Docker's own data, compares each path's realpath with the
+  roots nOS owns (a symlink out of a root is refused), and wipes the directories of disabled services. The backup drill replays every database of the dump.
 - A wedged Docker fails in 30 s, not 50 minutes. The keychain prompt appears only when a run signs.
 
 ### Supply chain
+- nos-cc shows reader text as text: a `[link=…]` or `[@click=…]` in a row no longer styles the pane or
+  plants an action.
 - The face Node image and the scanner images are pinned by digest; the SBOM scanner containers run read-only.
 - The immune drill plants a known secret and asks gitleaks to find it.
 
 ### Known open
 - The `frankenphp-digest` workflow, the reason for this cut (see above).
-- `nos-owned-paths`: the removal refusal resolving symlinks is in the next batch.
+- `estate-status` looks for DataTable bundles in the default dir, not a moved `backup_staging_dir`.
 
 ---
 
