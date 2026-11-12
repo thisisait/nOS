@@ -7,6 +7,7 @@
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { requests, consumed } from '$lib/limbs/request';
 	import { StatusNote, Badge } from '$lib/components/ui';
 	import { cancelSession, loadRoster, loadSessions } from '$lib/api/agents';
 	import type { RosterAgent } from '$lib/agents/roster';
@@ -19,6 +20,16 @@
 	let sessionsFailed = $state<string | null>(null);
 	let said: Record<string, string> = $state({});
 	let busy = $state<string | null>(null);
+	// A deep link's session (?app=agents&agent=<name>&session=<uuid>): its row is marked once listed.
+	let wanted = $state<string | null>(null);
+
+	$effect(() => {
+		const req = $requests.agents;
+		if (req?.action !== 'show') return;
+		consumed('agents');
+		wanted = (req.params.session as string | null) ?? null;
+		void pick(req.params.agent as string);
+	});
 
 	const tone = (s: string) =>
 		s === 'running'
@@ -119,7 +130,7 @@
 					</thead>
 					<tbody>
 						{#each sessions as s (s.uuid)}
-							<tr>
+							<tr class:wanted={wanted === s.uuid}>
 								<td><Badge tone={tone(s.status)}>{s.status}</Badge></td>
 								<td>{s.startedAt ?? '—'}</td>
 								<td>{s.endedAt ?? ''}{s.stopReason ? ` (${s.stopReason})` : ''}</td>
@@ -140,6 +151,9 @@
 </div>
 
 <style>
+	tr.wanted td {
+		background: rgba(90, 150, 255, 0.18);
+	}
 	.agents {
 		display: grid;
 		grid-template-columns: minmax(160px, 220px) 1fr;
