@@ -234,66 +234,12 @@ nos_extra_identities: []
 # the 00-admin-groups blueprint stops re-applying it on every converge.
 nos_operator_owns_password: false
 
-# ── TLD class detection (drives mkcert vs ACME, dnsmasq vs real DNS) ─────────
-# tenant_domain_is_local: true  → use mkcert + dnsmasq + /etc/resolver (dev mode)
-#                        false → use ACME (Let's Encrypt) + public DNS (prod mode)
-# The ONE list of local suffixes (Python reads it via nos_identity.local_tld_suffixes;
-# gate tests/anatomy/test_tld_class.py). .internal (ICANN 2024) and .home.arpa
-# (RFC 8375) are private by design; .local is mDNS-only (RFC 6762), accepted but
-# warned for a client firm. Override with `-e tenant_domain_is_local=false`.
-tenant_domain_is_local: "{{ (tenant_domain | default('')).endswith(('.local', '.lan', '.test', '.localhost', '.internal', '.home.arpa')) or (tenant_domain | default('')) == 'localhost' }}"
-
-# How clients reach this host. cloudflare: a public zone Cloudflare may front.
-# lan_tailscale: no public IP; dnsmasq answers the LAN IP (LAN + tailnet split DNS),
-# the Cloudflare door is refused. Derived: a public TLD has always meant Cloudflare.
-# A firm with its own domain and no Cloudflare sets lan_tailscale in config.yml.
-nos_edge: "{{ 'lan_tailscale' if tenant_domain_is_local else 'cloudflare' }}"
-
-# This host's address on the office LAN: dnsmasq answers it, Tailscale advertises it
-# as a /32 route. Ansible's default-route fact; pin the router's DHCP reservation
-# here (config.yml) when the host has more than one interface.
-nos_lan_ip: "{{ ansible_facts['default_ipv4']['address'] | default('') }}"
-# A host that leaves its LAN (a Mac taken home): dnsmasq answers 127.0.0.1 so the host
-# still reaches itself by name; no LAN route is advertised, reach it by its Tailscale IP.
-nos_lan_roaming: false
-
-# ── TLS cert paths ───────────────────────────────────────────────────────────
-# Cert tree lives under the infra stack dir. mkcert writes here for local
-# TLDs; pazny.acme symlinks LE certs here for public TLDs. Traefik mounts
-# this dir as /certs:ro; host nginx (if enabled) reads the same paths.
-tls_cert_dir: "{{ stacks_dir }}/infra/tls"
-# Cert filename uses the wildcard zone apex (host_alias.tenant_domain when
-# host_alias is set, else just tenant_domain). Keeps one cert file per fleet
-# box so multiple host_alias deploys against the same tenant_domain coexist.
-_acme_zone: "{{ ((_host_alias_normalized + '.') if (_host_alias_normalized | length > 0) else '') + tenant_domain }}"
-ssl_cert_path: "{{ tls_cert_dir }}/{{ 'local-dev.crt' if tenant_domain_is_local else 'acme/' + _acme_zone + '.crt' }}"
-ssl_cert_key: "{{ tls_cert_dir }}/{{ 'local-dev.key' if tenant_domain_is_local else 'acme/' + _acme_zone + '.key' }}"
-
 # ── ACME (Let's Encrypt) — auto-enabled for public TLDs ──────────────────────
 # Wildcard cert *{host_alias_seg}.{tenant_domain} (+ Tier-2 wildcard) via
 # DNS-01 challenge to Cloudflare. Keys & state stored at ~/.acme.sh/, certs
 # symlinked into nginx/ssl/acme/.
 install_acme: "{{ not tenant_domain_is_local }}"
-acme_provider: "cloudflare"               # cloudflare | manual | http
-acme_email: "{{ default_admin_email }}"
-acme_renewal_days: 60                     # Re-issue when cert expires within N days
-acme_staging: false                       # true → use LE staging endpoint (testing)
-acme_dns_provider: "dns_cf"               # acme.sh --dns id: dns_cf | dns_hetznercloud | dns_desec | dns_ovh …
-# Non-Cloudflare credentials, under acme.sh's own env names, in credentials.yml, e.g.
-#   {HETZNER_TOKEN: …} | {DEDYN_TOKEN: …} | {OVH_END_POINT, OVH_AK, OVH_AS, OVH_CK}
-acme_dns_env: {}
-# Cloudflare API token with "Zone:DNS:Edit" + "Zone:Zone:Read" — set in
-# credentials.yml as `acme_cloudflare_api_token`. Not defined here to
-# prevent the empty default silently shadowing a credentials.yml value
-# on machines where credentials.yml was just created (blank first run).
 
-# Hybrid mode — keep dnsmasq + /etc/resolver active even on a public TLD so
-# `*.pazny.eu` resolves to 127.0.0.1 locally while public DNS (Cloudflare)
-# can independently point at the home IP for external clients later. Useful
-# for staged transitions where you want a valid LE cert + real domain
-# identity NOW but aren't yet ready to expose ports / set CF A records.
-# Default false (clean separation: local TLD → dnsmasq, public TLD → real DNS).
-dnsmasq_force_local_domains: false
 instance_org: ""                          # Client organization name
 
 # Breach-notification controller identity (gov P1). Feeds the GDPR Art-33(3)(b)
@@ -901,7 +847,6 @@ frankenphp_checksums:
 # ==============================================================================
 # NGINX
 # ==============================================================================
-
 
 # Nginx sites – activated AUTOMATICALLY based on install_* flags.
 # For manual override set nginx_sites_enabled in config.yml.
@@ -1867,7 +1812,6 @@ snappymail_image: "djmaze/snappymail:v2.38.2"
 # Services then available via: http://mac-studio.<tailnet>.ts.net:<PORT>
 # ==============================================================================
 
-tailscale_hostname: ""            # Tailscale FQDN (e.g. mac-studio.tailnet-abc.ts.net) – homepage → Grafana
 services_lan_access: false        # true = Docker services on 0.0.0.0 (access via Tailscale/LAN by ports)
 
 # Alternative hosts for service access (LAN IP, Tailscale hostname/IP)
@@ -1929,19 +1873,6 @@ pmset_ttyskeepawake: 1                 # TTY session prevents sleep
 # (tested on macOS 27) and is the reference the restart handler's
 # plist-existence guard hardens around. Bump when a newer release is verified.
 dnsmasq_version: "2.93"                    # known-good Homebrew dnsmasq (2.93 runs both estates, 2026-10-09)
-dnsmasq_launchd_label: "homebrew.mxcl.dnsmasq"  # the formula's plist, run as root
-dnsmasq_launchd_domain: "system"           # root LaunchDaemon: bootout needs become, not gui/<uid>
-dnsmasq_dev_domain: "{{ tenant_domain | default('dev.local') }}"  # Auto-tracks tenant_domain (Track F)
-dnsmasq_dev_address: "127.0.0.1"          # Target for *.dev.local from localhost
-dnsmasq_port: 53                          # DNS port (53 = default)
-dnsmasq_lan_access: true                  # true = dnsmasq also listens on LAN (for TVs, mobiles, guests)
-dnsmasq_additional_addresses: []          # Additional custom DNS records
-dnsmasq_tailnet_conf: "{{ homebrew_prefix }}/etc/dnsmasq-tailnet.conf"  # roaming host: the tailnet instance's own config
-dnsmasq_tailnet_launchd_label: "eu.thisisait.nos.dnsmasq-tailnet"  # its root LaunchDaemon (literal in the plist template)
-dnsmasq_tailnet_launchd_domain: "system"
-# dnsmasq_additional_addresses:
-#   - domain: "api.external.test"
-#     address: "192.168.1.100"
 
 # ==============================================================================
 # RESTIC – backups
@@ -2088,26 +2019,6 @@ coexistence_secondary_ttl_days: 7
 
 # ── Traefik ────────────────────────────────────────────────────────────────────
 traefik_image_version: "v3.7.17"        # GHSA-xv5x-242w-7hf7 Negotiate/NTLM transport leak (high, v3.7.14..16) fixed v3.7.17 [advisory-status 2026-11-03]. GHSA-hrpp-p4fc-wwf8, -p8wx-ph99-xgcr, -fh26-gfpp-7xxx, -qvj7-gq9c-hp7q, -53qr-784g-cj35, -rv2h-qh7j-xrjw (high, <=v3.7.13..15) fixed v3.7.16 [advisory-status 2026-10-23]. REM-251 GHSA-rf44-j88r-hh8c (aliasHeadersStrategy, floor v3.7.12) + GHSA-v67p-phpq-fc8x trailer bypass (patched v3.7.13). Prior REM-145 CONNECT poisoning. [swept v3.7.10 2026-09-16]
-traefik_http_port: 80
-traefik_https_port: 443
-traefik_dashboard_port: 8082            # 8080=cadvisor, 8081=tileserver, 8090=freescout — 8082 is the first free slot
-# REM-194: the dashboard's only door is the SSO-gated api@internal router, which
-# fails closed (404) until an Authentik provider exists for traefik_domain (none yet).
-# Off = no router, no hub card; the registry and the role both read this one value.
-traefik_dashboard_route_enabled: false
-# Cloudflare Authenticated Origin Pulls: a second, mTLS-only door. :443 is untouched;
-# the router forwards WAN 443 here instead. Runbook: docs/traefik-primary-proxy.md.
-traefik_origin_pull_enabled: false
-traefik_origin_pull_port: 8443
-traefik_domain: "traefik{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
-traefik_log_level: "INFO"               # DEBUG / INFO / WARN / ERROR
-# traefik_dynamic_dir / traefik_certs_dir live in roles/pazny.traefik/defaults
-# (referenced only once the role loads). traefik_config_dir is HOISTED here —
-# tasks/stacks/core-up.yml's data-dir loop pre-creates it BEFORE the traefik role
-# loads, so the role default is too late: under ansible-core 2.20.6 the loop-item
-# `| default()` does not save the undefined var. Value matches the role default
-# ({{ stacks_dir }}/infra/traefik) byte-for-byte. See CLAUDE.md `{{ vars }}` gotcha.
-traefik_config_dir: "{{ stacks_dir }}/infra/traefik"
 
 # ── Tier-1 service ports lifted from role defaults ────────────────────────────
 # These are referenced via lookup('vars', '<svc>_port') in the Traefik file
