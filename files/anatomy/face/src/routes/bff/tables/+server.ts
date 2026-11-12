@@ -391,6 +391,15 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		if (body.op === 'createTable') {
 			const { op: _op, ...tableBody } = body;
 			void _op;
+			// The view block is narrowed here, at the trust boundary, the way every read narrows it:
+			// a block that would lose a part (unknown style, column, op or action) is refused, not stored.
+			if (tableBody.view !== undefined) {
+				const cols = (Array.isArray(tableBody.columns) ? tableBody.columns : []) as ColumnSpec[];
+				const { view, dropped } = narrowView(tableBody.view, cols);
+				if (!view || dropped.length)
+					throw error(400, `view block refused: ${dropped.join(', ') || 'not an object'}`);
+				tableBody.view = view;
+			}
 			return json(unwrap(await keapCreateTable(tableBody, locals.identity)));
 		}
 		throw error(400, 'unsupported op');
