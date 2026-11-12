@@ -80,7 +80,8 @@
     rc=$(perl -e 'alarm shift; exec @ARGV' 20 codesign -f -s "$H" "$p" >/dev/null 2>&1; echo $?) 2>/dev/null; rm -f "$p"
     [ "$rc" != 142 ] || { echo "codesign is waiting on a keychain dialog (no answer in 20 s). Once, in this session (it asks the login password), then re-run:
         security set-key-partition-list -S apple-tool:,apple:,codesign: -s {{ thalamus_signing_keychain | quote }}" >&2; exit 1; }
-    out=$(codesign -f -s "$H" --options runtime -i eu.thisisait.nos.app {{ thalamus_nos_app | quote }} 2>&1) || { echo "$out" >&2; grep -q errSecInternalComponent <<<"$out" && { echo "codesign could not reach the signing key (errSecInternalComponent). Over SSH the keychain cannot ask
+    # The real sign under an alarm too (review 2026-11-12): a dialog the probe missed fails the task, never hangs it.
+    out=$(perl -e 'alarm shift; exec @ARGV' 120 codesign -f -s "$H" --options runtime -i eu.thisisait.nos.app {{ thalamus_nos_app | quote }} 2>&1) || { echo "$out" >&2; grep -q errSecInternalComponent <<<"$out" && { echo "codesign could not reach the signing key (errSecInternalComponent). Over SSH the keychain cannot ask
       'allow codesign?'. Once, in this session (it asks the login password), then re-run:
         security set-key-partition-list -S apple-tool:,apple:,codesign: -s {{ thalamus_signing_keychain | quote }}" >&2; exit 1; }; exit 1; }
     /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f {{ thalamus_nos_app | quote }} || true
