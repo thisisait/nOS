@@ -280,3 +280,40 @@
     - _jf_branding.json is defined
     - ('/sso/OID/start/' ~ jellyfin_oidc_provider_name) not in (_jf_branding.json.LoginDisclaimer | default(''))
   no_log: true
+
+# The estate brand on the login page (row estate-brand-jellyfin): one marked block in CustomCss,
+# replaced whole when the title changes, the operator's own CSS around it kept. Re-read first:
+# the button task above may just have rewritten the branding. The title reaches CSS through a
+# safe charset only (no quote, backslash or `<`), so it cannot close the string or the <style>.
+- name: "[pazny.jellyfin Post] Re-read the branding (estate brand)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ jellyfin_port | default(8096) }}/Branding/Configuration"
+    timeout: 10
+  register: _jf_branding_now
+  when: _jf_branding.json is defined
+
+- name: "[pazny.jellyfin Post] Put the estate brand on the login page"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ jellyfin_port | default(8096) }}/System/Configuration/branding"
+    method: POST
+    body_format: json
+    body: "{{ _jf_branding_now.json | combine({'CustomCss': _jf_css_want}) }}"
+    headers:
+      Authorization: "MediaBrowser Token=\"{{ _jf_sso_auth.json.AccessToken | default('') }}\""
+    status_code: [200, 204]
+    timeout: 10
+  vars:
+    _jf_brand_title: "{{ estate_brand_title | default('This is AIT') | regex_replace('[^A-Za-z0-9 .,!&()+-]', '') | trim }}"
+    _jf_css_have: "{{ _jf_branding_now.json.CustomCss | default('') or '' }}"
+    _jf_css_rest: "{{ _jf_css_have | regex_replace('(?s)\\n?/\\* nos-estate-brand \\*/.*?/\\* /nos-estate-brand \\*/', '') }}"
+    _jf_css_block: >-
+      /* nos-estate-brand */ .loginDisclaimer::before { content: "{{ _jf_brand_title }} · powered by Jellyfin";
+      display: block; font-size: 1.3em; font-weight: 600; margin-bottom: 0.6em; } /* /nos-estate-brand */
+    _jf_css_want: "{{ (_jf_css_rest ~ '\n' ~ _jf_css_block) if _jf_css_rest else _jf_css_block }}"
+  register: _jf_brand_write
+  when:
+    - _jf_branding_now.json is defined
+    - _jf_brand_title | length > 0
+    - _jf_css_want != _jf_css_have
+  changed_when: true
+  no_log: true
