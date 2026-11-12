@@ -1,0 +1,554 @@
+# ==============================================================================
+# config.d/35-identity.yml — identity: Authentik (domain, port, engine, secrets
+# by derivation, groups, RBAC tiers, MFA, agent clients), SSO autologin and
+# header-provision, Infisical and Vaultwarden (row config-split-identity).
+#
+# One of the default layers (config.d/*.yml in order, then default.config.yml;
+# the set is tools/nos_identity.default_layers and main.yml vars_files). Every
+# variable is declared in exactly one of them. config.yml still overrides.
+# The install_* switches and the image/version pins stay in default.config.yml:
+# the upgrade path writes only that file (test_image_pins_stay_in_default_config).
+# Each app's own authentik_oidc_<app>_client_* stays beside its app.
+# ==============================================================================
+
+# ── SSO Autologin (β) ─────────────────────────────────────────────────────────
+# Global flag: auto-redirect/force-OIDC for native_oidc services that SUPPORT
+# it (per-plugin authentik.autologin.supports: yes). supports:no services stay
+# button-only and CANNOT be flipped (gate tests/anatomy/test_autologin_no_means_no.py).
+# Precedence: per-service > per-min-tier > global > false.
+# RISK: misconfig + no local fallback = lockout if Authentik is down. This is a
+# pre-existing risk of any pure-SSO native_oidc service, not new to autologin —
+# but enabling autologin makes it easy to lock yourself out of many services at
+# once. Opt-in only, AFTER manually testing each login flow.
+# READ docs/break-glass-runbook.md before enabling.
+sso_autologin: false                       # SAFE DEFAULT (opt-in; the whole mechanism stays dormant)
+sso_enable_custom_preloader: false         # Wing /hub branded splash + session pre-warmer (optional)
+sso_autologin_timeout_ms: 5000             # preloader / redirect fallback timeout (ms)
+# Per-tier / per-service overrides (precedence: svc > min_tier > global > false).
+# NOTE: the tier var is named sso_autologin_min_tier_<N> to avoid collision/
+# confusion with the unrelated authentik_app_tiers / authentik_rbac_tiers maps.
+# sso_autologin_min_tier_1: true           # enable for all Tier-1 (admin) native_oidc services that support it
+# sso_autologin_gitea: "{{ sso_autologin | default(false) }}"
+# sso_autologin_n8n: false                 # upstream CANNOT force-OIDC (supports:no, gate-locked anyway)
+#
+# ── forward_auth header-provision (Batch 6) ───────────────────────────────────
+# A handful of forward_auth services have a REAL "trust a proxy header" login
+# mode (NOT native OIDC) — the Authentik gate alone can log the user in,
+# eliminating the service's own second login. These are NOT autologin-block
+# services (gate test_no_autologin_for_pure_proxy_services forbids that); they
+# are wired by a service-side config toggle, gated on this same precedence chain.
+#
+# calibre-web: upstream "Allow Reverse Proxy Authentication" (config DB columns
+# config_allow_reverse_proxy_header_login + config_reverse_proxy_login_header_name).
+# When on, Calibre-Web trusts X-authentik-username (forwarded by Traefik's
+# authentik@file middleware) and logs the user straight in — no username/password
+# form. DORMANT by default (resolves false). Reversible: a re-run with the gate
+# OFF flips the DB column back to 0.
+#   CAVEAT (honest, documented): Calibre-Web's reverse-proxy login matches the
+#   forwarded username against an EXISTING Calibre-Web user. The provisioned
+#   admin user is `admin`; if the Authentik principal's username differs and has
+#   no Calibre-Web account, header login silently no-ops and the user still sees
+#   the login form. Auto-provisioning new users from the header is NOT supported
+#   upstream (req #2965 was rejected) — so this cleanly eliminates the second
+#   login only for users whose Authentik username matches a Calibre-Web account.
+# sso_autologin_calibreweb: "{{ sso_autologin | default(false) }}"
+# calibreweb_proxy_auth_header: X-authentik-username   # trusted header (Traefik authentik@file forwards this)
+
+# ==============================================================================
+# AUTHENTIK – SSO / Identity Provider (OIDC, SAML, LDAP, SCIM)
+# Central login for all services. PostgreSQL + Redis from the infra stack.
+# ==============================================================================
+
+authentik_domain: "auth{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
+authentik_port: 9003                               # 9000 = PHP-FPM, 9001 = RustFS, 9002 = Portainer
+# ADR-0001 Phase 0: opt-in OpenTofu Authentik drift detector (plan-only).
+# Phase 1 will repurpose this flag to make `tofu apply` authoritative.
+manage_authentik_with_tofu: false
+# ADR-0001 Phase 1 authority switch: "blueprint" (default, ak apply_blueprint) |
+# "tofu" (OpenTofu authoritative — imperative blueprint reapply + MTI footgun
+# skipped). DO NOT flip to "tofu" until the WHOLE tenant is authored+imported in
+# HCL and `tofu plan` is no-op (tools/tofu-authentik-adopt.sh) — the destroy
+# guard refuses apply otherwise. Reversible: flip back to "blueprint".
+authentik_engine: "blueprint"
+# OpenTofu state is runtime data, so it lives in ~/.nos (0700), never in the checkout:
+# a second clone started stateless there and planned 13 live providers anew (2026-10-23).
+tofu_authentik_state_dir: "{{ ansible_facts['env']['HOME'] }}/.nos/tofu/authentik"
+authentik_secret_key: "{{ global_password_prefix }}_pw_authentik_secret"
+authentik_db_name: "authentik"
+authentik_db_user: "authentik"
+authentik_db_password: "{{ nos_derived_secrets.authentik_db }}"
+authentik_bootstrap_password: "{{ nos_derived_secrets.authentik_admin }}"
+authentik_bootstrap_email: "{{ default_admin_email }}"
+
+# ── Tester identity (Track G) ───────────────────────────────────────────────
+# Provisioned via roles/pazny.authentik/templates/blueprints/00-admin-groups
+# as a member of all RBAC tier groups so `nos-smoke --strict` can probe
+# any service end-to-end. Override only if you need a different login slug.
+nos_tester_username: "nos-tester"
+nos_tester_email: "nos-tester@{{ tenant_domain | default('dev.local') }}"
+# nos_tester_password lives in default.credentials.yml (so secret hygiene).
+
+# ── Authentik RBAC groups (created automatically on blank run) ────────────────
+authentik_default_groups:
+  - name: "nos-providers"
+    description: "Provider admins (full remote access, same as CEO)"
+  - name: "nos-admins"
+    description: "Client CEO/CTO (full local + remote access)"
+  - name: "nos-managers"
+    description: "Division/department managers"
+  - name: "nos-users"
+    description: "Standard employees"
+  - name: "nos-guests"
+    description: "Guest access (IIAB terminal only)"
+
+# ── Authentik RBAC tiers (group → application access) ──────────────────────────
+# Tier 1 = admin only, Tier 4 = guest/public. Higher tier = broader access.
+# Policies auto-created by Authentik Blueprints (templates/authentik/blueprints/20-rbac-policies.yaml.j2).
+authentik_rbac_tiers:
+  - tier: 1
+    name: "tier-admin"
+    description: "Admin-only services (infrastructure, secrets, monitoring)"
+    groups: ["nos-providers", "nos-admins"]
+  - tier: 2
+    name: "tier-manager"
+    description: "Manager+ services (dev tools, analytics, automation)"
+    groups: ["nos-providers", "nos-admins", "nos-managers"]
+  - tier: 3
+    name: "tier-user"
+    description: "Standard employee services (productivity, collaboration)"
+    groups: ["nos-providers", "nos-admins", "nos-managers", "nos-users"]
+  - tier: 4
+    name: "tier-guest"
+    description: "Guest/public access (content, media)"
+    groups: ["nos-providers", "nos-admins", "nos-managers", "nos-users", "nos-guests"]
+
+# ── P0-MFA — enforced MFA + password policy (gov gate, default OFF) ───────────
+# enforce_mfa OFF = files/anatomy/plugins/authentik-base/blueprints/
+# 50-mfa-policy.yaml.j2 renders to a no-op (entries: with no list); Authentik's
+# stock default-authentication-flow is untouched → login byte-identical to today.
+# ON (profiles/gov-local.yml) = render a DEDICATED Tier-1 authentication flow
+# (nos-tier1-mfa-flow) with not_configured_action='configure' (force inline
+# TOTP/WebAuthn self-enrol — never a hard deny) and route only Tier-1 OIDC/proxy
+# providers to it; non-Tier-1 providers keep the stock flow. Plus a password
+# policy bound to the prompt stages that actually collect a new password.
+enforce_mfa: false
+mfa_password_min_length: 15            # NIST SP 800-63 floor for the password policy
+mfa_password_hibp: false               # OFF: HIBP needs egress (not air-gap-safe); zxcvbn is the local check
+# Remember-device window (Authentik last_auth_threshold syntax). Once a user
+# satisfies MFA, re-challenge only after this idle window — applied to BOTH the
+# dedicated nos-mfa-validate stage AND the managed stock default-authentication-
+# mfa-validation stage, so the posture is "global MFA, remembered" (one 2FA per
+# working session) rather than a per-login step-up (was seconds=0, brutal daily).
+# profiles/gov-local.yml may pin a stricter value for a step-up posture.
+mfa_remember_window: "hours=8"
+
+# Mapping slug → tier. Services without an entry default to tier 3 (user+).
+# LEGACY FALLBACK ONLY: the RBAC blueprint resolves tier as
+# `c.tier | default(authentik_app_tiers[c.slug])`, so for every plugin-backed
+# service (all carry authentik.tier) these values are DEAD — the per-plugin
+# tier wins. Kept (aligned to the plugin tiers + slug-correct keys, 2026-05-26
+# review) only as the fallback for Tier-2 apps_runner apps that lack a tier.
+authentik_app_tiers:
+  portainer: 1
+  infisical: 1
+  grafana: 1
+  spacetimedb: 1
+  gitea: 2
+  gitlab: 2
+  n8n: 2
+  superset: 2
+  metabase: 2
+  paperclip: 2
+  erpnext: 2
+  freescout: 2
+  nextcloud: 3
+  outline: 3
+  open-webui: 3
+  vaultwarden: 3
+  uptime-kuma: 3
+  calibre-web: 3
+  homeassistant: 3          # slug-correct key (was 'home-assistant', never matched c.slug)
+  kiwix: 4
+  jellyfin: 4
+  wing: 1
+  wordpress: 4
+  code-server: 2          # aligned to plugin authentik.tier (was 1)
+  influxdb: 1
+  ntfy: 3                 # aligned to plugin authentik.tier (was 2)
+  nodered: 2
+  firefly: 2
+  dolibarr: 2
+  miniflux: 3
+  mailpit: 1                # aligned to plugin authentik.tier (was 2)
+  hedgedoc: 3
+  bookstack: 3
+  onlyoffice: 3
+
+# ── OIDC Service Registry — REPLACED (D1.3, 2026-05-05) ──────────────────
+# Pre-D1.3: 35-row static central authentik_oidc_apps list. Source-of-truth
+# now lives in per-plugin authentik: blocks harvested into
+# authentik-base.inputs.clients by load_plugins.run_aggregators; blueprint
+# 10-oidc-apps.yaml.j2 iterates inputs.clients (D1.2).
+#
+# This empty list survives ONLY as the Tier-2 apps_runner extension
+# channel: apps_runner appends entries for each apps/<name>.yml
+# manifest's `authentik_entry` (Tier-1 services have plugins; manifest apps
+# don't yet). The blueprint merges both sources until apps_runner gets
+# its own plugin-aggregator pathway. Long-term: extend run_aggregators
+# with a `from: app_manifest` source so manifest apps land in
+# inputs.clients alongside Tier-1 plugins.
+authentik_oidc_apps: []
+
+# ==============================================================================
+# AGENT IDENTITY — Authentik OIDC client_credentials (Track B, 2026-04-26)
+#
+# Replaces the old shared BONE_SECRET on operational endpoints. Each
+# autonomous component (state-manager, OpenClaw, Wing reads) gets its own
+# OIDC client at Authentik with a discrete client_id + secret + capability
+# scope list. Bone validates incoming JWTs against Authentik's JWKS and
+# enforces the required scope per route.
+#
+# The wing_telemetry callback's POST /api/v1/events keeps its HMAC channel —
+# it has a different threat model (fires from inside a playbook run, must
+# not depend on Authentik being up at the time). Everything else moves to
+# JWT.
+#
+# Token lifetime: 12 hours (decision O3, 2026-04-26).
+# ==============================================================================
+
+# Capability scopes Bone recognises. Adding a scope here ALSO requires:
+#   - a route in files/anatomy/bone/main.py decorated with require_scope(...)
+#   - the matching scopemapping entry in the Authentik blueprint
+authentik_agent_scopes:
+  - "nos:state:read"
+  - "nos:state:write"
+  - "nos:migrations:read"
+  - "nos:migrations:apply"
+  # nos:migration:write (singular) — "author ONE migration record". B4a,
+  # 2026-06-16. Deliberately distinct from the plural nos:migrations:apply
+  # (the engine apply path). Declarative until a Bone route enforces it — the
+  # real gate stays the forge MR + the operator's merge (GATE 2).
+  - "nos:migration:write"
+  - "nos:upgrades:read"
+  - "nos:upgrades:apply"
+  - "nos:patches:read"
+  - "nos:patches:apply"
+  - "nos:coexistence:read"
+  - "nos:coexistence:write"
+  - "nos:run-tag"
+  # ── Track G/seed: security agent scopes ────────────────────────────────────
+  # Per-agent identity for the security pipeline. Each scope maps to a Bone
+  # route guarded by require_scope(...) when the corresponding endpoint
+  # ships (post-refactor §A4). Until then these scopes are declarative —
+  # available for clients to request, no enforcement surface yet. The
+  # bones&wings refactor's Conductor primary will wire enforcement.
+  - "nos:security:read"          # read scan-state, remediation-queue, advisories
+  - "nos:security:write"         # append findings, update remediation status
+  - "nos:security:scan"          # trigger ad-hoc scan run (between scheduled batches)
+  - "nos:pentest:execute"        # actually run the inspektor's attack probes (high blast radius)
+  - "nos:devlog:write"           # publish/update devlog entries (WP REST via tools/devlog-post.py)
+
+# Default agents seeded into Authentik. Add custom agents by extending this
+# list in your local config.yml (Ansible vars_files merge appends).
+#
+# capabilities:  scopes the agent is allowed to request. Any scope outside
+#                this list is dropped at token-emit time by Authentik.
+authentik_agent_clients:
+  - name: "nOS State Manager"
+    slug: "nos-state-manager"
+    client_id: "nos-state-manager"
+    client_secret: "{{ nos_derived_secrets.agent_state_manager }}"
+    capabilities:
+      - "nos:state:read"
+      - "nos:state:write"
+      - "nos:migrations:read"
+      - "nos:upgrades:read"
+      - "nos:patches:read"
+      - "nos:coexistence:read"
+
+  - name: "nOS OpenClaw"
+    slug: "nos-openclaw"
+    client_id: "nos-openclaw"
+    client_secret: "{{ nos_derived_secrets.agent_openclaw }}"
+    capabilities: "{{ authentik_agent_scopes }}"  # full operational
+
+  - name: "nOS Wing"
+    slug: "nos-wing"
+    client_id: "nos-wing"
+    client_secret: "{{ nos_derived_secrets.agent_wing }}"
+    capabilities:
+      - "nos:state:read"
+      - "nos:migrations:read"
+      - "nos:upgrades:read"
+      - "nos:patches:read"
+      - "nos:coexistence:read"
+
+  # ── Track G/seed: security agent identities (per-actor SSO) ───────────────
+  # Distinct from `nos-tester` (smoke probe — proves apps respond after auth)
+  # and `nos-state-manager` (operational state pushes). These are the
+  # security-research agent profiles from the bones&wings refactor (§7),
+  # provisioned NOW so wing.db audit trail tags every finding/scan/probe with
+  # the right actor_id from day one.
+
+  - name: "nOS Inspektor"
+    slug: "nos-inspektor"
+    client_id: "nos-inspektor"
+    client_secret: "{{ nos_derived_secrets.agent_inspektor }}"
+    # Pentest agent — full security read/write + scan trigger + probe execute.
+    # System-prompt source: docs/llm/security/pentest-task.md (drop-in ready).
+    # Audit: every wing.db row tagged actor_id=nos-inspektor; GDPR Article 30
+    # query is one SELECT.
+    capabilities:
+      - "nos:state:read"
+      - "nos:security:read"
+      - "nos:security:write"
+      - "nos:security:scan"
+      - "nos:pentest:execute"
+
+  - name: "nOS Librarian"
+    slug: "nos-librarian"
+    client_id: "nos-librarian"
+    client_secret: "{{ nos_derived_secrets.agent_librarian }}"
+    # Knowledge/RAG agent — read-only across state + security (so it can
+    # surface "have we already remediated this before?" context); future
+    # write scope for indexing into a RAG store post-PoC.
+    capabilities:
+      - "nos:state:read"
+      - "nos:security:read"
+      - "nos:migrations:read"
+      - "nos:upgrades:read"
+      - "nos:patches:read"
+
+  - name: "nOS Curator"
+    slug: "nos-curator"
+    client_id: "nos-curator"
+    client_secret: "{{ nos_derived_secrets.agent_curator }}"
+    # Taxonomy reconciler — librarian's active sibling. Sweeps the KEAP votable
+    # zone (L>=3), lints, and PROPOSES desc/node/relation edits into the
+    # moderation panel (propose-only; the moderator decides). Same read scopes as
+    # the librarian; KEAP writes ride the KEAP_AGENT_TOKEN_RW seam, not these.
+    capabilities:
+      - "nos:state:read"
+      - "nos:security:read"
+
+  # RETIRED 2026-08-26 (roster close, fable review wf_72000040-d16): nos-scout,
+  # nos-remediator (0 events ever; their briefs live on as
+  # conductor:security-drift-watch and the loop's `rem` source) and
+  # nos-upgrade-advisor (deterministic since UpgradeRepository::compareVersions,
+  # cab67496/b1e92005). Leaving the registry stops a blank re-creating them;
+  # the blueprint only UPSERTS, so existing Authentik rows and their derived
+  # secrets in ~/.nos/secrets.yml stay until the operator sweeps them.
+
+  - name: "nOS Upgrade Architect"
+    slug: "nos-upgrade-architect"
+    client_id: "nos-upgrade-architect"
+    client_secret: "{{ nos_derived_secrets.agent_upgrade_architect }}"
+    # W5-B5 recipe-authoring agent. Reads the /upgrades matrix, DRAFTS recipes
+    # for coverage gaps (in its report — operator commits), and queues
+    # coexistence for breaking upgrades. Read-only; never writes files or
+    # provisions.
+    capabilities:
+      - "nos:upgrades:read"
+      - "nos:state:read"
+      - "nos:coexistence:read"
+
+  - name: "nOS Migration Author"
+    slug: "nos-migration-author"
+    client_id: "nos-migration-author"
+    client_secret: "{{ nos_derived_secrets.agent_migration_author }}"
+    # B4a migration-authoring agent. Promotes a MERGED recipe into the real
+    # migration record (files/anatomy/migrations/) + the <service>_version bump
+    # in default.config.yml, opened as a LOCAL forge MR (GATE 2). Read on
+    # upgrades/state/migrations/coexistence; nos:migration:write authors the
+    # one record. Never merges, never provisions.
+    capabilities:
+      - "nos:upgrades:read"
+      - "nos:state:read"
+      - "nos:migrations:read"
+      - "nos:coexistence:read"
+      - "nos:migration:write"
+
+  - name: "nOS Conductor"
+    slug: "nos-conductor"
+    client_id: "nos-conductor"
+    client_secret: "{{ nos_derived_secrets.agent_conductor }}"
+    # Conductor agent (A8) — orchestrates the Phase 5 e2e ceremony and
+    # ongoing operator automation. Full operational + security scopes so
+    # it can read findings, trigger scans, and push approvals. Wing bearer
+    # token provisioned separately (conductor_wing_api_token) for the
+    # pulse-run-agent.sh script that execs claude with this identity.
+    capabilities: "{{ authentik_agent_scopes }}"
+
+  - name: "nOS Surveyor"
+    slug: "nos-surveyor"
+    client_id: "nos-surveyor"
+    client_secret: "{{ nos_derived_secrets.agent_surveyor }}"
+    # Surveyor agent (A20, 2026-08-17) — reports which of the estate deserves
+    # a control surface: what changes, what a person decides on, and what is
+    # decided on while being displayed nowhere. Strictly read-only; it
+    # proposes and never renders, so no write scope of any kind. Reads the
+    # same surfaces a control centre would have to read, which is the point.
+    capabilities:
+      - "nos:state:read"
+      - "nos:security:read"
+      - "nos:migrations:read"
+      - "nos:upgrades:read"
+      - "nos:coexistence:read"
+
+  - name: "nOS Devlog"
+    slug: "nos-devlog"
+    client_id: "nos-devlog"
+    client_secret: "{{ nos_derived_secrets.agent_devlog }}"
+    # Devlog agent (devlog epic, 2026-06-12) — publishes narrative entries to
+    # WordPress (docs/devlog/README.md). The WP credential itself is an
+    # Application Password (WP has no client_credentials path); this client is
+    # the registered AUDIT identity per Track G doctrine — every devlog write
+    # lands in wing.db with actor_id=agent:devlog via Bone HMAC events.
+    capabilities:
+      - "nos:devlog:write"
+
+# Hardcoded once Track B lands; flip if you want to fall back to BONE_SECRET
+# during the cutover (NOT recommended — both sides should agree on JWT only).
+authentik_agent_token_validity: "hours=12"
+
+# Authentik OIDC discovery URL — derived. Bone reads /.well-known/openid-configuration
+# from this base, then loads JWKS from there. The role ensures Authentik is
+# up before Bone's post-start runs, so this lookup never races.
+# Authentik with `issuer_mode: global` (set per-provider in the agent
+# clients blueprint) emits `iss = https://<authentik_domain>/` — the root
+# URL with a trailing slash, NOT /application/o/. Bone's JWT validator
+# matches this string exactly, so the trailing slash matters.
+authentik_oidc_issuer: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/"
+
+# ==============================================================================
+# INFISICAL CE – Secrets Management (REST API, CLI, SDK)
+# Central vault for DB passwords, API keys, certificates. E2EE.
+# ==============================================================================
+
+infisical_domain: "vault{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
+infisical_port: 8075
+infisical_encryption_key: "{{ global_password_prefix }}_pw_infisical_enc"
+infisical_auth_secret: "{{ global_password_prefix }}_pw_infisical_auth"
+infisical_db_name: "infisical"
+infisical_db_user: "infisical"
+infisical_db_password: "{{ nos_derived_secrets.infisical_db }}"
+
+# ── Seed: org + projects + secrets (pazny.infisical/tasks/seed.yml) ──────────
+# After Infisical is healthy, `seed.yml` bootstraps an admin user + organization
+# via `infisical bootstrap` CLI, then creates a project tree and pushes the
+# operator's secrets (from secrets.yml + this config) into each project.
+#
+# Push policy: "every run" — values are templated from Ansible vars on each
+# playbook run, so Infisical mirrors the canonical Ansible state. PATCH first,
+# POST on 404. Override `nos_infisical_projects` in config.yml to extend.
+infisical_org_name: "nOS"
+# stock-Jinja only (no `| bool`) — see _host_alias_normalized note (L40).
+infisical_seed_enabled: "{{ install_infisical | default(false) }}"
+
+# ── Invite-flow Cesta B Hybrid (A18, 2026-05-20) ──────────────────────────
+# Wing's UsersPresenter::actionInviteCreate optionally pushes per-user
+# credentials to Infisical (folder under /users/<name>/) AND provisions
+# a Stalwart mailbox via JMAP after the Authentik invitation lands.
+# See docs/invite-provisioning.md for the full contract.
+#
+# Off by default — flip true once Infisical is seeded AND Stalwart is
+# running. Each downstream is independently isConfigured()-gated, so the
+# extension degrades gracefully if either piece isn't live.
+nos_invite_provisioning_enabled: false
+# The Infisical project ID that holds per-user folders. Empty by default;
+# operator fills in after first install by either:
+#   • Running `infisical projects list` and copying the UUID for slug
+#     "nos-users" (auto-created by the seed.py run), OR
+#   • Adding a per-host override in config.yml.
+# When empty, Wing skips Infisical writes (Stalwart provisioning still
+# runs if STALWART_ADMIN_PASSWORD is set).
+infisical_users_project_id: ""
+infisical_users_environment: "prod"
+
+nos_infisical_projects:
+  - slug: nos-platform
+    name: "nOS Platform"
+    description: "Operator-wide tokens, signing secrets, API keys"
+    secrets:
+      WING_API_TOKEN: "{{ wing_api_token | default('') }}"
+      BONE_SECRET: "{{ bone_secret | default(global_password_prefix + '_pw_bone') }}"
+      VAULTWARDEN_ADMIN_TOKEN: "{{ vaultwarden_admin_token | default('') }}"
+      PAPERCLIP_AUTH_SECRET: "{{ paperclip_auth_secret | default('') }}"
+      ACME_CLOUDFLARE_API_TOKEN: "{{ acme_cloudflare_api_token | default('') }}"
+
+  - slug: nos-users
+    name: "nOS Users"
+    description: "Per-user credentials provisioned by the Wing invite flow (Cesta B, A18)."
+    secrets: {}                # Wing writes children dynamically under /users/<name>/
+
+  - slug: nos-databases
+    name: "nOS Databases"
+    description: "Root passwords for PostgreSQL, MariaDB, Redis"
+    secrets:
+      POSTGRESQL_ROOT_PASSWORD: "{{ postgresql_root_password | default(nos_derived_secrets.postgresql) }}"
+      MARIADB_ROOT_PASSWORD: "{{ mariadb_root_password | default(nos_derived_secrets.mariadb) }}"
+      REDIS_PASSWORD: "{{ redis_password | default(nos_derived_secrets.redis) }}"
+      INFISICAL_DB_PASSWORD: "{{ infisical_db_password }}"
+      AUTHENTIK_DB_PASSWORD: "{{ authentik_db_password | default(nos_derived_secrets.authentik_db) }}"
+      OUTLINE_DB_PASSWORD: "{{ outline_db_password | default(nos_derived_secrets.outline) }}"
+      HEDGEDOC_DB_PASSWORD: "{{ hedgedoc_db_password | default(nos_derived_secrets.hedgedoc) }}"
+      MINIFLUX_DB_PASSWORD: "{{ miniflux_db_password | default(nos_derived_secrets.miniflux) }}"
+      PAPERCLIP_DB_PASSWORD: "{{ paperclip_db_password | default(nos_derived_secrets.paperclip) }}"
+
+  - slug: nos-identity
+    name: "nOS Identity & SSO"
+    description: "Authentik admin + per-service OIDC client_secret values"
+    secrets:
+      AKADMIN_PASSWORD: "{{ akadmin_password | default(authentik_bootstrap_password) }}"
+      AUTHENTIK_SECRET_KEY: "{{ authentik_secret_key | default('') }}"
+      INFISICAL_ENCRYPTION_KEY: "{{ infisical_encryption_key }}"
+      INFISICAL_AUTH_SECRET: "{{ infisical_auth_secret }}"
+      OIDC_OUTLINE: "{{ authentik_oidc_outline_client_secret | default(nos_derived_secrets.oidc_outline) }}"
+      OIDC_GRAFANA: "{{ authentik_oidc_grafana_client_secret | default(nos_derived_secrets.oidc_grafana) }}"
+      OIDC_INFISICAL: "{{ authentik_oidc_infisical_client_secret | default(nos_derived_secrets.oidc_infisical) }}"
+      OIDC_PORTAINER: "{{ authentik_oidc_portainer_client_secret | default(nos_derived_secrets.oidc_portainer) }}"
+      OIDC_NEXTCLOUD: "{{ authentik_oidc_nextcloud_client_secret | default(nos_derived_secrets.oidc_nextcloud) }}"
+      OIDC_GITEA: "{{ authentik_oidc_gitea_client_secret | default(nos_derived_secrets.oidc_gitea) }}"
+      OIDC_OPENWEBUI: "{{ authentik_oidc_openwebui_client_secret | default(nos_derived_secrets.oidc_openwebui) }}"
+      OIDC_N8N: "{{ authentik_oidc_n8n_client_secret | default(nos_derived_secrets.oidc_n8n) }}"
+
+  - slug: nos-apps
+    name: "nOS Applications"
+    description: "Per-app encryption keys + admin passwords"
+    secrets:
+      OUTLINE_SECRET_KEY: "{{ outline_secret_key | default('') }}"
+      OUTLINE_UTILS_SECRET: "{{ outline_utils_secret | default('') }}"
+      FIREFLY_APP_KEY: "{{ firefly_app_key | default('') }}"
+      BOOKSTACK_APP_KEY: "{{ bookstack_app_key | default('') }}"
+      ONLYOFFICE_JWT_SECRET: "{{ onlyoffice_jwt_secret | default('') }}"
+      HEDGEDOC_SESSION_SECRET: "{{ hedgedoc_session_secret | default('') }}"
+      BLUESKY_PDS_JWT_SECRET: "{{ bluesky_pds_jwt_secret | default('') }}"
+      BLUESKY_PDS_ROTATION_KEY: "{{ bluesky_pds_rotation_key | default('') }}"
+      WORDPRESS_ADMIN_PASSWORD: "{{ wordpress_admin_password | default(nos_derived_secrets.wordpress_admin) }}"
+      NEXTCLOUD_ADMIN_PASSWORD: "{{ nextcloud_admin_password | default(nos_derived_secrets.nextcloud_admin) }}"
+      GITEA_ADMIN_PASSWORD: "{{ gitea_admin_password | default(nos_derived_secrets.gitea) }}"
+      PORTAINER_ADMIN_PASSWORD: "{{ portainer_admin_password | default(nos_derived_secrets.portainer) }}"
+
+  - slug: nos-observability
+    name: "nOS Observability"
+    description: "Grafana admin, InfluxDB token, exporter credentials"
+    secrets:
+      GRAFANA_ADMIN_PASSWORD: "{{ grafana_admin_password | default(nos_derived_secrets.grafana) }}"
+      INFLUXDB_ADMIN_TOKEN: "{{ influxdb_admin_token | default('') }}"
+
+# ==============================================================================
+# VAULTWARDEN – Personal Password Vault (Bitwarden-compatible)
+# Each nOS tenant has their own vault for personal passwords.
+# ==============================================================================
+
+vaultwarden_domain: "pass{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
+vaultwarden_port: 8062
+vaultwarden_signups_allowed: false                 # Admin creates accounts
+vaultwarden_admin_token: "{{ global_password_prefix }}_pw_vaultwarden_admin"
+# SSO_ONLY hides the email+master-password login form → only "Continue with SSO"
+# (Authentik). Native SSO is official since 1.35.0. NOTE: the master password is
+# STILL required to UNLOCK the vault afterwards (it derives the E2E decryption key
+# — SSO can't supply it); this is click-button, not passwordless. Default OFF.
+# DEPLOY-ORDER: your account must pre-exist before enabling (upstream #6316);
+# break-glass if Authentik is down = /admin or re-render with this false.
+vaultwarden_sso_only: false
