@@ -93,7 +93,8 @@ def drill_port_role(tmp: Path) -> dict:
         f.write_text(yaml.safe_dump({"services": {"drill-sample": _LAN}}))
         seen = gate.lan_ports(f.read_text(), "Darwin", absent=False)
         return any(("pazny.drill_sample", gate._container_port(p)) not in gate.EDGE for _, p in seen)
-    return _timed("exposed-port-role", "gate test_lan_access_is_behind_the_edge", judge)
+    # The gate's judge only (lan_ports + EDGE, Darwin, toggle off), not its discovery glob.
+    return _timed("exposed-port-role", "lan_ports()+EDGE of test_lan_access_is_behind_the_edge", judge)
 
 
 def drill_port_app(tmp: Path) -> dict:
@@ -110,6 +111,8 @@ def drill_port_app(tmp: Path) -> dict:
         try:
             nap.validate(nap.load_app_file(str(f)), app_name="drill-sample")
         except nap.AppParseError as e:
+            if not any(v.startswith("standard ") for v in e.violations):
+                raise   # refused before the standards ran (template drift): UNKNOWN, not missed
             return any(v.startswith("standard host-port-not-loopback") for v in e.violations)
         return False
     return _timed("exposed-port-app", "nos_app_parser.validate", judge)
