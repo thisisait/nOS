@@ -2,7 +2,8 @@
 """Nightly advisory patrol: run tools/advisory-status.py, keep the report, exit with the verdict.
 
 Pulse job advisory-patrol:nightly (files/anatomy/plugins/advisory-patrol). The
-report lands in ~/.nos/advisory/last.json (0600) for tools/red-status.py.
+report lands in ~/.nos/advisory/last.json (0600) for tools/red-status.py, with the
+exit code in one word under `patrol` (verdict/why/counts) for tools/morning-verdict.py.
 
   exit 0   every source read, no unjudged HIGH / CRITICAL / KEV match
   exit 10  an unjudged serious match (state/genome/advisory-judgements.yml)
@@ -40,6 +41,22 @@ def _github_token() -> str | None:
     return out.stdout.strip() or None if out.returncode == 0 else None
 
 
+def patrol_verdict(bad: list[dict], blind: list[str]) -> dict:
+    """The exit code in one word, kept in the report (row morning-verdict): 10 RED, 11 UNKNOWN, 0 OK.
+    Its own key: the report's `verdict` is advisory-status's AFFECTED/CLEAR, which counts judged
+    matches too."""
+    counts = {"unjudged_serious": len(bad), "blind_sources": len(blind)}
+    if bad:
+        u = bad[0]
+        return {"verdict": "RED", "why": f"{len(bad)} unjudged serious: {u['subject']} {u['version']} {u['id']}",
+                "counts": counts}
+    if blind:
+        return {"verdict": "UNKNOWN", "why": f"source(s) unreadable: {', '.join(blind)} — not clean",
+                "counts": counts}
+    return {"verdict": "OK", "why": "every source read, no unjudged HIGH / CRITICAL / KEV match",
+            "counts": counts}
+
+
 def main(argv: list[str] | None = None) -> int:
     if not (os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")):
         token = _github_token()
@@ -50,6 +67,7 @@ def main(argv: list[str] | None = None) -> int:
     rep["at"] = datetime.now(timezone.utc).isoformat()
     bad = adv.unjudged(rep, adv.judgements(), datetime.now(timezone.utc).date())
     blind = [n for n, s in rep["sources"].items() if s["state"] == "UNKNOWN"]
+    rep["patrol"] = patrol_verdict(bad, blind)
 
     SNAPSHOT.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     tmp = SNAPSHOT.with_suffix(".tmp")
