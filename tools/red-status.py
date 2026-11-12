@@ -33,7 +33,7 @@ missing it says so rather than treating absence as health, because "no data" and
 
 Usage:
     tools/red-status.py           # every red, grouped by source
-    tools/red-status.py --json    # for a caller
+    tools/red-status.py --json    # for a caller; verdict OK/RED/UNKNOWN + why + counts on top
     tools/red-status.py --quiet   # only the count line
 
 Exit 0 always, including when everything is red. Reporting IS its job, and it
@@ -1505,6 +1505,19 @@ def hold_lines(report: dict) -> list[str]:
     return out
 
 
+def verdict(report: dict, lines: list[str]) -> tuple[str, str, dict]:
+    """red-status's own one-word judgement (row morning-verdict): RED when a red line is
+    not an unreadable source, else UNKNOWN when a source was unreadable, else OK."""
+    missing = len(report.get("sources_missing", []))
+    red = lines[:len(lines) - missing] if missing else lines
+    counts = {"red": len(red), "unreadable": missing, "holds": len(hold_lines(report))}
+    if red:
+        return "RED", f"{len(red)} red: {red[0]}", counts
+    if missing:
+        return "UNKNOWN", f"{missing} source(s) unreadable: {report['sources_missing'][0]}", counts
+    return "OK", f"nothing red, {len(report.get('sources_read', []))} sources read", counts
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--json", action="store_true", help="emit the full report")
@@ -1518,6 +1531,7 @@ def main() -> int:
     report["reds"] = lines
     report["hold_count"] = len(holds)
     report["holds"] = holds
+    report["verdict"], report["why"], report["counts"] = verdict(report, lines)
 
     if args.json:
         json.dump(report, sys.stdout, indent=2, sort_keys=True)
