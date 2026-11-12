@@ -19,6 +19,8 @@
 	import { ApiError } from '$lib/api/client';
 	import RowEditor from './RowEditor.svelte';
 	import { Modal } from '$lib/components/ui';
+	import { untrack } from 'svelte';
+	import { loadBlogPrefs, saveBlogPrefs, MAX_LINES, type BlogPrefs } from '$lib/tables/blogPrefs';
 	import {
 		resolveView,
 		orderRows,
@@ -49,6 +51,42 @@
 	const declared = $derived(data ? resolveView(data) : null);
 	const view = $derived(declared && asGrid ? { ...declared, style: 'grid' as const } : declared);
 	const ordered = $derived(data && view ? orderRows(data.rows, view) : []);
+
+	// Blog settings (row face-style-blog-settings): this viewer's chip columns and body lines for this
+	// table, kept in this browser only (lib/tables/blogPrefs); the KEAP view block is not touched.
+	let blog = $state<BlogPrefs | null>(null);
+	let blogOpen = $state(false);
+	$effect(() => {
+		const slug = data?.slug;
+		blog = slug
+			? loadBlogPrefs(
+					slug,
+					untrack(() => data?.columns ?? [])
+				)
+			: null;
+		blogOpen = false;
+	});
+	const blogChoices = $derived(
+		(data?.columns ?? []).filter(
+			(c) => c.kind !== 'vector' && c.key !== view?.title?.key && c.key !== view?.body?.key
+		)
+	);
+	const postMeta = $derived(
+		blog ? blogChoices.filter((c) => blog!.meta.includes(c.key)) : (view?.meta ?? [])
+	);
+	function setBlog(next: BlogPrefs | null) {
+		blog = next;
+		if (data) saveBlogPrefs(data.slug, next);
+	}
+	function toggleChip(key: string, on: boolean) {
+		const cur = blog ?? { meta: (view?.meta ?? []).map((m) => m.key), lines: 0 };
+		setBlog({ ...cur, meta: on ? [...cur.meta, key] : cur.meta.filter((k) => k !== key) });
+	}
+	function setLines(raw: number) {
+		const cur = blog ?? { meta: (view?.meta ?? []).map((m) => m.key), lines: 0 };
+		const lines = Number.isInteger(raw) ? Math.min(MAX_LINES, Math.max(0, raw)) : 0;
+		setBlog({ ...cur, lines });
+	}
 
 	// ── Facets: the two filter levels ────────────────────────────────────────
 	//
@@ -348,10 +386,45 @@
 					<option value="grid">grid</option>
 				</select>
 			{/if}
+			{#if view.style === 'blog'}
+				<button
+					class="edit"
+					aria-expanded={blogOpen}
+					title="What each post shows, in this browser only"
+					onclick={() => (blogOpen = !blogOpen)}>{blog ? 'settings •' : 'settings'}</button
+				>
+			{/if}
 			{#if data.canWrite}
 				<button class="add" onclick={() => open(null)}>＋ Add row</button>
 			{/if}
 		</header>
+		{#if view.style === 'blog' && blogOpen}
+			<fieldset class="blog-prefs">
+				<legend>Each post shows (this browser only)</legend>
+				{#each blogChoices as c (c.key)}
+					<label
+						><input
+							type="checkbox"
+							checked={postMeta.some((m) => m.key === c.key)}
+							onchange={(e) => toggleChip(c.key, e.currentTarget.checked)}
+						/>
+						{c.label}</label
+					>
+				{/each}
+				<label
+					>body lines <input
+						type="number"
+						min="0"
+						max={MAX_LINES}
+						value={blog?.lines ?? 0}
+						onchange={(e) => setLines(e.currentTarget.valueAsNumber)}
+					/> (0 = all)</label
+				>
+				<button class="edit" disabled={!blog} onclick={() => setBlog(null)}
+					>reset to the table's</button
+				>
+			</fieldset>
+		{/if}
 
 		<!-- ── FACETS — two levels, outer→inner ─────────────────────────────── -->
 		{#if view.facets.length}
@@ -438,17 +511,19 @@
 				{#each rows as row (row.id)}
 					<article class="post" id={rowDomId(row.id)} class:flash={flashed === String(row.id)}>
 						<h3>{heading(row)}</h3>
-						{#if view.meta.length || view.date}
+						{#if postMeta.length || view.date}
 							<p class="meta">
 								{#if view.date}<span class="when">{formatWhen(row[view.date.key])}</span>{/if}
-								{#each view.meta as m (m.key)}
+								{#each postMeta as m (m.key)}
 									<span class="chip">{m.label}: {cell(row, m)}</span>
 								{/each}
 							</p>
 						{/if}
 						{#if view.body}
 							<!-- pre-wrap, NOT {@html}: the XSS gate forbids author markup here. -->
-							<p class="body">{cell(row, view.body)}</p>
+							<p class="body" class:clamp={!!blog?.lines} style:--lines={blog?.lines || null}>
+								{cell(row, view.body)}
+							</p>
 						{/if}
 						<button class="edit" onclick={() => show(row)}>view</button>
 						{#if data.canWrite}
@@ -752,6 +827,19 @@
 	.style-pick {
 		font-size: 12px;
 	}
+	.blog-prefs {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px 14px;
+		align-items: center;
+		font-size: 12px;
+		border: 1px solid rgba(255, 255, 255, 0.12);
+		border-radius: 8px;
+		margin: 0 0 8px;
+	}
+	.blog-prefs input[type='number'] {
+		width: 4em;
+	}
 	.add {
 		background: rgba(90, 150, 255, 0.85);
 		color: #fff;
@@ -853,8 +941,8 @@
 	}
 	.clamp {
 		display: -webkit-box;
-		-webkit-line-clamp: 4;
-		line-clamp: 4;
+		-webkit-line-clamp: var(--lines, 4);
+		line-clamp: var(--lines, 4);
 		-webkit-box-orient: vertical;
 		overflow: hidden;
 	}
