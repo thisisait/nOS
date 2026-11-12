@@ -810,8 +810,9 @@ which the person pins); they place it on the tab they choose. Each widget is {ti
 (query_rows arguments), chart ({query {table, q?, where?}, chart bar|line|pie, x, y?, op count|sum|avg}: show's source \
 plus its chart), kpi ({query {table, q?, where?}, op count|sum|avg, y?, unit?}: one total on a tile) or form ({table, columns?, prefill? {column: value}, when? {column: {key, op eq|neq, value}}}: a form \
 that adds a row; prefill is where the person's draft starts, when shows an optional field only while another field \
-holds a value), and up to 4 lens filters {column, op, value} the tab applies to every rows, chart and kpi widget (an empty \
-value: the person picks). Nothing runs and nothing is placed: the person sees the offer and may place it; you never \
+holds a value), reader ({reader red_status|loop_runs}: the estate's red state or the SERE loop's runs, read again \
+whenever the tab opens; tier 1 only; a morning board is these two), and up to 4 lens filters {column, op, value} the tab \
+applies to every rows, chart and kpi widget (an empty value: the person picks). Nothing runs and nothing is placed: the person sees the offer and may place it; you never \
 see its rows. A widget that does not fit its table is left out and you are told why.";
 
 /// The kinds the model may choose; the rest are drawn by a tool or a control, never by show.
@@ -1099,7 +1100,8 @@ else one total over every matched row"},
                     "rows": {"type": "object", "description": "query_rows arguments"},
                     "chart": {"type": "object", "description": "{query {table, q?, where?}, chart bar|line|pie, x, y?, op count|sum|avg}"},
                     "form": {"type": "object", "description": "{table, columns?, prefill? {column: value}, when? {column: {key, op eq|neq, value}}}"},
-                    "kpi": {"type": "object", "description": "{query {table, q?, where?}, op count|sum|avg, y?, unit?}"}}}}}}}},
+                    "kpi": {"type": "object", "description": "{query {table, q?, where?}, op count|sum|avg, y?, unit?}"},
+                    "reader": {"type": "object", "description": "{reader red_status|loop_runs}: a live estate reader, tier 1 only"}}}}}}}},
         {"type": "function", "function": {"name": "read_loop_runs", "description": READ_LOOP_RUNS,
         "parameters": {"type": "object", "additionalProperties": false, "properties": {
             "loop": {"type": "string", "maxLength": 64, "description": "sere (default) or a loops/<id>.loop.yml id, e.g. news-scout"},
@@ -4394,7 +4396,7 @@ impl Server {
         };
         let widgets = match a.get("widgets") {
             Some(Value::Array(w)) if (1..=8).contains(&w.len()) => w,
-            _ => return Err("`widgets` is a list of 1 to 8 {title, rows|chart|form|kpi}".into()),
+            _ => return Err("`widgets` is a list of 1 to 8 {title, rows|chart|form|kpi|reader}".into()),
         };
         let (mut kept, mut dropped, mut columns) = (Vec::new(), Vec::new(), Vec::new());
         for w in widgets {
@@ -4437,12 +4439,14 @@ impl Server {
     /// One offered widget as a spec, and its table's columns; Err is why it is left out. Repairs shapes
     /// only (a bare table name, a limit said as a string); never invents a widget.
     fn offered(&self, who: &Person, w: &Value, lens: &[Lens]) -> Result<(WidgetSpec, Vec<Map<String, Value>>), String> {
-        let o = w.as_object().ok_or("a widget is {title, rows|chart|form|kpi}")?;
+        let o = w.as_object().ok_or("a widget is {title, rows|chart|form|kpi|reader}")?;
         let keys: Vec<&String> = o.keys().filter(|k| *k != "title").collect();
-        let [k] = keys.as_slice() else { return Err("a widget is {title} and exactly one of rows, chart, form or kpi".into()) };
+        let [k] = keys.as_slice() else { return Err("a widget is {title} and exactly one of rows, chart, form, kpi or reader".into()) };
         let mut v = o[*k].clone();
-        if let (Value::String(t), "rows" | "form") = (&v, k.as_str()) {
-            v = json!({"table": t});
+        match (&v, k.as_str()) {
+            (Value::String(t), "rows" | "form") => v = json!({"table": t}),
+            (Value::String(t), "reader") => v = json!({"reader": t}),
+            _ => {}
         }
         if let Some(n) = v.get("limit").and_then(Value::as_str).and_then(|n| n.trim().parse::<u64>().ok()) {
             v["limit"] = json!(n);
@@ -4472,7 +4476,9 @@ impl Server {
             WidgetSpec::Chart(c) => self.matched(who, &lensed(chart_args(c)), false)?.schema,
             WidgetSpec::Kpi(k) => self.matched(who, &lensed(kpi_args(k)), false)?.schema,
             WidgetSpec::Knowledge(_) => return Err("a knowledge tree is pinned from read_node, never offered on a dashboard".into()),
-            WidgetSpec::Reader(_) => return Err("a reader widget is not offered on a dashboard yet".into()),
+            // The widget runs red()/read_loop_runs() as the person, which refuse below tier 1; an offer says so first.
+            WidgetSpec::Reader(_) if !self.is_tier1(who) => return Err("a reader widget reads the estate, which is tier 1's to see".into()),
+            WidgetSpec::Reader(_) => vec![],
             WidgetSpec::Form(f) => shaped(self.form_from_schema(who, &f.table, f.columns.as_deref())?, f)?.fields.iter()
                 .map(|f| json!({"key": f.key, "kind": f.kind, "options": f.options}).as_object().cloned().unwrap_or_default()).collect(),
         };

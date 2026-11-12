@@ -420,7 +420,10 @@
 
 	async function loadLayout() {
 		try {
-			layout = ws.migrate((await transport?.loadLayout()) ?? ws.empty());
+			const k = ws.knownReaders(ws.migrate((await transport?.loadLayout()) ?? ws.empty()));
+			layout = k.layout;
+			if (k.left.length)
+				layoutNote = `left out ${k.left.join(', ')}: a reader this Iris does not know`;
 		} catch (e) {
 			layout = ws.empty();
 			layoutNote = `${e}; starting with one empty workspace`;

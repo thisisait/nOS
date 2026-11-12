@@ -118,6 +118,26 @@ export function migrate(l: Layout | Old): Layout {
 	};
 }
 
+type ReaderName = Extract<WidgetSpec, { reader: unknown }>['reader']['reader'];
+const READERS: readonly ReaderName[] = ['red_status', 'loop_runs'];
+
+/** A widget whose reader names none wire.rs ReaderName knows is left out, by title: serve refuses
+ *  the whole layout over one such widget, and without naming it. */
+export function knownReaders(l: Layout): { layout: Layout; left: string[] } {
+	const left: string[] = [];
+	const workspaces = l.workspaces.map((s) => ({
+		...s,
+		items: s.items.filter((i) => {
+			if (i.kind !== 'widget' || !('reader' in i.spec)) return true;
+			const name = (i.spec.reader as { reader?: unknown } | null)?.reader;
+			if (READERS.includes(name as ReaderName)) return true;
+			left.push(i.title);
+			return false;
+		})
+	}));
+	return left.length ? { layout: { ...l, workspaces }, left } : { layout: l, left };
+}
+
 export const widgetsOf = (s: Space): WidgetItem[] =>
 	s.items.filter((i): i is WidgetItem => i.kind === 'widget');
 /** The ids from a root down to `id`: workspaces://a/b/c is its path. */
