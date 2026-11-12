@@ -12,6 +12,10 @@ Enablement — services AND manifest apps — is what the last converge ran
 
   tools/e2e-plan.py                 # JSON plan of the enabled services
   tools/e2e-plan.py --all           # include disabled ones (enabled: false)
+  tools/e2e-plan.py --journeys      # one argv line per declared journey; prints, never runs
+
+A plugin's `e2e.journeys` names specs under tests/e2e/journeys (row iris-approvals-e2e-plan).
+A journey writes to the live estate, so running one stays the operator's act.
 """
 from __future__ import annotations
 
@@ -19,6 +23,8 @@ import argparse
 import getpass
 import importlib.util
 import json
+import re
+import shlex
 import sys
 from pathlib import Path
 
@@ -30,6 +36,11 @@ PLUGINS = REPO / "files/anatomy/plugins"
 sys.path.insert(0, str(REPO / "tools"))
 from nos_identity import SYNTHETIC_FLAG, installed_apps, plugin_installed, ran, synthetic_identities  # noqa: E402
 MODES = ("native_oidc", "forward_auth", "header_oidc")
+JOURNEYS = REPO / "tests/e2e/journeys"
+JOURNEY_ENV = {"FACE_E2E"}      # flags only: tokens stay with the conftest / run-playwright.sh
+JOURNEY_SPEC = {"playwright": re.compile(r"[A-Za-z0-9_.-]+\.spec\.ts"), "pytest": re.compile(r"test_[A-Za-z0-9_]+\.py")}
+RUNNER = {"playwright": ["tools/run-playwright.sh", "journeys/{spec}"],
+          "pytest": ["python3", "-m", "pytest", "tests/e2e/journeys/{spec}", "-q"]}
 
 _spec = importlib.util.spec_from_file_location("nos_smoke", REPO / "tools/nos-smoke.py")
 smoke = importlib.util.module_from_spec(_spec)
@@ -84,6 +95,30 @@ def _edge_modes() -> dict:
 def _manifest_domains() -> dict:
     rows = (yaml.safe_load((REPO / "state/manifest.yml").read_text(encoding="utf-8")) or {}).get("services", [])
     return {r["id"]: r["domain_var"] for r in rows if r.get("id") and r.get("domain_var")}
+
+
+def _journeys(raw) -> tuple[list[dict], list[str]]:
+    """(accepted, refused) from a plugin's e2e.journeys. Plugin data becomes argv, so a spec is a
+    bare file name that exists under tests/e2e/journeys; anything else is refused by name, never
+    dropped. Literal data: not Jinja-rendered."""
+    ok, refused = [], []
+    for entry in raw if isinstance(raw, list) else [raw]:
+        j = entry if isinstance(entry, dict) else {}
+        spec, runner, env = j.get("spec"), j.get("runner"), j.get("env") or {}
+        pat = JOURNEY_SPEC.get(runner) if isinstance(runner, str) else None
+        if (isinstance(spec, str) and ".." not in spec and pat and pat.fullmatch(spec) and (JOURNEYS / spec).is_file()
+                and isinstance(env, dict) and all(k in JOURNEY_ENV and v in ("0", "1") for k, v in env.items())):
+            ok.append({"name": str(j.get("name") or spec), "spec": spec, "runner": runner, "env": dict(env)})
+        else:
+            label = "".join(c if c.isprintable() else " " for c in str(spec or j.get("name") or entry))
+            refused.append(f"journey:{label}"[:80])
+    return ok, refused
+
+
+def journey_argv(j: dict) -> str:
+    argv = [a.format(spec=j["spec"]) for a in RUNNER[j["runner"]]]
+    env = [f"{k}={v}" for k, v in sorted(j["env"].items())]
+    return shlex.join(["env", *env, *argv] if env else argv)
 
 
 def _host(url) -> str:
@@ -143,6 +178,7 @@ def plan(vars_: dict | None = None, include_disabled: bool = False) -> list[dict
         redirects = r.get("redirect_uris") or []
         key = path.parent.name.removesuffix("-base").replace("-", "_")
         launch = r.get("launch_url")
+        journeys, refused = _journeys(e2e.get("journeys") or [])
         if not launch and key in domains:       # metabase, woodpecker declare none
             launch = "https://" + _render(env, "{{ " + domains[key] + " }}")
         rows.append({
@@ -164,6 +200,8 @@ def plan(vars_: dict | None = None, include_disabled: bool = False) -> list[dict
             "enabled": enabled,
             "probes": _render(env, e2e.get("probes") or []),
             "isolation": _render(env, e2e.get("isolation") or []),
+            "journeys": journeys,
+            "refused": refused,
             "app": bool(ak),     # e2e-only plugins (backup, alert-relay) have no URL to open
         })
     # Manifest apps (apps/*.yml) carry their own authentik: block and were
@@ -190,17 +228,19 @@ def plan(vars_: dict | None = None, include_disabled: bool = False) -> list[dict
                      "tier": int(r["tier"]) if str(r.get("tier", "")).isdigit() else None,
                      "client_id": r.get("client_id"), "redirect_uri": (r.get("redirect_uris") or [None])[0],
                      "launch_url": r.get("launch_url"), "first_login": r.get("first_login"),
-                     "edge": "proxy", "enabled": enabled, "probes": [], "isolation": [], "app": True})
+                     "edge": "proxy", "enabled": enabled, "probes": [], "isolation": [], "journeys": [],
+                     "refused": [], "app": True})
     for row in rows:
         row["unresolved"] = [k for k in ("launch_url", "redirect_uri")
                              if (row[k] is None and k == "launch_url" and row["app"]) or
-                             (row[k] is not None and "." not in _host(row[k]))]
+                             (row[k] is not None and "." not in _host(row[k]))] + row.pop("refused")
     return rows
 
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--all", action="store_true", help="include services the config disables")
+    ap.add_argument("--journeys", action="store_true", help="print each journey's argv; runs nothing")
     a = ap.parse_args(argv)
     # What is enabled comes from what the last converge RAN (state.yml, -e
     # included); the layers only when no run is recorded. Say which, on stderr.
@@ -209,7 +249,15 @@ def main(argv: list[str] | None = None) -> int:
     if run.source == "state.yml" and run.apps() is None:
         print("apps: layers (this state.yml predates the apps record; the next converge writes it)",
               file=sys.stderr)
-    json.dump(plan(include_disabled=a.all), sys.stdout, indent=2)
+    rows = plan(include_disabled=a.all)
+    if a.journeys:      # exit 0 either way: a reader-shaped renderer; unresolved is the channel
+        for r in rows:
+            for j in r["journeys"] if r["enabled"] else ():
+                print(journey_argv(j))
+            for u in (u for u in r["unresolved"] if u.startswith("journey:")):
+                print(f"# unresolved {r['slug']}: {u}", file=sys.stderr)
+        return 0
+    json.dump(rows, sys.stdout, indent=2)
     print()
     return 0
 
