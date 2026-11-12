@@ -11,7 +11,9 @@ Each sample is drilled end to end, or named honestly:
                   scanned by gitleaks with THIS repo's .gitleaks.toml — the estate's real config and
                   allowlist, so an allowlist entry that swallowed a real-looking secret would show as missed
   eicar           not drilled: no anti-malware detector is declared in state/immune/indicators.yml
-  advisory-pin    not drilled offline: the advisory match needs OSV/GitHub (network)
+  advisory-pin    a fixture npm lockfile pinning lodash 4.17.20 (GHSA-35jh-r3h4-6jhm, fixed 4.17.21), judged
+                  by advisory-status's own collect() and OSV re-match; only its one fetch seam is answered,
+                  from the vendored record below, so no request leaves the host
   exposed-port-role  a role compose.yml.j2 publishing 0.0.0.0:<port>, judged by the CI gate's own
                   lan_ports() + EDGE (tests/anatomy/test_lan_access_is_behind_the_edge.py)
   exposed-port-app   a manifest app (apps/_template.yml) publishing 0.0.0.0, judged by the parser's
@@ -25,6 +27,7 @@ Exit 0 always (a drill reports). Refused inside an agent run (NOS_AGENT_NAME set
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import secrets
@@ -118,16 +121,43 @@ def drill_port_app(tmp: Path) -> dict:
     return _timed("exposed-port-app", "nos_app_parser.validate", judge)
 
 
+# The published advisory, vendored as OSV serves it (trimmed to the fields the matcher reads). Inert data.
+_ADVISORY = {"id": "GHSA-35jh-r3h4-6jhm", "aliases": ["CVE-2021-23337"],
+             "affected": [{"package": {"name": "lodash", "ecosystem": "npm"},
+                           "ranges": [{"type": "SEMVER", "events": [{"introduced": "0"}, {"fixed": "4.17.21"}]}]}],
+             "database_specific": {"severity": "HIGH"}}
+
+
+def drill_advisory_pin(tmp: Path, version: str = "4.17.20") -> dict:
+    def judge() -> bool:
+        spec = importlib.util.spec_from_file_location("advisory_status", REPO / "tools" / "advisory-status.py")
+        adv = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(adv)
+        lock = tmp / "drill-lock" / "package-lock.json"
+        lock.parent.mkdir(parents=True)
+        lock.write_text(json.dumps({"packages": {"": {}, "node_modules/lodash": {"version": version}}}))
+
+        def offline(url, body=None):   # the seam: answered here, never the network
+            if url == adv.OSV_BATCH:
+                n = len(json.loads(body)["queries"])
+                return {"results": [{"vulns": [{"id": _ADVISORY["id"]}]} for _ in range(n)]}
+            if url == adv.OSV_VULN.format(id=_ADVISORY["id"]):
+                return _ADVISORY
+            raise OSError("offline drill: no network")   # cve.now enrichment: UNKNOWN, the match stands
+        rep = adv.collect(pin_values={}, receptor_map={}, lockfiles={"drill": (lock, "npm")}, fetch=offline)
+        return any(m.get("id") == _ADVISORY["id"] for lf in rep["lockfiles"] for m in lf.get("matches") or [])
+    return _timed("advisory-pin", "advisory-status collect() + OSV re-match", judge)
+
+
 NOT_DRILLED = [
     {"sample": "eicar", "result": "no detector", "why": "no anti-malware indicator in state/immune/indicators.yml"},
-    {"sample": "advisory-pin", "result": "not drilled", "why": "the advisory match needs the network (OSV/GitHub)"},
 ]
 
 
 def run() -> dict:
     tmp = Path(tempfile.mkdtemp(prefix="nos-immune-drill-"))
     try:
-        rows = [drill_secret(tmp), drill_port_role(tmp), drill_port_app(tmp)] + NOT_DRILLED
+        rows = [drill_secret(tmp), drill_port_role(tmp), drill_port_app(tmp), drill_advisory_pin(tmp)] + NOT_DRILLED
     finally:
         shutil.rmtree(tmp, ignore_errors=True)   # every sample goes, whatever happened
     return {"at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "samples": rows,
