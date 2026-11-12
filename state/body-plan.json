@@ -12,13 +12,13 @@
     "organism": 0,
     "habitat": 9,
     "sense": 88,
-    "limb": 130,
+    "limb": 131,
     "memory": 43,
     "law": 57,
-    "reflex": 49,
+    "reflex": 50,
     "heartbeat": 1,
     "internal": 79,
-    "edges": 451
+    "edges": 453
   },
   "nodes": {
     "agent:conductor": {
@@ -869,6 +869,10 @@
       "level": "limb",
       "kind": "effector"
     },
+    "effector:morning-verdict": {
+      "level": "limb",
+      "kind": "effector"
+    },
     "effector:n8n-pack": {
       "level": "limb",
       "kind": "effector"
@@ -1342,6 +1346,10 @@
       "kind": "pulse"
     },
     "pulse:keap:keap-tables-export": {
+      "level": "reflex",
+      "kind": "pulse"
+    },
+    "pulse:keap:morning-verdict": {
       "level": "reflex",
       "kind": "pulse"
     },
@@ -3169,6 +3177,11 @@
       "kind": "trigger"
     },
     {
+      "from": "pulse:keap:morning-verdict",
+      "to": "effector:morning-verdict",
+      "kind": "trigger"
+    },
+    {
       "from": "pulse:librarian:brief-taxonomy",
       "to": "agent:librarian",
       "kind": "trigger"
@@ -3936,6 +3949,11 @@
     {
       "from": "service:pulse",
       "to": "pulse:keap:keap-tables-export",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:keap:morning-verdict",
       "kind": "trigger"
     },
     {

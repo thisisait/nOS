@@ -4,9 +4,9 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 595,
-    "edges": 570,
-    "nodes_pulse": 49,
+    "nodes": 597,
+    "edges": 572,
+    "nodes_pulse": 50,
     "nodes_judge": 5,
     "nodes_gateset": 5,
     "nodes_weakness": 7,
@@ -28,12 +28,12 @@
     "nodes_tasktype": 9,
     "nodes_skill": 16,
     "nodes_reader": 70,
-    "nodes_effector": 123,
+    "nodes_effector": 124,
     "nodes_article": 28,
     "nodes_organ_system": 13,
     "nodes_tissue": 1,
     "edges_data": 247,
-    "edges_trigger": 80,
+    "edges_trigger": 82,
     "edges_temporal": 5,
     "edges_mutex": 21,
     "edges_governed_by": 46,
@@ -2026,6 +2026,13 @@
       "anchor": "02.02.04",
       "description": "Effector tools/migration-pr.sh: tools/migration-pr.sh — validate an authored migration record + its version"
     },
+    "effector:morning-verdict": {
+      "kind": "effector",
+      "source": "tools/morning-verdict.py",
+      "title": "What each reader said this morning, one `morning-verdict` row per reader (the reader's own verdict, never a second judge; UNKNOWN on no answer in 60 s); Pulse `keap-base:morning-verdict` runs `--write` at 07:10 UTC, exits 0 / 10 RED / 11 UNKNOWN / 1 write failed.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/morning-verdict.py: What each reader said this morning, one `morning-verdict` row per reader (the reader's own verdict, never a second judge; UNKNOWN on no answer in 60 s); Pulse `keap-base:morning-verdict` runs `--write` at 07:10 UTC, exits 0 / 10 RED / 11 UNKNOWN / 1 write failed."
+    },
     "effector:n8n-pack": {
       "kind": "effector",
       "source": "tools/n8n-pack.py",
@@ -3233,6 +3240,24 @@
       "runs_agent": null,
       "anchor": "02.02.06",
       "description": "Pulse scheduled job (platform): runs keap-tables.py on cron `30 0 * * *`"
+    },
+    "pulse:keap:morning-verdict": {
+      "kind": "pulse",
+      "source": "files/anatomy/plugins/keap-base/plugin.yml",
+      "schedule": "10 7 * * *",
+      "jitter_min": 3,
+      "max_runtime_s": 420,
+      "category": "platform",
+      "paused": false,
+      "findings_exit_codes": [
+        10,
+        11
+      ],
+      "command_name": "morning-verdict.py",
+      "claims": [],
+      "runs_agent": null,
+      "anchor": "02.02.06",
+      "description": "Pulse scheduled job (platform): runs morning-verdict.py on cron `10 7 * * *` — exits [10, 11] mean findings, not failure"
     },
     "pulse:librarian:brief-taxonomy": {
       "kind": "pulse",
@@ -10140,6 +10165,14 @@
       "evidence": "derived"
     },
     {
+      "from": "pulse:keap:morning-verdict",
+      "to": "effector:morning-verdict",
+      "kind": "trigger",
+      "via": "the job's command is tools/morning-verdict.py",
+      "derived": "pulse-command",
+      "evidence": "derived"
+    },
+    {
       "from": "pulse:librarian:brief-taxonomy",
       "to": "agent:librarian",
       "kind": "trigger",
@@ -10486,6 +10519,14 @@
     {
       "from": "service:pulse",
       "to": "pulse:keap:keap-tables-export",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:keap:morning-verdict",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
       "derived": "daemon-dispatch",
