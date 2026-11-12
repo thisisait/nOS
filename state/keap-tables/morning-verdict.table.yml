@@ -1,0 +1,31 @@
+# =============================================================================
+# KEAP DataTable definition — "Morning verdict"
+#
+# Row morning-verdict (spec accepted 2026-11-12). Each morning the keap-base Pulse job
+# tools/morning-verdict.py writes what each reader said at that time: one row per
+# (morning, reader), slug `<UTC date>-<reader>`, so a re-run the same day overwrites.
+# Not a second judge: `verdict` is the reader's own key, or UNKNOWN when it gave none.
+#
+# UNSEEDED: rows are written at runtime with the agent RW bearer (ruling 2a). `why`
+# and `counts` are scrubbed before the write and are data, rendered as text.
+# =============================================================================
+
+title: "Morning verdict"
+description: >-
+  What each reader said each morning: OK, RED or UNKNOWN, a one-line why and its counts.
+  Yesterday's morning stays readable beside today's.
+driver: libsql
+visibility: tier-managers
+client_scope: none
+anchors: ["nos.loop"]
+
+schema:
+  columns:
+    - { key: slug,        label: "Slug",     kind: text,   role: dimension, required: true, concept: identity.slug }
+    - { key: occurred_at, label: "Morning",  kind: date,   role: dimension, required: true, concept: time.occurred_at }
+    - { key: reader,      label: "Reader",   kind: select, role: dimension, required: true, concept: prov.source,
+        options: ["red-status", "rem-status", "agent-status", "loop-status", "estate-status", "advisory-status"] }
+    - { key: verdict,     label: "Verdict",  kind: select, role: dimension, required: true, concept: evidence.verification,
+        options: ["OK", "RED", "UNKNOWN"] }
+    - { key: why,         label: "Why",      kind: text,   role: attribute, concept: identity.description }
+    - { key: counts,      label: "Counts",   kind: json,   role: attribute, concept: evidence.observation }

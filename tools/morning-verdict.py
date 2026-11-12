@@ -102,9 +102,9 @@ def advisory(now: datetime) -> tuple[str, str, dict]:
 
 
 def rows(now: datetime) -> list[dict]:
-    day, epoch = now.strftime("%Y-%m-%d"), int(now.timestamp())
+    day = now.strftime("%Y-%m-%d")    # occurred_at is kind date: an epoch int there is refused
     said = {n: run(n) for n in RUN} | {ADVISORY: advisory(now)}
-    return [{"slug": f"{day}-{n}", "occurred_at": epoch, "reader": n,
+    return [{"slug": f"{day}-{n}", "occurred_at": day, "reader": n,
              "verdict": v, "why": why, "counts": counts}
             for n, (v, why, counts) in said.items()]
 

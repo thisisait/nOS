@@ -160,7 +160,14 @@
       "properties": {
         "enabled":   {"type": "string", "description": "Jinja bool; defaults to authentik.enabled, so a plugin without an authentik block must set it."},
         "probes":    {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["name"]}},
-        "isolation": {"type": "array"}
+        "isolation": {"type": "array"},
+        "journeys":  {"type": "array", "minItems": 1, "description": "Journeys under tests/e2e/journeys this plugin promises; tools/e2e-plan.py --journeys prints their argv and never runs them (row iris-approvals-e2e-plan).",
+                      "items": {"type": "object", "additionalProperties": false, "required": ["name", "spec", "runner"],
+                                "properties": {"name": {"type": "string"},
+                                               "spec": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+$"},
+                                               "runner": {"enum": ["playwright", "pytest"]},
+                                               "env": {"type": "object", "additionalProperties": false,
+                                                       "properties": {"FACE_E2E": {"enum": ["0", "1"]}}}}}}
       }
     },
     "e2e_none": {

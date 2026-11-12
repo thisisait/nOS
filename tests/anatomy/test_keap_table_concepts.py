@@ -319,8 +319,10 @@ def test_a_concept_binds_only_the_kinds_it_allows():
 # NEXT definition to drift out of the seeder is caught the day it happens
 # instead of being found by hand a release later.
 UNSEEDED = {
-    "efferent-queue": "rows are written at runtime by tools/efferent.py with the operator's own token "
+    "efferent-queue": "rows are written at runtime by tools/efferent.py through KEAP's human door "
                       "(ruling 2026-11-12, efferent-queue slice 1); nothing to seed.",
+    "morning-verdict": "rows are written each morning by the keap-base job tools/morning-verdict.py with the "
+                       "agent RW bearer (ruling 2026-11-12, morning-verdict 2a); nothing to seed.",
     "apps": "fed by the app generator, not the playbook seeder — wiring it is a decision",
     "systems": "fed by the service registry — same",
     "repo": "digest OUTPUT — rows come from the repos importer (digest-import-repos.py) "
