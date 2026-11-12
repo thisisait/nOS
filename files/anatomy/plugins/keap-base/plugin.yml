@@ -295,7 +295,7 @@ pulse:
       args: ["--write"]
       schedule: "10 7 * * *"
       jitter_min: 3
-      max_runtime_s: 420        # five readers x 60 s each, then six writes
+      max_runtime_s: 540        # five readers x 60 s, then six writes x 30 s HTTP timeout
       max_concurrent: 1
       findings_exit_codes: [10, 11]
       env:
