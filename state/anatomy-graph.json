@@ -3246,7 +3246,7 @@
       "source": "files/anatomy/plugins/keap-base/plugin.yml",
       "schedule": "10 7 * * *",
       "jitter_min": 3,
-      "max_runtime_s": 420,
+      "max_runtime_s": 540,
       "category": "platform",
       "paused": false,
       "findings_exit_codes": [
