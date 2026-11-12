@@ -75,3 +75,13 @@ def test_the_default_layers_remove_only_inside_the_roots():
     roots = {r.rstrip("/") for r in roots}
     stray = sorted(d for d in data if not ms.covered(d, roots))
     assert not stray, f"remove=data would delete paths outside every nOS root: {stray}"
+
+
+def test_the_owned_roots_are_rechecked_right_before_the_rm():
+    """Row nos-owned-paths-recheck-before-rm: the check and the rm touch. The task directly before
+    the data delete re-includes removal-set.yml; a task slipped in between reopens the swap window."""
+    tasks = yaml.safe_load((REPO / "tasks/blank-reset.yml").read_text(encoding="utf-8"))
+    names = [t.get("name", "") for t in tasks]
+    rm = next(i for i, n in enumerate(names) if n.startswith("[BLANK] Remove data directories"))
+    assert rm > 0 and tasks[rm - 1].get("ansible.builtin.include_tasks") == "removal-set.yml", (
+        f"the task before the data delete is {names[rm - 1]!r}, not the removal-set re-check")
