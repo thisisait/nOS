@@ -341,8 +341,25 @@ fi
 # pulse's own scrub_text, one list (tests/fixtures/pulse_redact.json). pipefail keeps the agent's rc.
 _scrub=(python3 -u -c 'import sys; sys.path.insert(0, sys.argv[1]); from redact import scrub_text
 for line in sys.stdin: sys.stdout.write(scrub_text(line))' "$REPO_ROOT/files/anatomy/pulse/pulse")
+# NOS_AGENT_CAPTURE=1 (dev switch, default off; row agent-output-capture-switch): the SCRUBBED stream,
+# stdout and stderr, is also appended to ~/.nos/conductor/<PULSE_RUN_ID>.log, the glob Alloy already
+# tails (job=agent). The run id is the file name, not a Loki label: a label value per run is the
+# cardinality Loki warns against. Only under Pulse (a valid run id); files older than 7 days go first.
+CAPTURE_FILE=/dev/null
+if [[ "${NOS_AGENT_CAPTURE:-0}" == "1" ]]; then
+    if [[ "${PULSE_RUN_ID:-}" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]]; then
+        _capdir="$HOME/.nos/conductor"
+        (umask 077 && mkdir -p "$_capdir" && : >> "$_capdir/$PULSE_RUN_ID.log")
+        find "$_capdir" -name '*.log' -type f -mtime +7 -delete 2>/dev/null || true
+        CAPTURE_FILE="$_capdir/$PULSE_RUN_ID.log"
+        echo "[run-agent] capture on: the scrubbed output is appended to $CAPTURE_FILE (Loki job=agent)" >&2
+    else
+        echo "[run-agent] NOS_AGENT_CAPTURE=1 but no valid PULSE_RUN_ID: capture stays off" >&2
+    fi
+fi
 # stderr too (review 2026-11-11): a PHP warning can carry a header or a token into the caller's log.
-php bin/run-agent.php "${PASSTHRU[@]}" 2> >("${_scrub[@]}" >&2) | "${_scrub[@]}" | tee "$SUMMARY_FILE"
+php bin/run-agent.php "${PASSTHRU[@]}" 2> >("${_scrub[@]}" | tee -a "$CAPTURE_FILE" >&2) \
+    | "${_scrub[@]}" | tee "$SUMMARY_FILE" | tee -a "$CAPTURE_FILE"
 
 # ── MR post-step ─────────────────────────────────────────────────────────────
 # The agent has no forge tool and must not get one: a session that can push is a

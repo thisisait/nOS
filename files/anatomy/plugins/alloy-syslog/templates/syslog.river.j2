@@ -49,9 +49,9 @@ loki.source.file "daemons" {
 }
 
 // ── Conductor agent runs (per-Pulse-fire stdout/stderr capture) ──────────────
-// pulse-run-agent.sh writes a per-run log to ~/.nos/conductor/<run_id>.log
-// (planned — A8 follow-up). When that lands, this glob auto-tails. Until
-// then it's a no-op match (Alloy tolerates empty globs).
+// tools/run-agent.sh appends the SCRUBBED output of a Pulse run to ~/.nos/conductor/<run_id>.log
+// while NOS_AGENT_CAPTURE=1 (dev switch, default off; row agent-output-capture-switch). The run id
+// rides the `filename` label, not a label of its own. Off, the glob matches nothing (Alloy tolerates it).
 local.file_match "conductor_runs" {
   path_targets = [
     {__path__ = "{{ ansible_facts['env']['HOME'] }}/.nos/conductor/*.log", job = "agent", agent = "conductor"},
