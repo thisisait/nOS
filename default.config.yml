@@ -893,9 +893,9 @@ frankenphp_version: "1.13.5"
 # opens the PR); it moves a pin only after `gh attestation verify` names upstream's static.yaml.
 # mac-x86_64 has no asset since 1.13.3: its pin is still 1.13.1's, so an Intel Mac fails closed.
 frankenphp_checksums:
-  linux-aarch64: "72272e9b5538b9d1cdf5bfecacc503cb3b0db8931538c81a1f2d32f3801b545e"
-  linux-x86_64: "cdb85dd2fd6c0468f53079e845c81621563024772ac400e5d1c17d0751324b71"
-  mac-arm64: "42cbc1dc011495935a1ea8a90194269cda24a7f5ef2ef92117026efefd852f2e"
+  linux-aarch64: "aa3486f7f1f6720b251f066db995ac27321398ae86422a0e7510c0ffef54ac09"
+  linux-x86_64: "7290fb8dd97ce7d507d3af6973e019301943ce9e50ea79c95a3e96e700d5c47a"
+  mac-arm64: "63c4e48c3a8595331da9ebb916a64a9b950424d600a0f8f4edc1ea1a15e414d4"
   mac-x86_64: "b9123b427cb357eac076b1f316f71589cfe5c3db4ad2449114e243563d794a89"
 
 # ==============================================================================
