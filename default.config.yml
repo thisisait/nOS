@@ -57,8 +57,6 @@ nos_tenant_slug: "{{ (tenant_domain | default('dev.local')).split('.')[0] }}"
 authentik_data_dir: "{{ nos_data_root }}/platform/services/authentik/data"
 bluesky_pds_data_dir: "{{ nos_data_root }}/platform/services/bluesky_pds/data"
 bookstack_data_dir: "{{ nos_data_root }}/platform/services/bookstack/data"
-calibreweb_books_dir: "{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/shared/calibreweb/books"
-calibreweb_config_dir: "{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/shared/calibreweb/config"
 code_server_data_dir: "{{ nos_data_root }}/platform/services/code_server/data"
 erpnext_data_dir: "{{ nos_data_root }}/platform/services/erpnext/data"
 mikopbx_data_dir: "{{ nos_data_root }}/platform/services/mikopbx"
@@ -82,7 +80,6 @@ homeassistant_config_dir: "{{ nos_data_root }}/platform/services/homeassistant/c
 infisical_data_dir: "{{ nos_data_root }}/platform/services/infisical/data"
 influxdb_config_dir: "{{ nos_data_root }}/platform/services/influxdb/config"
 influxdb_data_dir: "{{ nos_data_root }}/platform/services/influxdb/data"
-jellyfin_config_dir: "{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/shared/jellyfin/config"
 keap_data_dir: "{{ nos_data_root }}/platform/services/keap/data"
 kiwix_data_dir: "{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/shared/kiwix/data"
 mailpit_data_dir: "{{ nos_data_root }}/platform/services/mailpit/data"
@@ -1002,116 +999,25 @@ redis_version: "8.10.3"                  # 8.10.2 MULTI-after-ACL-revoke bypass,
 # ==============================================================================
 # IIAB – WORDPRESS
 # ==============================================================================
-
-wordpress_domain: "wordpress{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-wordpress_dir: "{{ ansible_facts['env']['HOME'] }}/projects/wordpress"
-wordpress_db_name: "wordpress"
-wordpress_db_user: "wordpress"
-wordpress_db_password: "{{ nos_derived_secrets.wordpress }}"
-wordpress_db_host: "127.0.0.1"          # ignored if install_mariadb=true (uses 'mariadb' from iiab_net)
-wordpress_table_prefix: "wp_"
+# (the rest of this section is a config.d layer)
 wordpress_version: "7.1.4"              # 7.1.3+7.1.4 security releases (unauth comment disclosure, upgrade-window RCE, stored XSS). Prior CVE-2026-87902 at 7.1.2.
-# The live container already RAN 7.1.2 (WP auto-updates in the volume) while the
-# image said 7.0.4 — a force-recreate would have restored vulnerable files under
-# a 7.1.2 database. No 7.0.x image exists past 7.0.4, so this branch hop IS the fix.
-# ── wp2shell (CVE-2026-63030 + CVE-2026-60137), disclosed 2026-07-17 ──────────
-# Unauth RCE via /wp-json/batch/v1/: a REST batch-route confusion chained with a
-# core SQLi. Upstream fixed both the same day in 6.8.6 / 6.9.5 / 7.0.2, and for
-# two weeks the Docker official image published NONE of the three — so the pin
-# sat at 6.9.4 with a mu-plugin unregistering the batch endpoint, which breaks
-# the CHAIN at its entry but never patched the SQLi underneath it.
-#
-# LIFTED 2026-08-06. `wordpress:7.0.2` is on Docker Hub (pushed 2026-08-05,
-# arm64 among its architectures — verified against the registry, not inferred
-# from a release note). REM-129 + REM-160 are two rows for this one move: 160
-# is the observation that unblocks 129.
-#
-# ⚠️ 7.0.0 and 7.0.1 REMAIN VULNERABLE. The range is 6.9.0-6.9.4 AND
-# 7.0.0-7.0.1, so a mechanical "bump to the newest 7.0.x" is a lateral move into
-# the same hole. Only 6.8.6 / 6.9.5 / 7.0.2 are safe. Verify the exact tag
-# exists before bumping.
-#
-# The mitigation is now OFF and its mu-plugin is actively REMOVED (a flag that
-# only decides whether to write a file is half a switch — see the removal task
-# in roles/pazny.wordpress/tasks/main.yml). The file itself is kept: a rollback
-# to 6.9.4 is exactly when it is needed again.
-wordpress_cve_63030_mitigate: false
-wordpress_harden_unauth_surface: true   # REM-114: mu-plugin disables XML-RPC + blocks REST user enum + author enumeration (defense-in-depth; 6.9.4 core is CVE-clean)
-wordpress_port: 8084                    # Local container port (nginx proxy)
-wordpress_admin_user: "admin"
-wordpress_admin_password: "{{ nos_derived_secrets.wordpress_admin }}"
-# Break-glass local admin, NOT the SSO admin: sharing akadmin's address made
-# WordPress refuse to create akadmin at its first SSO login (email taken).
-wordpress_admin_email: "wordpress-admin@{{ tenant_domain | default('dev.local') }}"
-
-# ── Devlog platform (docs/devlog/README.md) ──────────────────────────────────
-# WordPress presents the nOS devlog: nos-core namespace is repo-committed and
-# synced by tasks/devlog-sync.yml; on-site namespaces are written live via
-# tools/devlog-post.py. The bot's Application Password is WP-minted in
-# roles/pazny.wordpress/tasks/devlog.yml and persisted to ~/.nos/secrets.yml.
-wordpress_devlog_enabled: true          # effective only with install_wordpress
-wordpress_devlog_bot_user: "nos-devlog-bot"
-wordpress_devlog_app_name: "nos-devlog"
-
-# Site polish (devlog presentation): theme + extra plugins installed/activated
-# idempotently by post.yml via wp-cli (wp.org slugs, all GPL).
-wordpress_theme: "generatepress"
-wordpress_extra_plugins: ["secure-custom-fields"]
-
-# RBAC mirror — Authentik groups -> WP roles, enforced on every OIDC login by
-# the rbac-role-sync.php mu-plugin (highest privilege wins; unmapped users
-# fall back to subscriber; local accounts untouched). JSON STRING literal on
-# purpose: to_json is an ansible filter and this value lands in the core-up
-# vars namespace (stock-Jinja trap). Operators with custom group names
-# (authentik_rbac_tiers) override this string in config.yml.
-wordpress_rbac_role_map_json: '{"nos-providers":"administrator","nos-admins":"administrator","nos-managers":"editor","nos-users":"author","nos-guests":"subscriber"}'
 
 # ==============================================================================
 # IIAB – NEXTCLOUD
 # ==============================================================================
-
-nextcloud_domain: "cloud{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-nextcloud_dir: "{{ ansible_facts['env']['HOME'] }}/projects/nextcloud"
-nextcloud_db_name: "nextcloud"
-nextcloud_db_user: "nextcloud"
-nextcloud_db_password: "{{ nos_derived_secrets.nextcloud }}"
-nextcloud_db_host: "127.0.0.1"         # ignored if install_mariadb=true (uses 'mariadb' from iiab_net)
-nextcloud_admin_user: "admin"
-nextcloud_admin_password: "{{ nos_derived_secrets.nextcloud_admin }}"
+# (the rest of this section is a config.d layer)
 # MAJOR-LOCKED (C2 56e80349 completed 2026-06-10 — the C2 pin landed only in the
 # role default, which THIS line shadowed, so the live container stayed on the
 # floating "stable" tag; when stable crosses a major NC 500s on existing data).
 # Bump ONE major per run on existing installs; see roles/pazny.nextcloud/defaults.
 nextcloud_version: "33"
-nextcloud_port: 8085                    # Local container port (nginx proxy)
 
 # ==============================================================================
 # IIAB – KIWIX (offline Wikipedia, Gutenberg, ZIM files)
 # Kiwix runs in a Docker container (simplest on macOS)
 # ==============================================================================
-
-kiwix_domain: "kiwix{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-kiwix_port: 8888                           # Local kiwix-serve port
+# (the rest of this section is a config.d layer)
 kiwix_version: "3.8.2"                             # Docker image tag (ghcr.io/kiwix/kiwix-serve)
-
-# Init ZIM — downloaded automatically on first blank run so Kiwix can start
-# with a working demo (no manual onboarding step). Alpine Linux wiki, ~3 MB.
-# The UNDATED permalink: dated names rotate off the mirror (_2026-04 404'd
-# by 2026-10, so the blank came up with no ZIM). Set
-# to "" in config.yml to opt out and rely on kiwix_zim_files / download-zim.sh.
-# WARNING: large ZIMs (>50 MB) block the playbook for the full download duration.
-kiwix_init_zim_url: "https://download.kiwix.org/zim/alpinelinux_en_all_maxi.zim"
-kiwix_init_zim_dest: "alpinelinux.zim"
-
-# ZIM files to download (empty = do not download automatically)
-# See: https://download.kiwix.org/zim/
-kiwix_zim_files: []
-# Examples (add to config.yml):
-# - url: "https://download.kiwix.org/zim/wikipedia/wikipedia_en_top_mini_2024-11.zim"
-#   dest: "wikipedia_en_top_mini.zim"    # ~315 MB
-#   checksum: "sha256:<hex>"               # optional: <url>.sha256 on the mirror; a mismatch fails the run
-# - url: "https://download.kiwix.org/zim/wikipedia/wikipedia_cs_all_mini_2024-11.zim"
-#   dest: "wikipedia_cs_mini.zim"        # ~500 MB
 
 # ==============================================================================
 # GEO – image pins (the rest of geo is the 70-geo layer under config.d)
@@ -1201,8 +1107,6 @@ openhuman_skills: [nos-datatables, nos-for-openhuman]  # copied into ~/.openhuma
 # IIAB – N8N (workflow automation)
 # ==============================================================================
 
-n8n_domain: "n8n{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-n8n_port: 5678
 # REM-152. MEASURED 2026-08-06 over the COMPLETE GitHub advisory set for npm
 # n8n (157 advisories, 2023-05-10..2026-07-22, cursor-paginated — the `page`
 # parameter is ignored by that endpoint and returns the same 100 forever, which
@@ -1213,44 +1117,6 @@ n8n_port: 5678
 # 2026-07-22. Same-major, migrate-on-start. arm64 tag confirmed on the registry.
 n8n_version: "2.45.7"  # Sep30-Oct28 GHSAs (unauth webhook/OAuth); 2.x floor 2.45.5, 2.46 is beta. One-way DB migrations: back up ~/n8n. Prior 2.37.10.
 n8n_data_dir: "{{ ansible_facts['env']['HOME'] }}/n8n"
-n8n_timezone: "{{ nos_timezone }}"
-# Where extra_hosts' `host-gateway` lands — BOTH families, CSV of CIDRs. The
-# n8n pack path (https://keap.<tld> pinned to host-gateway) must be re-opened
-# through n8n's SSRF guard via IP RANGES: the hostname allowlist env exists
-# but covers only the lookup phase — the connect-time validator sees a bare
-# IP (ssrf-protection.service.js validateConnectionHost) — and the lookup
-# phase validates EVERY resolved address, so the /etc/hosts IPv6 row (ULA ⊂
-# the default blocked set) blocks a v4-only allowlist. Both addresses
-# measured in the container's /etc/hosts on Docker Desktop for Mac
-# (2026-09-21). GLOBAL (not a role default) because the plugin loader renders
-# n8n-base's compose extension without the role's defaults in scope — a
-# role-scoped var rendered "" there. Linux bridge is typically 172.17.0.1 —
-# override on a Linux host.
-n8n_host_gateway_cidr: "192.168.65.254/32,fdc4:f303:9324::254/128"
-n8n_admin_email: "{{ default_admin_email }}"
-n8n_admin_password: "{{ nos_derived_secrets.n8n }}"
-n8n_admin_firstname: "Admin"
-n8n_admin_lastname: "nOS"
-
-# ==============================================================================
-# IIAB – GITEA (self-hosted Git)
-# ==============================================================================
-
-gitea_domain: "git{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-gitea_port: 3003         # 3000=Grafana, 3001=Uptime Kuma, 3002=reserve → Gitea on 3003
-gitea_ssh_port: 2222
-# Derives from the declared-identities registry (nos_primary_admin, top of
-# this file) — never directly from the OS username. The registry is the one
-# place that says who the local forge admin IS.
-gitea_admin_user: "{{ nos_primary_admin }}"
-gitea_admin_password: "{{ nos_derived_secrets.gitea }}"
-gitea_admin_email: ""                          # FILL IN!
-gitea_secret_key: "{{ nos_derived_secrets.gitea_secret }}"
-gitea_metrics_token: "{{ nos_derived_secrets.gitea_metrics }}"   # bearer token guarding /metrics (Alloy scrape sends it)
-gitea_disable_registration: false              # true = only admin can add users (also blocks OIDC auto-create)
-# Pure-SSO: hide the local self-registration form but still let OAuth2/OIDC
-# first-login auto-create users (Authentik onboarding). true = external-only.
-gitea_allow_only_external_registration: true
 
 # ==============================================================================
 # IIAB – GITLAB CE (full DevOps platform)
@@ -1259,14 +1125,7 @@ gitea_allow_only_external_registration: true
 #       Internal PostgreSQL, Redis, Sidekiq – all in one container.
 # ==============================================================================
 
-gitlab_domain: "gitlab{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-gitlab_http_port: 8929          # Internal HTTP port (nginx handles SSL, forwards here)
-gitlab_ssh_port: 2224           # Git SSH (22=system, 2222=Gitea → Gitlab on 2224)
 gitlab_version: "18.11.13-ce.0"  # 2026-10-21 critical patch (CVE-2026-110264 CVSS 10, -112212 7.5); last 18.11.x; 19.x is the next step
-gitlab_timezone: "{{ nos_timezone }}"
-gitlab_signup_enabled: false    # Disables registration of new users
-gitlab_puma_workers: 2          # Worker processes (min 2, with 36 GB feel free to use 4)
-gitlab_sidekiq_concurrency: 10  # Background job threads
 
 # ── which LOCAL forge the agent loop targets (tools/recipe-pr.sh) ─────────────
 # Gitea + Woodpecker is PRIMARY. GitLab is an optional drop-in replacement
@@ -1359,68 +1218,14 @@ openwebui_admin_password: "{{ nos_derived_secrets.openwebui_admin }}"
 # IIAB – WOODPECKER CI (CI/CD connected to Gitea)
 # Requires: install_gitea: true + manual OAuth2 application in Gitea
 # ==============================================================================
-
-woodpecker_domain: "ci{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-woodpecker_port: 8060            # Web UI
-woodpecker_grpc_port: 9060       # gRPC for agents (internal)
+# (the rest of this section is a config.d layer)
 woodpecker_version: "v3.17.0"           # REM-105: pin the floating v3 tag — CVE-2026-50141 auth-bypass-by-spoofing (agent_id gRPC metadata forge) fixed v3.14.1 [swept v3.14.1 2026-08-06]
-woodpecker_agent_secret: "{{ nos_derived_secrets.woodpecker }}"
-woodpecker_gitea_client: ""      # auto-provisioned on first run (post-oauth.yml); leave empty
-woodpecker_gitea_secret: ""      # auto-provisioned on first run (post-oauth.yml); leave empty
-# Hosts Gitea webhooks may POST to. Gitea denies private addresses by default
-# (SSRF); the CI host resolves to the LAN through the public edge, so without
-# this every Woodpecker delivery is refused while the hook still reports
-# active=true. Comma-separated hostnames — never `*` or `private`.
-# Where Woodpecker's deploy-trigger step POSTs. Over the Docker host bridge,
-# not the public edge: the caller is a container on this host, so the edge would
-# add a Cloudflare hop and a forward-auth surface to a call that never leaves
-# the machine. Provisioned as the `wing_deploy_url` REPO SECRET by
-# roles/pazny.woodpecker/tasks/post-secrets.yml.
-woodpecker_wing_deploy_url: "http://host.docker.internal:{{ wing_port | default(9000) }}/api/v1/deploy-trigger"
-gitea_webhook_allowed_hosts: "{{ woodpecker_domain | default('ci' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
-woodpecker_open_registration: false  # true = anyone can log in via Gitea
-# Comma-separated Gitea usernames Woodpecker auto-creates AND grants admin to,
-# bypassing open_registration=false. With registration closed this is the ONLY
-# list that can log in at all. It is DERIVED from the declared-identities
-# registry (every nos_identities entry whose realms include `woodpecker`), so
-# the incident of 2026-08-19 — the operator arrived as `akadmin`, the list
-# said `pazny` — cannot recur: both operators are in the registry, so both are
-# in this list. Add an identity to the registry, not a name to this string.
-woodpecker_admin: >-
-  {%- set _wp_names = [] -%}
-  {%- for _i in nos_identities | default([]) -%}
-  {%- if 'woodpecker' in (_i.realms | default([])) -%}
-  {%- set _ = _wp_names.append(_i.name) -%}
-  {%- endif -%}
-  {%- endfor -%}
-  {{ _wp_names | join(',') }}
-woodpecker_max_workflows: 4      # Max parallel pipeline runs per agent
-# REM-002 hardening — see roles/pazny.woodpecker/templates/compose.yml.j2 for
-# the full hardening block. Operators with vetted plugins can override
-# `woodpecker_plugins_privileged` with a comma-separated allowlist of plugin
-# image refs (e.g. "plugins/docker,plugins/kaniko"). Empty = no privileged plugins.
-woodpecker_plugins_privileged: ""
-woodpecker_prom_token: "{{ nos_derived_secrets.wp_prom }}"
 
 # ==============================================================================
 # IIAB – PORTAINER CE (Docker management UI)
 # ==============================================================================
-
-portainer_domain: "portainer{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-portainer_port: 9002                   # 9000/9001 reserved for RustFS (S3 API + console)
-  # REM-212 CRITICAL (CVE-2026-72533 / GHSA-jxhm-qq8x-v4c6, Docker API authz
-  # bypass). The row was filed vendor_blocked when no patch existed; 2.45.0
-  # (STS, 2026-08-27) now does. Tag verified pullable on Docker Hub before
-  # pinning — the queue records VERSIONS, and a version is not always a tag
-  # (node-red's recorded 4.1.13 has no plain tag at all).
+# (the rest of this section is a config.d layer)
 portainer_version: "2.45.3"             # GHSA-j3mf-q9qf-5qf8 (critical, <=2.45.2) fixed 2.45.3 [advisory-status 2026-10-23]; REM-295 bind-mount bypass fixes (LTS 2.39 unpatched)
-portainer_admin_password: "{{ nos_derived_secrets.portainer }}"
-# Repair an admin-password DRIFT (admin exists but neither the current nor
-# previous prefix logs in — left by an interrupted/partial provisioning). true =
-# wipe Portainer's BoltDB so admin-init recreates the admin with the config
-# password (Portainer holds no user data — endpoints/OAuth are reprovisioned).
-# Default false (manual-over-auto): off gives a loud, paste-able reset diagnostic.
-portainer_admin_auto_reset: false
 # Shared Traefik/Portainer Docker-API gateway (templates/stacks/infra base
 # compose). Guards docker.sock = root-on-host — pinned, never floating
 # (2026-06-10 review; the C1 pin gate doesn't scan base-stack templates).
@@ -1457,62 +1262,29 @@ nos_forum_cloudflare_turn_key_id: ""    # Cloudflare dashboard → Realtime → 
 # ==============================================================================
 # IIAB – JELLYFIN (media server)
 # ==============================================================================
-
-jellyfin_domain: "media{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-jellyfin_port: 8096
+# (the rest of this section is a config.d layer)
 jellyfin_version: "12.2"                # GHSA-6828 (critical traversal) + GHSA-cf3c (high) fixed only in 12; one-way DB migration, cold copy first (one-way-upgrade-guard)
-jellyfin_lan_access: true              # true = port reachable from LAN (for TVs, mobile clients)
-jellyfin_cache_dir: "{{ nos_data_root }}/platform/services/jellyfin/cache"
-jellyfin_movies_dir: "{{ ansible_facts['env']['HOME'] }}/media/movies"   # Override to your library
-jellyfin_shows_dir: "{{ ansible_facts['env']['HOME'] }}/media/shows"
-jellyfin_music_dir: "{{ ansible_facts['env']['HOME'] }}/media/music"
-# More libraries, e.g. ["/Volumes/SSD1TB/Filmy"]. Each mounts read-only at the
-# SAME path inside the container, so Jellyfin's picker accepts the host path.
-jellyfin_extra_media_dirs: []
 
 # ==============================================================================
 # IIAB – UPTIME KUMA (monitoring dashboard)
 # ==============================================================================
-
-uptime_kuma_domain: "uptime{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-uptime_kuma_port: 3001
+# (the rest of this section is a config.d layer)
 uptime_kuma_version: "2.5.9"        # GHSA-86ch-2247-gr56 (<=2.5.8) + GHSA-v2p3 (admin RCE) fixed [advisory-status 2026-10-31]. REM-073 2026-07-24.
-uptime_kuma_admin_user: "admin"
-uptime_kuma_admin_password: "{{ nos_derived_secrets.uptime_kuma }}"
-uptime_kuma_auto_monitors: true  # Automatically create monitors for all install_* services
-# NOTE (autologin ceiling): Kuma v1.x has NO OIDC and NO proxy-header login, so it
-# always shows its own login after the Authentik forward-auth gate. The only lever
-# is Kuma "Disable Auth" (gate-only) — a SECURITY DOWNGRADE (anyone past the gate
-# becomes shared Kuma admin). Deliberately NOT wired (deferred): it needs careful
-# set_settings/connect() idempotency in setup-monitors.py. Real per-user SSO waits
-# on the Kuma v2.x migration (sqlite→mariadb, breaking).
-uptime_kuma_status_page_slug: "nos"               # Slug for public status page (status.dev.local → /status/<slug>)
-uptime_kuma_status_page_title: "nOS Service Status"
-uptime_kuma_status_page_domain: "status{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
-uptime_kuma_ntfy_topic: "nos-alerts"              # ntfy topic used for alert notifications
-uptime_kuma_notify_webhook_url: "http://127.0.0.1:{{ bone_port | default(8099) }}/api/events"
-uptime_kuma_tls_expiry_monitors: true             # Create TLS cert-expiry monitors for HTTPS-exposed services
-uptime_kuma_docker_host_monitors: false           # Optional Docker healthcheck pass-through (needs socket proxy)
 
 # ==============================================================================
 # IIAB – CALIBRE-WEB (ebook server)
 # ==============================================================================
-
-calibreweb_domain: "books{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-calibreweb_port: 8083
+# (the rest of this section is a config.d layer)
 # Registry path only; the tag is calibreweb_version. LinuxServer publishes the
 # SAME image to lscr.io and Docker Hub (`linuxserver/calibre-web`); a sandbox
 # that refuses lscr.io flips this (docs/cloud-e2e.md §Registries).
 calibreweb_image: "lscr.io/linuxserver/calibre-web"
 calibreweb_version: "0.6.27"   # lscr.io/linuxserver/calibre-web (REM-195: security release)
-calibreweb_timezone: "{{ nos_timezone }}"
 
 # ==============================================================================
 # IIAB – SNAPPYMAIL (webmail frontend)
 # ==============================================================================
-
-snappymail_domain: "webmail{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-snappymail_port: 3008
+# (the rest of this section is a config.d layer)
 # Official image (Alpine, nginx + PHP-FPM 8.2). Pin a tag or digest.
 snappymail_image: "djmaze/snappymail:v2.38.2"
 
@@ -1843,8 +1615,6 @@ rustfs_version: "1.0.3"                 # GHSA-xm99 (high) + 5 medium; skip 1.0.
 # Requires: install_mariadb: true, redis_docker: true
 # ==============================================================================
 
-erpnext_domain: "erp{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-erpnext_port: 8087                     # 8082 = Traefik dashboard, 8083-8086 taken
 # REM-165. v15.119.0 is the TOP of the v15 line — v15.120.0 is 404 — and the
 # bump stays inside v15 deliberately: v16.31.1 exists and the pin scanner offers
 # it, but a Frappe major is a bench migration this estate already treats as
@@ -1855,14 +1625,6 @@ erpnext_port: 8087                     # 8082 = Traefik dashboard, 8083-8086 tak
 # its arm64 manifest are verified against the registry; that the service comes
 # up on it is not. First supervised `-e install_erpnext=true` run is the test.
 erpnext_version: "v15.124.5"              # top of v15 (2026-11-04): GHSA-m668-9q43-8g29 + GHSA-x267-fgf5-54q9 fixed by 15.124.2 [advisory-status 2026-11-08]. Prior GHSA-v38v-9h2p-hr8v (critical) fixed by 15.121.3. REM-208: GHSA-6w83-8777-v93q SSTI (CVSS 9.9), floor 15.119.1 — pinned above it so the fourth overtake has margin
-# erpnext_data_dir: DEPRECATED since P0.1 migration to a named volume. Sites data
-# lives in Docker named volume `b2b_erpnext_sites` (managed for blank-reset
-# via `compose down -v` + `volume prune -f -a`). External storage can be
-# configured by moving the whole Docker Desktop disk image to an external SSD.
-erpnext_admin_password: "{{ nos_derived_secrets.erpnext }}"
-# Site name follows erpnext_domain (host_alias + tenant_domain aware).
-erpnext_site_name: "{{ erpnext_domain }}"
-erpnext_experimental_override: false
 # Bind-mount target for the ERPNext sites volume. The Docker named volume
 # `b2b_erpnext_sites` is the live storage; this var is referenced by
 # tasks/post.yml when reading site_config.json + bench migrate. Operators
@@ -1875,8 +1637,6 @@ authentik_oidc_erpnext_client_secret: "{{ nos_derived_secrets.oidc_erpnext }}"
 # Requires: install_mariadb: true
 # ==============================================================================
 
-freescout_domain: "helpdesk{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-freescout_port: 8090
 # REM-218. The `-php8.3` suffix is GONE because that line is dead: nfrastack's
 # newest php8.3 tag is 2.1.5, published 2026-07-18, and every tag from 2.2.0
 # onward is php8.5-only. Verified against the registry, 165 tags enumerated —
@@ -1893,14 +1653,6 @@ freescout_port: 8090
 # Check it with `tools/app-version.py`, which asks the application. Until a
 # converge runs, the claim below is UNVERIFIED and the reader will say so.
 freescout_version: "2.2.8"               # nfrastack; CHANGELOG claims app 1.8.238 (REM-250). UNVERIFIED until `tools/app-version.py`
-freescout_db_name: "freescout"
-freescout_db_user: "freescout"
-freescout_db_password: "{{ nos_derived_secrets.freescout }}"
-freescout_admin_email: "{{ default_admin_email }}"
-freescout_admin_password: "{{ nos_derived_secrets.freescout }}"
-freescout_timezone: "{{ nos_timezone }}"
-freescout_admin_first_name: "Admin"
-freescout_admin_last_name: "nOS"
 authentik_oidc_freescout_client_id: "nos-freescout"
 authentik_oidc_freescout_client_secret: "{{ nos_derived_secrets.oidc_freescout }}"
 
@@ -1908,15 +1660,8 @@ authentik_oidc_freescout_client_secret: "{{ nos_derived_secrets.oidc_freescout }
 # B2B – OUTLINE (team wiki / knowledge base)
 # Requires: install_postgresql: true, redis_docker: true
 # ==============================================================================
-
-outline_domain: "wiki{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-outline_port: 3005
+# (the rest of this section is a config.d layer)
 outline_version: "1.12.0"     # 2026-10-25: 44 advisories <1.12 incl. GHSA-f28f-75h4-499q + GHSA-48rq-wx9j-g949 (critical); notes 1.10-1.12 list no breaking change
-outline_db_name: "outline"
-outline_db_user: "outline"
-outline_db_password: "{{ nos_derived_secrets.outline }}"
-outline_secret_key: "{{ global_password_prefix }}_pw_outline_secret"
-outline_utils_secret: "{{ global_password_prefix }}_pw_outline_utils"
 
 # ==============================================================================
 # VOIP – MIKOPBX (Asterisk 22 PBX; SQLite + Redis inside, no infra DB)
@@ -1942,18 +1687,8 @@ mikopbx_providers: []                  # - { name: "provider", host: "sip.exampl
 # DATA – METABASE (BI dashboards)
 # Requires: install_postgresql: true
 # ==============================================================================
-
-metabase_domain: "bi{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-metabase_port: 3002
+# (the rest of this section is a config.d layer)
 metabase_version: "v0.63.10"     # REM-198 CRITICAL GHSA-r495-55cx-fjh7 — the SECOND metabase advisory with NO CVE id; the repo advisory endpoint is the only channel that shows either [was v0.63.5, REM-153]
-metabase_db_name: "metabase"
-metabase_db_user: "metabase"
-metabase_db_password: "{{ nos_derived_secrets.metabase }}"
-metabase_timezone: "{{ nos_timezone }}"
-metabase_admin_email: "{{ default_admin_email }}"
-metabase_admin_password: "{{ nos_derived_secrets.metabase_admin }}"
-metabase_admin_first_name: "Admin"
-metabase_admin_last_name: "nOS"
 
 # ==============================================================================
 # DATA – APACHE SUPERSET (data visualization)
