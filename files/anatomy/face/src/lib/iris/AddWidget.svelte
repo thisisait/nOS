@@ -1,6 +1,7 @@
 <!--
   "+ widget": the person names a table and what to show of it. The spec is what the widget
   re-runs as them, without the model (wire.rs WidgetSpec); serve checks every column.
+  A reader is a fixed list, shown to everyone: serve refuses it below tier 1, naming the widget.
 -->
 <script lang="ts">
 	import type { Value, WidgetSpec } from './wire';
@@ -14,7 +15,8 @@
 	let title = $state('');
 	let q = $state('');
 	let where = $state('');
-	let kind = $state<'rows' | 'chart' | 'form'>('rows');
+	let kind = $state<'rows' | 'chart' | 'form' | 'reader'>('rows');
+	let reader: 'red_status' | 'loop_runs' = $state('red_status');
 	let chart: 'bar' | 'line' | 'pie' = $state('bar');
 	let x = $state('');
 	let y = $state('');
@@ -22,6 +24,7 @@
 	let error = $state('');
 
 	function spec(): WidgetSpec {
+		if (kind === 'reader') return { reader: { reader } };
 		const t = table.trim();
 		const w = where.trim() ? (JSON.parse(where) as Value[]) : undefined;
 		if (w !== undefined && !Array.isArray(w))
@@ -33,13 +36,15 @@
 	}
 
 	const ready = $derived(
-		!!table.trim() && (kind !== 'chart' || (!!x.trim() && (op === 'count' || !!y.trim())))
+		kind === 'reader' ||
+			(!!table.trim() && (kind !== 'chart' || (!!x.trim() && (op === 'count' || !!y.trim()))))
 	);
 
 	function add(e: SubmitEvent) {
 		e.preventDefault();
 		try {
-			onadd(title.trim() || `${kind} · ${table.trim()}`, spec());
+			const name = kind === 'reader' ? reader : table.trim();
+			onadd(title.trim() || `${kind} · ${name}`, spec());
 		} catch (err) {
 			error = String(err);
 		}
@@ -47,7 +52,9 @@
 </script>
 
 <form class="add" onsubmit={add} aria-label="add a widget">
-	<label>table id<input bind:value={table} required placeholder="the KEAP table" /></label>
+	{#if kind !== 'reader'}
+		<label>table id<input bind:value={table} required placeholder="the KEAP table" /></label>
+	{/if}
 	<label>title<input bind:value={title} maxlength="120" placeholder="optional" /></label>
 	<label>
 		show
@@ -55,9 +62,18 @@
 			<option value="rows">rows</option>
 			<option value="chart">chart</option>
 			<option value="form">form (adds a row)</option>
+			<option value="reader">reader (tier 1)</option>
 		</select>
 	</label>
-	{#if kind !== 'form'}
+	{#if kind === 'reader'}
+		<label>
+			reader
+			<select bind:value={reader}
+				><option value="red_status">what is red</option><option value="loop_runs">loop runs</option
+				></select
+			>
+		</label>
+	{:else if kind !== 'form'}
 		<label>search<input bind:value={q} placeholder="optional" /></label>
 		<label
 			>where<input
