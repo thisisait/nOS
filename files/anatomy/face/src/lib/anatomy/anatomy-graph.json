@@ -4,7 +4,7 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 593,
+    "nodes": 594,
     "edges": 568,
     "nodes_pulse": 48,
     "nodes_judge": 5,
@@ -28,7 +28,7 @@
     "nodes_tasktype": 9,
     "nodes_skill": 16,
     "nodes_reader": 70,
-    "nodes_effector": 122,
+    "nodes_effector": 123,
     "nodes_article": 28,
     "nodes_organ_system": 13,
     "nodes_tissue": 1,
@@ -1780,6 +1780,13 @@
       "title": "score Czech ASR models (parakeet, whisper-turbo cs, Canary-1B-v2) on the operator's own recordings: WER/CER, wake hits, latency, peak RSS; `--record`/`--setup` need NOS_LIVE=1.",
       "anchor": "02.02.04",
       "description": "Effector tools/ears-asr-bench.py: score Czech ASR models (parakeet, whisper-turbo cs, Canary-1B-v2) on the operator's own recordings: WER/CER, wake hits, latency, peak RSS; `--record`/`--setup` need NOS_LIVE=1."
+    },
+    "effector:efferent": {
+      "kind": "effector",
+      "source": "tools/efferent.py",
+      "title": "the efferent queue: commands handed to the operator as KEAP rows (add / list / show / tick); never runs a command, a row closes only when its allow-listed reader saw the effect. The `efferent` pane reads `list --json`.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/efferent.py: the efferent queue: commands handed to the operator as KEAP rows (add / list / show / tick); never runs a command, a row closes only when its allow-listed reader saw the effect. The `efferent` pane reads `list --json`."
     },
     "effector:espo-party-sync": {
       "kind": "effector",

@@ -12,7 +12,7 @@
     "organism": 0,
     "habitat": 9,
     "sense": 88,
-    "limb": 129,
+    "limb": 130,
     "memory": 43,
     "law": 57,
     "reflex": 48,
@@ -726,6 +726,10 @@
       "kind": "effector"
     },
     "effector:ears-asr-bench": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:efferent": {
       "level": "limb",
       "kind": "effector"
     },

@@ -162,6 +162,7 @@ posts, restarts or renders something.
 - `nos-statusline.sh` — one line of estate truth, for the tmux status bar.
 - `nos-watch.sh` — render a reader's CURRENT OUTPUT on an interval, in place.
 - `wf-panel.sh` — put the workflow tree in the nos-cc panel, and nowhere else.
+- `efferent.py` — the efferent queue: commands handed to the operator as KEAP rows (add / list / show / tick); never runs a command, a row closes only when its allow-listed reader saw the effect. The `efferent` pane reads `list --json`.
 
 ### Agents and the loop
 
