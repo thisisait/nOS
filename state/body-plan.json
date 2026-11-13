@@ -12,7 +12,7 @@
     "organism": 0,
     "habitat": 9,
     "sense": 89,
-    "limb": 131,
+    "limb": 132,
     "memory": 44,
     "law": 57,
     "reflex": 50,
@@ -830,6 +830,10 @@
       "kind": "effector"
     },
     "effector:keap-tables": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:loop-bench": {
       "level": "limb",
       "kind": "effector"
     },

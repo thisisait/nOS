@@ -1,0 +1,16 @@
+# Planted for loop-bench date-kind-gets-date: the two shapes that shipped on 2026-11-12 (morning-verdict
+# e0631aa4f^, efferent bab6b74dd^). Not Python on purpose (.txt): nothing imports, lints or collects it.
+import time
+from datetime import datetime
+
+TABLE = "morning-verdict"
+QUEUE = "efferent-queue"
+
+
+def rows(now: datetime) -> list[dict]:
+    day, epoch = now.strftime("%Y-%m-%d"), int(now.timestamp())
+    return [{"slug": f"{day}-red-status", "occurred_at": epoch, "reader": "red-status"}]
+
+
+def tick(write, slug: str) -> None:
+    write(slug, {"status": "done-seen", "seen_at": int(time.time())})
