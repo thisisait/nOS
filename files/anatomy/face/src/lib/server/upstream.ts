@@ -379,6 +379,14 @@ export async function boneHealth(): Promise<unknown> {
 	return asJson(await fetch(BONE_BASE() + '/api/health'));
 }
 
+/** The root CA digests (public Bone route, ruled 2026-11-13: no token, no Traefik router).
+ *  6 s: Bone's own fetch of the edge is capped at 4 s. */
+export async function boneRootCa(): Promise<unknown> {
+	return asJson(
+		await fetch(BONE_BASE() + '/api/v1/estate/root-ca', { signal: AbortSignal.timeout(6000) })
+	);
+}
+
 /**
  * Prove the link the face actually depends on carries traffic.
  *

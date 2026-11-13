@@ -11,6 +11,7 @@
 	import { CP_GRID_APP, parseSurfaceApp } from './surfaces';
 	import ControlPanel from './ControlPanel.svelte';
 	import Wallpaper from './Wallpaper.svelte';
+	import Identity from './Identity.svelte';
 	import DataTableApp from '$lib/components/DataTableApp.svelte';
 
 	let { win }: { win: WindowModel } = $props();
@@ -34,6 +35,8 @@
 	<ControlPanel />
 {:else if parsed?.surface === 'wallpaper'}
 	<Wallpaper />
+{:else if parsed?.surface === 'identity'}
+	<Identity />
 {:else if parsed?.surface === 'rawDataTable'}
 	<DataTableApp {table} />
 {:else if parsed}
