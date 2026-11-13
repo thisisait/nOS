@@ -56,6 +56,14 @@ def _first_const(node: ast.AST) -> str | None:
     return None
 
 
+GIT_WRAPPERS = {"git", "_git"}
+
+
+def _callee(node: ast.Call) -> str | None:
+    f = node.func
+    return f.id if isinstance(f, ast.Name) else f.attr if isinstance(f, ast.Attribute) else None
+
+
 def python_offenders(path: pathlib.Path) -> list[str]:
     try:
         tree = ast.parse(path.read_text(encoding="utf-8"))
@@ -68,8 +76,9 @@ def python_offenders(path: pathlib.Path) -> list[str]:
             name = _first_const(node)
             if name in HOST_BINARIES:
                 hits.append(f"{path.relative_to(REPO)}:{node.lineno} argv [{name!r}, ...]")
-        # _run("launchctl", "list") — the varargs spelling.
-        if isinstance(node, ast.Call) and node.args:
+        # _run("launchctl", "list") — the varargs spelling. A git wrapper's first argument is a git
+        # subcommand (git("log", ...)), not a host binary (row host-shim-gate-misreads-git-log).
+        if isinstance(node, ast.Call) and node.args and _callee(node) not in GIT_WRAPPERS:
             a0 = node.args[0]
             if (isinstance(a0, ast.Constant) and a0.value in HOST_BINARIES and len(node.args) >= 2
                     and all(isinstance(a, ast.Constant) for a in node.args[:2])):
@@ -112,6 +121,9 @@ def test_the_gate_sees_both_spellings(tmp_path):
         'import subprocess\n'
         'subprocess.run(["launchctl", "print", "gui/1/x"])\n'
         '_run("netstat", "-anv")\n'
+        'git("log", "--name-only")\n'
+        '_git("log", "-1")\n'
+        'run("log", "show")\n'
         'PATTERN = r"launchctl\\s+(load|bootstrap)"\n'
         'src = "lsof -nP -i"\n')
     global REPO
@@ -128,5 +140,6 @@ def test_the_gate_sees_both_spellings(tmp_path):
         sh_hits = shell_offenders(sh)
     finally:
         REPO = saved
-    assert len(hits) == 2, hits
+    assert len(hits) == 3, hits   # launchctl argv, netstat varargs, run("log", ...); never git("log")
+    assert not any("git" in h for h in hits) and sum("'log'" in h for h in hits) == 1, hits
     assert [h.split(":")[1].split()[0] for h in sh_hits] == ["3", "4", "5"], sh_hits
