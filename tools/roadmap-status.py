@@ -33,6 +33,7 @@ Usage:
     tools/roadmap-status.py --json       # for a caller
     tools/roadmap-status.py --frontier watch [--json]   # buildable rows of one subtree
     tools/roadmap-status.py --frontier ring [--json]    # the whole ring: all 13 organ systems
+    # each buildable row is `ready` (carries a spec, see spec_ready) or `needs-spec (no …)`
 
 Exit 0 when it could read the table. Exit 2 when it could NOT — an unreachable
 KEAP must not render as an empty roadmap, which would read as "no work left".
@@ -45,6 +46,7 @@ import collections
 import datetime
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -116,6 +118,41 @@ def order(r: dict) -> tuple:
     return (rank(r.get("status")), *explicit, r.get("slug") or "")
 
 
+#: A label: the word, an optional "(operator)", then a colon ("E2E (operator, Studio):").
+_LABEL = r"(?:\s*\([^)\n]*\))?\s*:"
+#: The top agent's stamp: it wrote "SPEC ACCEPTED" / "SPEC READY" or its explore-round rulings in.
+SPEC_STAMP = re.compile(r"spec (?:accepted|ready)|explore rounds? \d", re.I)
+#: The four parts of the house spec shape (roadmap-loop §6), each a label or a heading, never a bare
+#: word: "tests/e2e/" in prose is not an acceptance, "never" in prose is not a must-not.
+SPEC_PARTS = {
+    "goal": re.compile(rf"\bgoal{_LABEL}|^#+ *goal\b", re.I | re.M),
+    "slice": re.compile(rf"smallest(?: shippable)? slice|first slice|\bslices?(?: \d+)?{_LABEL}|\bslice \d"
+                        r"|^#+[^\n]*\bslice", re.I | re.M),
+    "e2e": re.compile(rf"\be2e(?: acceptance)?{_LABEL}|\bacceptance{_LABEL}|^#+[^\n]*\b(?:e2e|acceptance)\b",
+                      re.I | re.M),
+    "must-not": re.compile(rf"\bmust not{_LABEL}|^#+ *must not\b|\bout of scope{_LABEL}|\bnon-goals?{_LABEL}",
+                           re.I | re.M),
+}
+
+
+def spec_ready(body: str | None) -> tuple[bool, list[str]]:
+    """Does the row carry a READY SPEC (operator 2026-11-13: the loop builds only those)?
+
+    Ready = the top agent's stamp (`SPEC ACCEPTED`, `SPEC READY`, `explore round(s) N`), or all four
+    parts of the house spec shape, each found case-insensitively as a label or a markdown heading:
+      goal      `Goal:` · `## Goal`
+      slice     `smallest (shippable) slice` · `first slice` · `Slice:` / `Slice 1` / `Slices:` · a heading naming a slice
+      e2e       `E2E:` · `E2E acceptance` · `E2E (operator):` · `Acceptance:` · a heading naming e2e/acceptance
+      must-not  `Must not:` · `## Must not` · `Out of scope:` · `Non-goals:`
+    Returns (ready, the missing parts in that order). A heuristic over text, not a judge: it says
+    whether the shape is there, never whether the spec is good."""
+    body = body or ""
+    if SPEC_STAMP.search(body):
+        return True, []
+    missing = [part for part, pat in SPEC_PARTS.items() if not pat.search(body)]
+    return not missing, missing
+
+
 #: The statuses that open the frontier: `shipped`, and `active` — a branch the operator has allocated
 #: and is growing (an epic ships only when its children do, so shipped-only deadlocks every epic).
 #: `review` does not: it is pushed but not landed, a child would stack on code dev does not have.
@@ -152,6 +189,7 @@ def frontier(rows: list[dict], root: str) -> dict:
             item["depth"] = depth + 1
             if c.get("status") in OPEN:
                 if here is None:
+                    item["ready"], item["missing"] = spec_ready(c.get("body"))
                     out.append((item, c))
                 else:
                     item.update(blocked_by=here.get("slug"), blocked_by_status=here.get("status"))
@@ -204,11 +242,15 @@ def print_frontier(f: dict) -> None:
     if f["state"] != "ok":
         print(f"UNKNOWN: frontier under `{f['root']}` — {f['reason']}. Not an empty frontier.")
         return
+    ready = sum(1 for r in f["frontier"] if r["ready"])
     print(f"frontier under `{f['root']}` ({f['root_status']}) — "
           f"{len(f['frontier'])} buildable, {len(f['blocked'])} blocked")
+    print(f"  {ready} ready, {len(f['frontier']) - ready} needs-spec — the loop builds only `ready`; "
+          "a needs-spec row is an explore candidate (roadmap-loop §6)")
     for r in f["frontier"]:
         where = f"{r['system']:10s} " if "system" in r else ""
-        print(f"  d{r['depth']} [{r['status']:6s}] {where}{r['slug'] or '?':28s} {r['title'] or ''}")
+        spec = "ready" if r["ready"] else "needs-spec (" + ", ".join(f"no {m}" for m in r["missing"]) + ")"
+        print(f"  d{r['depth']} [{r['status']:6s}] {where}{r['slug'] or '?':28s} {r['title'] or ''}  — {spec}")
     if f["blocked"]:
         print("\n  blocked — nearest unshipped ancestor:")
         for r in f["blocked"]:

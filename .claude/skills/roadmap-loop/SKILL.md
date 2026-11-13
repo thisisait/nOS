@@ -99,7 +99,13 @@ never picked. An `active` parent may not be on dev yet: a row that needs its par
 parent's branch when that is in `## Built`, else it is skipped. Never pass `--knowledge` (656 KB). Read one row's body with
 `nos dtt status --json | jq '.rows[] | select(.slug=="<slug>")'`.
 
-Skip a frontier row that:
+Build only a frontier row the reader marks `ready` (operator 2026-11-13). Ready means the body
+carries a spec: the goal, the smallest shippable slice, the e2e acceptance and what it must not do,
+or the top agent's `SPEC ACCEPTED`. A `needs-spec` row is never built, however small it looks. It
+is the explore candidate: §6 drafts its spec, the top agent accepts or revises it, and once that is
+in the body the reader says `ready`.
+
+Skip a ready frontier row that:
 - is listed by `tools/roadmap-stale.py`, which you run once per pick. Its
   evidence is a branch already in dev, or "CLOSED", "SHIPPED", "Built in" or
   "Propose: shipped" in the body. Skip the row without asking and without
@@ -204,7 +210,7 @@ into `## To capture`.
 
 ## 6. Explore when nothing is buildable
 
-When §2 finds no buildable row, the iteration does not idle. It explores
+When §2 finds no `ready` row, the iteration does not idle. It explores
 (operator 2026-11-11): it prepares work for the next nights, and the top agent,
 the session that integrates, answers.
 
@@ -213,8 +219,8 @@ the session that integrates, answers.
   - `accepted`: the top agent captured it; delete your draft file;
   - `revise: <what>`: rewrite the draft accordingly, as round 2 or later;
   - `operator`: it went to the operator; leave the draft alone.
-- Then take up to 3 rows that are worth doing but too vague to build: next or
-  active, not stale, not blocked, not gate-only, not live-estate. Write one
+- Then take up to 3 `needs-spec` frontier rows (§2), in the reader's order:
+  not stale, not gate-only, not live-estate. Write one
   draft each, `~/.cache/nos-roadmap-loop/explore/<slug>.md`, containing:
   - the goal;
   - the files and organs it touches;
