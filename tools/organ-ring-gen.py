@@ -5,7 +5,8 @@ The Planner's skill tree places the 13 organ systems on ring 1 in the apex rulin
 order (core column, left wing, right wing; `order` within a side). The face is synced
 alone to the host and cannot read files/anatomy/apex/ruling.yml, so this writes the
 ring as a committed copy inside the face. Same sort as tools/roadmap-status.py
-ring_order(). Keys and sides only: titles and tells stay in the ruling.
+ring_order(). Key, side, title and the one-sentence `tells` (the skill tree shows it
+as a system's subtitle on hover); everything else stays in the ruling.
 
     tools/organ-ring-gen.py            # write the face copy
     tools/organ-ring-gen.py --check    # exit 1 if the committed copy is stale
@@ -30,7 +31,9 @@ def build() -> dict:
     systems = yaml.safe_load(RULING.read_text(encoding="utf-8"))["organ_systems"]
     ring = sorted(systems, key=lambda k: (SIDES.get(systems[k].get("side"), 9), systems[k].get("order", 99)))
     return {"generated_by": "tools/organ-ring-gen.py",
-            "ring": [{"key": k, "side": systems[k].get("side")} for k in ring]}
+            "ring": [{"key": k, "side": systems[k].get("side"),
+                      "title": systems[k].get("title", k), "tells": systems[k].get("tells", "")}
+                     for k in ring]}
 
 
 def main() -> int:
