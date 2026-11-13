@@ -63,15 +63,22 @@ _nos_sp=/var/lib/nos/settings
 NOS_LOOPS_PAUSED_FILE="${NOS_LOOPS_PAUSED_FILE:-$_nos_sp/loops-paused}"
 NOS_AGENT_LOCK_HELD=()
 
+# nos_agent_lock_release [retry] — `retry` is acquire's own back-off: it never unloads.
 nos_agent_lock_release() {
-    local slot
+    local slot held=0
     for slot in ${NOS_AGENT_LOCK_HELD[@]+"${NOS_AGENT_LOCK_HELD[@]}"}; do
+        held=1
         rm -f "$slot/owner" 2>/dev/null || true
         rmdir "$slot" 2>/dev/null || true
     done
     NOS_AGENT_LOCK_HELD=()
     # Only ever removes an EMPTY parent — another holder's slot keeps it.
-    rmdir "$NOS_AGENT_LOCK" 2>/dev/null || true
+    rmdir "$NOS_AGENT_LOCK" 2>/dev/null || return 0
+    # The last run out unloads the resident Ollama models (row ollama-residency-as-a-pausable-resource):
+    # a 14.9 GB resident outlived its work and starved KEAP and two converges. Opt out: =0.
+    if [[ "$held" == 1 && "${1:-}" != retry && "${NOS_MODELS_UNLOAD_ON_RELEASE:-1}" != 0 ]]; then
+        "$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)/tools/nos" models unload >&2 || true
+    fi
 }
 
 # _nos_agent_slot_take <slot-dir> <owner-label> — 0 if the slot is now ours.
@@ -129,7 +136,7 @@ nos_agent_lock_acquire() {
         # next acquirer. ponytail: two CLI acquirers can livelock trading
         # slots; both are bounded by wait_s and refuse loudly. Add a ticket
         # slot (monotonic counter) only if that is ever observed.
-        nos_agent_lock_release
+        nos_agent_lock_release retry
 
         if (( waited >= wait_s )); then
             echo "ERROR: another nOS agent run holds the lock — $(_nos_agent_lock_owners)" >&2

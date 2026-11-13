@@ -170,6 +170,10 @@ once per page, and reloading 14.9 GB between pages costs more than the residency
 does. Only the caller knows when the *work* is finished, so unloading is an act,
 not a timeout. Run it after a loop, or before a converge you need to trust.
 
+The agent run lock calls it for you: the last run to leave `agent-run-lock.sh`
+(no slot held by anyone) runs `nos models unload`; a peer still holding a slot keeps
+the model. `NOS_MODELS_UNLOAD_ON_RELEASE=0` turns that off.
+
 - `status` exits 2 and says **UNKNOWN** if ollama does not answer — an
   unreachable ollama is never reported as "none resident".
 - Fetch and render are separate calls on purpose: the first version shared one
