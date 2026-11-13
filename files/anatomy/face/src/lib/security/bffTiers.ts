@@ -25,6 +25,8 @@ export const BFF_TIERS: Record<string, Tier> = {
 	'/bff/agents/[name]/sessions': 4,
 	'/bff/ask': 4,
 	'/bff/config': 4,
+	// the public root CA digest (Control Panel -> Identity); Bone's route is off the edge.
+	'/bff/estate/root-ca': 4,
 	'/bff/hub': 4,
 	'/bff/iris/send': 4,
 	'/bff/iris/stream': 4,

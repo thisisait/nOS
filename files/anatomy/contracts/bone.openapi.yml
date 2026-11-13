@@ -1016,7 +1016,9 @@ paths:
 
         at http://<tenant>/nos-root-ca.crt. One rule: rootca.verdict (estate-status uses it too).
 
-        Never the PEM, the key or a path. Cached 60 s.'
+        Never the PEM, the key or a path. PUBLIC (ruled 2026-11-13): public facts; no Traefik router
+
+        names it (bone is in traefik_skip_ids); the 60 s cache bounds the served-side fetch.'
       operationId: estate_root_ca_api_v1_estate_root_ca_get
       responses:
         '200':
