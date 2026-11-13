@@ -17,7 +17,7 @@
     "law": 57,
     "reflex": 51,
     "heartbeat": 1,
-    "internal": 79,
+    "internal": 80,
     "edges": 454
   },
   "nodes": {
@@ -406,6 +406,10 @@
       "kind": "authentik"
     },
     "authentik:roundcube": {
+      "level": "internal",
+      "kind": "authentik"
+    },
+    "authentik:rustfs": {
       "level": "internal",
       "kind": "authentik"
     },

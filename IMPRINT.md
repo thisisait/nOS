@@ -52,7 +52,7 @@ Each line: level (count) — what it means (the lexicon's words), then the most 
 - **reflex** (51) — An automatic, scheduled response of an organ; Pulse runs each one on its clock. Most connected: pulse:conductor:self-test-001 (9), pulse:librarian:brief-taxonomy (9), pulse:librarian:describe-taxonomy (9)
 - **heartbeat** (1) — A periodic signal that proves something is still alive. Most connected: daemon:eu.thisisait.nos.heartbeat (0)
 
-Hidden plumbing: 79 internal nodes. Look closer: `tools/body.py <level>` or `tools/body.py <node>`.
+Hidden plumbing: 80 internal nodes. Look closer: `tools/body.py <level>` or `tools/body.py <node>`.
 
 ## 4. How to ask — the senses
 

@@ -4,8 +4,8 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 603,
-    "edges": 573,
+    "nodes": 604,
+    "edges": 575,
     "nodes_pulse": 51,
     "nodes_judge": 5,
     "nodes_gateset": 5,
@@ -20,7 +20,7 @@
     "nodes_backend": 9,
     "nodes_repo": 4,
     "nodes_tofu": 1,
-    "nodes_authentik": 61,
+    "nodes_authentik": 62,
     "nodes_table": 45,
     "nodes_doctrine": 29,
     "nodes_faceapp": 11,
@@ -32,7 +32,7 @@
     "nodes_article": 28,
     "nodes_organ_system": 13,
     "nodes_tissue": 1,
-    "edges_data": 247,
+    "edges_data": 249,
     "edges_trigger": 83,
     "edges_temporal": 5,
     "edges_mutex": 21,
@@ -1130,6 +1130,17 @@
       "anchor": "02.02.08",
       "description": "Authentik forward_auth client 'None' (RBAC tier 3) — no manifest service (Tier-2 app or excluded install); provider+application managed by OpenTofu from the committed registry"
     },
+    "authentik:rustfs": {
+      "kind": "authentik",
+      "source": "state/tofu-authentik-services.yml",
+      "mode": "forward_auth",
+      "tier": 1,
+      "client_id": null,
+      "service": "rustfs",
+      "managed_by": "tofu:authentik-state",
+      "anchor": "02.02.08",
+      "description": "Authentik forward_auth client 'None' (RBAC tier 1) — gates service:rustfs; provider+application managed by OpenTofu from the committed registry"
+    },
     "authentik:snappymail": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
@@ -1167,12 +1178,12 @@
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "forward_auth",
-      "tier": 3,
+      "tier": 1,
       "client_id": null,
       "service": null,
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik forward_auth client 'None' (RBAC tier 3) — no manifest service (Tier-2 app or excluded install); provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik forward_auth client 'None' (RBAC tier 1) — no manifest service (Tier-2 app or excluded install); provider+application managed by OpenTofu from the committed registry"
     },
     "authentik:uptime-kuma": {
       "kind": "authentik",
@@ -2714,7 +2725,7 @@
       "source": "state/judge-sets.yml",
       "deterministic": true,
       "mutates_worktree": true,
-      "min_work": 8944,
+      "min_work": 8386,
       "argv": [
         "python3",
         "-m",
@@ -2725,7 +2736,7 @@
       "claims": [],
       "requires": [],
       "anchor": "02.02.04",
-      "description": "Loop judge: gate command `python3 -m pytest tests/anatomy -q` — work floor min_work=8944, deterministic=True"
+      "description": "Loop judge: gate command `python3 -m pytest tests/anatomy -q` — work floor min_work=8386, deterministic=True"
     },
     "lock:agent-run-lock": {
       "kind": "lock",
@@ -4215,7 +4226,7 @@
       "layer": "L1",
       "layer_basis": {
         "height": 3,
-        "dependents": 45,
+        "dependents": 46,
         "upstreams": 2
       }
     },
@@ -6390,6 +6401,14 @@
       "evidence": "derived"
     },
     {
+      "from": "authentik:rustfs",
+      "to": "service:rustfs",
+      "kind": "data",
+      "via": "SSO gate (mode=forward_auth) — provider+application applied by tofu from the registry row",
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
+    },
+    {
       "from": "authentik:snappymail",
       "to": "service:snappymail",
       "kind": "data",
@@ -7125,6 +7144,14 @@
     {
       "from": "service:authentik",
       "to": "authentik:roundcube",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:rustfs",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting",
