@@ -516,6 +516,14 @@
   [
    "WING_API_TOKEN=ghp_FAKEaaaabbbbccccdddd1234 once",
    "WING_API_TOKEN=<REDACTED> once"
+  ],
+  [
+   "sk-ant-api03-abcdefgh shortened",
+   "sk-<REDACTED> shortened"
+  ],
+  [
+   "gitlab glpat-FAKEabcdefghij1234567 x",
+   "gitlab glpat-<REDACTED> x"
   ]
  ]
 }

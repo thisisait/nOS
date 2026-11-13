@@ -147,18 +147,21 @@ fn tok(c: char) -> bool {
     c.is_ascii_alphanumeric() || c == '_' || c == '-'
 }
 
-/// `(?<![A-Za-z0-9_])(gh[pousr]_|github_pat_|xox[abprs]-|sk-ant-|sk-|AKIA)[tok]{16,}`; the
+/// `(?<![A-Za-z0-9_])(gh[pousr]_|github_pat_|glpat-|xox[abprs]-|sk-ant-|sk-|AKIA)[tok]{16,}`; the
 /// alternatives are tried in that order, as re's alternation is.
 fn bare(t: &[char], p: usize) -> Option<(usize, usize)> {
     if p > 0 && (t[p - 1].is_ascii_alphanumeric() || t[p - 1] == '_') {
         return None;
     }
-    const PREFIXES: [&str; 14] = ["ghp_", "gho_", "ghu_", "ghs_", "ghr_", "github_pat_", "xoxa-", "xoxb-", "xoxp-",
-                                  "xoxr-", "xoxs-", "sk-ant-", "sk-", "AKIA"];
-    let pre = PREFIXES.iter().find(|s| exact(t, p, s))?;
-    let keep = p + pre.chars().count();
-    let n = run(t, keep, usize::MAX, tok);
-    (n >= 16).then_some((keep, keep + n))
+    const PREFIXES: [&str; 15] = ["ghp_", "gho_", "ghu_", "ghs_", "ghr_", "github_pat_", "glpat-", "xoxa-", "xoxb-",
+                                  "xoxp-", "xoxr-", "xoxs-", "sk-ant-", "sk-", "AKIA"];
+    // re backtracks the alternation: a short `sk-ant-x` falls back to `sk-` with value `ant-x`
+    // (review 2026-11-13: committing to the first prefix let Rust ship what Python hides).
+    PREFIXES.iter().filter(|s| exact(t, p, s)).find_map(|pre| {
+        let keep = p + pre.chars().count();
+        let n = run(t, keep, usize::MAX, tok);
+        (n >= 16).then_some((keep, keep + n))
+    })
 }
 
 /// `(?<![tok])eyJ[tok]{8,}\.[tok]{8,}\.[tok]{8,}`: a JWT; `.` is not a token char, so each greedy

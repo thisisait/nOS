@@ -64,7 +64,7 @@ _BEARER_INLINE = re.compile(
 # A bare token in free text (no KEY= before it): a provider's well-known prefix, then 16+ token chars.
 # The prefix stays, so the operator sees WHICH kind was hidden. sk-ant- before sk- (alternation order).
 _BARE_TOKEN = re.compile(
-	r"(?<![A-Za-z0-9_])(?P<prefix>gh[pousr]_|github_pat_|xox[abprs]-|sk-ant-|sk-|AKIA)(?P<value>[A-Za-z0-9_\-]{16,})"
+	r"(?<![A-Za-z0-9_])(?P<prefix>gh[pousr]_|github_pat_|glpat-|xox[abprs]-|sk-ant-|sk-|AKIA)(?P<value>[A-Za-z0-9_\-]{16,})"
 )
 
 # A JWT: eyJ then three dot-separated base64url segments of 8+.
