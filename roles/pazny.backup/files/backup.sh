@@ -256,6 +256,8 @@ status_append() {
             elif [[ "${part}" == *.part ]]; then
                 shrank="$(keep_if_shrunk "${part}" "${part%.part}")"
                 mv -f "${part}" "${part%.part}"
+                # a gzip night (no zstd) must not leave yesterday's .zst to win a restore
+                [[ "${part}" != *.gz.part ]] || rm -f "${part%.gz.part}.zst"
             fi
         else
             rm -f "${part}"
