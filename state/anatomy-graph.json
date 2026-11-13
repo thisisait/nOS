@@ -8069,7 +8069,7 @@
       "from": "effector:anatomy-graph-gen",
       "to": "doctrine:ssot/doctrine/layers.md#3",
       "kind": "governed_by",
-      "via": "cited at tools/anatomy-graph-gen.py:1900",
+      "via": "cited at tools/anatomy-graph-gen.py:1901",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"
@@ -8078,7 +8078,7 @@
       "from": "effector:anatomy-graph-gen",
       "to": "doctrine:ssot/doctrine/loop-contract.md#DECISION-2e",
       "kind": "governed_by",
-      "via": "cited at tools/anatomy-graph-gen.py:1568",
+      "via": "cited at tools/anatomy-graph-gen.py:1569",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"

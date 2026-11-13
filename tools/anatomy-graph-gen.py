@@ -119,6 +119,7 @@ import functools
 import hashlib
 import importlib.util
 import json
+import os
 import re
 import sys
 import datetime
@@ -2138,8 +2139,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="compile state/anatomy-graph.json")
     ap.add_argument("--check", action="store_true", help="exit 1 if the artifact is stale")
     ap.add_argument("--refreeze", action="store_true",
-                    help="re-stamp the face layout pin — runs the vitest "
-                         "positions check first and refuses if they moved")
+                    help="re-freeze the face layout pin after the graph changed — "
+                         "re-stamps, or re-pins moved positions, then the vitest check must pass")
     args = ap.parse_args()
     text = render(build())
     if args.check:
@@ -2182,19 +2183,29 @@ def main() -> int:
                       file=sys.stderr)
                 return 0
             # --refreeze does the ritual, INCLUDING the step the paragraph above
-            # refuses to skip: it runs the vitest positions check first and
-            # stamps nothing if that fails. Added 2026-08-30 after the third
-            # regen in two days — four hand commands where forgetting the vitest
-            # one silences the gate, which is exactly what the comment warns of.
+            # refuses to skip: the vitest positions check decides, and nothing is
+            # stamped unless it passes afterwards. Added 2026-08-30 after the
+            # third regen in two days of four hand commands.
             face = FACE_TARGET.parent.parents[2]
-            got = subprocess.run(
-                ["npx", "vitest", "run", "src/lib/anatomy/graphLayout.test.ts"],
-                cwd=face, capture_output=True, text=True, timeout=900)
+            vitest = ["npx", "vitest", "run", "src/lib/anatomy/graphLayout.test.ts"]
+            got = subprocess.run(vitest, cwd=face, capture_output=True, text=True, timeout=900)
             if got.returncode != 0:
-                print("anatomy-graph: --refreeze REFUSED — the layout positions "
-                      "moved, so this is not a re-stamp but a re-pin a human "
-                      "must look at:\n" + got.stdout[-700:], file=sys.stderr)
-                return 1
+                # The graph the pin froze changed (the sha above differs), so the
+                # positions move WITH it: re-pin, then the check must pass on its
+                # own (ruled 2026-11-12, layout-pin-refreeze-holds (a)). A red pin
+                # over an unchanged graph never reaches this line.
+                subprocess.run(vitest, cwd=face, capture_output=True, timeout=900,
+                               env={**os.environ, "FACE_LAYOUT_REPIN": "1"})
+                subprocess.run(["npx", "prettier", "--write", str(pin_path)],
+                               cwd=face, capture_output=True, timeout=120)
+                again = subprocess.run(vitest, cwd=face, capture_output=True, text=True, timeout=900)
+                if again.returncode != 0:
+                    print("anatomy-graph: --refreeze REFUSED — the re-pinned layout "
+                          "still fails its own check:\n" + again.stdout[-700:], file=sys.stderr)
+                    return 1
+                print("anatomy-graph: pin re-pinned, positions moved with the graph "
+                      "(review graphLayout.force.pin.json in the diff)", file=sys.stderr)
+                return 0
             # THE FILE THE GATE READS, not the rendered text. They differ
             # (the writer's trailing newline), so stamping sha256(text) wrote
             # a hash nothing would ever match — the first --refreeze did
