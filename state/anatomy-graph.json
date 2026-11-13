@@ -8402,7 +8402,7 @@
       "from": "reader:loop-status",
       "to": "doctrine:ssot/doctrine/loop-contract.md#3.4",
       "kind": "governed_by",
-      "via": "cited at tools/loop-status.py:431",
+      "via": "cited at tools/loop-status.py:438",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"
@@ -8420,7 +8420,7 @@
       "from": "reader:loop-status",
       "to": "doctrine:ssot/doctrine/loop-contract.md#5a",
       "kind": "governed_by",
-      "via": "cited at tools/loop-status.py:495",
+      "via": "cited at tools/loop-status.py:502",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"

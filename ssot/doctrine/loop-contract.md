@@ -570,6 +570,7 @@ Three runtimes exist (Claude Code, Hermes, AgentKit/PHP) and a fourth is planned
 | `GET /api/v1/loop/proposals?limit=` | `loop:read` | ledger list, newest first — `diff_text` excluded at the SQL column list (the run screen's read surface, 2026-08-06) |
 | `GET /api/v1/loop/judge_runs?limit=&gate_set=` | `loop:read` | ledger list — outcome, `work_count` vs `min_work`, `reason` |
 | `GET /api/v1/loop/verdicts?limit=` | `loop:read` | ledger list, incl. `evidence` (the run-uuid JSON that ties a baseline verdict to its judge runs) |
+| `GET /api/v1/loop/awaiting` | `loop:read` | unlanded proposals (`tools/loop-status.py` `awaiting()`, judged against Bone's repo root): uuid, weakness, state, detail, verdict; never the diff. Git bounded 10 s (fails closed), one run at a time, cached 60 s; an unreadable ledger answers `unknown` |
 | `POST /api/v1/loop/verdicts` | — | **does not exist** (§3.1). The GET list above READS sealed rows; §3.1's guarantee — no endpoint that ACCEPTS a verdict — is untouched by a read, and the gate now pins exactly that: no write-method route may ever exist under this name |
 
 ### 6.2 CLI — `nos-loop`

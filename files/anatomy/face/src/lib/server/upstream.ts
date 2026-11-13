@@ -667,6 +667,15 @@ export const loop = {
 		if (gateSet) u.searchParams.set('gate_set', gateSet);
 		return asJson(await fetch(u, { headers: loopHeaders() }));
 	},
+	/** Unlanded proposals (loop-status.awaiting(), cached 60 s on Bone). 12 s: its git is bounded. */
+	async awaiting(): Promise<unknown> {
+		return asJson(
+			await fetch(LOOP_BASE() + '/awaiting', {
+				headers: loopHeaders(),
+				signal: AbortSignal.timeout(12_000)
+			})
+		);
+	},
 	async verdicts(limit = 100): Promise<unknown> {
 		const u = new URL(LOOP_BASE() + '/verdicts');
 		u.searchParams.set('limit', String(limit));
