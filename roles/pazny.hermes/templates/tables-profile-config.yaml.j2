@@ -20,7 +20,7 @@ model:
 mcp_servers:
   nos-tables:
     command: "/usr/bin/python3"
-    args: {{ [nos_main_checkout | default(playbook_dir) ~ '/tools/mcp-tables-server.py'] | tojson }}
+    args: {{ [nos_main_checkout ~ '/tools/mcp-tables-server.py'] | tojson }}
     env:
       KEAP_IDENTITY_URL: "http+unix://{{ receptor_socket | urlencode | replace('/', '%2F') }}"
       NOS_MCP_READ_ONLY: "1"
