@@ -53,6 +53,12 @@ def _known_task_types() -> set[str]:
 def _live_statuses() -> set[str]:
     """What the LIVE roadmap table accepts, or an empty set when KEAP cannot be
     read (offline capture is a supported case, so this never raises)."""
+    cols = _live_columns()
+    return set((cols or {}).get("status", {}).get("options") or [])
+
+
+def _live_columns() -> dict | None:
+    """The LIVE roadmap table's columns by key, or None when KEAP cannot be read."""
     try:
         import json
         import urllib.request
@@ -68,9 +74,9 @@ def _live_statuses() -> set[str]:
             data = json.loads(r.read()).get("data") or {}
         cols = {c["key"]: c for c in (data.get("schema", {}).get("columns")
                                       or data.get("columns") or [])}
-        return set(cols.get("status", {}).get("options") or [])
+        return cols
     except Exception:  # noqa: BLE001 — offline is a supported case, never a crash
-        return set()
+        return None
 
 
 def _declared_options(key: str = "status") -> set[str]:
@@ -137,6 +143,15 @@ def main() -> int:
         if args.origin not in allowed:
             _die(f"origin {args.origin!r} is not declared by roadmap.table.yml.\n"
                  f"  it accepts: {', '.join(sorted(allowed)) or '(nothing: no origin column)'}")
+        # One file carrying a key the live table lacks makes `nos dtt seed` refuse EVERY row
+        # (its preflight unions all files), so origin is written only once the column is live
+        # (review 2026-11-13). Offline cannot tell: refuse too, never guess.
+        cols = _live_columns()
+        if cols is None or "origin" not in cols:
+            _die("origin is not a live roadmap column yet"
+                 + (" (KEAP unreachable, cannot check)" if cols is None else "")
+                 + ": capture without --origin now and add it with --update after the keap "
+                 "converge (nos --tags keap) has applied the column.")
 
     body = args.body
     if body is None and args.body_file:
