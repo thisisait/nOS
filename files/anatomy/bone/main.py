@@ -16,6 +16,7 @@ from fastapi import Depends, FastAPI, HTTPException, Header
 from fastapi.responses import JSONResponse, Response
 
 import otel
+import rootca
 
 app = FastAPI(title="nOS Bone API", version="0.2.0")
 
@@ -196,6 +197,64 @@ async def root_ca():
         raise HTTPException(status_code=404, detail="no root CA on this host")
     return Response(pem, media_type="application/x-x509-ca-cert",
                     headers={"Content-Disposition": 'attachment; filename="nos-root-ca.crt"'})
+
+
+_ROOT_CA_CACHE: dict = {}
+
+
+def _ca_details(pem: str) -> dict:
+    """subject + notAfter of the trusted CA; {} when cryptography (PyJWT[crypto]) cannot read it."""
+    try:
+        from cryptography import x509
+        cert = x509.load_pem_x509_certificate(pem.encode("ascii"))
+        return {"subject": cert.subject.rfc4514_string()[:300],
+                "not_after": cert.not_valid_after_utc.isoformat()}
+    except Exception:  # noqa: BLE001 - details are optional, the digest is the answer
+        return {}
+
+
+@app.get("/api/v1/estate/root-ca")
+async def estate_root_ca(_=Depends(require_scope("nos:state:read"))):
+    """The trusted root CA's digest beside what the edge serves (row
+    nos-root-ca-fingerprint-second-channel). Trusted = the mkcert rootCA.pem the host signs with
+    (NOS_MKCERT_ROOT_CA, fixed at converge), never the serving path; served = the edge's own answer
+    at http://<tenant>/nos-root-ca.crt. One rule: rootca.verdict (estate-status uses it too).
+    Never the PEM, the key or a path. Cached 60 s."""
+    hit = _ROOT_CA_CACHE.get("v")
+    if hit and time.time() - hit[0] < 60:
+        return hit[1]
+    path = os.environ.get("NOS_MKCERT_ROOT_CA", "")
+    try:
+        trusted = Path(path).read_text(encoding="ascii") if path else ""
+    except (OSError, ValueError):
+        trusted = ""
+    want = rootca.fingerprint(trusted)
+    if want is None:
+        out: dict = {"trusted": {"unknown": "no readable mkcert rootCA.pem on this host (a public TLD has none)"},
+                     "served": {"unknown": "not compared"}, "agree": False}
+    else:
+        tld = os.environ.get("INSTANCE_TLD", "")
+        try:
+            async with httpx.AsyncClient(timeout=4) as client:
+                async with client.stream("GET", f"http://{tld}/nos-root-ca.crt") as r:
+                    body = b""
+                    async for chunk in r.aiter_bytes():
+                        body += chunk
+                        if len(body) > 20000:
+                            break
+                    status = r.status_code
+            if status != 200:
+                served = {"unknown": f"the edge answered {status}"}
+                v = None
+            else:
+                v = rootca.verdict(trusted, body[:20000].decode("ascii", "replace"))
+                served = {"sha256": v["served"]} if v["served"] else {"unknown": v["why"]}
+        except httpx.HTTPError as exc:
+            served, v = {"unknown": f"the edge did not answer ({type(exc).__name__})"}, None
+        out = {"trusted": {"sha256": want, **_ca_details(trusted)}, "served": served,
+               "agree": bool(v and v["agree"])}
+    _ROOT_CA_CACHE["v"] = (time.time(), out)
+    return out
 
 
 @app.get("/api/health/aggregate")

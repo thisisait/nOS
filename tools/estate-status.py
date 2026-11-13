@@ -349,57 +349,60 @@ def axis_organs(res: Result) -> None:
 
 
 
-def _sha256_fp(der: bytes) -> str:
-    import hashlib
-    return ":".join(f"{b:02X}" for b in hashlib.sha256(der).digest())
+def _rootca():
+    """The one comparison rule, shared with Bone's /api/v1/estate/root-ca (files/anatomy/bone/rootca.py)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("nos_rootca", REPO / "files" / "anatomy" / "bone" / "rootca.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 
-def axis_root_ca(res: Result) -> None:
+def axis_root_ca(res: Result) -> str | None:
     """Does the edge serve THIS host's root CA (row nos-root-ca-reader)? Plain http, as a LAN
-    device fetches it (traefik nos-root-ca-web -> Bone /nos-root-ca.crt), vs mkcert's rootCA.pem."""
-    import ssl
+    device fetches it (traefik nos-root-ca-web -> Bone /nos-root-ca.crt), vs mkcert's rootCA.pem.
+    The rule is rootca.verdict(), the same one Bone answers the face with (no fork). Returns the
+    trusted sha256 when the host has one (`nos ca` prints it in full)."""
     # state.yml records no domain; the router is rendered from the resolved tenant_domain and
     # tenant_domain_is_local (traefik services.yml.j2), so the reader resolves the same two.
     tld = (resolve_flag("tenant_domain") or [("", "")])[-1][1]
     if not tld or "{{" in tld:
         res.add("edge", "root CA", "UNKNOWN — tenant_domain resolves in no layer", UNREADABLE)
-        return
+        return None
     if not nos_identity_is_local_host(tld):
         res.uncomparable.append(f"root CA ({tld} is not local: ACME certs, no local CA)")
-        return
+        return None
     try:
         from nos_sso import mkcert_root_ca
         local = mkcert_root_ca()
-        want = _sha256_fp(ssl.PEM_cert_to_DER_cert(Path(local).read_text(encoding="ascii"))) if local else None
+        trusted = Path(local).read_text(encoding="ascii") if local else None
     except (ImportError, OSError, ValueError) as exc:
         res.add("edge", "root CA", f"UNKNOWN — mkcert rootCA.pem unreadable ({type(exc).__name__})", UNREADABLE)
-        return
-    if want is None:
+        return None
+    if trusted is None:
         res.add("edge", "root CA", "UNKNOWN — no mkcert rootCA.pem on this host", UNREADABLE)
-        return
+        return None
+    rootca = _rootca()
+    want = rootca.fingerprint(trusted)
+    if want is None:
+        res.add("edge", "root CA", "UNKNOWN — the mkcert rootCA.pem is not exactly one public certificate", UNREADABLE)
+        return None
     url = f"http://{tld}/nos-root-ca.crt"
     try:
         with urllib.request.urlopen(url, timeout=4) as r:
             body = r.read(20000).decode("ascii", "replace")
     except urllib.error.HTTPError as exc:
         res.add("edge", "root CA", f"{url} answered {exc.code}: the edge serves no root CA", DISAGREE)
-        return
+        return want
     except (urllib.error.URLError, OSError) as exc:
         res.add("edge", "root CA", f"UNKNOWN — {url} unreachable ({type(exc).__name__})", UNREADABLE)
-        return
-    if body.count("-----BEGIN CERTIFICATE-----") != 1:
-        res.add("edge", "root CA", f"{url} does not serve exactly one certificate", DISAGREE)
-        return
-    try:
-        got = _sha256_fp(ssl.PEM_cert_to_DER_cert(body.strip()))
-    except ValueError:
-        res.add("edge", "root CA", f"{url} serves an unparseable certificate", DISAGREE)
-        return
-    if got == want:
-        res.add("edge", "root CA", f"{url} serves the mkcert CA (sha256 {got[:23]}…)")
+        return want
+    v = rootca.verdict(trusted, body)
+    if v["agree"]:
+        res.add("edge", "root CA", f"{url} serves the mkcert CA (sha256 {v['served'][:23]}…)")
     else:
-        res.add("edge", "root CA", f"{url} serves sha256 {got[:23]}…, the mkcert CA is {want[:23]}… "
-                "(a stale copy in shared-certs, or another host's CA)", DISAGREE)
+        res.add("edge", "root CA", f"{url} {v['why']}", DISAGREE)
+    return want
 
 
 def axis_tables_export(res: Result) -> None:
@@ -719,6 +722,8 @@ def main() -> int:
                     help="every install_* resolved, as one JSON object (exit 0)")
     ap.add_argument("--identity", action="store_true",
                     help="only the organ-identity axis (language, runtime, run-as uid)")
+    ap.add_argument("--root-ca", action="store_true",
+                    help="only the root-CA axis, with the trusted sha256 in full (`nos ca`)")
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args()
 
@@ -731,6 +736,10 @@ def main() -> int:
         axis_config(res, args.config)
     elif args.identity:
         axis_identity(res)
+    elif args.root_ca:
+        want = axis_root_ca(res)
+        if not args.json:
+            print(f"this host signs with the root CA  SHA-256 {want or 'UNKNOWN'}")
     else:
         axis_repos(res, do_fetch=not args.no_fetch)
         axis_organs(res)

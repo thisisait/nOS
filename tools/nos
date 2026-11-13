@@ -9,6 +9,7 @@
 #   nos halt [--status] | nos resume   (emergency halt of every Pulse job)
 #   nos push [git push args]   (tools/nos-push: mirror sync + pre-push score)
 #   nos stacks|cc|ci|smoke [args]   (tools/nos-stacks.sh, nos-cc.sh, ci-local.sh, nos-smoke.py)
+#   nos ca [--json]   (the root CA this host signs with, and whether the edge serves it)
 #
 # `nos dtt` runs the DataTables tools from $NOS_SRC over the PRIVATE seed repo
 # (NOS_SEED_DIR) — an installed nos reaches them from any shell/branch/cwd, so
@@ -163,6 +164,7 @@ case "${1:-}" in
   cc)     shift; exec "$NOS_SRC/tools/nos-cc.sh" "$@" ;;
   ci)     shift; exec "$NOS_SRC/tools/ci-local.sh" "$@" ;;
   smoke)  shift; exec "$NOS_SRC/tools/nos-smoke.py" "$@" ;;
+  ca)     shift; exec "$NOS_SRC/tools/estate-status.py" --root-ca "$@" ;;
 esac
 
 # ── `nos dtt <verb>` — DataTables ops, not a converge ────────────────────────
