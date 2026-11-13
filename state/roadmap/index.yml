@@ -22,7 +22,7 @@
   parent: ''
   track: security
 - slug: agent-action-catalog
-  parent: ''
+  parent: wits-cell-roster
   track: agents
 - slug: agent-fallback-dead
   parent: ''
@@ -31,8 +31,11 @@
   parent: agent-landing-zero-command-operator
   track: platform
 - slug: agent-landing-zero-command-operator
-  parent: ''
+  parent: forge
   track: platform
+- slug: agent-output-capture-switch
+  parent: agent-output-observed-not-kept
+  track: security
 - slug: agent-output-observed-not-kept
   parent: pulse-redact-gaps
   track: security
@@ -49,7 +52,7 @@
   parent: ''
   track: platform
 - slug: agentkit-baseline-gate-attribution
-  parent: ''
+  parent: wits-cell-roster
   track: platform
 - slug: agentkit-lexicon-proper-name
   parent: body-cell
@@ -64,7 +67,7 @@
   parent: ''
   track: platform
 - slug: agents
-  parent: ''
+  parent: wits-cell-roster
   track: agents
 - slug: agents-awaiting-surface
   parent: agents
@@ -85,7 +88,7 @@
   parent: ''
   track: release
 - slug: anatomy-suite-reaches-live-hub
-  parent: ''
+  parent: forge
   track: platform
 - slug: apex-and-cross-level-keys
   parent: repo-body-plan
@@ -103,7 +106,7 @@
   parent: body-cell
   track: agents
 - slug: app-credentials-in-nos
-  parent: ''
+  parent: vault
   track: security
 - slug: app-standards-are-parsed
   parent: face-app-builder
@@ -117,6 +120,9 @@
 - slug: appendage-lexicon
   parent: body-plan
   track: platform
+- slug: archive
+  parent: ''
+  track: body
 - slug: atlas-agent-town
   parent: iris-agent-dendrogram
   track: face
@@ -129,11 +135,17 @@
 - slug: authentik-device-flow
   parent: device-organ
   track: platform
-- slug: backoffice-organ
+- slug: backoffice
   parent: ''
+  track: body
+- slug: backoffice-organ
+  parent: backoffice
   track: platform
 - slug: backup-dna
-  parent: ''
+  parent: keel
+  track: platform
+- slug: backup-dna-status-reader
+  parent: backup-dna
   track: platform
 - slug: backup-drill-keap-db
   parent: ''
@@ -148,7 +160,7 @@
   parent: pulse-redact-gaps
   track: security
 - slug: backup-restic-store
-  parent: ''
+  parent: keel
   track: platform
 - slug: backup-run-now-ordering
   parent: ''
@@ -168,8 +180,11 @@
 - slug: bff-table-read-tier-gate
   parent: consulting-firm-deployment
   track: security
+- slug: blank-dirs-confined-to-nos-roots
+  parent: blank-forgets-disabled-services
+  track: platform
 - slug: blank-forgets-disabled-services
-  parent: ''
+  parent: spine-converge
   track: platform
 - slug: blank-keeps-nextcloud-user-files
   parent: managed-resources-manifest
@@ -180,6 +195,9 @@
 - slug: blank-records-strict-smoke
   parent: ''
   track: release
+- slug: blank-removal-set-renders-all-off
+  parent: blank-forgets-disabled-services
+  track: platform
 - slug: blank-run-record
   parent: ''
   track: release
@@ -199,7 +217,7 @@
   parent: body-plan
   track: platform
 - slug: body-plan
-  parent: rel-017
+  parent: spine-law
   track: platform
 - slug: body-plan-levels-complete
   parent: repo-body-plan
@@ -211,10 +229,10 @@
   parent: ''
   track: platform
 - slug: bot-pr-runs-ci
-  parent: ''
+  parent: forge
   track: release
 - slug: brew-deps-deterministic-pin
-  parent: ''
+  parent: spine-converge
   track: platform
 - slug: caddy
   parent: jeff
@@ -261,6 +279,9 @@
 - slug: chatdev-symbiont-poc
   parent: iris-agent-dendrogram
   track: agents
+- slug: ci-circadian
+  parent: ''
+  track: platform
 - slug: ci-macos-idempotence-step
   parent: body-habitat
   track: release
@@ -273,6 +294,15 @@
 - slug: claude-cli-respects-existing
   parent: self-symbiont-host
   track: platform
+- slug: cli-limbs-inventory
+  parent: cli-limbs-tidy
+  track: platform
+- slug: cli-limbs-more-verbs
+  parent: cli-limbs-tidy
+  track: platform
+- slug: cli-limbs-raw-push-hook
+  parent: cli-limbs-tidy
+  track: platform
 - slug: cli-limbs-tidy
   parent: repo-body-plan
   track: platform
@@ -280,10 +310,10 @@
   parent: consulting-firm-deployment
   track: security
 - slug: client-facing-plain-language
-  parent: ''
+  parent: wits-thalamus
   track: face
 - slug: client-ip-survives-docker-desktop
-  parent: ''
+  parent: gatehouse
   track: security
 - slug: client-offboarding-mechanic
   parent: consulting-firm-deployment
@@ -291,12 +321,18 @@
 - slug: client-red-status-hides-maintainer-ci
   parent: ''
   track: release
-- slug: codeql-test-regex-alerts
+- slug: clockwork
   parent: ''
+  track: body
+- slug: codeql-test-regex-alerts
+  parent: forge
   track: security
 - slug: codexis-authentik-oidc
   parent: consulting-firm-deployment
   track: platform
+- slug: commons
+  parent: ''
+  track: body
 - slug: compose-hardening
   parent: sec
   track: security
@@ -306,11 +342,26 @@
 - slug: config-readers-and-habitat-ruling
   parent: default-config-split
   track: platform
+- slug: config-split-agents
+  parent: default-config-split-domains
+  track: platform
+- slug: config-split-apps
+  parent: default-config-split-domains
+  track: platform
+- slug: config-split-data
+  parent: default-config-split-domains
+  track: platform
+- slug: config-split-edge
+  parent: default-config-split-domains
+  track: platform
+- slug: config-split-identity
+  parent: default-config-split-domains
+  track: platform
 - slug: constitution-llm-legible
-  parent: ''
+  parent: spine-law
   track: platform
 - slug: consulting-firm-deployment
-  parent: ''
+  parent: backoffice
   track: platform
 - slug: consulting-firm-test-readiness-2026-09-20
   parent: consulting-firm-deployment
@@ -325,7 +376,7 @@
   parent: consulting-firm-deployment
   track: agents
 - slug: containerized-core
-  parent: ''
+  parent: spine-medulla
   track: platform
 - slug: contracts-missing
   parent: body-organ
@@ -352,7 +403,7 @@
   parent: converge-speed
   track: platform
 - slug: converge-keap-churn
-  parent: ''
+  parent: archive
   track: cortex
 - slug: converge-keychain-preflight
   parent: ''
@@ -370,7 +421,7 @@
   parent: plat
   track: platform
 - slug: converge-sudo-from-keychain
-  parent: ''
+  parent: spine-converge
   track: platform
 - slug: converge-watch
   parent: converge-speed
@@ -391,10 +442,10 @@
   parent: containerized-core
   track: platform
 - slug: cortex
-  parent: ''
+  parent: archive
   track: cortex
 - slug: cortex-caddy-transcript-visibility
-  parent: ''
+  parent: archive
   track: cortex
 - slug: cortex-corpus-ruling
   parent: body-organ
@@ -403,10 +454,10 @@
   parent: cortex
   track: cortex
 - slug: cortex-graph-borrowings
-  parent: ''
+  parent: archive
   track: cortex
 - slug: cortex-keap-export-edge
-  parent: ''
+  parent: archive
   track: cortex
 - slug: cortex-lang
   parent: cortex
@@ -414,6 +465,9 @@
 - slug: cortex-node-tests-in-ci
   parent: ''
   track: release
+- slug: cortex-plan-evidence-contract
+  parent: cortex-plan-evidence-without-ledger
+  track: agents
 - slug: cortex-plan-evidence-without-ledger
   parent: iris-speaks-cortex-lang
   track: agents
@@ -427,16 +481,16 @@
   parent: cortex
   track: cortex
 - slug: cortex-s3-ann-experiment
-  parent: ''
+  parent: archive
   track: cortex
 - slug: cortex-store-test-hook-timeout
-  parent: ''
+  parent: archive
   track: cortex
 - slug: cortex-store-test-timeout
-  parent: ''
+  parent: archive
   track: release
 - slug: cortex-vendor-staleness
-  parent: ''
+  parent: archive
   track: cortex
 - slug: cortex-zod-4
   parent: security-review-1103
@@ -460,19 +514,22 @@
   parent: workload-allowlist
   track: platform
 - slug: deep-suite-own-repo
-  parent: ''
+  parent: forge
   track: security
 - slug: default-config-split
-  parent: ''
+  parent: spine-genome
+  track: platform
+- slug: default-config-split-domains
+  parent: default-config-split
   track: platform
 - slug: dendrogram-avatars
   parent: iris-agent-dendrogram
   track: face
 - slug: dependabot-alerts-are-mostly-a-fixture
-  parent: ''
+  parent: watch
   track: security
 - slug: dependency-supply-genome
-  parent: rel-018
+  parent: forge
   track: security
 - slug: device-channel-http
   parent: device-channels
@@ -505,7 +562,7 @@
   parent: device-organ
   track: platform
 - slug: device-organ
-  parent: ''
+  parent: gatehouse
   track: platform
 - slug: device-pairing
   parent: device-organ
@@ -529,7 +586,7 @@
   parent: dgx-vllm-poc
   track: platform
 - slug: dgx-harbor
-  parent: ''
+  parent: forge
   track: platform
 - slug: dgx-iris-on-vllm
   parent: dgx-vllm-poc
@@ -553,7 +610,7 @@
   parent: dgx-nos-cutover
   track: agents
 - slug: digest
-  parent: ''
+  parent: archive
   track: digest
 - slug: digest-absorb-chokepoint
   parent: digest
@@ -637,7 +694,7 @@
   parent: workload-allowlist
   track: security
 - slug: docs-czech-and-fork-residue
-  parent: ''
+  parent: gatehouse
   track: platform
 - slug: doctrine-front-matter-in-force
   parent: repo-body-plan
@@ -658,7 +715,7 @@
   parent: dry-run-evidence
   track: platform
 - slug: dtt
-  parent: ''
+  parent: archive
   track: platform
 - slug: dtt-access-rules
   parent: dtt
@@ -669,8 +726,14 @@
 - slug: dtt-constitution
   parent: dtt
   track: platform
+- slug: dtt-export-follows-backup-staging
+  parent: dtt-nightly-export
+  track: platform
 - slug: dtt-mcp-harness
   parent: dtt
+  track: platform
+- slug: dtt-nightly-export
+  parent: keel
   track: platform
 - slug: dtt-routing-address
   parent: dtt
@@ -700,10 +763,10 @@
   parent: e2e-lifecycle
   track: release
 - slug: e2e-files-move-journey-timeout
-  parent: ''
+  parent: wits-thalamus
   track: face
 - slug: e2e-lifecycle
-  parent: ''
+  parent: forge
   track: release
 - slug: e2e-macos-lifecycle
   parent: e2e-lifecycle
@@ -715,7 +778,7 @@
   parent: e2e-lifecycle
   track: release
 - slug: e2e-results-miss-setup-skips
-  parent: ''
+  parent: forge
   track: platform
 - slug: ears-app-bundle
   parent: local-llm
@@ -754,10 +817,13 @@
   parent: wing-organ-without-face
   track: security
 - slug: edge-two-doors
-  parent: rel-016
+  parent: gatehouse
   track: platform
 - slug: efferent-queue
-  parent: ''
+  parent: spine-face
+  track: face
+- slug: efferent-queue-unknown-status
+  parent: efferent-queue
   track: face
 - slug: egress-containment
   parent: digest
@@ -781,10 +847,19 @@
   parent: consulting-firm-deployment
   track: platform
 - slug: espocrm-retire-cleanup
-  parent: ''
+  parent: backoffice
   track: platform
 - slug: estate-brand
-  parent: ''
+  parent: gatehouse
+  track: face
+- slug: estate-brand-jellyfin
+  parent: estate-brand
+  track: face
+- slug: estate-brand-logo
+  parent: estate-brand
+  track: face
+- slug: estate-brand-plugin-blocks
+  parent: estate-brand
   track: face
 - slug: estate-dev-split
   parent: rel-018
@@ -793,13 +868,13 @@
   parent: ''
   track: platform
 - slug: estate-service-login
-  parent: ''
+  parent: spine-medulla
   track: security
 - slug: estate-token-gate-scans-tasks
-  parent: ''
+  parent: watch
   track: security
 - slug: eval-mage-vl-cowork
-  parent: ''
+  parent: wits-cortex
   track: cortex
 - slug: event-type-gate-dot-blind
   parent: wing-organ-without-face
@@ -808,10 +883,10 @@
   parent: body-cell
   track: agents
 - slug: ext-contract
-  parent: ''
+  parent: forge
   track: platform
 - slug: face
-  parent: ''
+  parent: spine-face
   track: face
 - slug: face-anatomy
   parent: face
@@ -819,12 +894,21 @@
 - slug: face-animation-facets
   parent: agent-action-catalog
   track: face
+- slug: face-app-awaiting
+  parent: agents-awaiting-surface
+  track: face
 - slug: face-app-builder
   parent: face
   track: face
 - slug: face-app-min-tier
   parent: wing-organ-without-face
   track: security
+- slug: face-awaiting-dock-badge
+  parent: face-app-awaiting
+  track: face
+- slug: face-awaiting-unreachable-kinds
+  parent: face-app-awaiting
+  track: face
 - slug: face-chat-style
   parent: face-collab
   track: face
@@ -836,6 +920,9 @@
   track: face
 - slug: face-create-table-idempotent
   parent: face-the-endpoint
+  track: face
+- slug: face-dock-icons-live
+  parent: one-service-directory
   track: face
 - slug: face-dock-table-def
   parent: ''
@@ -903,6 +990,18 @@
 - slug: face-planner-loops-polish
   parent: face-planner
   track: face
+- slug: face-row-view-modal
+  parent: face-styles
+  track: face
+- slug: face-skill-tree-view
+  parent: spine-face
+  track: face
+- slug: face-style-at-create
+  parent: face-styles
+  track: face
+- slug: face-style-blog-settings
+  parent: face-styles
+  track: face
 - slug: face-styles
   parent: face
   track: face
@@ -960,6 +1059,9 @@
 - slug: fixtures-service-seed-scope
   parent: fixtures
   track: platform
+- slug: forge
+  parent: ''
+  track: body
 - slug: fork-ramet-word
   parent: body-organism
   track: platform
@@ -973,13 +1075,13 @@
   parent: ''
   track: security
 - slug: fresh-host-first-login
-  parent: ''
+  parent: gatehouse
   track: platform
 - slug: from-blank-fixture-marker-orphan
   parent: consulting-firm-deployment
   track: platform
 - slug: fs
-  parent: ''
+  parent: commons
   track: filesystem
 - slug: fs-peruser
   parent: fs
@@ -997,7 +1099,7 @@
   parent: ''
   track: filesystem
 - slug: gate-diet
-  parent: ''
+  parent: forge
   track: platform
 - slug: gate-diet-cold-files
   parent: gate-diet
@@ -1011,6 +1113,9 @@
 - slug: gate-diet-role-journeys
   parent: gate-diet
   track: platform
+- slug: gatehouse
+  parent: ''
+  track: body
 - slug: gates-reach-live-or-break-in-worktree
   parent: review-v015-followups
   track: security
@@ -1069,16 +1174,22 @@
   parent: nos-atlas
   track: platform
 - slug: gis-property
-  parent: ''
+  parent: commons
   track: platform
 - slug: git-origin-watcher
   parent: loop-definition-model
   track: agents
 - slug: gitlab-18-11-13-upgrade
-  parent: rel-018
+  parent: forge
   track: security
+- slug: grafana-check-trend-view
+  parent: loop-grafana-check
+  track: agents
+- slug: grafana-registry-from-manifest
+  parent: one-service-directory
+  track: platform
 - slug: greenfield-first-deploy-lessons
-  parent: ''
+  parent: forge
   track: release
 - slug: ha-ip-ban-bans-the-proxy
   parent: ''
@@ -1111,13 +1222,16 @@
   parent: ''
   track: platform
 - slug: host-driver-updates
-  parent: ''
+  parent: spine-converge
   track: platform
 - slug: host-organ-home-removal
-  parent: ''
+  parent: spine-converge
   track: platform
 - slug: host-organ-retention
-  parent: ''
+  parent: spine-medulla
+  track: platform
+- slug: host-shim-gate-misreads-git-log
+  parent: forge
   track: platform
 - slug: host-software-ownership
   parent: rel-017
@@ -1126,9 +1240,12 @@
   parent: ''
   track: platform
 - slug: identities-from-install
-  parent: ''
+  parent: gatehouse
   track: release
 - slug: identity-reader-knows-nos-pulse
+  parent: ''
+  track: security
+- slug: image-sbom-cleanup-never-raises
   parent: ''
   track: security
 - slug: immune-apoptosis-regulator
@@ -1137,6 +1254,18 @@
 - slug: immune-cell-registry
   parent: immune-system
   track: security
+- slug: immune-clamav-cell
+  parent: immune-drill-known-samples
+  track: security
+- slug: immune-drill-known-samples
+  parent: watch
+  track: security
+- slug: immune-drill-more-samples
+  parent: immune-drill-known-samples
+  track: security
+- slug: immune-drill-table-and-audit
+  parent: immune-drill-known-samples
+  track: security
 - slug: immune-first-crawler
   parent: immune-system
   track: security
@@ -1144,10 +1273,13 @@
   parent: immune-system
   track: security
 - slug: immune-panic-mode
-  parent: rel-018
+  parent: watch
   track: security
 - slug: immune-system
-  parent: ''
+  parent: watch
+  track: security
+- slug: immune-verdicts-record
+  parent: immune-apoptosis-regulator
   track: security
 - slug: importer-isdoc
   parent: digest
@@ -1204,7 +1336,7 @@
   parent: iris-genui-bench
   track: agents
 - slug: iris-bench-writes-checkout
-  parent: ''
+  parent: wits-thalamus
   track: agents
 - slug: iris-canvas
   parent: ''
@@ -1261,7 +1393,7 @@
   parent: ''
   track: face
 - slug: iris-genui
-  parent: ''
+  parent: wits-thalamus
   track: agents
 - slug: iris-genui-bench
   parent: iris-genui
@@ -1288,7 +1420,7 @@
   parent: iris-genui
   track: agents
 - slug: iris-harness-revision-loop
-  parent: ''
+  parent: wits-thalamus
   track: agents
 - slug: iris-input-highlighting
   parent: iris-translate-stage
@@ -1300,7 +1432,7 @@
   parent: iris-genui-bench
   track: agents
 - slug: iris-loops
-  parent: rel-018
+  parent: wits-cell-roster
   track: cortex
 - slug: iris-market-data-alerts
   parent: iris-genui
@@ -1315,7 +1447,10 @@
   parent: iris-workspace-survives-restart
   track: agents
 - slug: iris-orchestrator
-  parent: rel-018
+  parent: wits-thalamus
+  track: agents
+- slug: iris-over-mcp-to-hermes-openhuman
+  parent: ''
   track: agents
 - slug: iris-place-here-or-new-tab
   parent: iris-genui
@@ -1333,10 +1468,10 @@
   parent: iris-genui-bench
   track: cortex
 - slug: iris-subagent-journey-gaps
-  parent: ''
+  parent: wits-thalamus
   track: agents
 - slug: iris-subagents-finish
-  parent: rel-018
+  parent: wits-thalamus
   track: agents
 - slug: iris-translate-stage
   parent: iris-routing-editor
@@ -1344,6 +1479,9 @@
 - slug: iris-transport-seam
   parent: pupil-web-remote
   track: agents
+- slug: iris-workspace-grows
+  parent: wits-thalamus
+  track: face
 - slug: iris-workspace-survives-restart
   parent: pupil-web-remote
   track: agents
@@ -1356,11 +1494,17 @@
 - slug: jellyfin-12-upgrade
   parent: rel-018
   track: security
+- slug: jellyfin-quickconnect-knob
+  parent: jellyfin-tv-login
+  track: platform
+- slug: jellyfin-quickconnect-probe
+  parent: jellyfin-tv-login
+  track: platform
 - slug: jellyfin-sso-provider-missing
   parent: identities-from-install
   track: platform
 - slug: jellyfin-tv-login
-  parent: ''
+  parent: commons
   track: platform
 - slug: jobs-that-read-secrets-yml
   parent: secrets-at-rest
@@ -1369,7 +1513,7 @@
   parent: ''
   track: cortex
 - slug: keap-conditional-row-update
-  parent: ''
+  parent: archive
   track: platform
 - slug: keap-converge-stall
   parent: ''
@@ -1390,13 +1534,16 @@
   parent: body-organ
   track: cortex
 - slug: keap-lint-disabled-refs
-  parent: ''
+  parent: archive
   track: platform
 - slug: keap-manager-grants-land
-  parent: ''
+  parent: archive
   track: platform
 - slug: keap-mcp-door
   parent: body-organ
+  track: platform
+- slug: keap-mcp-door-organ
+  parent: keap-mcp-door
   track: platform
 - slug: keap-recall
   parent: body-organ
@@ -1417,8 +1564,11 @@
   parent: ''
   track: platform
 - slug: keap-tables-after-a-blank
-  parent: ''
+  parent: archive
   track: platform
+- slug: keel
+  parent: ''
+  track: body
 - slug: keychain-asks-first
   parent: ''
   track: platform
@@ -1432,7 +1582,7 @@
   parent: ''
   track: platform
 - slug: kpro
-  parent: ''
+  parent: archive
   track: cortex
 - slug: kpro-get
   parent: kpro
@@ -1449,11 +1599,26 @@
 - slug: lan-access-is-behind-the-edge
   parent: security-review-1103
   track: security
+- slug: lan-docker-user-chain
+  parent: lan-access-is-behind-the-edge
+  track: security
+- slug: lan-rustfs-spacetimedb-sso
+  parent: lan-access-is-behind-the-edge
+  track: security
+- slug: lan-tailscale-rule-on-fact
+  parent: lan-access-is-behind-the-edge
+  track: security
+- slug: lan-trustedips-bridge-subnet
+  parent: lan-access-is-behind-the-edge
+  track: security
 - slug: law-one-home-ssot-doctrine
   parent: repo-body-plan
   track: platform
-- slug: layout-pin-refreeze-keeps-utf8
+- slug: layout-pin-refreeze-holds
   parent: ''
+  track: face
+- slug: layout-pin-refreeze-keeps-utf8
+  parent: spine-face
   track: face
 - slug: ledger-constitution
   parent: backoffice-organ
@@ -1477,7 +1642,7 @@
   parent: repo-body-plan
   track: platform
 - slug: linux-host-self-resolution
-  parent: ''
+  parent: gatehouse
   track: platform
 - slug: linux-users-role-gaps
   parent: dgx-users-cleanup
@@ -1495,7 +1660,7 @@
   parent: local-llm
   track: agents
 - slug: local-llm
-  parent: ''
+  parent: wits-cortex
   track: cortex
 - slug: local-llm-bench
   parent: local-llm
@@ -1548,6 +1713,9 @@
 - slug: loop-anatomy-harvests-manifests
   parent: loop-generator
   track: agents
+- slug: loop-bench
+  parent: nos-native-loop
+  track: agents
 - slug: loop-checkpoint-recover
   parent: sere
   track: agents
@@ -1588,7 +1756,7 @@
   parent: ''
   track: agents
 - slug: loop-queue-retires
-  parent: ''
+  parent: watch
   track: security
 - slug: loop-reach
   parent: sere
@@ -1608,6 +1776,9 @@
 - slug: loop-steps-match-run
   parent: loop-definition-model
   track: agents
+- slug: loop-ticks-table
+  parent: nos-native-loop
+  track: agents
 - slug: loop-validator-catches-a-loop-that-never-runs
   parent: ''
   track: agents
@@ -1621,7 +1792,7 @@
   parent: ''
   track: release
 - slug: managed-resources-manifest
-  parent: ''
+  parent: spine-converge
   track: platform
 - slug: manifest-origin
   parent: body-habitat
@@ -1633,7 +1804,7 @@
   parent: body-organism
   track: release
 - slug: medulla
-  parent: ''
+  parent: spine-medulla
   track: platform
 - slug: medulla-admin-halt
   parent: medulla
@@ -1677,6 +1848,9 @@
 - slug: medulla-organ-identity-reader
   parent: medulla
   track: platform
+- slug: medulla-pulse-env-no-binaries
+  parent: agents-run-away-from-the-secrets
+  track: security
 - slug: medulla-scheduler
   parent: medulla
   track: platform
@@ -1696,19 +1870,22 @@
   parent: memory-direction
   track: cortex
 - slug: model-catalog-with-quality
-  parent: ''
+  parent: wits-habitat
   track: agents
 - slug: model-digest-lock
-  parent: ''
+  parent: wits-habitat
   track: security
 - slug: moderation-drain-loop
-  parent: ''
+  parent: archive
   track: cortex
+- slug: morning-verdict
+  parent: spine-medulla
+  track: platform
 - slug: multi-firm-distribution-hardening
   parent: agent-landing-zero-command-operator
   track: platform
 - slug: multitenant-client-isolation
-  parent: ''
+  parent: backoffice
   track: platform
 - slug: n8n-edge-ungated-path-split
   parent: ''
@@ -1720,8 +1897,11 @@
   parent: ''
   track: platform
 - slug: n8n-packs-never-activated
-  parent: ''
+  parent: clockwork
   track: platform
+- slug: net-raw-drop-audit
+  parent: sec-transport-enforce
+  track: security
 - slug: nextcloud-sso-state-lost
   parent: e2e-lifecycle
   track: platform
@@ -1737,18 +1917,48 @@
 - slug: nos-atlas
   parent: gis-property
   track: platform
+- slug: nos-cc-cells-as-text
+  parent: cli-limbs-tidy
+  track: platform
 - slug: nos-forum
-  parent: ''
+  parent: voice
   track: platform
 - slug: nos-immune
-  parent: ''
+  parent: watch
   track: security
 - slug: nos-linux-fhs-layout
   parent: nos-system-user-linux
   track: platform
+- slug: nos-native-loop
+  parent: ''
+  track: agents
+- slug: nos-owned-paths
+  parent: spine-genome
+  track: filesystem
+- slug: nos-owned-paths-gate
+  parent: nos-owned-paths
+  track: filesystem
+- slug: nos-owned-paths-reader
+  parent: nos-owned-paths
+  track: filesystem
+- slug: nos-owned-paths-realpath
+  parent: nos-owned-paths
+  track: filesystem
+- slug: nos-owned-paths-recheck-before-rm
+  parent: nos-owned-paths
+  track: security
+- slug: nos-push-dry-run-no-sync
+  parent: cli-limbs-tidy
+  track: platform
 - slug: nos-push-silent-noop
   parent: ''
   track: release
+- slug: nos-root-ca-fingerprint-second-channel
+  parent: fresh-host-first-login
+  track: platform
+- slug: nos-root-ca-reader
+  parent: fresh-host-first-login
+  track: platform
 - slug: nos-system-user-linux
   parent: medulla
   track: security
@@ -1801,7 +2011,7 @@
   parent: ''
   track: security
 - slug: obs-queue-rem-156
-  parent: ''
+  parent: watch
   track: security
 - slug: obs-queue-rem-159
   parent: ''
@@ -1813,7 +2023,7 @@
   parent: ''
   track: security
 - slug: obs-queue-rem-188
-  parent: ''
+  parent: watch
   track: security
 - slug: obs-queue-rem-204
   parent: ''
@@ -1837,16 +2047,16 @@
   parent: ''
   track: platform
 - slug: ollama-residency-as-a-pausable-resource
-  parent: ''
+  parent: wits-habitat
   track: platform
 - slug: one-node-and-image-sbom
-  parent: rel-018
+  parent: watch
   track: security
 - slug: one-service-directory
-  parent: ''
+  parent: spine-genome
   track: platform
 - slug: one-vault
-  parent: ''
+  parent: vault
   track: security
 - slug: oneshot-logprobs-for-field-confidence
   parent: consulting-firm-deployment
@@ -1879,10 +2089,10 @@
   parent: openhuman
   track: agents
 - slug: operator-login-is-verified
-  parent: ''
+  parent: gatehouse
   track: security
 - slug: operator-session-threat-model
-  parent: ''
+  parent: watch
   track: security
 - slug: operator-task-on-condition
   parent: ''
@@ -1918,14 +2128,17 @@
   parent: symbiont-claude
   track: agents
 - slug: paperclip-company-dna
-  parent: ''
+  parent: forge
   track: agents
 - slug: paperclip-keap-table-token
-  parent: ''
+  parent: forge
   track: agents
 - slug: paperclip-linked-worktree-refused
   parent: ''
   track: agents
+- slug: paperclip-nested-git-rw
+  parent: paperclip-workspace-mounts-no-git
+  track: security
 - slug: paperclip-restore-per-db
   parent: pulse-redact-gaps
   track: platform
@@ -1972,7 +2185,7 @@
   parent: ''
   track: release
 - slug: pipeline-exercise-loop-build
-  parent: ''
+  parent: backoffice
   track: agents
 - slug: pipeline-exercise-loop-prompt
   parent: ''
@@ -1987,7 +2200,7 @@
   parent: repo-body-plan
   track: platform
 - slug: planes
-  parent: ''
+  parent: wits-cell-roster
   track: agents
 - slug: planes-grant
   parent: planes
@@ -2014,10 +2227,10 @@
   parent: planes
   track: agents
 - slug: plat
-  parent: ''
+  parent: spine-converge
   track: platform
 - slug: plat-active-work-datatable
-  parent: ''
+  parent: archive
   track: platform
 - slug: plat-brew-lag
   parent: converge-speed
@@ -2050,7 +2263,7 @@
   parent: ''
   track: platform
 - slug: plat-legacy-removal-vocab
-  parent: ''
+  parent: spine-converge
   track: platform
 - slug: plat-linux
   parent: plat
@@ -2059,7 +2272,7 @@
   parent: plat
   track: platform
 - slug: plat-organ-identity
-  parent: ''
+  parent: spine-genome
   track: platform
 - slug: plat-phantom-flag
   parent: ''
@@ -2074,10 +2287,10 @@
   parent: plat
   track: platform
 - slug: portable-ssd-offline-replication
-  parent: ''
+  parent: keel
   track: platform
 - slug: post-start-silent-green-sweep
-  parent: ''
+  parent: spine-converge
   track: platform
 - slug: pr-threat-review-agent
   parent: workload-allowlist
@@ -2103,6 +2316,9 @@
 - slug: profile-outranks-config
   parent: ''
   track: platform
+- slug: profiles-readme
+  parent: phenotype-not-organism-type
+  track: platform
 - slug: prom-rules-never-reload
   parent: ''
   track: platform
@@ -2111,6 +2327,9 @@
   track: security
 - slug: prose-retirement
   parent: body-plan
+  track: platform
+- slug: pulse-env-backup-staging-dir
+  parent: dtt-nightly-export
   track: platform
 - slug: pulse-findings-streak
   parent: medulla-scheduler
@@ -2188,7 +2407,7 @@
   parent: rbac-permission-genome
   track: security
 - slug: rbac-permission-genome
-  parent: ''
+  parent: gatehouse
   track: security
 - slug: rbac-scopes-enforced-or-gone
   parent: rbac-permission-genome
@@ -2197,13 +2416,13 @@
   parent: rbac-permission-genome
   track: security
 - slug: readers-see-converge-profiles
-  parent: ''
+  parent: spine-converge
   track: platform
 - slug: reconcile-2026-10
   parent: roadmap-reconcile-2026-10
   track: release
 - slug: red-status-reboot-required
-  parent: ''
+  parent: watch
   track: security
 - slug: rel-011
   parent: ''
@@ -2223,11 +2442,14 @@
 - slug: rel-018
   parent: ''
   track: release
+- slug: rel-019
+  parent: ''
+  track: release
 - slug: release-018-diff-review-lows
   parent: security-review-1103
   track: security
 - slug: release-installer-usb
-  parent: ''
+  parent: forge
   track: release
 - slug: release-to-release-upgrades
   parent: multi-firm-distribution-hardening
@@ -2235,17 +2457,20 @@
 - slug: rem-queue-commit-256-260-261
   parent: ''
   track: security
+- slug: rem-regrade-red-line
+  parent: security-scan-staleness-missed-a-live-critical
+  track: security
 - slug: remote-inference-weak-host
-  parent: ''
+  parent: wits-habitat
   track: cortex
 - slug: repo-body-plan
-  parent: rel-017
+  parent: spine-law
   track: platform
 - slug: repo-mirror-knowledge
   parent: shared-workstation
   track: cortex
 - slug: repo-split-trigger
-  parent: ''
+  parent: forge
   track: platform
 - slug: report-chain-planning-bench
   parent: local-llm-bench
@@ -2257,10 +2482,10 @@
   parent: digest
   track: digest
 - slug: research-agent-desktop
-  parent: ''
+  parent: wits-thalamus
   track: face
 - slug: restic-prune-runs
-  parent: ''
+  parent: keel
   track: platform
 - slug: retire-healing-words
   parent: body-plan
@@ -2269,19 +2494,22 @@
   parent: ''
   track: security
 - slug: roadmap-closed-body-open-status
-  parent: ''
+  parent: spine-law
   track: platform
 - slug: roadmap-index-and-cli-docs-lag
-  parent: rel-018
+  parent: spine-law
+  track: platform
+- slug: roadmap-organic-structure
+  parent: spine-law
   track: platform
 - slug: roadmap-reconcile-2026-10
-  parent: rel-018
+  parent: spine-law
   track: release
 - slug: roadmap-table-id-literals
-  parent: ''
+  parent: archive
   track: platform
 - slug: row-edit-journey-decider
-  parent: ''
+  parent: wits-thalamus
   track: agents
 - slug: rsi-days-after-blank
   parent: rsi-evals
@@ -2293,10 +2521,10 @@
   parent: rsi-evals
   track: agents
 - slug: run-journeys-resolved-python
-  parent: ''
+  parent: forge
   track: platform
 - slug: rust-transplant-order
-  parent: ''
+  parent: spine-law
   track: platform
 - slug: rustfs-1-0-3-upgrade
   parent: rel-018
@@ -2316,8 +2544,11 @@
 - slug: scan-writer-cwd
   parent: scan-output-off-deploy-tree
   track: security
+- slug: scrub-bare-token-shapes
+  parent: watch
+  track: security
 - slug: sec
-  parent: ''
+  parent: vault
   track: security
 - slug: sec-backrest-auth
   parent: sec
@@ -2362,7 +2593,7 @@
   parent: ''
   track: security
 - slug: sec-severity-floor
-  parent: ''
+  parent: watch
   track: security
 - slug: sec-transport
   parent: sec
@@ -2398,13 +2629,13 @@
   parent: body-habitat
   track: security
 - slug: secrets-at-rest
-  parent: ''
+  parent: vault
   track: security
 - slug: security-review-1103
-  parent: ''
+  parent: watch
   track: security
 - slug: security-scan-staleness-missed-a-live-critical
-  parent: ''
+  parent: watch
   track: security
 - slug: seed-bundle-generalize
   parent: digest
@@ -2416,7 +2647,7 @@
   parent: body-habitat
   track: platform
 - slug: sere
-  parent: ''
+  parent: forge
   track: platform
 - slug: sere-a
   parent: sere
@@ -2440,7 +2671,7 @@
   parent: dtt-share-model
   track: platform
 - slug: shared-workstation
-  parent: ''
+  parent: wits-habitat
   track: platform
 - slug: sign-before-origin-primitive
   parent: agent-landing-zero-command-operator
@@ -2451,6 +2682,24 @@
 - slug: specialization-packs
   parent: rel-017
   track: agents
+- slug: spine
+  parent: ''
+  track: body
+- slug: spine-converge
+  parent: spine
+  track: body
+- slug: spine-face
+  parent: spine
+  track: body
+- slug: spine-genome
+  parent: spine
+  track: body
+- slug: spine-law
+  parent: spine
+  track: body
+- slug: spine-medulla
+  parent: spine
+  track: body
 - slug: spine-tools-vs-cli-refusal
   parent: w-agentkit-spine
   track: agents
@@ -2460,6 +2709,9 @@
 - slug: sso-admin-auto-provision
   parent: ''
   track: platform
+- slug: sso-admin-claims-long-tail
+  parent: identities-from-install
+  track: platform
 - slug: sso-users-follow-the-domain
   parent: domain-change-drift
   track: platform
@@ -2467,7 +2719,7 @@
   parent: ssot-cite-adopters-or-amend
   track: platform
 - slug: ssot-cite-adopters-or-amend
-  parent: ''
+  parent: spine-law
   track: platform
 - slug: ssot-cite-editor
   parent: ssot-index
@@ -2500,7 +2752,7 @@
   parent: rel-017
   track: release
 - slug: stacks-one-list
-  parent: ''
+  parent: spine-genome
   track: platform
 - slug: stalwart-never-left-bootstrap
   parent: ''
@@ -2515,25 +2767,43 @@
   parent: sere
   track: agents
 - slug: storage-genome
-  parent: rel-018
+  parent: spine-genome
   track: platform
-- slug: suite-prune-one-site-tests
+- slug: storage-genome-codesign-probe
+  parent: storage-genome
+  track: platform
+- slug: storage-genome-free-floor
+  parent: storage-genome
+  track: platform
+- slug: storage-genome-harness-cleanup
+  parent: storage-genome
+  track: platform
+- slug: storage-genome-probe-timeout-gate
+  parent: storage-genome
+  track: platform
+- slug: storage-genome-reader
+  parent: storage-genome
+  track: platform
+- slug: stores
   parent: ''
+  track: body
+- slug: suite-prune-one-site-tests
+  parent: gate-diet
   track: platform
 - slug: suite-prune-to-joints
-  parent: ''
+  parent: gate-diet
   track: platform
 - slug: swarm-2026-09-15
   parent: plat
   track: platform
 - slug: symbiont-census
-  parent: rel-018
+  parent: watch
   track: platform
 - slug: symbiont-claude
   parent: self-symbiont-host
   track: platform
 - slug: symbiosome-rename
-  parent: rel-018
+  parent: spine-law
   track: platform
 - slug: symbiosome-tidy-paperclip
   parent: rel-018
@@ -2542,7 +2812,7 @@
   parent: ''
   track: platform
 - slug: system-table-owner
-  parent: ''
+  parent: archive
   track: platform
 - slug: tables
   parent: ''
@@ -2551,19 +2821,19 @@
   parent: face
   track: face
 - slug: tag-gate-reads-blocking-jobs
-  parent: ''
+  parent: forge
   track: release
 - slug: test-suite-diet
-  parent: ''
+  parent: gate-diet
   track: release
 - slug: test-suite-thinning
-  parent: ''
+  parent: gate-diet
   track: release
 - slug: tester-hardware-readiness
   parent: consulting-firm-deployment
   track: release
 - slug: thalamus-clippy-lane
-  parent: ''
+  parent: forge
   track: platform
 - slug: thalamus-decider-guard-followups
   parent: thalamus-pupil-peer-exe
@@ -2575,7 +2845,13 @@
   parent: face-the-endpoint
   track: face
 - slug: thalamus-otel
-  parent: ''
+  parent: watch
+  track: agents
+- slug: thalamus-otel-panel
+  parent: thalamus-otel
+  track: agents
+- slug: thalamus-otel-spans
+  parent: thalamus-otel
   track: agents
 - slug: thalamus-pupil-peer-exe
   parent: iris-genui
@@ -2605,13 +2881,16 @@
   parent: sec
   track: security
 - slug: tls-reader-gate-needs-live-docker
-  parent: ''
+  parent: forge
   track: release
 - slug: tofu-state-out-of-the-checkout
   parent: estate-dev-split
   track: platform
+- slug: tofu-tier-binding-missing
+  parent: gatehouse
+  track: security
 - slug: token-ratchet-gate-reads-wal
-  parent: ''
+  parent: watch
   track: security
 - slug: tools-index-by-body-word
   parent: repo-body-plan
@@ -2709,6 +2988,9 @@
 - slug: v0-9
   parent: ''
   track: release
+- slug: vault
+  parent: ''
+  track: body
 - slug: verify-queue-in-dolibarr
   parent: ''
   track: platform
@@ -2730,6 +3012,9 @@
 - slug: vision-pipeline-uses-run-agent-sh
   parent: consulting-firm-deployment
   track: platform
+- slug: voice
+  parent: ''
+  track: body
 - slug: voice-device-turn
   parent: pupil-push-to-talk
   track: agents
@@ -2740,7 +3025,7 @@
   parent: rel-011
   track: agents
 - slug: w-datalog
-  parent: rel-011
+  parent: archive
   track: cortex
 - slug: w-exec-pipe
   parent: rel-011
@@ -2763,11 +3048,14 @@
 - slug: w-vocab
   parent: rel-011
   track: cortex
+- slug: watch
+  parent: ''
+  track: body
 - slug: wave-small-ssot
   parent: dtt
   track: platform
 - slug: web-apex-rethink
-  parent: ''
+  parent: voice
   track: platform
 - slug: wet-test-gate-before-autodeploy
   parent: agent-landing-zero-command-operator
@@ -2779,7 +3067,7 @@
   parent: wing-organ-without-face
   track: security
 - slug: wing-apply-through-medulla
-  parent: ''
+  parent: spine-medulla
   track: security
 - slug: wing-cortex-executor-to-cortex
   parent: medulla
@@ -2794,7 +3082,7 @@
   parent: wing-organ-without-face
   track: face
 - slug: wing-events-chain-aware-retention
-  parent: ''
+  parent: spine-medulla
   track: platform
 - slug: wing-events-ts-unvalidated
   parent: ''
@@ -2810,6 +3098,15 @@
   track: face
 - slug: wing-inc2-agents-timeline
   parent: wing-organ-without-face
+  track: face
+- slug: wing-inc2-face-cutover
+  parent: wing-organ-without-face
+  track: face
+- slug: wing-inc2-latte-delete
+  parent: wing-inc2-face-cutover
+  track: face
+- slug: wing-inc2-repoint-producers
+  parent: wing-inc2-face-cutover
   track: face
 - slug: wing-inc3-upgrades-app
   parent: wing-organ-without-face
@@ -2836,7 +3133,7 @@
   parent: face-the-endpoint
   track: face
 - slug: wing-php-upload-progress-uaf
-  parent: ''
+  parent: spine-medulla
   track: security
 - slug: wing-retired
   parent: medulla
@@ -2845,7 +3142,7 @@
   parent: medulla
   track: platform
 - slug: wing-tenants
-  parent: ''
+  parent: spine-medulla
   track: platform
 - slug: wing-tier-followups
   parent: wing-organ-without-face
@@ -2853,8 +3150,23 @@
 - slug: wing-to-medulla-waves
   parent: medulla
   track: platform
-- slug: woodpecker-runs-cortex-tests
+- slug: wits
   parent: ''
+  track: body
+- slug: wits-cell-roster
+  parent: wits
+  track: body
+- slug: wits-cortex
+  parent: wits
+  track: body
+- slug: wits-habitat
+  parent: wits
+  track: body
+- slug: wits-thalamus
+  parent: wits
+  track: body
+- slug: woodpecker-runs-cortex-tests
+  parent: forge
   track: release
 - slug: wordpress-client-portal
   parent: consulting-firm-deployment
@@ -2863,7 +3175,7 @@
   parent: ''
   track: security
 - slug: wordpress-oidc-timeout-on-first-converge
-  parent: ''
+  parent: voice
   track: platform
 - slug: work-corpus-not-seed
   parent: cortex
@@ -2872,11 +3184,11 @@
   parent: ''
   track: platform
 - slug: workload-allowlist
-  parent: ''
+  parent: watch
   track: security
 - slug: worktree-and-build-cache-pruner
   parent: ''
   track: platform
 - slug: zod4-serde-yaml-debt
-  parent: ''
+  parent: watch
   track: security

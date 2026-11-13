@@ -51,7 +51,7 @@ SHIPPED = "shipped"
 #: the live roadmap table has no task_type column, and the seeder's preflight
 #: refuses to write a column that does not exist. When roadmap.table.yml gains
 #: task_type and it is applied, add it here and to the emitted row dict.
-GIT_OWNED = ("title", "parent", "track", "origin", "refs", "body")
+GIT_OWNED = ("title", "parent", "track", "origin", "release", "refs", "body")
 
 
 def refuse_unknown_args(argv: list[str], doc: str) -> None:
