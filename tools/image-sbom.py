@@ -59,8 +59,13 @@ def run(argv: list[str], timeout: int = STEP_S) -> tuple[int, str, str]:
         r = subprocess.run(argv, capture_output=True, text=True, timeout=timeout)
     except (OSError, subprocess.TimeoutExpired) as e:
         # Killing the docker client leaves the container running with its mounts: remove it by name.
+        # The cleanup never raises: a wedged Docker made it time out and failed the whole patrol (11-13).
         if "--name" in argv:
-            subprocess.run([argv[0], "rm", "-f", argv[argv.index("--name") + 1]], capture_output=True, timeout=60)
+            name = argv[argv.index("--name") + 1]
+            try:
+                subprocess.run([argv[0], "rm", "-f", name], capture_output=True, timeout=60)
+            except (OSError, subprocess.TimeoutExpired):
+                return 1, "", f"{e}; and the cleanup did not answer: container {name} may be left"
         return 1, "", str(e)
     return r.returncode, r.stdout, r.stderr
 

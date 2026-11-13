@@ -69,10 +69,17 @@ def _vendored_concept_ids() -> set[str] | None:
 # instruction in test_declared_concepts_exist_in_the_vendored_vocabulary,
 # and the concepts to propose upstream are named per row.
 CONCEPTLESS = {
+    "loop-ticks.at": "ISO-8601 UTC text (KEAP has no datetime kind); time.occurred_at binds date and holds the day — needs a datetime kind + concept",
+    "loop-ticks.row": "the roadmap row slug the tick worked on, or '-'; not a parent of the tick — needs graph.subject (rowRef across tables)",
+    "loop-ticks.ref": "branch@sha7 or '-'; a commit is provenance, not identity.* — needs vcs.commit (same as repo.head_sha)",
+    "loop-ticks.outcome": "the tick's own claim about itself; evidence.verification is reserved for an independent check — needs lifecycle.outcome",
+    "loop-ticks.next_wake_s": "seconds to the next wake; no duration concept — needs measure.duration (same as kolben-time-entry.hours)",
+    "loop-ticks.inputs": "what the tick read before deciding; evidence.observation is claimed once-per-table by lanes — needs evidence.inputs",
     "efferent-queue.command": "the exact text a person runs; no concept for it yet — needs action.command (ruling 2026-11-12, efferent-queue)",
     "efferent-queue.occurred_at": "ISO-8601 UTC text (KEAP has no datetime kind; tick compares it within a day) — needs a datetime kind + concept",
     "efferent-queue.seen_why": "why tick could not judge a row; evidence.observation is json-only — needs a text evidence.reason",
     "efferent-queue.reader_args": "arguments of a closed-list reader; needs evidence.args alongside evidence.verification",
+    "roadmap.origin": "where the work was born (intent|immune|germline|symbiont); prov.source is taken by `source` (the filing process) — needs prov.origin",
     "party.trading_name": "secondary name; identity.name is (rightly) the legal name — needs identity.alias",
     "party.country": "no geography concept exists — needs place.country",
     "party-address.street": "no postal concepts exist — needs place.street",
@@ -322,6 +329,8 @@ def test_a_concept_binds_only_the_kinds_it_allows():
 UNSEEDED = {
     "efferent-queue": "rows are written at runtime by tools/efferent.py through KEAP's human door "
                       "(ruling 2026-11-12, efferent-queue slice 1); nothing to seed.",
+    "loop-ticks": "rows are written at runtime, one per loop/watch/top tick, by tools/loop-tick.py with the "
+                  "agent RW bearer (row loop-ticks-table, slice 2); nothing to seed.",
     "morning-verdict": "rows are written each morning by the keap-base job tools/morning-verdict.py with the "
                        "agent RW bearer (ruling 2026-11-12, morning-verdict 2a); nothing to seed.",
     "apps": "fed by the app generator, not the playbook seeder — wiring it is a decision",

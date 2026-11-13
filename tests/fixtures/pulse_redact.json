@@ -468,6 +468,62 @@
   [
    "TokenError: refresh failed for host",
    "TokenError: <REDACTED>"
+  ],
+  [
+   "token ghp_FAKEaaaabbbbccccdddd1234 in text",
+   "token ghp_<REDACTED> in text"
+  ],
+  [
+   "{\"t\":\"github_pat_FAKE11AA22BB33CC44DD55EE\"}",
+   "{\"t\":\"github_pat_<REDACTED>\"}"
+  ],
+  [
+   "slack xoxb-FAKE1234567890-abcdefgh done",
+   "slack xoxb-<REDACTED> done"
+  ],
+  [
+   "key AKIAFAKEFAKEFAKE1234 here",
+   "key AKIA<REDACTED> here"
+  ],
+  [
+   "sk-ant-FAKEapi03-aaaaaaaaaaaa",
+   "sk-ant-<REDACTED>"
+  ],
+  [
+   "openai sk-FAKEaaaaaaaaaaaaaaaaaaaa",
+   "openai sk-<REDACTED>"
+  ],
+  [
+   "jwt eyJFAKEhbGciOiJ.eyJzdWIiOiIxMjM0.FAKEsignatureXYZ end",
+   "jwt eyJ<REDACTED> end"
+  ],
+  [
+   "task-runner-is-not-a-token-at-all",
+   "task-runner-is-not-a-token-at-all"
+  ],
+  [
+   "ghp_short stays",
+   "ghp_short stays"
+  ],
+  [
+   "risk-assessmentframework and xghp_FAKEaaaabbbbccccdddd stay",
+   "risk-assessmentframework and xghp_FAKEaaaabbbbccccdddd stay"
+  ],
+  [
+   "eyJshort.eyJalso.short stays",
+   "eyJshort.eyJalso.short stays"
+  ],
+  [
+   "WING_API_TOKEN=ghp_FAKEaaaabbbbccccdddd1234 once",
+   "WING_API_TOKEN=<REDACTED> once"
+  ],
+  [
+   "sk-ant-api03-abcdefgh shortened",
+   "sk-<REDACTED> shortened"
+  ],
+  [
+   "gitlab glpat-FAKEabcdefghij1234567 x",
+   "gitlab glpat-<REDACTED> x"
   ]
  ]
 }

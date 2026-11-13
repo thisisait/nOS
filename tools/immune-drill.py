@@ -10,7 +10,8 @@ Each sample is drilled end to end, or named honestly:
   secret-canary   a GitHub-PAT-shaped string built at RUN time (never in the repo) in a temp file,
                   scanned by gitleaks with THIS repo's .gitleaks.toml — the estate's real config and
                   allowlist, so an allowlist entry that swallowed a real-looking secret would show as missed
-  eicar           not drilled: no anti-malware detector is declared in state/immune/indicators.yml
+  eicar           the EICAR test file built at RUN time (never in the repo) in a temp file, judged by
+                  `clamscan --no-summary` (the clamav cell); no clamscan, or an error, is UNKNOWN
   advisory-pin    a fixture npm lockfile pinning lodash 4.17.20 (GHSA-35jh-r3h4-6jhm, fixed 4.17.21), judged
                   by advisory-status's own collect() and OSV re-match; only its one fetch seam is answered,
                   from the vendored record below, so no request leaves the host
@@ -73,7 +74,34 @@ def drill_secret(tmp: Path) -> dict:
             "rule": caught[0].get("RuleID") if caught else None, "seconds": secs}
 
 
-_LAN = {"ports": ["0.0.0.0:8081:80"]}   # beside the edge's 80/443: every interface, past Traefik
+def _eicar() -> bytes:
+    """The 68-byte EICAR test file, joined now: whole in the repo, a scanner would quarantine this file."""
+    return ("X5O!P%@AP[4\\PZX54(P^)7CC)7}$" + "EICAR-STANDARD-" + "ANTIVIRUS-" + "TEST-FILE!" + "$H+H*").encode()
+
+
+def drill_eicar(tmp: Path) -> dict:
+    cs = shutil.which("clamscan")
+    if not cs:
+        return {"sample": "eicar", "result": "UNKNOWN", "why": "clamscan not on PATH"}
+    f = tmp / "eicar.com"
+    f.write_bytes(_eicar())
+    t0 = time.monotonic()
+    try:
+        r = subprocess.run([cs, "--no-summary", str(f)], capture_output=True, text=True, timeout=300, check=False)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return {"sample": "eicar", "result": "UNKNOWN", "why": f"clamscan did not answer: {type(exc).__name__}"}
+    secs = round(time.monotonic() - t0, 2)
+    found = [ln.rsplit(": ", 1)[-1].removesuffix(" FOUND") for ln in r.stdout.splitlines() if ln.endswith(" FOUND")]
+    rule = next((s for s in found if "eicar" in s.lower()), None)
+    if rule:
+        return {"sample": "eicar", "result": "caught", "detector": "clamscan", "rule": rule, "seconds": secs}
+    if r.returncode == 0 and f"{f}: OK" in r.stdout:
+        return {"sample": "eicar", "result": "missed", "detector": "clamscan", "rule": None, "seconds": secs}
+    tail = (r.stderr.strip().splitlines() or r.stdout.strip().splitlines() or [""])[-1][:160]
+    return {"sample": "eicar", "result": "UNKNOWN", "why": f"clamscan exit {r.returncode}: {tail}"}
+
+
+_LAN = {"ports":["0.0.0.0:8081:80"]}   # beside the edge's 80/443: every interface, past Traefik
 
 
 def _timed(sample: str, detector: str, judge) -> dict:
@@ -149,15 +177,10 @@ def drill_advisory_pin(tmp: Path, version: str = "4.17.20") -> dict:
     return _timed("advisory-pin", "advisory-status collect() + OSV re-match", judge)
 
 
-NOT_DRILLED = [
-    {"sample": "eicar", "result": "no detector", "why": "no anti-malware indicator in state/immune/indicators.yml"},
-]
-
-
 def run() -> dict:
     tmp = Path(tempfile.mkdtemp(prefix="nos-immune-drill-"))
     try:
-        rows = [drill_secret(tmp), drill_port_role(tmp), drill_port_app(tmp), drill_advisory_pin(tmp)] + NOT_DRILLED
+        rows = [drill_secret(tmp), drill_eicar(tmp), drill_port_role(tmp), drill_port_app(tmp), drill_advisory_pin(tmp)]
     finally:
         shutil.rmtree(tmp, ignore_errors=True)   # every sample goes, whatever happened
     return {"at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "samples": rows,

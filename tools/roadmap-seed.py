@@ -10,7 +10,7 @@ machinery; the row content lives in the operator's private repo and never here.
 
 First-time setup: `tools/roadmap-extract.py --write` writes the live table into
 NOS_SEED_DIR; commit those in your private repo. Thereafter the files are the
-source of the git-owned half (title/parent/track/refs/body); the table owns
+source of the git-owned half (title/parent/track/origin/refs/body); the table owns
 status/target/occurred_at/verified* (moved by roadmap-update.py / -verify.py).
 
 Usage:  python3 tools/roadmap-seed.py [--dry-run] [--sync] [--only SLUG[,SLUG...]] [--restore-from KEAP.db]
@@ -135,7 +135,7 @@ if not _live_cols:
              "whether a write would land. Is KEAP up?")
 
 # ── The half git owns (files) vs the half the table owns (roadmap-update) ────
-# git owns   slug title parent track refs body   — authored in the files
+# git owns   slug title parent track origin refs body — authored in the files
 # table owns status target occurred_at verified* — moved by roadmap-update.py
 # --sync reconciles the git-owned half for existing rows; without it this is
 # purely additive.

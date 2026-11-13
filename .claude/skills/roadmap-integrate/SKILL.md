@@ -96,3 +96,6 @@ It runs on its own cadence (every ~2 h) and needs no prompt from the operator fo
   destructive on the live estate, a new external account. One questionnaire, at most 4 questions;
   22:00–07:00 collect them for the morning report instead of waking him.
 - **SECURITY lines in watch.md** are read at once; a real one stops the batch until fixed.
+- **End of every tick:** one `loop-ticks` row, `tools/loop-tick.py --role top --phase integrate|answer|idle
+  --outcome <o> --ref <branch@sha7|-> --next-wake <s> --reason "<why>"`; the ledger line stays (refused or KEAP
+  unreachable: say so there). One pane line per tick, not a narration.

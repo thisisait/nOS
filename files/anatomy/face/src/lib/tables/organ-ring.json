@@ -1,0 +1,83 @@
+{
+  "generated_by": "tools/organ-ring-gen.py",
+  "ring": [
+    {
+      "key": "gatehouse",
+      "side": "core",
+      "title": "The Gatehouse",
+      "tells": "Access is decided in one place."
+    },
+    {
+      "key": "spine",
+      "side": "core",
+      "title": "The Spine",
+      "tells": "The estate governs and audits itself."
+    },
+    {
+      "key": "stores",
+      "side": "core",
+      "title": "The Stores",
+      "tells": "Everything remembered lives here, at home."
+    },
+    {
+      "key": "vault",
+      "side": "core",
+      "title": "The Vault",
+      "tells": "Secrets are kept, never scattered."
+    },
+    {
+      "key": "keel",
+      "side": "core",
+      "title": "The Keel",
+      "tells": "Copied nightly. Restore, proven."
+    },
+    {
+      "key": "archive",
+      "side": "left",
+      "title": "The Archive",
+      "tells": "Where knowledge is preserved and grown."
+    },
+    {
+      "key": "forge",
+      "side": "left",
+      "title": "The Forge",
+      "tells": "Software made, tested and landed at home."
+    },
+    {
+      "key": "backoffice",
+      "side": "left",
+      "title": "The Backoffice",
+      "tells": "CRM, books and a customer desk, at home."
+    },
+    {
+      "key": "commons",
+      "side": "left",
+      "title": "The Commons",
+      "tells": "Daily work and daily life, shared."
+    },
+    {
+      "key": "watch",
+      "side": "right",
+      "title": "The Watch",
+      "tells": "The estate keeps watch on itself."
+    },
+    {
+      "key": "wits",
+      "side": "right",
+      "title": "The Wits",
+      "tells": "Autonomous minds with bounded hands."
+    },
+    {
+      "key": "clockwork",
+      "side": "right",
+      "title": "The Clockwork",
+      "tells": "Duties kept on a clock, events turned into actions."
+    },
+    {
+      "key": "voice",
+      "side": "right",
+      "title": "The Voice",
+      "tells": "Mail, calls and signals, spoken from home."
+    }
+  ]
+}

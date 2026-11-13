@@ -1,48 +1,97 @@
 /*
-  Dark-theme the SvelteFlow CHROME for the planner's graphs. The library ships
-  a light default (white minimap, white control buttons, white-boxed edge
-  labels) that is illegible on our #14171c canvas — the operator's finding
-  2026-09-07. These are the framework's global classes, so one shared sheet
-  themes every planner reading (Loops / Routing / Roadmap) consistently; the
-  per-view files import it rather than each re-declaring (and drifting).
+  Theme the SvelteFlow CHROME for the planner's graphs with the design tokens. The library
+  ships a light default (white minimap, white control buttons, white-boxed edge labels) that
+  is illegible on the face's dark canvas — the operator's finding 2026-09-07, and again
+  2026-11-13: the first version of this sheet wrote `:global(...)` selectors, which only a
+  Svelte <style> block understands; in a plain .css file the browser dropped every rule, so
+  the minimap stayed white. Plain selectors now, on Svelte Flow's own --xy-* variables, so
+  the chrome follows whatever the tokens say (light or dark) instead of a hard-coded dark.
 
-  Chrome only — node bodies keep their per-view KIND colours.
+  Shared by every planner reading (Loops / Routing / Roadmap / Skill tree); chrome only —
+  node bodies keep their per-view colours. The minimap's node tints by state are here too,
+  because the minimap is the same component in every reading.
 */
 
-/* Zoom / fit control buttons — dark tile, light glyph. */
-:global(.svelte-flow__controls) {
-	box-shadow: 0 0 0 1px var(--border, #2a2f38);
+.svelte-flow {
+	--xy-controls-button-background-color-props: var(--glass, #1b1f27);
+	--xy-controls-button-background-color-hover-props: color-mix(
+		in srgb,
+		var(--glass, #1b1f27) 70%,
+		var(--fg, #e8ecf3)
+	);
+	--xy-controls-button-color-props: var(--fg, #e8ecf3);
+	--xy-controls-button-color-hover-props: var(--fg, #e8ecf3);
+	--xy-controls-button-border-color-props: var(--glass-brd, #2a2f38);
+	--xy-controls-box-shadow: 0 0 0 1px var(--glass-brd, #2a2f38);
+	--xy-minimap-background-color-props: color-mix(in srgb, var(--bg, #14171c) 92%, transparent);
+	--xy-minimap-mask-background-color-props: color-mix(in srgb, var(--bg, #14171c) 55%, transparent);
+	--xy-minimap-mask-stroke-color-props: var(--accent, #6a9af0);
+	--xy-minimap-mask-stroke-width-props: 1;
+	--xy-minimap-node-background-color-props: var(--muted, #8e98a8);
+	--xy-minimap-node-stroke-color-props: transparent;
+	--xy-edge-label-background-color: var(--glass, #1b1f27);
+	--xy-edge-label-color: var(--fg, #e8ecf3);
+	--xy-attribution-background-color: transparent;
+}
+
+.svelte-flow__controls {
 	border-radius: 6px;
 	overflow: hidden;
 }
-:global(.svelte-flow__controls-button) {
-	background: var(--panel, #1b1f27);
-	border-bottom: 1px solid var(--border, #2a2f38);
-	fill: var(--fg, #e8ecf3);
-}
-:global(.svelte-flow__controls-button:hover) {
-	background: color-mix(in srgb, var(--panel, #1b1f27) 82%, #ffffff);
-}
-:global(.svelte-flow__controls-button svg) {
-	fill: var(--fg, #e8ecf3);
+.svelte-flow__controls-button {
+	backdrop-filter: var(--glass-filter, none);
+	-webkit-backdrop-filter: var(--glass-filter, none);
 }
 
-/* Minimap — dark ground, muted nodes, a subtle (not blinding) viewport mask. */
-:global(.svelte-flow__minimap) {
-	background-color: var(--panel, #1b1f27);
+.svelte-flow__minimap {
+	border: 1px solid var(--glass-brd, #2a2f38);
+	border-radius: 8px;
+	overflow: hidden;
 }
-:global(.svelte-flow__minimap-mask) {
-	fill: color-mix(in srgb, var(--bg, #14171c) 68%, transparent);
-}
-:global(.svelte-flow__minimap-node) {
-	fill: #3a4150;
-	stroke: none;
+.svelte-flow__attribution {
+	color: var(--muted, #8e98a8);
 }
 
-/* Edge labels — dark box, light text (was grey text in a white box). */
-:global(.svelte-flow__edge-textbg) {
-	fill: var(--panel, #1b1f27);
+/* Minimap gems by state (the skill tree passes the node's classes as nodeClass; a node's
+   stroke is its own colour, so a 10px gem reads as a dot at the minimap's scale). */
+.svelte-flow__minimap-node {
+	stroke: var(--muted, #8e98a8);
+	stroke-opacity: 0.6;
 }
-:global(.svelte-flow__edge-text) {
+.svelte-flow__minimap-node.st-shipped {
+	fill: var(--ok, #5fc3dc);
+	stroke: var(--ok, #5fc3dc);
+}
+.svelte-flow__minimap-node.st-allocated {
+	fill: var(--info, #6a9af0);
+	stroke: var(--info, #6a9af0);
+}
+.svelte-flow__minimap-node.st-frontier,
+.svelte-flow__minimap-node.st-doing {
+	fill: var(--warn, #f0b450);
+	stroke: var(--warn, #f0b450);
+}
+.svelte-flow__minimap-node.st-review {
+	fill: var(--info, #6a9af0);
+	stroke: var(--info, #6a9af0);
+	stroke-opacity: 0.4;
+}
+.svelte-flow__minimap-node.st-ungrown {
+	fill: var(--bad, #e5484d);
+	stroke: var(--bad, #e5484d);
+}
+.svelte-flow__minimap-node.st-milestone {
 	fill: var(--fg, #e8ecf3);
+	stroke: var(--fg, #e8ecf3);
+}
+.svelte-flow__minimap-node.st-blocked,
+.svelte-flow__minimap-node.st-dormant {
+	fill: var(--muted, #8e98a8);
+	stroke: var(--muted, #8e98a8);
+	stroke-opacity: 0.25;
+	fill-opacity: 0.4;
+}
+.svelte-flow__minimap-node.rank-system,
+.svelte-flow__minimap-node.rank-core {
+	stroke-opacity: 1;
 }

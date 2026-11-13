@@ -40,6 +40,9 @@ files:
   files/anatomy/face/src/lib/anatomy/loop-graph.json:
     writer: tools/loop-graph-gen.py
     check: [tools/loop-graph-gen.py, --check]
+  files/anatomy/face/src/lib/tables/organ-ring.json:
+    writer: tools/organ-ring-gen.py
+    check: [tools/organ-ring-gen.py, --check]
   IMPRINT.md:
     writer: tools/imprint-gen.py
     check: [tools/imprint-gen.py, --check]
@@ -71,7 +74,7 @@ files:
     why: JSON Lines has no file header; every line is an entry.
   state/tofu-authentik-services.yml:
     writer: tools/tofu-authentik-gen-registry.py
-    checked_by: nobody; the writer has no --check (it rewrites in place)
+    check: [tools/tofu-authentik-gen-registry.py, --check]
   state/roadmap/index.yml:
     writer: tools/roadmap-seed.py
     checked_by: nobody offline; the writer reads the private seed (NOS_SEED_DIR)

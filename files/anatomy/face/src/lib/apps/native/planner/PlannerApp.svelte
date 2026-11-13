@@ -1,9 +1,11 @@
 <!--
-  Planner — three views of the estate's own work (face-planner).
+  Planner — four views of the estate's own work (face-planner).
 
   Roadmap: the roadmap DataTable as an interactive Svelte Flow graph (drag to
   reparent, RBAC-gated write-back; the DataTable stays source of truth). Select
   a node for its detail; Esc closes it.
+  Skill tree: the same rows as the passive tree — core, 13 organ systems, the
+  lit frontier (face-skill-tree-view); same reparent write.
   Loops:   the agentic loop's harness (propose→judge→apply + roles + intents +
   what it refuses), read-only, compiled from ledger.py. Pan + zoom only.
   Routing: the agent CAPABILITY space (agents→task_types→scopes), read-only,
@@ -15,12 +17,14 @@
 <script lang="ts">
 	import { Tabs, type TabSpec } from '$lib/components/ui';
 	import RoadmapGraph from './RoadmapGraph.svelte';
+	import SkillTreeView from './SkillTreeView.svelte';
 	import LoopsView from './LoopsView.svelte';
 	import RoutingView from './RoutingView.svelte';
 	import { requests, consumed } from '$lib/limbs/request';
 
 	const tabs: TabSpec[] = [
 		{ key: 'roadmap', label: 'Roadmap' },
+		{ key: 'tree', label: 'Skill tree' },
 		{ key: 'loops', label: 'Loops' },
 		{ key: 'routing', label: 'Routing' }
 	];
@@ -42,6 +46,8 @@
 	<div class="body" role="tabpanel" id="panel-{active}" aria-labelledby="tab-{active}">
 		{#if active === 'roadmap'}
 			<RoadmapGraph {focus} />
+		{:else if active === 'tree'}
+			<SkillTreeView />
 		{:else if active === 'loops'}
 			<LoopsView />
 		{:else if active === 'routing'}

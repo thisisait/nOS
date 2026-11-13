@@ -139,7 +139,7 @@ posts, restarts or renders something.
 
 ### Estate state, renders and records
 
-- `immune-drill.py` — the immune drill: plants inert samples in a temp tree, runs the estate's own detector (gitleaks with this repo's config), records caught / missed / no detector, removes every sample (row immune-drill-known-samples). Operator only.
+- `immune-drill.py` — the immune drill: plants inert samples in a temp tree, runs the estate's own detectors (gitleaks with this repo's config, clamscan on an EICAR file), records caught / missed / UNKNOWN, removes every sample (row immune-drill-known-samples). Operator only.
 - `current-state.py` — The claim board's WRITE side: file/claim/release/progress; a claim is refused unless the match says you are capable.
 - `geo-load.py` — Load ČÚZK open data (RÚIAN address points, INSPIRE parcels + buildings) for the configured kraje into PostGIS `geo`; staged + swapped per layer.
 - `geo-project-sites.py` — Nightly one-way projection of KEAP party-site rows (+ ARES seats) into PostGIS `geo.party_site`; `--erase-party` for GDPR (called by digest-teardown).
@@ -168,6 +168,7 @@ posts, restarts or renders something.
 ### Agents and the loop
 
 - `iris-bench.py` — Score Iris from the thalamus wire alone (cases in `state/fixtures/iris-bench.yml`): tools, kinds, count = matched, sourced charts, time, cannot-see, no proposal; rejects every approval, writes only `~/.nos/bench/iris-bench/last-run.json` (or `--out`); NOS_LIVE=1 or `--offline --sock` (fake).
+- `loop-bench.py` — Judge the roadmap loop by its artifacts (cases in `state/fixtures/loop-bench/artifact.yml`): `--artifact` over a git range + the loop's ledger, notes and top-to-loop, code as judge, pass/fail/no_data; `--out` provenance, `--compare` paired McNemar; writes only `~/.nos/bench/loop-bench/`. Not a gate; the loop never reads it.
 - `oneshot-poc.py` — One-shot PoC: a small model answers a battery of constrained questions, a compiler turns them into a thalamus tool plan, a dry run validates it against `state/fixtures/oneshot/thalamus-tools.json` and the iris-bench checks; traces every question; offline fakes, Ollama only on NOS_LIVE=1.
   - Local Clef-flash on a Mac (16 GB+), **operator-run, third-party code: review it first**:
     1. `pip install "mlx-vlm>=0.7.4,<0.8" huggingface_hub` (in a venv of your own)
@@ -186,6 +187,7 @@ posts, restarts or renders something.
   - `--validate <file>` checks one loop manifest (exit 1, every reason on stderr); discover-pulse-catalog.py schedules no loop it refuses.
 - `loop-pr.py` — The loop's driver: what happens after the judges say pass.
 - `loop-propose.py` — The loop's ENTRY: hand one reported weakness to a model that may propose.
+- `loop-tick.py` — One `loop-ticks` row per loop / watch / top tick, every field checked against the table def, reason scrubbed to 300 chars; append-once, a role writes only its own; dry run without KEAP_AGENT_TOKEN_RW. Exits 0 written · 2 refused · 1 write failed.
 - `loop-review.py` — The reviewer: the only thing in the loop permitted to merge.
 - `night-watch.py` — What we said the night would do, beside what it did.
 - `nos-ops-harness.py` — nos-ops measurement harness — WHERE does the chain/tool-use boundary sit?
@@ -276,6 +278,7 @@ posts, restarts or renders something.
 - `ci-circadian.py` — Pulse job (plugin ci-circadian, off by default): `gh workflow run --ref dev` of every workflow with both `schedule` and `workflow_dispatch`, because GitHub fires schedules only on master; `--dry-run` lists them.
 - `ci-tag-check.py` — nightly CI lane: `ansible-playbook main.yml --check --tags <tag>` for each tag in `ci-tag-check.yml`; red only on an evaluation error (undefined var, missing file/include), a check-mode halt at infra bring-up is the frontier, not a failure.
 - `regenerate.py` — Rewrite every stale file in state/generated.yml with its writer, in registry order (graph → body plan → imprint), re-freezing the face layout pin; `--check` names what is stale. The one command for the one freshness gate.
+- `organ-ring-gen.py` — Compile the apex organ-system ring order into the face's organ-ring.json (the Planner skill tree).
 - `routing-graph-gen.py` — Compile the agent capability graph (nos-work://) into routing-graph.json for the Planner Routing view.
 - `apex-sign.py` — Sign the apex ruling — after showing what changed since it was last signed.
 - `d12-annotate-plugins.py` — D1.2.b — add `name` + `enabled` to each plugin's authentik block.

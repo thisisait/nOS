@@ -24,12 +24,19 @@ import type { Identity } from '$lib/contracts';
 
 const CARDS_MS = 3_000;
 const CACHE_MS = 15_000;
-/** Per uid, answers AND refusals, so the dock's poll neither hammers a down thalamus nor re-asks. */
-const cards = new Map<string, { at: number; v: unknown[] | string }>();
+/** Per uid, answers AND refusals, so the dock's poll neither hammers a down thalamus nor re-asks.
+ *  The in-flight ask is cached, not only its value: parallel polls share one relay link (review 11-13). */
+const cards = new Map<string, { at: number; p: Promise<unknown[] | string> }>();
 
-async function irisCards(who: Identity): Promise<unknown[] | string> {
+function irisCards(who: Identity): Promise<unknown[] | string> {
 	const hit = cards.get(who.uid);
-	if (hit && Date.now() - hit.at < CACHE_MS) return hit.v;
+	if (hit && Date.now() - hit.at < CACHE_MS) return hit.p;
+	const p = askCards(who);
+	cards.set(who.uid, { at: Date.now(), p });
+	return p;
+}
+
+async function askCards(who: Identity): Promise<unknown[] | string> {
 	const got = await askOnce(who, JSON.stringify({ t: 'approvals_open' }), CARDS_MS);
 	let v: unknown[] | string = 'the thalamus gave an answer that is not approvals_open';
 	if ('why' in got) v = got.why;
@@ -42,7 +49,6 @@ async function irisCards(who: Identity): Promise<unknown[] | string> {
 			v = 'the thalamus answered a line that is not JSON';
 		}
 	}
-	cards.set(who.uid, { at: Date.now(), v });
 	return v;
 }
 

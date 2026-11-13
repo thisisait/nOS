@@ -1,0 +1,60 @@
+# =============================================================================
+# clamav — the anti-malware immune cell's signature feed
+#
+# BORN 2026-11-13 (row immune-clamav-cell). The immune drill's eicar sample had
+# no detector; ClamAV is it (state/immune/indicators.yml `clamav`). Binaries:
+# tasks/clamav.yml under install_clamav. This job keeps the signatures fresh
+# and its run is the cell's heartbeat. No scan of the home or estate data here.
+# =============================================================================
+
+name: clamav
+version: 0.1.0
+description: |
+  Daily freshclam run, then the age of the signatures clamscan loads.
+  Talks to the ClamAV signature mirror only; sends no account and no data.
+
+type:
+  - scheduled-job
+
+requires:
+  feature_flag: install_clamav
+  variables:
+    - playbook_dir         # repo root → files/anatomy/plugins/clamav/freshen.py
+
+# =============================================================================
+# PULSE JOB — the verdict is pulse_runs.exit_code, written by freshen.py:
+#   0  signatures at most 48 h old
+#   11 older, or clamscan cannot say (absent, no database): UNKNOWN, never fresh
+# 01:10 UTC: before the 02:00+ security patrols.
+# =============================================================================
+
+pulse:
+  jobs:
+    - name: freshclam
+      category: security
+      runner: subprocess
+      command: "{{ playbook_dir }}/files/anatomy/plugins/clamav/freshen.py"
+      schedule: "10 1 * * *"
+      jitter_min: 10
+      max_runtime_s: 1200       # a first download of the full database is ~300 MB
+      max_concurrent: 1
+      findings_exit_codes: [11]
+      env: {}
+
+gdpr:
+  purpose: "Downloading public malware signatures for the host's anti-malware scanner"
+  legal_basis: legitimate_interests
+  data_categories:
+    - software_inventory      # the ClamAV version in the mirror request only
+  data_subjects: [operators]
+  retention_days: 30
+  processors: []              # the ClamAV mirror serves files; no personal data sent
+  eu_residency: true
+
+e2e:
+  enabled: "{{ (install_clamav | default(false)) and (install_wing | default(false)) }}"
+  probes:
+    - name: clamav-freshclam-registered-in-wing
+      url: http://127.0.0.1:{{ wing_port }}/api/v1/pulse_jobs
+      auth: {bearer: wing_api_token, headers: {X-Wing-Edge-Token: wing_edge_token}}
+      expect: {json_equals: {"jobs.clamav:freshclam.id": "clamav:freshclam"}}

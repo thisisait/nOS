@@ -34,16 +34,17 @@ code that attempted the work.
    nos dtt board                                    # current-state: assignments, claims, who is capable
    nos dtt capture --slug <kebab> --title "<one line>" --track <platform|security|agents|cortex|face|release|filesystem> \
        --task-type <investigate|design|code-fix|seed-edit|review|doc|security-remediation|converge> \
-       --status <next|queued> [--parent <slug>] --body "<the prose>"
+       --status <next|queued> [--origin <intent|immune|germline|symbiont>] [--parent <slug>] --body "<the prose>"
    nos dtt seed [--dry-run] [--sync]                # file the seed repo's new rows into the live table
    nos dtt update --slug <slug> --status doing|review|shipped [--owner <who>]   # move a CLAIM
    nos dtt claim <slug> · nos dtt progress <slug> working|blocked|review|done · nos dtt release <slug>
    ```
 
    `capture` writes ONE file `<slug>.md` into the seed repo; commit and push it
-   there (never into nOS), then `seed`. The file owns `title/parent/track/refs/body`;
+   there (never into nOS), then `seed`. The file owns `title/parent/track/origin/refs/body`;
    the table owns `status`, dates and `verified*`. Do not hand-edit a row's
    table-owned half in the file — `--sync` reconciles only the git-owned half.
+   `--origin` is where the work was born: `intent` (operator) · `immune` (an immune cell or drill found it) · `germline` (the body proposed it) · `symbiont` (another vendor's defect); omit when unsure.
 
 2. **MCP** — the `nos_tables` tool (server `tools/mcp-tables-server.py`; in
    Claude Code it is registered as `nos-tables`). One tool, verb-shaped input:

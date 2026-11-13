@@ -12,6 +12,11 @@
 	--warn-ink: color-mix(in srgb, var(--warn) 40%, var(--fg));
 	--bad-ink: color-mix(in srgb, var(--bad) 40%, var(--fg));
 
+	/* The skill tree's colour aliases (--line-hi, --ink-mute, --data-4, --glow …) are generated
+	   into tokens.css by design-sync; only the font stack is face-owned. */
+	--font-code:
+		'AIT Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace; /* type.families.code */
+
 	color-scheme: dark light;
 }
 

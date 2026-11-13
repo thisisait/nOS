@@ -44,6 +44,17 @@
     - slug: "book-access"
       def: "{{ lookup('file', playbook_dir + '/state/keap-tables/book-access.table.yml') | from_yaml }}"
       rows: []
+    # Written at runtime, so nothing seeds their ROWS, but the TABLE must exist first: absent, the
+    # 07:10 morning-verdict job failed "unknown table" (2026-11-13). Gate: test_every_table_def_is_created.
+    - slug: "morning-verdict"
+      def: "{{ lookup('file', playbook_dir + '/state/keap-tables/morning-verdict.table.yml') | from_yaml }}"
+      rows: []
+    - slug: "efferent-queue"
+      def: "{{ lookup('file', playbook_dir + '/state/keap-tables/efferent-queue.table.yml') | from_yaml }}"
+      rows: []
+    - slug: "loop-ticks"
+      def: "{{ lookup('file', playbook_dir + '/state/keap-tables/loop-ticks.table.yml') | from_yaml }}"
+      rows: []
   loop_control:
     loop_var: _face_tbl
     label: "{{ _face_tbl.slug }}"

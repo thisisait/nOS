@@ -20,6 +20,7 @@ File format (state/roadmap/_template.md is the canonical example):
     title: P1 — HKDF derivation + per-user scope
     parent: sec
     track: security
+    origin: immune               # optional: intent|immune|germline|symbiont
     task_type: code-fix          # optional (dtt-task-types); "" if unset
     status: next                 # INSERT-time seed; the table owns it after
     when: 2026-08-03             # a date; STATUS decides target vs occurred_at
@@ -28,7 +29,7 @@ File format (state/roadmap/_template.md is the canonical example):
     ---
     <body prose — the measurement, the defect, the fix, the gate>
 
-git owns title/parent/track/refs/task_type/body (authored in the file, synced by
+git owns title/parent/track/origin/refs/task_type/body (authored in the file, synced by
 --sync); the table owns status/target/occurred_at/verified* (moved by
 roadmap-update.py / roadmap-verify.py). status+when in a file seed a FRESH row's
 insert only; --sync never overwrites the table-owned half.
@@ -50,7 +51,7 @@ SHIPPED = "shipped"
 #: the live roadmap table has no task_type column, and the seeder's preflight
 #: refuses to write a column that does not exist. When roadmap.table.yml gains
 #: task_type and it is applied, add it here and to the emitted row dict.
-GIT_OWNED = ("title", "parent", "track", "refs", "body")
+GIT_OWNED = ("title", "parent", "track", "origin", "release", "refs", "body")
 
 
 def refuse_unknown_args(argv: list[str], doc: str) -> None:
@@ -121,10 +122,14 @@ def parse_file(path: str) -> dict:
         title=title,
         parent=str(meta.get("parent") or "").strip(),
         track=str(meta.get("track") or "").strip(),
-        release=str(meta.get("release") or "").strip(),
         refs=str(meta.get("refs") or "").strip(),
         body=body.strip(),
     )
+    # origin (where the work was born) and release (its milestone) are emitted only when the
+    # file says them, so an unset one is never guessed and --sync never blanks a live value.
+    for k in ("origin", "release"):
+        if v := str(meta.get(k) or "").strip():
+            row[k] = v
     if status:
         row["status"] = status
     if when:
@@ -138,7 +143,7 @@ def parse_file(path: str) -> dict:
 #: row() out of the seeder, which no longer inlines rows). target/occurred_at is
 #: the status-decided date column; AT MOST one is present (a dateless row has
 #: neither — status/when are optional, see parse_file).
-WRITTEN_KEYS = ("slug", "title", "parent", "status", "track", "release", "refs",
+WRITTEN_KEYS = ("slug", "title", "parent", "status", "track", "origin", "release", "refs",
                 "body", "target", "occurred_at")
 
 #: The PUBLIC, content-free index (slug graph only — no titles/bodies/refs, which
@@ -185,7 +190,7 @@ def write_index(rows: list[dict], repo_root: str) -> str:
 
 #: Frontmatter key order for a per-row file — readable, stable diffs. Shared by
 #: the extractor and dtt-capture so every seed file has the same shape.
-FILE_FM_ORDER = ("slug", "title", "parent", "track", "task_type",
+FILE_FM_ORDER = ("slug", "title", "parent", "track", "origin", "task_type",
                  "status", "when", "refs", "release")
 
 #: A row id must match KEAP's assertRowId (the agent door hard-errors otherwise).
@@ -201,9 +206,12 @@ def _yaml_val(s: str) -> str:
 
 def render_row_file(fm: dict, body: str) -> str:
     """Render one per-row seed file (frontmatter + body). `fm` keys are read in
-    FILE_FM_ORDER; missing keys render empty. Body is the prose after the ---."""
+    FILE_FM_ORDER; missing keys render empty, except an absent `origin`, which is not
+    written at all. Body is the prose after the ---."""
     lines = ["---"]
     for k in FILE_FM_ORDER:
+        if k == "origin" and not fm.get(k):
+            continue
         lines.append(f"{k}: {_yaml_val(fm.get(k, ''))}")
     lines.append("---")
     lines.append("")

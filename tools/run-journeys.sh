@@ -66,20 +66,13 @@ import os, pathlib, re, shlex, sys
 
 repo = pathlib.Path.cwd()
 sys.path.insert(0, str(repo / "tools"))
-from nos_identity import operator_file
+from nos_identity import resolve_flag
 home = pathlib.Path.home()
 
 
 def from_config(key: str, default: str = "") -> str:
-    value = default
-    for layer in ("default.config.yml", "config.yml"):
-        path = operator_file(layer) if layer == "config.yml" else repo / layer
-        if not path.exists():
-            continue
-        m = re.search(rf"^{re.escape(key)}:\s*(\S+)", path.read_text(encoding="utf-8"), re.M)
-        if m:
-            value = m.group(1).strip().strip("\"'")
-    return value
+    # Every layer, last wins (nos_identity): default.config.yml alone missed keys moved to config.d.
+    return (resolve_flag(key) or [("", default)])[-1][1]
 
 
 secrets = {}

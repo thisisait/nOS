@@ -3,7 +3,8 @@
 
   Slice 1 is READ-ONLY: it renders the roadmap rows as a Svelte Flow graph —
   nodes are rows (coloured by status), edges are parent→child, laid out one
-  column per track. Pan/zoom/select; nothing writes yet. The editor slices add
+  column per organ system (the row's ring-1 ancestor; "outside the ring" last).
+  Pan/zoom/select; nothing writes yet. The editor slices add
   drag-to-reparent and write-back through the tables BFF (RBAC-gated), with the
   DataTable staying the source of truth and this graph a controlled projection.
 
@@ -20,34 +21,45 @@
 	import './graph-theme.css';
 	import { loadTable, tablesUpsertRow } from '$lib/api/tables';
 	import { ApiError } from '$lib/api/client';
-	import { rowsToGraph, reparentPayload, type PlannerNode } from '$lib/tables/planner';
+	import {
+		rowsToGraph,
+		reparentPayload,
+		frontierStates,
+		type PlannerNode
+	} from '$lib/tables/planner';
 	import type { DataTable } from '$lib/contracts';
 	import { StatusNote, Badge } from '$lib/components/ui';
+	import RowDetail from './RowDetail.svelte';
 
-	const HEADER_GAP = 70; // px above the topmost row a track's header floats
+	const HEADER_GAP = 70; // px above the topmost row a column's header floats
+	/** The face is themed by <html data-theme>; the flow's chrome follows it (graph-theme.css does the rest). */
+	const colorMode =
+		typeof document !== 'undefined' && document.documentElement.dataset.theme === 'light'
+			? 'light'
+			: 'dark';
 
-	/** One non-interactive label node per track, positioned at that column's x
+	/** One non-interactive label node per organ-system column, at that column's x
 	 *  (the min x among its rows — depth-0 rows sit exactly at the column base,
 	 *  deeper ones only indent right) and above the topmost row. Never a row:
 	 *  distinct id namespace, and selectable/draggable/connectable all false so
 	 *  it can't be dragged, reparented, or opened in the detail panel. */
-	function trackHeaders(planned: PlannerNode[]): Node[] {
+	function groupHeaders(planned: PlannerNode[]): Node[] {
 		const minX = new Map<string, number>();
 		let minY = 0;
 		for (const n of planned) {
-			const track = n.data.track || 'untracked';
+			const group = n.data.group;
 			const x = n.position.x;
-			if (!minX.has(track) || x < (minX.get(track) as number)) minX.set(track, x);
+			if (!minX.has(group) || x < (minX.get(group) as number)) minX.set(group, x);
 			if (n.position.y < minY) minY = n.position.y;
 		}
 		return [...minX.entries()]
-			.sort(([a], [b]) => (a < b ? -1 : 1))
-			.map(([track, x]) => ({
-				id: `__track__${track}`,
+			.sort(([, a], [, b]) => a - b)
+			.map(([group, x]) => ({
+				id: `__group__${group}`,
 				type: 'default',
 				position: { x, y: minY - HEADER_GAP },
-				data: { label: track },
-				class: 'track-header',
+				data: { label: group },
+				class: 'group-header',
 				draggable: false,
 				selectable: false,
 				connectable: false,
@@ -110,23 +122,6 @@
 		selectedId && table ? (table.rows.find((r) => r.id === selectedId) ?? null) : null
 	);
 
-	// The row fields worth showing, in a sensible reading order; only the ones
-	// with a value render (a roadmap row fills a handful, not all 20 columns).
-	const FIELDS: { key: string; label: string }[] = [
-		{ key: 'status', label: 'Status' },
-		{ key: 'kind', label: 'Kind' },
-		{ key: 'track', label: 'Track' },
-		{ key: 'severity', label: 'Severity' },
-		{ key: 'effort', label: 'Effort' },
-		{ key: 'owner', label: 'Owner' },
-		{ key: 'parent', label: 'Parent' },
-		{ key: 'target', label: 'Target' },
-		{ key: 'occurred_at', label: 'Landed' },
-		{ key: 'verified', label: 'Verified' },
-		{ key: 'verified_by', label: 'Verified by' },
-		{ key: 'source', label: 'Source' },
-		{ key: 'release', label: 'Release' }
-	];
 	function cellOf(row: DataTable['rows'][number], key: string): string {
 		const v = row[key];
 		return v == null ? '' : String(v);
@@ -155,12 +150,13 @@
 	/** Build the bindable node/edge arrays from a (possibly filtered) table.
 	 *  Reassigning the arrays keeps Svelte Flow's drag state intact. */
 	function applyGraph(t: DataTable) {
-		const g = rowsToGraph(t);
+		// Organ systems come from the FULL board: a hidden shipped ancestor still owns its column.
+		const g = rowsToGraph(t, frontierStates(table?.rows ?? t.rows));
 		dangling = g.danglingParents;
 		const rowNodes = g.nodes.map((n) => ({
 			id: n.id,
 			position: n.position,
-			data: { label: n.data.label },
+			data: { label: n.data.label, status: n.data.status },
 			style:
 				`background:${STATUS_BG[n.data.status] ?? '#343a45'};color:#e8ecf3;` +
 				'border:1px solid var(--border,#333a45);border-radius:8px;' +
@@ -168,7 +164,7 @@
 				'font-size:12px;padding:6px 10px;width:240px;' +
 				(n.data.orphanParent ? 'outline:1px dashed #b8863b;' : '')
 		})) as Node[];
-		nodes = [...trackHeaders(g.nodes), ...rowNodes];
+		nodes = [...groupHeaders(g.nodes), ...rowNodes];
 		edges = g.edges.map((e) => ({ id: e.id, source: e.source, target: e.target })) as Edge[];
 		phase = t.rows.length ? 'ok' : 'empty';
 	}
@@ -215,6 +211,17 @@
 
 	// Deleting an edge un-parents its child (target → root). Svelte Flow has
 	// already dropped the edge from its state; the reload re-derives the truth.
+	/** Only an edge (one parent link) is ever deleted, and only by a writer: deleting a node takes
+	 *  every edge touching it, so one Backspace un-parented a row and all its children (review 13e). */
+	async function onbeforedelete({
+		nodes: n
+	}: {
+		nodes: unknown[];
+		edges: Edge[];
+	}): Promise<boolean> {
+		return canWrite && n.length === 0;
+	}
+
 	function ondelete(deleted: { edges?: Edge[] }) {
 		if (!canWrite) return;
 		for (const e of deleted.edges ?? []) void reparent(e.target, null);
@@ -280,39 +287,27 @@
 			<SvelteFlow
 				bind:nodes
 				bind:edges
+				{colorMode}
 				fitView
 				nodesConnectable={canWrite}
 				elementsSelectable={true}
 				{onconnect}
 				{ondelete}
+				{onbeforedelete}
 				onselectionchange={({ nodes: sel }) => (selectedId = sel[0]?.id ?? null)}
 			>
 				<Background />
 				<Controls />
-				<MiniMap pannable zoomable />
+				<!-- Minimap nodes in their status fill (the default was one grey on white, 11-13). -->
+				<MiniMap
+					pannable
+					zoomable
+					nodeColor={(n) => STATUS_BG[String(n.data?.status ?? '')] ?? '#343a45'}
+				/>
 			</SvelteFlow>
 
 			{#if selectedRow}
-				<aside class="detail" aria-label="Row detail">
-					<div class="detail-head">
-						<strong>{cellOf(selectedRow, 'title') || cellOf(selectedRow, 'slug')}</strong>
-						<button class="close" onclick={() => (selectedId = null)} aria-label="Close detail"
-							>×</button
-						>
-					</div>
-					<code class="slug">{cellOf(selectedRow, 'slug')}</code>
-					<dl>
-						{#each FIELDS as f}
-							{#if cellOf(selectedRow, f.key)}
-								<dt>{f.label}</dt>
-								<dd>{cellOf(selectedRow, f.key)}</dd>
-							{/if}
-						{/each}
-					</dl>
-					{#if cellOf(selectedRow, 'body')}
-						<p class="body">{cellOf(selectedRow, 'body')}</p>
-					{/if}
-				</aside>
+				<RowDetail row={selectedRow} onclose={() => (selectedId = null)} />
 			{/if}
 
 			<div class="legend" aria-label="Status legend">
@@ -390,9 +385,9 @@
 	.flow :global(.svelte-flow) {
 		background: var(--bg, #14171c);
 	}
-	/* Column headers: a track name floated above its column. Not a row — no
+	/* Column headers: an organ system floated above its column. Not a row — no
 	   card chrome, no connection handles, no selection highlight. */
-	.flow :global(.track-header) {
+	.flow :global(.group-header) {
 		background: transparent;
 		border: none;
 		box-shadow: none;
@@ -405,7 +400,7 @@
 		white-space: nowrap;
 		pointer-events: none;
 	}
-	.flow :global(.track-header .svelte-flow__handle) {
+	.flow :global(.group-header .svelte-flow__handle) {
 		display: none;
 	}
 	.legend {
@@ -437,59 +432,5 @@
 	}
 	.chip.note {
 		font-style: italic;
-	}
-	.detail {
-		position: absolute;
-		top: 0.6rem;
-		right: 0.6rem;
-		width: 260px;
-		max-height: calc(100% - 1.2rem);
-		overflow-y: auto;
-		background: var(--panel, #1b1f27);
-		border: 1px solid var(--border, #333a45);
-		border-radius: 8px;
-		padding: 0.6rem 0.75rem;
-		font-size: 0.82rem;
-		z-index: 5;
-	}
-	.detail-head {
-		display: flex;
-		align-items: baseline;
-		gap: 0.5rem;
-	}
-	.detail-head strong {
-		flex: 1 1 auto;
-	}
-	.close {
-		background: transparent;
-		border: none;
-		color: var(--muted, #9aa4b2);
-		font-size: 1.1rem;
-		line-height: 1;
-		cursor: pointer;
-	}
-	.slug {
-		color: var(--muted, #9aa4b2);
-		font-size: 0.75rem;
-	}
-	.detail dl {
-		display: grid;
-		grid-template-columns: auto 1fr;
-		gap: 0.15rem 0.6rem;
-		margin: 0.5rem 0 0;
-	}
-	.detail dt {
-		color: var(--muted, #9aa4b2);
-	}
-	.detail dd {
-		margin: 0;
-		word-break: break-word;
-	}
-	.detail .body {
-		margin: 0.6rem 0 0;
-		padding-top: 0.5rem;
-		border-top: 1px solid var(--border, #2a2f38);
-		color: var(--fg, #e8ecf3);
-		white-space: pre-wrap;
 	}
 </style>

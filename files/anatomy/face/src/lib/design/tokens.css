@@ -14,5 +14,11 @@
 	--bad: #e5484d; /* signal */
 	--info-soft: rgba(106, 154, 240, 0.16); /* accent-faint */
 	--info-ink: #9dbcf0; /* accent-soft */
+	--line-hi: #7484a2; /* line-hi */
+	--ink-mute: #c0c8d4; /* ink-mute */
+	--ink-faint: rgba(255, 255, 255, 0.16); /* ink-faint */
+	--data-4: #b48ad8; /* data-4 */
+	--glow: rgba(74, 127, 224, 0.35); /* glow */
+	--glow-2: rgba(120, 90, 200, 0.25); /* glow-2 */
 	--glass-filter: blur(18px) saturate(170%); /* components-css */
 }

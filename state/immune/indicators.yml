@@ -138,6 +138,19 @@ indicators:
     verdicts: none
     definition: none
 
+  clamav:
+    source: files/anatomy/plugins/clamav/plugin.yml
+    kind: sentinel
+    antigen: a file whose bytes match a ClamAV signature (clamscan exit 1, "<sig> FOUND")
+    receptor: clamscan over a path it is handed (today only the immune drill's temp tree)
+    effector: report
+    signal: none (tools/immune-drill.py runs it; no scan of the home or estate data yet)
+    heartbeat: {every_hours: 26, last_report: "pulse:clamav:freshclam"}  # 10 1 * * *; exit 11 = signatures > 48 h or unread
+    lifespan: none
+    tolerance: none (any signature match is a finding)
+    verdicts: ~/.nos/immune/drill/<stamp>.json
+    definition: none
+
   # ── patrols: Pulse sweeps on a schedule (category security) ─────────────
   advisory-patrol:nightly:
     source: files/anatomy/plugins/advisory-patrol/plugin.yml
@@ -300,3 +313,4 @@ not_indicators:
 # Pulse jobs filed under category security that detect nothing: no antigen.
 not_indicator_jobs:
   conductor:scan-state-record: records vulnerability-scan output onto refs/heads/scan-data; judges nothing
+  clamav:freshclam: feeds signatures to the clamav cell and is its heartbeat; judges no file

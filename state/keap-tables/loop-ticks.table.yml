@@ -1,0 +1,49 @@
+# =============================================================================
+# KEAP DataTable definition — "Loop ticks"
+#
+# Row loop-ticks-table (operator 2026-11-12). Each tick of the three roadmap roles
+# (loop, watch, top) is ONE row here instead of prose in the pane; the pane keeps
+# one line. Append-once and one-role-per-writer are refused by tools/loop-tick.py, the
+# writer the skills call; KEAP does not enforce either (any RW-bearer holder can upsert).
+# Not `loop_runs`: that name is the thalamus reader of the SERE loop's runs.
+#
+# `outcome` is the tick's own claim about itself, so it carries no
+# evidence.verification (that concept is for an independent check).
+#
+# UNSEEDED: rows are written at runtime by tools/loop-tick.py with the agent RW
+# bearer; nothing to seed. `reason` is scrubbed and cut to 300 chars before the write.
+# =============================================================================
+
+title: "Loop ticks"
+description: >-
+  One row per tick of the roadmap loop, its watcher and the top agent: what phase,
+  which row and ref, how it ended, when it wakes next, and why.
+driver: libsql
+visibility: tier-managers
+client_scope: none
+anchors: ["nos.loop"]
+
+schema:
+  columns:
+    - { key: slug,        label: "Slug",      kind: text,   role: dimension, required: true, concept: identity.slug }
+    - { key: occurred_at, label: "Day",       kind: date,   role: dimension, required: true, concept: time.occurred_at }
+    # Full ISO-8601 UTC; time.occurred_at binds date only (CONCEPTLESS in test_keap_table_concepts.py).
+    - { key: at,          label: "At",        kind: text,   role: dimension, required: true }
+    - { key: role,        label: "Role",      kind: select, role: dimension, required: true, concept: class.kind,
+        options: ["loop", "watch", "top"] }
+    - { key: phase,       label: "Phase",     kind: select, role: dimension, required: true, concept: lifecycle.stage,
+        options: ["pick", "build", "lanes", "push", "explore", "idle", "stopped", "integrate", "answer"] }
+    # A dtt slug or "-"; no concept fits (CONCEPTLESS).
+    - { key: row,         label: "Row",       kind: text,   role: dimension, required: true }
+    # branch@sha7 or "-"; no concept fits (CONCEPTLESS).
+    - { key: ref,         label: "Ref",       kind: text,   role: dimension, required: true }
+    # The tick's own claim; no concept fits (CONCEPTLESS).
+    - { key: outcome,     label: "Outcome",   kind: select, role: dimension, required: true,
+        options: ["built", "idle", "blocked", "failed", "stopped", "noop", "skipped", "revised", "accepted"] }
+    # Seconds to the next wake (0 = stopped); no concept fits (CONCEPTLESS).
+    - { key: next_wake_s, label: "Next wake (s)", kind: number, role: measure }
+    - { key: reason,      label: "Reason",    kind: text,   role: attribute, concept: identity.description }
+    # What the tick read before deciding; evidence.observation is lanes' (once per table) — CONCEPTLESS.
+    - { key: inputs,      label: "Inputs",    kind: json,   role: attribute }
+    - { key: lanes,       label: "Lanes",     kind: json,   role: attribute, concept: evidence.observation }
+    - { key: writer,      label: "Writer",    kind: text,   role: dimension, required: true, concept: prov.generated_by }

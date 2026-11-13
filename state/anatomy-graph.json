@@ -4,9 +4,9 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 599,
-    "edges": 572,
-    "nodes_pulse": 50,
+    "nodes": 605,
+    "edges": 575,
+    "nodes_pulse": 51,
     "nodes_judge": 5,
     "nodes_gateset": 5,
     "nodes_weakness": 7,
@@ -20,20 +20,20 @@
     "nodes_backend": 9,
     "nodes_repo": 4,
     "nodes_tofu": 1,
-    "nodes_authentik": 61,
-    "nodes_table": 44,
+    "nodes_authentik": 62,
+    "nodes_table": 45,
     "nodes_doctrine": 29,
     "nodes_faceapp": 11,
     "nodes_agent": 17,
     "nodes_tasktype": 9,
     "nodes_skill": 16,
     "nodes_reader": 71,
-    "nodes_effector": 124,
+    "nodes_effector": 127,
     "nodes_article": 28,
     "nodes_organ_system": 13,
     "nodes_tissue": 1,
-    "edges_data": 247,
-    "edges_trigger": 82,
+    "edges_data": 249,
+    "edges_trigger": 83,
     "edges_temporal": 5,
     "edges_mutex": 21,
     "edges_governed_by": 46,
@@ -1130,6 +1130,17 @@
       "anchor": "02.02.08",
       "description": "Authentik forward_auth client 'None' (RBAC tier 3) — no manifest service (Tier-2 app or excluded install); provider+application managed by OpenTofu from the committed registry"
     },
+    "authentik:rustfs": {
+      "kind": "authentik",
+      "source": "state/tofu-authentik-services.yml",
+      "mode": "forward_auth",
+      "tier": 1,
+      "client_id": null,
+      "service": "rustfs",
+      "managed_by": "tofu:authentik-state",
+      "anchor": "02.02.08",
+      "description": "Authentik forward_auth client 'None' (RBAC tier 1) — gates service:rustfs; provider+application managed by OpenTofu from the committed registry"
+    },
     "authentik:snappymail": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
@@ -1167,12 +1178,12 @@
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "forward_auth",
-      "tier": 3,
+      "tier": 1,
       "client_id": null,
       "service": null,
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik forward_auth client 'None' (RBAC tier 3) — no manifest service (Tier-2 app or excluded install); provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik forward_auth client 'None' (RBAC tier 1) — no manifest service (Tier-2 app or excluded install); provider+application managed by OpenTofu from the committed registry"
     },
     "authentik:uptime-kuma": {
       "kind": "authentik",
@@ -1861,9 +1872,9 @@
     "effector:immune-drill": {
       "kind": "effector",
       "source": "tools/immune-drill.py",
-      "title": "the immune drill: plants inert samples in a temp tree, runs the estate's own detector (gitleaks with this repo's config), records caught / missed / no detector, removes every sample (row immune-drill-known-samples). Operator only.",
+      "title": "the immune drill: plants inert samples in a temp tree, runs the estate's own detectors (gitleaks with this repo's config, clamscan on an EICAR file), records caught / missed / UNKNOWN, removes every sample (row immune-drill-known-samples). Operator only.",
       "anchor": "02.02.04",
-      "description": "Effector tools/immune-drill.py: the immune drill: plants inert samples in a temp tree, runs the estate's own detector (gitleaks with this repo's config), records caught / missed / no detector, removes every sample (row immune-drill-known-samples). Operator only."
+      "description": "Effector tools/immune-drill.py: the immune drill: plants inert samples in a temp tree, runs the estate's own detectors (gitleaks with this repo's config, clamscan on an EICAR file), records caught / missed / UNKNOWN, removes every sample (row immune-drill-known-samples). Operator only."
     },
     "effector:import-coolify-template": {
       "kind": "effector",
@@ -1963,6 +1974,13 @@
       "anchor": "02.02.04",
       "description": "Effector tools/keap-tables.py: Every KEAP DataTable (rows + history) to a bundle before a blank and back after it (`nos dtt export|import`, dry run unless --confirm); the blank runs both."
     },
+    "effector:loop-bench": {
+      "kind": "effector",
+      "source": "tools/loop-bench.py",
+      "title": "Judge the roadmap loop by its artifacts (cases in `state/fixtures/loop-bench/artifact.yml`): `--artifact` over a git range + the loop's ledger, notes and top-to-loop, code as judge, pass/fail/no_data; `--out` provenance, `--compare` paired McNemar; writes only `~/.nos/bench/loop-bench/`. Not a gate; the loop never reads it.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/loop-bench.py: Judge the roadmap loop by its artifacts (cases in `state/fixtures/loop-bench/artifact.yml`): `--artifact` over a git range + the loop's ledger, notes and top-to-loop, code as judge, pass/fail/no_data; `--out` provenance, `--compare` paired McNemar; writes only `~/.nos/bench/loop-bench/`. Not a gate; the loop never reads it."
+    },
     "effector:loop-diff": {
       "kind": "effector",
       "source": "tools/loop-diff.py",
@@ -1997,6 +2015,13 @@
       "title": "The reviewer: the only thing in the loop permitted to merge.",
       "anchor": "02.02.04",
       "description": "Effector tools/loop-review.py: The reviewer: the only thing in the loop permitted to merge."
+    },
+    "effector:loop-tick": {
+      "kind": "effector",
+      "source": "tools/loop-tick.py",
+      "title": "One `loop-ticks` row per loop / watch / top tick, every field checked against the table def, reason scrubbed to 300 chars; append-once, a role writes only its own; dry run without KEAP_AGENT_TOKEN_RW. Exits 0 written · 2 refused · 1 write failed.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/loop-tick.py: One `loop-ticks` row per loop / watch / top tick, every field checked against the table def, reason scrubbed to 300 chars; append-once, a role writes only its own; dry run without KEAP_AGENT_TOKEN_RW. Exits 0 written · 2 refused · 1 write failed."
     },
     "effector:maps-style-vendor": {
       "kind": "effector",
@@ -2137,6 +2162,13 @@
       "title": "Pulse job: ring the operator once (Wing inbox, HIGH to ntfy) when a task in `state/operator-tasks.yml` has its condition reader turn true; `--apply` writes, default dry run.",
       "anchor": "02.02.04",
       "description": "Effector tools/operator-tasks.py: Pulse job: ring the operator once (Wing inbox, HIGH to ntfy) when a task in `state/operator-tasks.yml` has its condition reader turn true; `--apply` writes, default dry run."
+    },
+    "effector:organ-ring-gen": {
+      "kind": "effector",
+      "source": "tools/organ-ring-gen.py",
+      "title": "Compile the apex organ-system ring order into the face's organ-ring.json (the Planner skill tree).",
+      "anchor": "02.02.04",
+      "description": "Effector tools/organ-ring-gen.py: Compile the apex organ-system ring order into the face's organ-ring.json (the Planner skill tree)."
     },
     "effector:outline-roles": {
       "kind": "effector",
@@ -2700,7 +2732,7 @@
       "source": "state/judge-sets.yml",
       "deterministic": true,
       "mutates_worktree": true,
-      "min_work": 8944,
+      "min_work": 8386,
       "argv": [
         "python3",
         "-m",
@@ -2711,7 +2743,7 @@
       "claims": [],
       "requires": [],
       "anchor": "02.02.04",
-      "description": "Loop judge: gate command `python3 -m pytest tests/anatomy -q` — work floor min_work=8944, deterministic=True"
+      "description": "Loop judge: gate command `python3 -m pytest tests/anatomy -q` — work floor min_work=8386, deterministic=True"
     },
     "lock:agent-run-lock": {
       "kind": "lock",
@@ -2896,6 +2928,23 @@
       "runs_agent": null,
       "anchor": "02.02.06",
       "description": "Pulse scheduled job (platform): runs ci-circadian.py on cron `30 2 * * *` — exits [11] mean findings, not failure"
+    },
+    "pulse:clamav:freshclam": {
+      "kind": "pulse",
+      "source": "files/anatomy/plugins/clamav/plugin.yml",
+      "schedule": "10 1 * * *",
+      "jitter_min": 10,
+      "max_runtime_s": 1200,
+      "category": "security",
+      "paused": false,
+      "findings_exit_codes": [
+        11
+      ],
+      "command_name": "freshen.py",
+      "claims": [],
+      "runs_agent": null,
+      "anchor": "02.02.08",
+      "description": "Pulse scheduled job (security): runs freshen.py on cron `10 1 * * *` — exits [11] mean findings, not failure"
     },
     "pulse:conductor:scan-state-record": {
       "kind": "pulse",
@@ -4184,7 +4233,7 @@
       "layer": "L1",
       "layer_basis": {
         "height": 3,
-        "dependents": 45,
+        "dependents": 46,
         "upstreams": 2
       }
     },
@@ -5569,6 +5618,13 @@
       "anchor": "02.02.05",
       "description": "KEAP DataTable definition 'Loop configuration' (state/keap-tables/loop-config.table.yml)"
     },
+    "table:loop-ticks": {
+      "kind": "table",
+      "source": "state/keap-tables/loop-ticks.table.yml",
+      "title": "Loop ticks",
+      "anchor": "02.02.05",
+      "description": "KEAP DataTable definition 'Loop ticks' (state/keap-tables/loop-ticks.table.yml)"
+    },
     "table:morning-verdict": {
       "kind": "table",
       "source": "state/keap-tables/morning-verdict.table.yml",
@@ -6352,6 +6408,14 @@
       "evidence": "derived"
     },
     {
+      "from": "authentik:rustfs",
+      "to": "service:rustfs",
+      "kind": "data",
+      "via": "SSO gate (mode=forward_auth) — provider+application applied by tofu from the registry row",
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
+    },
+    {
       "from": "authentik:snappymail",
       "to": "service:snappymail",
       "kind": "data",
@@ -7087,6 +7151,14 @@
     {
       "from": "service:authentik",
       "to": "authentik:roundcube",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:rustfs",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting",
@@ -10357,6 +10429,14 @@
     {
       "from": "service:pulse",
       "to": "pulse:ci-circadian:nightly",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:clamav:freshclam",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
       "derived": "daemon-dispatch",

@@ -136,6 +136,11 @@ schema:
     # observation channel from becoming a way to mint work for itself.
     - { key: source,      label: "Source",       kind: select, role: dimension, concept: prov.source,
         options: ["operator", "agent-observation", "security-scan", "loop-ledger", "hidden-fee", "review"] }
+    # `origin` — where the WORK was born (ruling 2026-11-13, roadmap-organic-structure):
+    # it measures how much work the body gives birth to. Git-owned like `track`
+    # (set once at capture); `source` is the filing process, so no concept is free.
+    - { key: origin,      label: "Origin",       kind: select, role: dimension,
+        options: ["intent", "immune", "germline", "symbiont"] }
     - { key: source_ref,  label: "Source ref",   kind: text,   role: attribute, concept: prov.ref }
     - { key: refs,        label: "References",   kind: json,   role: attribute, concept: prov.references }
     - { key: release,     label: "Release",      kind: text,   role: attribute, concept: identity.version }

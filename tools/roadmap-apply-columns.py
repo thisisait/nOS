@@ -24,6 +24,10 @@ Usage:
     tools/roadmap-apply-columns.py                    # diff declared vs live (all cols)
     tools/roadmap-apply-columns.py --column track     # dry-run the track reconcile
     tools/roadmap-apply-columns.py --column track --confirm
+    tools/roadmap-apply-columns.py --add origin       # dry-run appending a declared column missing live
+    tools/roadmap-apply-columns.py --add origin --confirm
+--add appends ONE declared column the live table lacks, leaving every live column as it is (the
+roadmap is create_only in the keap converge, so a new column never arrives by itself: origin, 11-13).
 
 Exit 0 applied/nothing-to-do · 1 refused/unverifiable · 2 unreadable.
 """
@@ -95,12 +99,47 @@ def _shape_of(c: dict) -> str:
     return f"kind={c.get('kind')} options={c.get('options')}"
 
 
+def add_columns(table: dict, live_cols: list, declared: dict, keys: list, confirm: bool) -> int:
+    """Append declared columns missing live; every live column is kept byte-for-byte."""
+    live_keys = [c["key"] for c in live_cols]
+    for k in keys:
+        if k not in declared:
+            sys.exit(f"REFUSING: {k!r} is not declared in {DEF.name}")
+        if k in live_keys:
+            sys.exit(f"REFUSING: {k!r} is already live (reshape it with --column)")
+    new_cols = [*live_cols, *(declared[k] for k in keys)]
+    assert [c["key"] for c in new_cols[: len(live_cols)]] == live_keys, "a live column moved"
+    for k in keys:
+        print(f"  + {k}: {_shape_of(declared[k])}")
+    if not confirm:
+        print("\nDRY RUN — nothing written. Re-run with --confirm to apply.")
+        return 0
+    import urllib.error
+    try:
+        call(f"{API}/{table['id']}", "PATCH", {"schema": {"columns": new_cols}})
+    except urllib.error.HTTPError as e:
+        print(f"\nREFUSED by KEAP ({e.code}): {e.read().decode('utf-8', 'replace').strip()}", file=sys.stderr)
+        return 1
+    landed_cols = call(f"{API}/{table['id']}")["data"]["schema"]["columns"]
+    landed = [c["key"] for c in landed_cols]
+    # Whole columns, not keys: a GET form that does not round-trip through PATCH would reshape a live
+    # column under a key-only check and still read "unchanged" (review 13d MEDIUM).
+    if landed_cols[: len(live_cols)] != live_cols or any(k not in landed for k in keys):
+        changed = [c["key"] for c, o in zip(landed_cols, live_cols) if c != o]
+        print(f"\nAPPLIED BUT NOT CONFIRMED — live columns now: {landed}; reshaped: {changed}", file=sys.stderr)
+        return 1
+    print(f"\nApplied and verified: {', '.join(keys)} added; the {len(live_keys)} live columns unchanged.")
+    return 0
+
+
 def main() -> int:
     import yaml
 
     ap = argparse.ArgumentParser()
     ap.add_argument("--column", action="append", default=[],
                     help="column key to reconcile to the definition (repeatable)")
+    ap.add_argument("--add", action="append", default=[],
+                    help="append a declared column the live table lacks (repeatable); nothing else changes")
     ap.add_argument("--confirm", action="store_true", help="apply, then verify by reading back")
     args = ap.parse_args()
 
@@ -111,7 +150,13 @@ def main() -> int:
     live_by_key = {c["key"]: c for c in live_cols}
     print(f"table: {table.get('title')} (id {table['id']}) · {len(live_cols)} live column(s)")
 
+    if args.add:
+        return add_columns(table, live_cols, declared_by_key, args.add, args.confirm)
+
     if not args.column:
+        missing = [k for k in declared_by_key if k not in live_by_key]
+        if missing:
+            print(f"\ndeclared but not live (add with --add KEY): {', '.join(missing)}")
         print("\ndeclared vs live (shape/options differences):")
         for k, d in declared_by_key.items():
             lc = live_by_key.get(k)

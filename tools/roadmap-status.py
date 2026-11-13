@@ -31,6 +31,9 @@ Usage:
     tools/roadmap-status.py --knowledge > roadmap.md   # one file to attach to a cloud chat
     tools/roadmap-status.py --knowledge --status active,next --track face
     tools/roadmap-status.py --json       # for a caller
+    tools/roadmap-status.py --frontier watch [--json]   # buildable rows of one subtree
+    tools/roadmap-status.py --frontier ring [--json]    # the whole ring: all 13 organ systems
+    # each buildable row is `ready` (carries a spec, see spec_ready) or `needs-spec (no …)`
 
 Exit 0 when it could read the table. Exit 2 when it could NOT — an unreachable
 KEAP must not render as an empty roadmap, which would read as "no work left".
@@ -43,6 +46,7 @@ import collections
 import datetime
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -97,6 +101,171 @@ def declared_columns() -> list[str]:
     return [c["key"] for c in spec["schema"]["columns"]]
 
 
+def order(r: dict) -> tuple:
+    """Status first, then the operator's explicit order, then slug.
+
+    `ordinal` carries the concept `ui.sort` and until 2026-08-09 no reader
+    honoured it — so a set of rows deliberately sequenced as a week rendered
+    alphabetically, which is the one order that cannot be a plan. Rows with
+    no ordinal keep sorting after those that have one rather than at 0,
+    because absent is not first.
+    """
+    raw = r.get("ordinal")
+    try:
+        explicit = (0, float(raw)) if raw not in (None, "") else (1, 0.0)
+    except (TypeError, ValueError):
+        explicit = (1, 0.0)
+    return (rank(r.get("status")), *explicit, r.get("slug") or "")
+
+
+#: A label: the word, an optional "(operator)", then a colon ("E2E (operator, Studio):").
+_LABEL = r"(?:\s*\([^)\n]*\))?\s*:"
+#: The top agent's stamp: it wrote "SPEC ACCEPTED" / "SPEC READY" or its explore-round rulings in.
+SPEC_STAMP = re.compile(r"spec (?:accepted|ready)|explore rounds? \d", re.I)
+#: The four parts of the house spec shape (the roadmap-loop skill, section 6), each a label or a heading, never a bare
+#: word: "tests/e2e/" in prose is not an acceptance, "never" in prose is not a must-not.
+SPEC_PARTS = {
+    "goal": re.compile(rf"\bgoal{_LABEL}|^#+ *goal\b", re.I | re.M),
+    "slice": re.compile(rf"smallest(?: shippable)? slice|first slice|\bslices?(?: \d+)?{_LABEL}|\bslice \d"
+                        r"|^#{1,6} [^\n]*\bslice", re.I | re.M),
+    "e2e": re.compile(rf"\be2e(?: acceptance)?{_LABEL}|\bacceptance{_LABEL}|^#{{1,6}} [^\n]*\b(?:e2e|acceptance)\b",
+                      re.I | re.M),
+    "must-not": re.compile(rf"\bmust not{_LABEL}|^#+ *must not\b|\bout of scope{_LABEL}|\bnon-goals?{_LABEL}",
+                           re.I | re.M),
+}
+
+
+def spec_ready(body: str | None) -> tuple[bool, list[str]]:
+    """Does the row carry a READY SPEC (operator 2026-11-13: the loop builds only those)?
+
+    Ready = the top agent's stamp (`SPEC ACCEPTED`, `SPEC READY`, `explore round(s) N`), or all four
+    parts of the house spec shape, each found case-insensitively as a label or a markdown heading:
+      goal      `Goal:` · `## Goal`
+      slice     `smallest (shippable) slice` · `first slice` · `Slice:` / `Slice 1` / `Slices:` · a heading naming a slice
+      e2e       `E2E:` · `E2E acceptance` · `E2E (operator):` · `Acceptance:` · a heading naming e2e/acceptance
+      must-not  `Must not:` · `## Must not` · `Out of scope:` · `Non-goals:`
+    Returns (ready, the missing parts in that order). A heuristic over text, not a judge: it says
+    whether the shape is there, never whether the spec is good."""
+    body = str(body or "")
+    if SPEC_STAMP.search(body):
+        return True, []
+    missing = [part for part, pat in SPEC_PARTS.items() if not pat.search(body)]
+    return not missing, missing
+
+
+#: The statuses that open the frontier: `shipped`, and `active` — a branch the operator has allocated
+#: and is growing (an epic ships only when its children do, so shipped-only deadlocks every epic).
+#: `review` does not: it is pushed but not landed, a child would stack on code dev does not have.
+OPEN, GROWN = ("active", "next"), ("shipped", "active")
+
+
+def frontier(rows: list[dict], root: str) -> dict:
+    """The passive tree under `root` (operator 2026-11-13, roadmap-organic-structure).
+
+    An open row is on the frontier only when every ancestor up to and including
+    `root` is shipped; otherwise it names the nearest unshipped ancestor. Rows
+    whose parent is not on the board, and cycles met on the way down, are
+    reported rather than followed."""
+    by_slug = {r.get("slug"): r for r in rows if r.get("slug")}
+    if root not in by_slug:
+        return {"state": "UNKNOWN", "root": root,
+                "reason": f"no row `{root}` on the board"}
+    kids = collections.defaultdict(list)
+    for r in rows:
+        kids[r.get("parent") or ""].append(r)
+    missing = sorted(f"{r.get('slug')} (parent `{r.get('parent')}`)" for r in rows
+                     if r.get("parent") and r.get("parent") not in by_slug)
+    out, blocked, cycles, seen = [], [], [], {root}
+    stack = [(by_slug[root], 0, None)]
+    while stack:
+        node, depth, blocker = stack.pop()
+        here = blocker if node.get("status") in GROWN else node
+        for c in kids.get(node.get("slug"), []):
+            if c.get("slug") in seen:
+                cycles.append(f"{node.get('slug')} -> {c.get('slug')}")
+                continue
+            seen.add(c.get("slug"))
+            item = {k: c.get(k) for k in ("slug", "title", "status", "track", "parent")}
+            item["depth"] = depth + 1
+            if c.get("status") in OPEN:
+                if here is None:
+                    item["ready"], item["missing"] = spec_ready(c.get("body"))
+                    out.append((item, c))
+                else:
+                    item.update(blocked_by=here.get("slug"), blocked_by_status=here.get("status"))
+                    blocked.append((item, c))
+            stack.append((c, depth + 1, here))
+
+    def key(pair: tuple) -> tuple:
+        return (pair[0]["depth"], *order(pair[1]))
+    return {"state": "ok", "root": root, "root_status": by_slug[root].get("status"),
+            "frontier": [i for i, _ in sorted(out, key=key)],
+            "blocked": [i for i, _ in sorted(blocked, key=key)],
+            "cycles": cycles, "missing_parent": missing}
+
+
+def ring_order() -> list[str]:
+    """The 13 apex organ systems in their ring order: core column, then left wing, then right."""
+    import yaml
+    systems = yaml.safe_load((REPO / "files/anatomy/apex/ruling.yml").read_text(encoding="utf-8"))["organ_systems"]
+    side = {"core": 0, "left": 1, "right": 2}
+    return sorted(systems, key=lambda k: (side.get(systems[k].get("side"), 9), systems[k].get("order", 99)))
+
+
+def frontier_ring(rows: list[dict]) -> dict:
+    """Every system's frontier, nearest the centre first, then ring order. Open top-level rows that
+    hang under no system are `ungrown`: the migration's remaining work, never silently dropped."""
+    ring = ring_order()
+    by_slug = {r.get("slug"): r for r in rows if r.get("slug")}
+    absent = [k for k in ring if k not in by_slug]
+    if absent:
+        return {"state": "UNKNOWN", "root": "ring", "reason": f"organ-system rows missing: {', '.join(absent)}"}
+    out, blocked, cycles, missing = [], [], [], set()
+    for i, root in enumerate(ring):
+        f = frontier(rows, root)
+        for item in f["frontier"]:
+            out.append({**item, "system": root, "_ring": i})
+        for item in f["blocked"]:
+            blocked.append({**item, "system": root, "_ring": i})
+        cycles += f["cycles"]
+        missing.update(f["missing_parent"])
+    ungrown = sorted(r.get("slug") for r in rows if not r.get("parent") and r.get("slug") not in ring
+                     and r.get("status") in OPEN and not str(r.get("slug")).startswith("rel-"))  # a milestone, as planner.ts isMilestone
+    def key(item: dict) -> tuple:
+        return (item["depth"], item["_ring"], *order(by_slug[item["slug"]]))
+    clean = lambda items: [{k: v for k, v in i.items() if k != "_ring"} for i in sorted(items, key=key)]  # noqa: E731
+    return {"state": "ok", "root": "ring", "root_status": "shipped", "frontier": clean(out), "blocked": clean(blocked),
+            "cycles": cycles, "missing_parent": sorted(missing), "ungrown": ungrown}
+
+
+def print_frontier(f: dict) -> None:
+    if f["state"] != "ok":
+        print(f"UNKNOWN: frontier under `{f['root']}` — {f['reason']}. Not an empty frontier.")
+        return
+    ready = sum(1 for r in f["frontier"] if r["ready"])
+    print(f"frontier under `{f['root']}` ({f['root_status']}) — "
+          f"{len(f['frontier'])} buildable, {len(f['blocked'])} blocked")
+    print(f"  {ready} ready, {len(f['frontier']) - ready} needs-spec — the loop builds only `ready`; "
+          "a needs-spec row is an explore candidate (roadmap-loop skill, section 6)")
+    for r in f["frontier"]:
+        where = f"{r['system']:10s} " if "system" in r else ""
+        spec = "ready" if r["ready"] else "needs-spec (" + ", ".join(f"no {m}" for m in r["missing"]) + ")"
+        print(f"  d{r['depth']} [{r['status']:6s}] {where}{r['slug'] or '?':28s} {r['title'] or ''}  — {spec}")
+    if f["blocked"]:
+        print("\n  blocked — nearest unshipped ancestor:")
+        for r in f["blocked"]:
+            print(f"  d{r['depth']} [{r['status']:6s}] {r['slug'] or '?':28s} "
+                  f"<- `{r['blocked_by']}` ({r['blocked_by_status']})")
+    for c in f["cycles"]:
+        print(f"  ! cycle: {c}")
+    if f["missing_parent"]:
+        print(f"  ! {len(f['missing_parent'])} row(s) on the board name a parent that is not on it: "
+              + ", ".join(f["missing_parent"][:8]) + (" …" if len(f["missing_parent"]) > 8 else ""))
+    if f.get("ungrown"):
+        print(f"  ! {len(f['ungrown'])} open top-level row(s) hang under no organ system (not on any frontier): "
+              + ", ".join(f["ungrown"][:8]) + (" …" if len(f["ungrown"]) > 8 else ""))
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--all", action="store_true", help="every row, not only the ones in motion")
@@ -104,6 +273,8 @@ def main() -> int:
     ap.add_argument("--status", help="restrict to these statuses, comma-separated (e.g. active,next)")
     ap.add_argument("--schema", action="store_true", help="declared columns vs the live table")
     ap.add_argument("--json", action="store_true", help="machine-readable")
+    ap.add_argument("--frontier", metavar="ROOT",
+                    help="open rows under ROOT whose ancestors are all shipped; the rest name their blocker")
     ap.add_argument("--knowledge", action="store_true",
                     help="one markdown file of the board (bodies whole) to attach to a conversation")
     args = ap.parse_args()
@@ -111,12 +282,25 @@ def main() -> int:
     try:
         table = get(BASE)["data"]
         rows = [r.get("values", r) for r in paged(get, BASE + "/rows")["data"]["rows"]]
-    except (urllib.error.URLError, OSError, KeyError, ValueError) as exc:
+    except (urllib.error.URLError, OSError, KeyError, ValueError, SystemExit) as exc:
+        if args.frontier:  # a reader: UNKNOWN and exit 0, never an empty frontier
+            f = {"state": "UNKNOWN", "root": args.frontier, "reason": f"board unreadable: {exc}"}
+            json.dump(f, sys.stdout) if args.json else print_frontier(f)
+            print()
+            return 0
+        if isinstance(exc, SystemExit):
+            raise
         # Absence must never render as calm. An empty roadmap and an unreachable
         # one look identical on stdout, and only one of them is good news.
         print(f"CANNOT READ the roadmap table: {exc}", file=sys.stderr)
         print(f"  tried {BASE} — is KEAP up? (`docker ps --filter name=keap`)", file=sys.stderr)
         return 2
+
+    if args.frontier:
+        f = frontier_ring(rows) if args.frontier == "ring" else frontier(rows, args.frontier)
+        json.dump(f, sys.stdout, indent=1, ensure_ascii=False) if args.json else print_frontier(f)
+        print()
+        return 0
 
     live_cols = [c.get("key") for c in (table.get("schema", {}).get("columns") or [])]
     declared = declared_columns()
@@ -173,22 +357,6 @@ def main() -> int:
     children = collections.defaultdict(list)
     for r in show:
         children[r.get("parent") or ""].append(r)
-
-    def order(r: dict) -> tuple:
-        """Status first, then the operator's explicit order, then slug.
-
-        `ordinal` carries the concept `ui.sort` and until 2026-08-09 no reader
-        honoured it — so a set of rows deliberately sequenced as a week rendered
-        alphabetically, which is the one order that cannot be a plan. Rows with
-        no ordinal keep sorting after those that have one rather than at 0,
-        because absent is not first.
-        """
-        raw = r.get("ordinal")
-        try:
-            explicit = (0, float(raw)) if raw not in (None, "") else (1, 0.0)
-        except (TypeError, ValueError):
-            explicit = (1, 0.0)
-        return (rank(r.get("status")), *explicit, r.get("slug") or "")
 
     def emit(parent: str, depth: int) -> None:
         for r in sorted(children.get(parent, []), key=order):
