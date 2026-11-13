@@ -5,8 +5,14 @@ import {
 	frontierStates,
 	specReady,
 	skillTreeLayout,
+	skillTreeLabels,
+	labelPlan,
+	LABEL_LOD,
+	LABEL_PX,
+	GEM_SIZE,
 	ORGAN_RING,
-	OUTSIDE_RING
+	OUTSIDE_RING,
+	type LabelBox
 } from './planner';
 import type { DataTable } from '$lib/contracts';
 
@@ -372,7 +378,13 @@ describe('skillTreeLayout', () => {
 		for (let m = 0; m < 6; m++) rows.push({ slug: `rel-02${m}`, status: 'next', parent: '' });
 		while (rows.length < 1100)
 			rows.push({ slug: `extra-${rows.length}`, status: 'next', parent: 'voice-e1' });
-		return rows.map((r, i) => ({ ...r, id: `s${i}` }));
+		// Live-shaped titles: a system's row reads "The Spine: its tells", a row's is a sentence.
+		const tells = new Map(ORGAN_RING.map((r) => [r.key, `${r.title}: ${r.tells}`]));
+		return rows.map((r, i) => ({
+			...r,
+			id: `s${i}`,
+			title: tells.get(r.slug as string) ?? `${r.slug} — one sentence of ${30 + rnd(40)} chars`
+		}));
 	}
 
 	it('packs an 1100-row board: no two tree nodes closer than 20px, the orbit inside 1300px', () => {
@@ -390,6 +402,63 @@ describe('skillTreeLayout', () => {
 		expect(min).toBeGreaterThanOrEqual(20);
 		expect(lay.orbit).toBeLessThan(1300);
 		expect(lay.halo).toEqual([]); // every row hangs under a system (milestones orbit)
+	});
+
+	/** fitView's zoom for a viewport, as @xyflow/system computes it (padding on both axes). */
+	function fitZoom(boxes: { x: number; y: number }[], w: number, h: number, pad: number) {
+		const xs = boxes.map((p) => p.x);
+		const ys = boxes.map((p) => p.y);
+		const bw = Math.max(...xs) - Math.min(...xs) + GEM_SIZE.system;
+		const bh = Math.max(...ys) - Math.min(...ys) + GEM_SIZE.system;
+		return Math.min(w / (bw * (1 + pad)), h / (bh * (1 + pad)));
+	}
+	const overlaps = (bs: LabelBox[]) => {
+		let n = 0;
+		for (let i = 0; i < bs.length; i++)
+			for (let j = i + 1; j < bs.length; j++) {
+				const a = bs[i];
+				const b = bs[j];
+				if (a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h) n++;
+			}
+		return n;
+	};
+
+	it('labels never overlap on the 1100-row board: fitView, medium and near zoom (operator 11-13)', () => {
+		const rows = synthetic() as never[];
+		const lay = skillTreeLayout(rows);
+		const items = skillTreeLabels(rows, lay, frontierStates(rows));
+		const fit = fitZoom([...lay.positions.values()], 1400, 1100, 0.15);
+		expect(fit).toBeGreaterThan(0.3); // the board the operator saw fits a laptop pane
+		for (const zoom of [fit, LABEL_LOD.mid, 0.7, LABEL_LOD.near, 1.5, 2.5]) {
+			const kept = labelPlan(items, zoom);
+			expect(overlaps(kept), `zoom ${zoom.toFixed(2)}`).toBe(0);
+			// never clipped: the 13 rim names are kept at every zoom, short enough for their box
+			const rim = kept.filter((b) => b.id.startsWith('__rim__'));
+			expect(rim.map((b) => b.text).sort()).toEqual(ORGAN_RING.map((r) => r.title).sort());
+			for (const b of rim)
+				expect(b.text.length * LABEL_PX.big.char + LABEL_PX.big.pad).toBeLessThanOrEqual(b.w);
+			// a kept epic or leaf label covers no gem as big as its own (one count, not a million expects)
+			let covered = 0;
+			for (const b of kept.filter((k) => k.priority >= 2))
+				for (const it of items) {
+					if (it.id === b.id || it.size < b.size) continue;
+					const gx = (it.cx - it.size / 2) * zoom;
+					const gy = (it.cy - it.size / 2) * zoom;
+					const gs = it.size * zoom;
+					if (gx < b.x + b.w && b.x < gx + gs && gy < b.y + b.h && b.y < gy + gs) covered++;
+				}
+			expect(covered, `zoom ${zoom.toFixed(2)} labels over gems`).toBe(0);
+		}
+		// a system's gem reads by its apex name, not the row title; detail shows the title
+		expect(items.find((i) => i.id === 's1')!.text).toBe('The Spine');
+		// the pass is a level of detail, not a blackout: more labels as the zoom grows
+		const n = (z: number) => labelPlan(items, z).length;
+		expect(n(fit)).toBeGreaterThanOrEqual(13 + 13); // 13 rim names + the systems (core may yield)
+		expect(n(0.7)).toBeGreaterThan(n(fit));
+		expect(n(LABEL_LOD.near)).toBeGreaterThan(n(0.7));
+		expect(n(2.5)).toBeGreaterThan(n(LABEL_LOD.near));
+		// hover, focus and selection always get their label, even in a crowd
+		expect(labelPlan(items, fit, new Set(['s400'])).some((b) => b.id === 's400')).toBe(true);
 	});
 
 	it('a crowded ring splits into radial sub-rings instead of pushing the whole board out', () => {

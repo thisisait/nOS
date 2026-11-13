@@ -344,9 +344,9 @@ export interface TreeLayout {
 
 const R1 = 340; // ring 1 (the 13 systems); raised only if their labels would not fit
 const RING_GAP = [0, 0, 150, 120, 100, 85]; // step out to ring d; the last entry repeats
-const MIN_ARC = [0, 110, 34, 24]; // arc between neighbours on ring d; the last entry repeats
+const MIN_ARC = [0, 110, 40, 28]; // arc between neighbours on ring d; the last entry repeats
 const SUB_RINGS = 5; // a crowded ring splits into up to this many radial sub-rings
-const SUB_STEP = 26; // radial distance between sub-rings (> the leaf arc, so dots never touch)
+const SUB_STEP = 30; // radial distance between sub-rings (> the leaf arc, so dots never touch)
 const SECTOR_PAD = 2; // weight added per root: a bare system still owns a visible wedge
 const ORBIT_GAP = 140; // the milestone orbit sits this far beyond the tree
 const ORBIT_ARC = 110;
@@ -581,4 +581,197 @@ export function skillTreeLayout(
 		for (const r of loose) put(r.id, radius.get(cell(r, 'slug'))!, angle.get(cell(r, 'slug'))!);
 	}
 	return { positions, absent, sectors: tree.sectors, rings: tree.rings, orbit, halo };
+}
+
+// ── Labels: the level of detail is a collision pass (operator 2026-11-13: overlapping texts) ──
+
+/** A label candidate: the gem's centre and size in flow px, its text, its priority (0 a sector
+ *  name on the rim, 1 core and system, 2 epic and milestone, 3 frontier leaf, 4 leaf, 5 halo).
+ *  A rim name has no gem (size 0) and sits at its sector's angle, outside the tree. */
+export interface LabelItem {
+	id: string;
+	cx: number;
+	cy: number;
+	size: number;
+	text: string;
+	priority: number;
+	/** the view's classes for it: rank and state, or `rim` */
+	cls: string;
+}
+
+/** A placed label, SCREEN px relative to the flow origin (the view adds the viewport's x, y):
+ *  w/h are the box's constant size on screen, x/y its top-left. Text never wraps; a title
+ *  longer than the box is cut with an ellipsis by the view (the full one is the tooltip). */
+export interface LabelBox extends LabelItem {
+	x: number;
+	y: number;
+	w: number;
+	h: number;
+}
+
+/** Screen metrics per tier: average glyph width, horizontal padding, max width, height. The
+ *  width is an estimate (no canvas in a test) that over-measures, so a pass is a safe pass. */
+export const LABEL_PX = {
+	big: { char: 7.6, pad: 18, max: 200, h: 22 }, // rim names, core, systems (13px semibold)
+	small: { char: 6.4, pad: 16, max: 180, h: 18 } // everything else (11px)
+};
+const RIM_GAP = 6; // screen px between a gem's rim and its label
+/** Zoom at which epics and milestones, then leaves, become label candidates at all. */
+export const LABEL_LOD = { mid: 0.45, near: 0.9 };
+
+/** The box for one label at a zoom: anchored on the gem's rim along the branch angle (the ray
+ *  from the core), the way PoE hangs a name off a node — outward, so neighbours on a ring
+ *  diverge instead of stacking below each other. */
+export function labelBox(it: LabelItem, zoom: number): LabelBox {
+	const m = it.priority <= 1 ? LABEL_PX.big : LABEL_PX.small;
+	const w = Math.min(m.max, it.text.length * m.char + m.pad);
+	const h = m.h;
+	const len = Math.hypot(it.cx, it.cy);
+	const ux = len ? it.cx / len : 0;
+	const uy = len ? it.cy / len : 1;
+	const g = (it.size / 2) * zoom + RIM_GAP;
+	const ax = it.cx * zoom + ux * g;
+	const ay = it.cy * zoom + uy * g;
+	const x = ax - (ux > 0.35 ? 0 : ux < -0.35 ? w : w / 2);
+	const y = ay - (uy > 0.35 ? 0 : uy < -0.35 ? h : h / 2);
+	return { ...it, x, y, w, h };
+}
+
+const hits = (a: LabelBox, b: { x: number; y: number; w: number; h: number }) =>
+	a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+
+/** Gem box per rank, flow px (the layout gives centres; Svelte Flow positions a corner). */
+export const GEM_SIZE = { core: 56, system: 30, epic: 14, leaf: 10, halo: 8 } as const;
+export type GemRank = keyof typeof GEM_SIZE;
+
+export function gemRank(slug: string, info: TreeStateInfo | undefined, ring: Set<string>): GemRank {
+	if (ring.has(slug)) return 'system';
+	if (!info || info.depth < 0) return info?.state === 'milestone' ? 'epic' : 'halo';
+	return info.depth === 1 ? 'epic' : 'leaf';
+}
+
+const RIM_NAME_GAP = 16; // flow px beyond the guide rim (rings[last] + 60) where a sector's name sits
+const LIVE = new Set<TreeState>(['frontier', 'doing', 'review', 'allocated']); // the leaves worth a label first
+
+/** Every label candidate of a board: the core, one per placed row (a system reads by its apex
+ *  name, never its row title, so the 13 names are short and whole), and one rim name per sector
+ *  just outside the tree — the PoE class name at the edge of its wedge. `cls` carries the
+ *  state and rank classes the view styles by. */
+export function skillTreeLabels(
+	rows: readonly DataTableRow[],
+	lay: TreeLayout,
+	states: ReadonlyMap<string, TreeStateInfo>,
+	ring: readonly { key: string; title: string }[] = ORGAN_RING
+): LabelItem[] {
+	const keys = new Set(ring.map((r) => r.key));
+	const title = new Map(ring.map((r) => [r.key, r.title]));
+	const out: LabelItem[] = [
+		{
+			id: '__core__',
+			cx: 0,
+			cy: 0,
+			size: GEM_SIZE.core,
+			text: 'core',
+			priority: 1,
+			cls: 'rank-core'
+		}
+	];
+	for (const r of rows) {
+		const pos = lay.positions.get(r.id);
+		if (!pos) continue;
+		const slug = cell(r, 'slug');
+		const info = states.get(slug);
+		const state = info?.state ?? 'dormant';
+		const rank = gemRank(slug, info, keys);
+		const priority =
+			rank === 'system'
+				? 1
+				: rank === 'epic'
+					? 2
+					: rank === 'halo' || state === 'dormant' || state === 'blocked'
+						? 5
+						: LIVE.has(state)
+							? 3
+							: 4;
+		out.push({
+			id: r.id,
+			cx: pos.x,
+			cy: pos.y,
+			size: GEM_SIZE[rank],
+			text: (keys.has(slug) ? title.get(slug) : '') || cell(r, 'title') || slug || r.id,
+			priority,
+			cls: `rank-${rank} st-${state}`
+		});
+	}
+	const rim = lay.rings[lay.rings.length - 1] + 60 + RIM_NAME_GAP;
+	for (const s of lay.sectors) {
+		const a = (s.from + s.to) / 2;
+		out.push({
+			id: `__rim__${s.key}`,
+			cx: rim * Math.cos(a),
+			cy: rim * Math.sin(a),
+			size: 0,
+			text: title.get(s.key) ?? s.key,
+			priority: 0,
+			cls: 'rim'
+		});
+	}
+	return out;
+}
+
+/** Greedy level of detail: candidates by priority (then id, so it is stable), each kept only
+ *  if its box clears every kept box and — below the system tier — every gem on screen as big
+ *  as its own (an epic's name may lie over leaf dots, never over another epic or a system).
+ *  Epics need LABEL_LOD.mid, leaves LABEL_LOD.near; rim names and systems are always
+ *  candidates. `always` (hovered, focused, selected) are kept first, whatever they cover. */
+export function labelPlan(
+	items: readonly LabelItem[],
+	zoom: number,
+	always: ReadonlySet<string> = new Set()
+): LabelBox[] {
+	const tier = (p: number) => (p <= 1 ? 0 : p === 2 ? LABEL_LOD.mid : LABEL_LOD.near);
+	const cands = items
+		.filter((it) => always.has(it.id) || zoom >= tier(it.priority))
+		.map((it) => labelBox(it, zoom))
+		.sort(
+			(a, b) =>
+				Number(always.has(b.id)) - Number(always.has(a.id)) ||
+				a.priority - b.priority ||
+				(a.id < b.id ? -1 : 1)
+		);
+	// Gems as obstacles, sorted by their left edge; a label scans only the gems its span reaches.
+	const gems = items
+		.filter((it) => it.size > 0)
+		.map((it) => ({
+			id: it.id,
+			x: (it.cx - it.size / 2) * zoom,
+			y: (it.cy - it.size / 2) * zoom,
+			w: it.size * zoom,
+			h: it.size * zoom
+		}))
+		.sort((a, b) => a.x - b.x);
+	const maxGem = gems.reduce((n, g) => Math.max(n, g.w), 0);
+	const coversGem = (b: LabelBox) => {
+		let lo = 0;
+		let hi = gems.length;
+		const from = b.x - maxGem;
+		while (lo < hi) {
+			const mid = (lo + hi) >> 1;
+			if (gems[mid].x < from) lo = mid + 1;
+			else hi = mid;
+		}
+		for (let i = lo; i < gems.length && gems[i].x < b.x + b.w; i++)
+			if (gems[i].id !== b.id && gems[i].w >= b.size * zoom && hits(b, gems[i])) return true;
+		return false;
+	};
+	// ponytail: O(kept × candidates) label check; a grid if a board ever keeps thousands of labels.
+	const kept: LabelBox[] = [];
+	for (const b of cands) {
+		if (!always.has(b.id)) {
+			if (kept.some((k) => hits(b, k))) continue;
+			if (b.priority >= 2 && coversGem(b)) continue;
+		}
+		kept.push(b);
+	}
+	return kept;
 }
