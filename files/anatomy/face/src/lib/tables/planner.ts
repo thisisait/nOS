@@ -204,7 +204,8 @@ export function rowsToGraph(
 
 /** Ring 1: the 13 apex organ systems in ring order (core column, left wing, right wing),
  *  generated from files/anatomy/apex/ruling.yml by tools/organ-ring-gen.py. */
-export const ORGAN_RING: readonly { key: string; side: string }[] = organRing.ring;
+export const ORGAN_RING: readonly { key: string; side: string; title: string; tells: string }[] =
+	organRing.ring;
 
 /** Mirrors tools/roadmap-status.py: OPEN statuses can be built; GROWN ones open the frontier. */
 const OPEN = new Set(['active', 'next']);
@@ -294,25 +295,53 @@ export function frontierStates(
 }
 
 export interface TreeLayout {
-	/** row id → position; the core sits at (0, 0). */
+	/** row id → the node's CENTRE; the core sits at (0, 0). */
 	positions: Map<string, { x: number; y: number }>;
 	/** ring keys with no row on the board: the ring is incomplete, say so. */
 	absent: string[];
+	/** each organ system's wedge, screen radians (y down, −π/2 is straight up). */
+	sectors: { key: string; from: number; to: number }[];
+	/** tree ring radii by depth: [0, ring 1, ring 2, …]. */
+	rings: number[];
+	/** the milestone orbit's radius, 0 when the board has none. */
+	orbit: number;
+	/** the halo's ring radii (rows hung under no system), [] when every row is hung. */
+	halo: number[];
 }
 
-const R1 = 360; // ring-1 radius
-const RING_GAP = 190; // minimum step between rings
-const MIN_ARC = 48; // minimum arc between neighbours on one ring (a dot + its label)
-const BAND_GAP = 240; // the outside-the-ring band sits this far below the tree
-const BAND_COL = 200;
-const BAND_ROW = 70;
-const BAND_COLS = 12;
+const R1 = 340; // ring 1 (the 13 systems); raised only if their labels would not fit
+const RING_GAP = [0, 0, 150, 120, 100, 85]; // step out to ring d; the last entry repeats
+const MIN_ARC = [0, 150, 34, 24]; // arc between neighbours on ring d; the last entry repeats
+const SUB_RINGS = 5; // a crowded ring splits into up to this many radial sub-rings
+const SUB_STEP = 26; // radial distance between sub-rings (> the leaf arc, so dots never touch)
+const SECTOR_PAD = 2; // weight added per root: a bare system still owns a visible wedge
+const ORBIT_GAP = 140; // the milestone orbit sits this far beyond the tree
+const ORBIT_ARC = 110;
+const HALO_GAP = 160; // unhung constellations start this far beyond the orbit
+const HALO_ARC = [0, 24, 22]; // a halo root's neighbours; descendants keep the last entry
+const HALO_GAP_D = [0, 0, 90, 75];
+const last = (xs: readonly number[], i: number) => xs[Math.min(i, xs.length - 1)];
+
+/** Push sorted angles apart until neighbours sit ≥ gap, inside [lo, hi]; order is kept.
+ *  Two passes suffice when (n − 1)·gap ≤ hi − lo, which the caller's radius guarantees. */
+function spread(as: number[], lo: number, hi: number, gap: number): number[] {
+	const out = as.slice();
+	if (!out.length) return out;
+	out[0] = Math.max(out[0], lo);
+	for (let i = 1; i < out.length; i++) out[i] = Math.max(out[i], out[i - 1] + gap);
+	out[out.length - 1] = Math.min(out[out.length - 1], hi);
+	for (let i = out.length - 2; i >= 0; i--) out[i] = Math.min(out[i], out[i + 1] - gap);
+	return out;
+}
 
 /** Radial placement: the systems on ring 1, the core column's arc centred at the top, the
- *  left wing down the left, the right wing down the right. A system's sector is proportional
- *  to its subtree size; a node's children split its sector by their subtree sizes, sorted by
- *  slug. Each deeper ring's radius grows until its closest neighbours sit MIN_ARC apart.
- *  Rows outside the ring go to a band under the tree: milestones first, then by slug. */
+ *  left wing down the left, the right wing down the right. A system's wedge is proportional
+ *  to its subtree size with a floor wide enough for its label; a node's children split its
+ *  wedge by their subtree sizes, sorted by slug. Ring d's radius is the smallest at which
+ *  every system's ring-d rows fit its wedge MIN_ARC apart (then spread to that gap inside
+ *  the wedge) and at least RING_GAP beyond ring d−1 — sector-aware packing, so one crowded
+ *  system never pushes the whole board out. Milestones orbit beyond the tree, centred at
+ *  the top; rows hung under no system form a dim halo of their own constellations outside. */
 export function skillTreeLayout(
 	rows: readonly DataTableRow[],
 	ring: readonly { key: string; side: string }[] = ORGAN_RING
@@ -347,69 +376,171 @@ export function skillTreeLayout(
 		weight.set(s, w);
 		return w;
 	};
-	const total = seq.reduce((n, k) => n + weigh(k), 0) || 1;
 
-	// Angles first (they do not depend on the radius), then one radius per depth.
 	const angle = new Map<string, number>();
 	const depth = new Map<string, number>();
-	const place = (s: string, a: number, b: number, d: number) => {
-		angle.set(s, (a + b) / 2);
-		depth.set(s, d);
-		const children = (kids.get(s) ?? [])
-			.map((c) => cell(c, 'slug'))
-			.filter((c) => weight.has(c) && !angle.has(c));
-		const sum = children.reduce((n, c) => n + weight.get(c)!, 0);
-		let at = a;
-		for (const c of children) {
-			const span = ((b - a) * weight.get(c)!) / sum;
-			place(c, at, at + span, d + 1);
-			at += span;
-		}
-	};
-	const sector = new Map<string, [number, number]>();
-	let at = 0;
-	for (const k of seq) {
-		const span = (2 * Math.PI * weight.get(k)!) / total;
-		sector.set(k, [at, at + span]);
-		at += span;
-	}
-	const shift = core.length
-		? -Math.PI / 2 - (sector.get(core[0])![0] + sector.get(core[core.length - 1])![1]) / 2
-		: Math.PI / 2;
-	for (const k of seq) place(k, sector.get(k)![0] + shift, sector.get(k)![1] + shift, 1);
+	const radius = new Map<string, number>();
 
-	const radius = [0, R1];
-	const maxDepth = Math.max(1, ...depth.values());
-	for (let d = 2; d <= maxDepth; d++) {
-		const as = [...depth].filter(([, v]) => v === d).map(([s]) => angle.get(s)!);
-		as.sort((x, y) => x - y);
-		let gap = Infinity;
-		for (let i = 1; i < as.length; i++) gap = Math.min(gap, as[i] - as[i - 1]);
-		radius[d] = Math.max(radius[d - 1] + RING_GAP, gap > 0 && gap < Infinity ? MIN_ARC / gap : 0);
-	}
+	/** One constellation set. Wedged (the tree): `roots` own wedges ∝ weight, floored so
+	 *  `arcs[1]` fits on `r1`, and every ring is packed per wedge. Laned (the halo): one lane
+	 *  round the whole circle, every ring packed as a whole — the roots are many and bare, so
+	 *  wedges would starve the few big constellations. Descendants ring outward either way. */
+	const constellate = (
+		roots: string[],
+		r1: number,
+		gaps: readonly number[],
+		arcs: readonly number[],
+		centreOn: string[],
+		wedged: boolean
+	): { rings: number[]; sectors: { key: string; from: number; to: number }[] } => {
+		const rings = [0, Math.max(r1, (roots.length * arcs[1]) / (2 * Math.PI))];
+		const minSpan = wedged ? arcs[1] / rings[1] : 0;
+		const span = new Map(roots.map((k) => [k, 0]));
+		const fixed = new Set<string>();
+		for (let pass = 0; pass <= roots.length; pass++) {
+			const free = roots.filter((k) => !fixed.has(k));
+			const total = free.reduce((n, k) => n + weight.get(k)! + SECTOR_PAD, 0) || 1;
+			const left = 2 * Math.PI - fixed.size * minSpan;
+			let short = false;
+			for (const k of free) {
+				const s = (left * (weight.get(k)! + SECTOR_PAD)) / total;
+				if (s < minSpan) {
+					fixed.add(k);
+					short = true;
+				} else span.set(k, s);
+			}
+			if (!short) break;
+		}
+		for (const k of fixed) span.set(k, minSpan);
+		const sectors: { key: string; from: number; to: number }[] = [];
+		let at = 0;
+		for (const k of roots) {
+			sectors.push({ key: k, from: at, to: at + span.get(k)! });
+			at += span.get(k)!;
+		}
+		// Rotate so the wedges in `centreOn` straddle the top (or the first root starts there).
+		const mid = centreOn.length
+			? (sectors.find((s) => s.key === centreOn[0])!.from +
+					sectors.find((s) => s.key === centreOn[centreOn.length - 1])!.to) /
+				2
+			: 0;
+		const shift = -Math.PI / 2 - mid;
+		for (const s of sectors) {
+			s.from += shift;
+			s.to += shift;
+		}
+		const lanes = wedged ? sectors : [{ key: '*', from: shift, to: shift + 2 * Math.PI }];
+		const lane = new Map<string, string>();
+		const place = (s: string, a: number, b: number, d: number, k: string) => {
+			angle.set(s, (a + b) / 2);
+			depth.set(s, d);
+			lane.set(s, k);
+			const children = (kids.get(s) ?? [])
+				.map((c) => cell(c, 'slug'))
+				.filter((c) => weight.has(c) && !angle.has(c));
+			const sum = children.reduce((n, c) => n + weight.get(c)!, 0);
+			let cur = a;
+			for (const c of children) {
+				const w = ((b - a) * weight.get(c)!) / sum;
+				place(c, cur, cur + w, d + 1, k);
+				cur += w;
+			}
+		};
+		for (const s of sectors) place(s.key, s.from, s.to, 1, wedged ? s.key : '*');
+		for (const s of sectors) radius.set(s.key, rings[1]);
+
+		// Each ring: group by (depth, lane); a crowded ring splits into up to SUB_RINGS radial
+		// sub-rings (members round-robin by angle order), so the ring's radius is the single-ring
+		// need ÷ sub-rings; neighbours then sit ≥ arc apart along a sub-ring and ≥ SUB_STEP across.
+		const groups = new Map<string, string[]>();
+		let maxDepth = 1;
+		for (const [s, k] of lane) {
+			const d = depth.get(s)!;
+			maxDepth = Math.max(maxDepth, d);
+			const key = `${d}|${k}`;
+			if (!groups.has(key)) groups.set(key, []);
+			groups.get(key)!.push(s);
+		}
+		let prevSub = 1;
+		for (let d = wedged ? 2 : 1; d <= maxDepth; d++) {
+			const arc = last(arcs, d);
+			let single = 0;
+			for (const l of lanes) {
+				const n = groups.get(`${d}|${l.key}`)?.length ?? 0;
+				if (n) single = Math.max(single, (n * arc) / (l.to - l.from));
+			}
+			const base = d === 1 ? r1 : rings[d - 1] + last(gaps, d);
+			const sub = Math.min(SUB_RINGS, Math.max(1, Math.ceil(single / base)));
+			const half = ((sub - 1) / 2) * SUB_STEP; // the band's half-width; arcs are kept on its inner edge
+			const band = ((prevSub - 1) / 2) * SUB_STEP + half;
+			let need = base + (d === 1 ? half : band);
+			for (const l of lanes) {
+				const n = groups.get(`${d}|${l.key}`)?.length ?? 0; // n−1 gaps of arc/sub + a full arc of margins
+				if (n) need = Math.max(need, (((n - 1) / sub + 1) * arc) / (l.to - l.from) + half);
+			}
+			rings[d] = Math.ceil(need);
+			prevSub = sub;
+			const gap = arc / (sub * (rings[d] - half));
+			const margin = arc / (2 * (rings[d] - half)); // a full arc at a lane border, whatever the sub-ring
+			for (const l of lanes) {
+				const members = groups.get(`${d}|${l.key}`);
+				if (!members) continue;
+				members.sort((x, y) => angle.get(x)! - angle.get(y)! || (x < y ? -1 : 1));
+				const as = spread(
+					members.map((m) => angle.get(m)!),
+					l.from + margin,
+					l.to - margin,
+					gap
+				);
+				members.forEach((m, i) => {
+					angle.set(m, as[i]);
+					radius.set(m, rings[d] + ((i % sub) - (sub - 1) / 2) * SUB_STEP);
+				});
+			}
+		}
+		return { rings, sectors };
+	};
+
+	for (const k of seq) weigh(k);
+	const tree = constellate(seq, R1, RING_GAP, MIN_ARC, core, true);
 
 	const positions = new Map<string, { x: number; y: number }>();
+	const put = (id: string, rad: number, a: number) =>
+		positions.set(id, { x: Math.round(rad * Math.cos(a)), y: Math.round(rad * Math.sin(a)) });
 	for (const r of withId) {
 		const s = cell(r, 'slug');
-		const a = angle.get(s);
-		if (a === undefined) continue;
-		const rad = radius[depth.get(s)!];
-		positions.set(r.id, { x: Math.round(rad * Math.cos(a)), y: Math.round(rad * Math.sin(a)) });
+		if (angle.has(s)) put(r.id, radius.get(s)!, angle.get(s)!);
 	}
-	const outside = withId
-		.filter((r) => !positions.has(r.id))
-		.sort(
-			(a, b) =>
-				Number(isMilestone(b)) - Number(isMilestone(a)) ||
-				(cell(a, 'slug') < cell(b, 'slug') ? -1 : 1)
-		);
-	const top = radius[maxDepth] + BAND_GAP;
-	const left = (-(Math.min(outside.length, BAND_COLS) - 1) * BAND_COL) / 2;
-	outside.forEach((r, i) =>
-		positions.set(r.id, {
-			x: Math.round(left + (i % BAND_COLS) * BAND_COL),
-			y: Math.round(top + Math.floor(i / BAND_COLS) * BAND_ROW)
-		})
+
+	// Milestones: an orbit beyond the tree, by slug clockwise, centred at the top.
+	const outer = tree.rings[tree.rings.length - 1];
+	const stones = withId
+		.filter((r) => !positions.has(r.id) && isMilestone(r))
+		.sort((a, b) => (cell(a, 'slug') < cell(b, 'slug') ? -1 : 1));
+	const orbit = stones.length ? outer + ORBIT_GAP : 0;
+	stones.forEach((r, i) =>
+		put(r.id, orbit, -Math.PI / 2 + ((i - (stones.length - 1) / 2) * ORBIT_ARC) / orbit)
 	);
-	return { positions, absent };
+
+	// The halo: every row still unplaced, as constellations rooted on their own top rows.
+	const loose = withId.filter((r) => !positions.has(r.id));
+	const looseSlugs = new Set(loose.map((r) => cell(r, 'slug')));
+	const isRoot = (r: DataTableRow) => !looseSlugs.has(cell(r, 'parent'));
+	const order = [...loose].sort(
+		(a, b) => Number(isRoot(b)) - Number(isRoot(a)) || (cell(a, 'slug') < cell(b, 'slug') ? -1 : 1)
+	);
+	const haloRoots: string[] = [];
+	for (const r of order) {
+		const s = cell(r, 'slug');
+		if (weight.has(s)) continue; // reached from an earlier root (or a cycle's other half)
+		weigh(s);
+		haloRoots.push(s);
+	}
+	let halo: number[] = [];
+	if (haloRoots.length) {
+		const base = (orbit || outer) + HALO_GAP;
+		halo = constellate(haloRoots, base, HALO_GAP_D, HALO_ARC, [], false).rings.slice(1);
+		for (const r of loose) put(r.id, radius.get(cell(r, 'slug'))!, angle.get(cell(r, 'slug'))!);
+	}
+	return { positions, absent, sectors: tree.sectors, rings: tree.rings, orbit, halo };
 }

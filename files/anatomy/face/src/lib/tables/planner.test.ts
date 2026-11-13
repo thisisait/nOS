@@ -245,12 +245,110 @@ describe('skillTreeLayout', () => {
 		expect(ang('wits') - ang('watch')).toBeGreaterThan(ang('clockwork') - ang('wits'));
 	});
 
-	it('rows outside the ring sit in a band below the tree, milestones first', () => {
-		const p = at(board());
-		const lowest = Math.max(...RING.map((s) => p(s).y), p('f-next').y, p('s-grand').y);
-		expect(p('rel-020').y).toBeGreaterThan(lowest);
-		expect(p('rel-020').x).toBeLessThan(p('loose').x);
-		expect(p('loose').x).toBeLessThan(p('loose-kid').x);
+	it('milestones orbit beyond the tree at the top; unhung rows form a halo outside, root then child', () => {
+		const rows = board();
+		const p = at(rows);
+		const r = (s: string) => Math.hypot(p(s).x, p(s).y);
+		const lay = skillTreeLayout(rows);
+		const treeOuter = Math.max(...RING.map(r), r('f-next'), r('s-grand'));
+		expect(lay.orbit).toBeGreaterThan(treeOuter);
+		expect(r('rel-020')).toBe(lay.orbit);
+		expect(p('rel-020').y).toBeLessThan(0); // the orbit's crown sits over the core column
+		expect(lay.halo[0]).toBeGreaterThan(lay.orbit);
+		expect(r('loose')).toBeGreaterThanOrEqual(lay.halo[0]);
+		expect(r('loose-kid')).toBeGreaterThan(r('loose'));
+	});
+
+	it('exposes the guides: one contiguous wedge per system round the circle, rings by depth', () => {
+		const lay = skillTreeLayout(board());
+		expect(lay.sectors.map((s) => s.key)).toEqual([
+			...RING.slice(5, 9).reverse(),
+			...RING.slice(0, 5),
+			...RING.slice(9)
+		]);
+		for (let i = 1; i < lay.sectors.length; i++)
+			expect(lay.sectors[i].from).toBeCloseTo(lay.sectors[i - 1].to, 9);
+		expect(lay.sectors.at(-1)!.to - lay.sectors[0].from).toBeCloseTo(2 * Math.PI, 9);
+		expect(lay.rings[0]).toBe(0);
+		expect(lay.rings.length).toBe(1 + 1 + 3); // core, ring 1, s-next → s-child → s-grand
+		expect(lay.rings).toEqual([...lay.rings].sort((a, b) => a - b));
+		expect(skillTreeLayout(systems()).orbit).toBe(0);
+		expect(skillTreeLayout(systems()).halo).toEqual([]);
+	});
+
+	/** A fully hung board the size of the real one: 13 systems, 3..20 epics each, 0..12 leaves,
+	 *  some grand-leaves, one 52-fan epic, 6 milestones; deterministic (LCG). */
+	function synthetic(): Record<string, unknown>[] {
+		let seed = 7;
+		const rnd = (n: number) => (seed = (seed * 48271) % 2147483647) % n;
+		const rows: Record<string, unknown>[] = systems();
+		const statuses = ['shipped', 'active', 'next', 'queued', 'review', 'doing', 'parked'];
+		for (const sys of RING) {
+			const epics = 3 + rnd(18);
+			for (let e = 0; e < epics; e++) {
+				const es = `${sys}-e${e}`;
+				rows.push({ slug: es, status: statuses[rnd(4)], parent: sys });
+				const leaves = sys === 'spine' && e === 0 ? 52 : rnd(13);
+				for (let l = 0; l < leaves; l++) {
+					const ls = `${es}-l${l}`;
+					rows.push({ slug: ls, status: statuses[rnd(7)], parent: es });
+					if (rnd(5) === 0)
+						for (let g = 0; g < 1 + rnd(4); g++)
+							rows.push({ slug: `${ls}-g${g}`, status: statuses[rnd(7)], parent: ls });
+				}
+			}
+		}
+		for (let m = 0; m < 6; m++) rows.push({ slug: `rel-02${m}`, status: 'next', parent: '' });
+		while (rows.length < 1100)
+			rows.push({ slug: `extra-${rows.length}`, status: 'next', parent: 'voice-e1' });
+		return rows.map((r, i) => ({ ...r, id: `s${i}` }));
+	}
+
+	it('packs an 1100-row board: no two tree nodes closer than 20px, the orbit inside 1300px', () => {
+		const rows = synthetic();
+		expect(rows.length).toBeGreaterThanOrEqual(1100);
+		const lay = skillTreeLayout(rows as never);
+		const pts = rows.map((r) => lay.positions.get(r.id as string)!);
+		expect(pts.every(Boolean)).toBe(true);
+		// Sorted by x, so the O(n²) pair scan stops early: 1100 rows in well under a second.
+		const inTree = pts.filter((p) => Math.hypot(p.x, p.y) < lay.orbit).sort((a, b) => a.x - b.x);
+		let min = Infinity;
+		for (let i = 0; i < inTree.length; i++)
+			for (let j = i + 1; j < inTree.length && inTree[j].x - inTree[i].x < 20; j++)
+				min = Math.min(min, Math.hypot(inTree[i].x - inTree[j].x, inTree[i].y - inTree[j].y));
+		expect(min).toBeGreaterThanOrEqual(20);
+		expect(lay.orbit).toBeLessThan(1300);
+		expect(lay.halo).toEqual([]); // every row hangs under a system (milestones orbit)
+	});
+
+	it('a crowded ring splits into radial sub-rings instead of pushing the whole board out', () => {
+		// Every system holds 10 rows (balanced wedges); one Watch row fans 60 leaves. One ring per
+		// depth needed r ≈ 1719 for them (the pre-packing layout); sub-rings keep it under 900.
+		const rows = [
+			...systems(),
+			...RING.flatMap((s) =>
+				Array.from({ length: 10 }, (_, i) => ({
+					id: `${s}${i}`,
+					slug: `${s}-r${i}`,
+					status: 'next',
+					parent: s
+				}))
+			),
+			...Array.from({ length: 60 }, (_, i) => ({
+				id: `l${i}`,
+				slug: `watch-l${String(i).padStart(2, '0')}`,
+				status: 'next',
+				parent: 'watch-r0'
+			}))
+		];
+		const lay = skillTreeLayout(rows);
+		const leafRadii = new Set(
+			rows
+				.filter((r) => r.slug.startsWith('watch-l'))
+				.map((r) => Math.round(Math.hypot(lay.positions.get(r.id)!.x, lay.positions.get(r.id)!.y)))
+		);
+		expect(leafRadii.size).toBeGreaterThanOrEqual(3); // several sub-rings in use
+		expect(Math.max(...leafRadii)).toBeLessThan(900);
 	});
 
 	it('is stable: the same board in another order lays out the same', () => {
