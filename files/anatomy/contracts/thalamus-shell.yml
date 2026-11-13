@@ -2,7 +2,7 @@
 # Protocol: ssot/doctrine/cross-repo-contracts.md §1 (spec + fixture + gates
 # over the same bytes). Both sides link one Rust crate (nos-contract), so the
 # gate is the crate decoding the fixture; one copy only, both sides cite this.
-contract_version: 18   # 18: widget spec reader, a widget answers red_status, table, timeline; 17: approvals_open (both ways); 16: questions (both ways), answer, answer_result; 15: setting, state settings; 14: halt, lift_halt, state act; 13: state (both ways); 12: callout, steps, sources, follow_up; 11: dendrogram; 10: knowledge_tree, widget spec knowledge; 9: resume workspace, clear, branch, stop, model_state; 8: catalogue (both ways), limbs, act, acted, action_approval; 7: resume, workspace_load, workspace_save, workspace, said, replay; 6: dashboard, kpi, working_for, model_options, model_pick; 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice, delta, sequence; 5: row_diff_approval op/title/read_from
+contract_version: 19   # 19: the relay's read hello (read: true, one approvals_open); 18: widget spec reader, a widget answers red_status, table, timeline; 17: approvals_open (both ways); 16: questions (both ways), answer, answer_result; 15: setting, state settings; 14: halt, lift_halt, state act; 13: state (both ways); 12: callout, steps, sources, follow_up; 11: dendrogram; 10: knowledge_tree, widget spec knowledge; 9: resume workspace, clear, branch, stop, model_state; 8: catalogue (both ways), limbs, act, acted, action_approval; 7: resume, workspace_load, workspace_save, workspace, said, replay; 6: dashboard, kpi, working_for, model_options, model_pick; 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice, delta, sequence; 5: row_diff_approval op/title/read_from
 fixture: files/anatomy/contracts/thalamus-shell.fixture.json
 
 producer:
@@ -380,6 +380,13 @@ invariants:
     variant or component leaving the enum fails to decode its sample and the
     gate goes red; removing one is a contract_version bump with the fixture
     in the same change.
+  relay_hello: >-
+    The face reaches this wire through the relay (thalamus/src/relay.rs): its first line is
+    {relay:"face", secret, uid, username, groups, tab}, and that tab takes over the person's older
+    one. Since v19 the same six keys plus `read: true` is a read hello: no take-over, exactly one
+    line, only `approvals_open`, answered and closed; any other line is `refused`. It grants
+    strictly less than a tab (ruled 2026-11-13, row face-awaiting-unreachable-kinds). Any other
+    extra key, or `read` that is not true, is not a hello.
 
 open:
   - >-

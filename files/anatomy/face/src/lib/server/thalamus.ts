@@ -31,14 +31,15 @@ export const configured = () => relay() !== null;
 export const tabsOf = (uid: string) => [...tabs.values()].filter((t) => t.uid === uid).length;
 
 /** The hello's who comes from the verified identity only, never from anything the browser sent. */
-export const hello = (who: Identity, tab: string, secret: string) =>
+export const hello = (who: Identity, tab: string, secret: string, read = false) =>
 	JSON.stringify({
 		relay: 'face',
 		secret,
 		uid: who.uid,
 		username: who.username,
 		groups: who.groups,
-		tab
+		tab,
+		...(read ? { read: true } : {})
 	});
 
 export type Sink = { line: (l: string) => void; link: (l: Link) => void };
@@ -94,6 +95,45 @@ export function openTab(who: Identity, sink: Sink): { tab: string; close: () => 
 			sock.destroy();
 		}
 	};
+}
+
+/**
+ * One read-only line through a read hello (contract v19, relay.rs read_once): no `tabs` entry, no
+ * MAX_TABS count, and the thalamus never takes over the person's live Iris tab for it. The answer
+ * line or why there is none; the socket is destroyed on every path, the timeout included.
+ */
+export function askOnce(
+	who: Identity,
+	line: string,
+	ms: number
+): Promise<{ line: string } | { why: string }> {
+	const r = relay();
+	if (!r) return Promise.resolve({ why: 'the thalamus relay is not configured' });
+	if (!who.authenticated) return Promise.resolve({ why: 'not signed in' });
+	return new Promise((resolve) => {
+		const sock = connect({ host: r.host, port: r.port });
+		let buf = '';
+		let done = false;
+		const finish = (v: { line: string } | { why: string }) => {
+			if (done) return;
+			done = true;
+			clearTimeout(timer);
+			sock.destroy();
+			resolve(v);
+		};
+		const timer = setTimeout(() => finish({ why: `no answer within ${ms} ms` }), ms);
+		sock.setEncoding('utf8');
+		sock.write(hello(who, randomUUID(), r.secret, true) + '\n' + line + '\n');
+		sock.on('data', (chunk: string) => {
+			buf += chunk;
+			const nl = buf.indexOf('\n');
+			if (nl >= 0) finish({ line: buf.slice(0, nl) });
+			else if (buf.length > MAX_LINE) finish({ why: 'the thalamus sent a line over 1 MiB' });
+		});
+		// The error's message names host and port only; it never carries the hello.
+		sock.on('error', (e) => finish({ why: `the optic nerve failed: ${e.message}` }));
+		sock.on('close', () => finish({ why: 'the thalamus closed the link' }));
+	});
 }
 
 /** One ToThalamus line onto a tab; only the person who opened it may drive it. */
