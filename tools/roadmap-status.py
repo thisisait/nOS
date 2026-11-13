@@ -31,6 +31,7 @@ Usage:
     tools/roadmap-status.py --knowledge > roadmap.md   # one file to attach to a cloud chat
     tools/roadmap-status.py --knowledge --status active,next --track face
     tools/roadmap-status.py --json       # for a caller
+    tools/roadmap-status.py --frontier watch [--json]   # buildable rows of one subtree
 
 Exit 0 when it could read the table. Exit 2 when it could NOT — an unreachable
 KEAP must not render as an empty roadmap, which would read as "no work left".
@@ -97,6 +98,93 @@ def declared_columns() -> list[str]:
     return [c["key"] for c in spec["schema"]["columns"]]
 
 
+def order(r: dict) -> tuple:
+    """Status first, then the operator's explicit order, then slug.
+
+    `ordinal` carries the concept `ui.sort` and until 2026-08-09 no reader
+    honoured it — so a set of rows deliberately sequenced as a week rendered
+    alphabetically, which is the one order that cannot be a plan. Rows with
+    no ordinal keep sorting after those that have one rather than at 0,
+    because absent is not first.
+    """
+    raw = r.get("ordinal")
+    try:
+        explicit = (0, float(raw)) if raw not in (None, "") else (1, 0.0)
+    except (TypeError, ValueError):
+        explicit = (1, 0.0)
+    return (rank(r.get("status")), *explicit, r.get("slug") or "")
+
+
+#: The table's statuses that open the frontier. Only `shipped`: `review` sorts
+#: with the moving lanes in STATUS_ORDER and is not SETTLED — a claim of work
+#: not yet merged, so a child built on it stacks on code dev does not have.
+OPEN, GROWN = ("active", "next"), "shipped"
+
+
+def frontier(rows: list[dict], root: str) -> dict:
+    """The passive tree under `root` (operator 2026-11-13, roadmap-organic-structure).
+
+    An open row is on the frontier only when every ancestor up to and including
+    `root` is shipped; otherwise it names the nearest unshipped ancestor. Rows
+    whose parent is not on the board, and cycles met on the way down, are
+    reported rather than followed."""
+    by_slug = {r.get("slug"): r for r in rows if r.get("slug")}
+    if root not in by_slug:
+        return {"state": "UNKNOWN", "root": root,
+                "reason": f"no row `{root}` on the board"}
+    kids = collections.defaultdict(list)
+    for r in rows:
+        kids[r.get("parent") or ""].append(r)
+    missing = sorted(f"{r.get('slug')} (parent `{r.get('parent')}`)" for r in rows
+                     if r.get("parent") and r.get("parent") not in by_slug)
+    out, blocked, cycles, seen = [], [], [], {root}
+    stack = [(by_slug[root], 0, None)]
+    while stack:
+        node, depth, blocker = stack.pop()
+        here = blocker if node.get("status") == GROWN else node
+        for c in kids.get(node.get("slug"), []):
+            if c.get("slug") in seen:
+                cycles.append(f"{node.get('slug')} -> {c.get('slug')}")
+                continue
+            seen.add(c.get("slug"))
+            item = {k: c.get(k) for k in ("slug", "title", "status", "track", "parent")}
+            item["depth"] = depth + 1
+            if c.get("status") in OPEN:
+                if here is None:
+                    out.append((item, c))
+                else:
+                    item.update(blocked_by=here.get("slug"), blocked_by_status=here.get("status"))
+                    blocked.append((item, c))
+            stack.append((c, depth + 1, here))
+
+    def key(pair: tuple) -> tuple:
+        return (pair[0]["depth"], *order(pair[1]))
+    return {"state": "ok", "root": root, "root_status": by_slug[root].get("status"),
+            "frontier": [i for i, _ in sorted(out, key=key)],
+            "blocked": [i for i, _ in sorted(blocked, key=key)],
+            "cycles": cycles, "missing_parent": missing}
+
+
+def print_frontier(f: dict) -> None:
+    if f["state"] != "ok":
+        print(f"UNKNOWN: frontier under `{f['root']}` — {f['reason']}. Not an empty frontier.")
+        return
+    print(f"frontier under `{f['root']}` ({f['root_status']}) — "
+          f"{len(f['frontier'])} buildable, {len(f['blocked'])} blocked")
+    for r in f["frontier"]:
+        print(f"  d{r['depth']} [{r['status']:6s}] {r['slug'] or '?':28s} {r['title'] or ''}")
+    if f["blocked"]:
+        print("\n  blocked — nearest unshipped ancestor:")
+        for r in f["blocked"]:
+            print(f"  d{r['depth']} [{r['status']:6s}] {r['slug'] or '?':28s} "
+                  f"<- `{r['blocked_by']}` ({r['blocked_by_status']})")
+    for c in f["cycles"]:
+        print(f"  ! cycle: {c}")
+    if f["missing_parent"]:
+        print(f"  ! {len(f['missing_parent'])} row(s) on the board name a parent that is not on it: "
+              + ", ".join(f["missing_parent"][:8]) + (" …" if len(f["missing_parent"]) > 8 else ""))
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--all", action="store_true", help="every row, not only the ones in motion")
@@ -104,6 +192,8 @@ def main() -> int:
     ap.add_argument("--status", help="restrict to these statuses, comma-separated (e.g. active,next)")
     ap.add_argument("--schema", action="store_true", help="declared columns vs the live table")
     ap.add_argument("--json", action="store_true", help="machine-readable")
+    ap.add_argument("--frontier", metavar="ROOT",
+                    help="open rows under ROOT whose ancestors are all shipped; the rest name their blocker")
     ap.add_argument("--knowledge", action="store_true",
                     help="one markdown file of the board (bodies whole) to attach to a conversation")
     args = ap.parse_args()
@@ -111,12 +201,25 @@ def main() -> int:
     try:
         table = get(BASE)["data"]
         rows = [r.get("values", r) for r in paged(get, BASE + "/rows")["data"]["rows"]]
-    except (urllib.error.URLError, OSError, KeyError, ValueError) as exc:
+    except (urllib.error.URLError, OSError, KeyError, ValueError, SystemExit) as exc:
+        if args.frontier:  # a reader: UNKNOWN and exit 0, never an empty frontier
+            f = {"state": "UNKNOWN", "root": args.frontier, "reason": f"board unreadable: {exc}"}
+            json.dump(f, sys.stdout) if args.json else print_frontier(f)
+            print()
+            return 0
+        if isinstance(exc, SystemExit):
+            raise
         # Absence must never render as calm. An empty roadmap and an unreachable
         # one look identical on stdout, and only one of them is good news.
         print(f"CANNOT READ the roadmap table: {exc}", file=sys.stderr)
         print(f"  tried {BASE} — is KEAP up? (`docker ps --filter name=keap`)", file=sys.stderr)
         return 2
+
+    if args.frontier:
+        f = frontier(rows, args.frontier)
+        json.dump(f, sys.stdout, indent=1, ensure_ascii=False) if args.json else print_frontier(f)
+        print()
+        return 0
 
     live_cols = [c.get("key") for c in (table.get("schema", {}).get("columns") or [])]
     declared = declared_columns()
@@ -173,22 +276,6 @@ def main() -> int:
     children = collections.defaultdict(list)
     for r in show:
         children[r.get("parent") or ""].append(r)
-
-    def order(r: dict) -> tuple:
-        """Status first, then the operator's explicit order, then slug.
-
-        `ordinal` carries the concept `ui.sort` and until 2026-08-09 no reader
-        honoured it — so a set of rows deliberately sequenced as a week rendered
-        alphabetically, which is the one order that cannot be a plan. Rows with
-        no ordinal keep sorting after those that have one rather than at 0,
-        because absent is not first.
-        """
-        raw = r.get("ordinal")
-        try:
-            explicit = (0, float(raw)) if raw not in (None, "") else (1, 0.0)
-        except (TypeError, ValueError):
-            explicit = (1, 0.0)
-        return (rank(r.get("status")), *explicit, r.get("slug") or "")
 
     def emit(parent: str, depth: int) -> None:
         for r in sorted(children.get(parent, []), key=order):

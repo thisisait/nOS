@@ -99,6 +99,13 @@ outside two parents fell behind 141 platform rows):
 3. track `platform`;
 4. the rest.
 
+A row under `watch`, at any depth, is picked ONLY from
+`tools/roadmap-status.py --frontier watch`. That reader lists the open rows
+whose ancestors are all `shipped`, so the tree grows from its edge and never
+past an unmerged parent (operator 2026-11-13, row roadmap-organic-structure).
+If it prints UNKNOWN, take no `watch` row this pick. Every other row keeps the
+order above.
+
 Within a group, take `next` before `active`, then board order. Skip a row
 that:
 - is listed by `tools/roadmap-stale.py`, which you run once per pick. Its
