@@ -330,6 +330,7 @@ def regenerate_before_last(ctx: Ctx, case: dict):
         finally:
             subprocess.run(["git", "worktree", "remove", "--force", str(wt)], cwd=REPO, capture_output=True)
             shutil.rmtree(tmp, ignore_errors=True)
+            subprocess.run(["git", "worktree", "prune"], cwd=REPO, capture_output=True)   # no stale metadata
     if unread and not bad:
         raise NoData("; ".join(unread))
     return _verdict(bad + unread, "integrate heads stale", len(heads))
@@ -480,6 +481,8 @@ def artifact(a) -> int:
             verdict, detail = "no_data", str(e)
         except KeyError as e:
             verdict, detail = "no_data", f"no judge or field {e}"
+        except (OSError, ValueError, SyntaxError, yaml.YAMLError) as e:   # unreadable is no_data, never a crash
+            verdict, detail = "no_data", f"{type(e).__name__}: {e}"
         results.append({"id": case["id"], "kind": case.get("kind"), "verdict": verdict,
                         "pass": verdict == "pass", "no_data": verdict == "no_data", "detail": detail})
         print(f"{case['id']:<32} {verdict:<8} {detail[:220]}")
