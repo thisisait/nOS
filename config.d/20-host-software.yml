@@ -86,6 +86,7 @@ homebrew_installed_packages:
   - mkcert               # local SSL certificates (tasks/tls-certs.yml)
   - ffmpeg               # ears: microphone capture + resample
   - restic               # pre-wipe backup, Backrest
+  - zstd                 # backup.sh stages dumps with --rsyncable (restic dedup); restore reads .zst
   - gitleaks             # gitleaks plugin: nightly secret scan
   # Infisical CLI — used by roles/pazny.infisical/tasks/seed.yml to run
   # `infisical bootstrap` on a fresh CE instance, returning a machine

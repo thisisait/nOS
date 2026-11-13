@@ -26,6 +26,7 @@ linux_apt_base_packages:
   - sqlite3
   - tar
   - unzip
+  - zstd                 # backup.sh staging (--rsyncable) + restore of .zst
 
 # The operator's own packages, installed on top (package names, strings).
 linux_apt_packages: []

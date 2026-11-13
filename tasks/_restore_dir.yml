@@ -73,8 +73,13 @@
   # on macOS Docker Desktop the host user owns the bind path, so it is a no-op.
   ansible.builtin.shell: |
     set -o pipefail
+    {% if item.file is search('[.]zst$') %}
+    zstd -dc "{{ restore_workdir }}/{{ item.file }}" | tar -xf - -C "{{ dir_target }}" --same-owner 2>/dev/null \
+      || zstd -dc "{{ restore_workdir }}/{{ item.file }}" | tar -xf - -C "{{ dir_target }}"
+    {% else %}
     tar -xzf "{{ restore_workdir }}/{{ item.file }}" -C "{{ dir_target }}" --same-owner 2>/dev/null \
       || tar -xzf "{{ restore_workdir }}/{{ item.file }}" -C "{{ dir_target }}"
+    {% endif %}
   args:
     executable: /bin/bash
   register: dir_extract

@@ -155,6 +155,22 @@ resolve_openssl() {
     return 1
 }
 
+# zstd with --rsyncable for the staged copies (row restic-prune-runs): a gzip
+# stream differs end to end when one row changes, so restic stored ~3 GB a night.
+# Absent: staging stays gzip and the log says so; the S3 leg never changes.
+ZSTD_BIN=""
+resolve_zstd() {
+    local cand
+    for cand in zstd /opt/homebrew/bin/zstd /usr/local/bin/zstd /usr/bin/zstd; do
+        command -v "${cand}" >/dev/null 2>&1 || continue
+        if [[ "$("${cand}" -H 2>&1)" == *--rsyncable* ]]; then   # only the long help lists it
+            ZSTD_BIN="${cand}"
+            return 0
+        fi
+    done
+    log "staging: no zstd with --rsyncable on PATH, staged copies stay gzip"
+}
+
 # Fail closed if encryption is requested but unusable — never silently ship
 # cleartext PII to object storage. Sets ENC_SUFFIX + exports NOS_BACKUP_PASS.
 setup_encryption() {
@@ -203,6 +219,26 @@ keep_if_shrunk() {
     return 0
 }
 
+# <stem>.gz.part -> <stem>.zst (0600), replacing tonight's gzip and yesterday's copy
+# of either name. Returns 1 (the caller promotes the gzip as before) when gzip or
+# zstd fails, e.g. a member with trailing garbage. Sets STAGE_SHRANK.
+STAGE_SHRANK=""
+stage_zstd() {
+    local part="$1" zst old
+    zst="${part%.gz.part}.zst"
+    old="${zst}"; [[ -f "${old}" ]] || old="${part%.part}"
+    STAGE_SHRANK=""
+    if ! gzip -dc "${part}" | "${ZSTD_BIN}" -q -f -3 --rsyncable -o "${zst}.part"; then
+        rm -f "${zst}.part" "${zst}"   # yesterday's .zst would pass for tonight's
+        log "WARN ${part##*/}: zstd restage failed, kept as gzip"
+        return 1
+    fi
+    chmod 600 "${zst}.part"
+    STAGE_SHRANK="$(keep_if_shrunk "${zst}.part" "${old}")"
+    mv -f "${zst}.part" "${zst}"
+    rm -f "${part}" "${part%.part}"
+}
+
 # Append a source entry to the status JSON. Args: name size_bytes duration_ms success(0/1) [empty_ok]
 status_append() {
     local name="$1" size="$2" duration="$3" success="$4" empty_ok="${5:-0}"
@@ -215,7 +251,9 @@ status_append() {
     for part in "${STAGING_DIR}/${name}".*; do
         [[ -e "${part}" && "${part}" != *.prev ]] || continue
         if [[ "${success}" == "1" ]]; then
-            if [[ "${part}" == *.part ]]; then
+            if [[ "${part}" == *.gz.part && -n "${ZSTD_BIN}" ]] && stage_zstd "${part}"; then
+                shrank="${STAGE_SHRANK}"
+            elif [[ "${part}" == *.part ]]; then
                 shrank="$(keep_if_shrunk "${part}" "${part%.part}")"
                 mv -f "${part}" "${part%.part}"
             fi
@@ -1210,6 +1248,7 @@ main() {
     log "==== nOS backup start ===="
     status_reset
     setup_encryption
+    resolve_zstd
     ensure_bucket
 
     run_mariadb
