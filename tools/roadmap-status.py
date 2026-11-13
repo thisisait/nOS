@@ -122,7 +122,7 @@ def order(r: dict) -> tuple:
 _LABEL = r"(?:\s*\([^)\n]*\))?\s*:"
 #: The top agent's stamp: it wrote "SPEC ACCEPTED" / "SPEC READY" or its explore-round rulings in.
 SPEC_STAMP = re.compile(r"spec (?:accepted|ready)|explore rounds? \d", re.I)
-#: The four parts of the house spec shape (roadmap-loop §6), each a label or a heading, never a bare
+#: The four parts of the house spec shape (the roadmap-loop skill, section 6), each a label or a heading, never a bare
 #: word: "tests/e2e/" in prose is not an acceptance, "never" in prose is not a must-not.
 SPEC_PARTS = {
     "goal": re.compile(rf"\bgoal{_LABEL}|^#+ *goal\b", re.I | re.M),
@@ -246,7 +246,7 @@ def print_frontier(f: dict) -> None:
     print(f"frontier under `{f['root']}` ({f['root_status']}) — "
           f"{len(f['frontier'])} buildable, {len(f['blocked'])} blocked")
     print(f"  {ready} ready, {len(f['frontier']) - ready} needs-spec — the loop builds only `ready`; "
-          "a needs-spec row is an explore candidate (roadmap-loop §6)")
+          "a needs-spec row is an explore candidate (roadmap-loop skill, section 6)")
     for r in f["frontier"]:
         where = f"{r['system']:10s} " if "system" in r else ""
         spec = "ready" if r["ready"] else "needs-spec (" + ", ".join(f"no {m}" for m in r["missing"]) + ")"
