@@ -12,8 +12,8 @@
     "organism": 0,
     "habitat": 9,
     "sense": 89,
-    "limb": 132,
-    "memory": 44,
+    "limb": 133,
+    "memory": 45,
     "law": 57,
     "reflex": 50,
     "heartbeat": 1,
@@ -854,6 +854,10 @@
       "kind": "effector"
     },
     "effector:loop-review": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:loop-tick": {
       "level": "limb",
       "kind": "effector"
     },
@@ -2218,6 +2222,10 @@
       "kind": "table"
     },
     "table:loop-config": {
+      "level": "memory",
+      "kind": "table"
+    },
+    "table:loop-ticks": {
       "level": "memory",
       "kind": "table"
     },

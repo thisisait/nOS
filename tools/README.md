@@ -187,6 +187,7 @@ posts, restarts or renders something.
   - `--validate <file>` checks one loop manifest (exit 1, every reason on stderr); discover-pulse-catalog.py schedules no loop it refuses.
 - `loop-pr.py` — The loop's driver: what happens after the judges say pass.
 - `loop-propose.py` — The loop's ENTRY: hand one reported weakness to a model that may propose.
+- `loop-tick.py` — One `loop-ticks` row per loop / watch / top tick, every field checked against the table def, reason scrubbed to 300 chars; append-once, a role writes only its own; dry run without KEAP_AGENT_TOKEN_RW. Exits 0 written · 2 refused · 1 write failed.
 - `loop-review.py` — The reviewer: the only thing in the loop permitted to merge.
 - `night-watch.py` — What we said the night would do, beside what it did.
 - `nos-ops-harness.py` — nos-ops measurement harness — WHERE does the chain/tool-use boundary sit?
