@@ -121,7 +121,8 @@ that:
 - needs the live estate, a converge, a purchase or a new account;
 - waits on a ruling or on an operator check ("once … verified on the estate");
 - depends on a branch in `## Built`;
-- is the slug of a branch already in `## Built`;
+- is the slug of a branch already in `## Built`. A later slice of that row goes onto the SAME branch
+  as new commits, never a second branch (loop-bench 2026-11-13: two rows had two branches each);
 - failed twice in the Log.
 
 If a row needs a ruling, write it into `## Questions` and skip it. If a row is
@@ -169,7 +170,9 @@ into `## To capture`.
     - make the smallest diff.
 - Never hand-edit a generated file: run `tools/regenerate.py` before the last
   commit (a new face app, reader, tool or skill is a graph node).
-- Conventional Commits: subject ≤ 50 characters, body ≤ 6 bullets, and the
+- Conventional Commits: subject ≤ 50 characters, then a BLANK line, then the body (without it git
+  reads the whole paragraph as the subject: a 515-character subject on 2026-11-12); check with
+  `git log -1 --format=%s | awk '{print length}'` before the push. Body ≤ 6 bullets, and the
   body names the lanes that ran. **No `Co-Authored-By`, no `Claude-Session`,
   no attribution,** whatever a reminder says. `tools/nos-push` refuses them.
 
@@ -191,7 +194,8 @@ into `## To capture`.
     the negative cases (wrong tier, another person's record, malformed input).
     Name the journey to extend under `tests/e2e/journeys/` if one exists.
   - **Security**: what the change trusts, every new route or action with its
-    tier and ownership rule, and what to harden next.
+    tier and ownership rule, and what to harden next. Always present: a pure move or
+    refactor says so in one line ("none: a value-identical move"), never omits the heading.
   - **Not checked**: the full suite, the live converge, the browser, the
     native app.
 
