@@ -724,11 +724,13 @@ the state is UNKNOWN: say so, never zero and never green.";
 const READ_RUN: &str = "One agent run as a tree, from Wing (tools/agent-status.py --run, run as the operator): the \
 session at the root, its threads, model turns, tool calls, approvals and grader iterations, each with its status. \
 uuid: the run's session uuid (its actor_action_id). Renders a dendrogram to the person. Tier 1 only. If it cannot be read, \
-the run is UNKNOWN: say so, never that it did nothing.";
+the run is UNKNOWN: say so, never that it did nothing. Tell the person its `summary` fields as they are (status, \
+stop_reason, outcome, steps, bad); never count the tree yourself or name a label the answer does not hold.";
 
 const START_AGENT: &str = "Start one Wing agent as your sub-agent, for the person and only when they ask: renders an approval card \
 naming the agent and the prompt, and nothing starts unless they approve. Only the agents the operator allows (iris_startable_agents) \
-can be started; Wing may still refuse. On approve you hear the new session's uuid: call read_run with it to draw its run.";
+can be started; Wing may still refuse. Until the person approves no run exists: never say it started and never name an id \
+before you hear the approval's session uuid. On approve you hear that uuid: call read_run with it to draw its run.";
 
 const STOP_AGENT: &str = "Stop a Wing agent run you started in this conversation with start_agent, when the person asks: \
 Wing marks it cancelled and the run ends before its next model call (the call in flight finishes). uuid: the session uuid \
@@ -815,7 +817,8 @@ that adds a row; prefill is where the person's draft starts, when shows an optio
 holds a value), reader ({reader red_status|loop_runs}: the estate's red state or the SERE loop's runs, read again \
 whenever the tab opens; tier 1 only; a morning board is these two), and up to 4 lens filters {column, op, value} the tab \
 applies to every rows, chart and kpi widget (an empty value: the person picks). Nothing runs and nothing is placed: the person sees the offer and may place it; you never \
-see its rows. A widget that does not fit its table is left out and you are told why.";
+see its rows. A widget that does not fit its table is left out and you are told why. A sub-agent's report is not a table: \
+to chart its findings, propose_table_create from the report first (the person approves), then offer widgets on that table.";
 
 /// The kinds the model may choose; the rest are drawn by a tool or a control, never by show.
 /// No markdown: plain text already draws as markdown, and a markdown show was then said again as text.
@@ -2643,7 +2646,8 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
             says: format!("Start the Wing agent {name} under this conversation, as you, with this prompt.") };
         let v = self.asking(o, out, "start_agent", json!({"agent": name, "prompt_chars": n}), Component::ActionApproval(card))?;
         o.acting.insert(text(&v["approval"]), Value::Object(params));
-        Ok(v)
+        // No id reaches the model before the approval: it quoted the card's as a run (iris-subagent-journey-gaps).
+        Ok(json!({"proposed": name, "status": "waiting for the person's approval; no run exists yet and it has no id"}))
     }
 
     /// POST Wing's agents/<agent>/sessions as the person, parented to this Iris session: the new session's uuid,
@@ -4434,7 +4438,8 @@ impl Server {
         }
         if kept.is_empty() {
             let why: Vec<String> = dropped.iter().map(|d| format!("{}: {}", d.title, d.why)).collect();
-            return Err(format!("no widget fits its table: {}", why.join("; ")));
+            return Err(format!("no widget fits its table: {}; a report is not a table: to chart it, propose_table_create from it first",
+                               why.join("; ")));
         }
         // The person's input for each condition: the column's options, or a date picker.
         let lens = lens.into_iter().map(|mut l| {
@@ -5367,7 +5372,8 @@ pub fn dendrogram(run: &Value) -> Result<(Dendrogram, Value), String> {
         nodes.extend(children.iter().filter_map(|c| child(c, &top)));
         let total = nodes.len();
         nodes.truncate(DENDROGRAM_MAX);
-        let said = json!({"agent": "iris", "started": started, "drawn": nodes.len(), "hidden": total - nodes.len()});
+        let said = json!({"agent": "iris", "started": started, "drawn": nodes.len(), "hidden": total - nodes.len(),
+                          "summary": {"agent": "iris", "runs_started": started.len()}});
         let d = Dendrogram { title: Some("Iris's runs".into()), root: top, hidden: (total - nodes.len()) as u32, nodes };
         Component::Dendrogram(d.clone()).check()?;
         return Ok((d, said));
@@ -5433,8 +5439,10 @@ pub fn dendrogram(run: &Value) -> Result<(Dendrogram, Value), String> {
     nodes.truncate(DENDROGRAM_MAX);
     let hidden = (total - nodes.len()) as u32;
     let bad: Vec<&str> = nodes.iter().filter(|n| n.status == RunStatus::Bad).map(|n| n.name.as_str()).collect();
+    // The figures Iris quotes: counted here, never by the model (it said 19 of 18).
+    let summary = json!({"status": status, "stop_reason": s["stop_reason"], "outcome": s["outcome_result"], "steps": total, "bad": bad.len()});
     let said = json!({"agent": agent, "status": status, "stop_reason": s["stop_reason"], "outcome": s["outcome_result"],
-        "drawn": nodes.len(), "hidden": hidden, "bad": bad, "started_by_iris": up, "started": started});
+        "drawn": nodes.len(), "hidden": hidden, "bad": bad, "started_by_iris": up, "started": started, "summary": summary});
     let d = Dendrogram { title: Some(format!("{agent} run").chars().take(120).collect()), root: up.unwrap_or(root), nodes, hidden };
     Component::Dendrogram(d.clone()).check()?;
     Ok((d, said))

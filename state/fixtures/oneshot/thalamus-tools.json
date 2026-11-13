@@ -1303,7 +1303,7 @@
   },
   {
     "function": {
-      "description": "One agent run as a tree, from Wing (tools/agent-status.py --run, run as the operator): the session at the root, its threads, model turns, tool calls, approvals and grader iterations, each with its status. uuid: the run's session uuid (its actor_action_id). Renders a dendrogram to the person. Tier 1 only. If it cannot be read, the run is UNKNOWN: say so, never that it did nothing.",
+      "description": "One agent run as a tree, from Wing (tools/agent-status.py --run, run as the operator): the session at the root, its threads, model turns, tool calls, approvals and grader iterations, each with its status. uuid: the run's session uuid (its actor_action_id). Renders a dendrogram to the person. Tier 1 only. If it cannot be read, the run is UNKNOWN: say so, never that it did nothing. Tell the person its `summary` fields as they are (status, stop_reason, outcome, steps, bad); never count the tree yourself or name a label the answer does not hold.",
       "name": "read_run",
       "parameters": {
         "additionalProperties": false,
@@ -1325,7 +1325,7 @@
   },
   {
     "function": {
-      "description": "Start one Wing agent as your sub-agent, for the person and only when they ask: renders an approval card naming the agent and the prompt, and nothing starts unless they approve. Only the agents the operator allows (iris_startable_agents) can be started; Wing may still refuse. On approve you hear the new session's uuid: call read_run with it to draw its run.",
+      "description": "Start one Wing agent as your sub-agent, for the person and only when they ask: renders an approval card naming the agent and the prompt, and nothing starts unless they approve. Only the agents the operator allows (iris_startable_agents) can be started; Wing may still refuse. Until the person approves no run exists: never say it started and never name an id before you hear the approval's session uuid. On approve you hear that uuid: call read_run with it to draw its run.",
       "name": "start_agent",
       "parameters": {
         "additionalProperties": false,
@@ -1586,7 +1586,7 @@
   },
   {
     "function": {
-      "description": "Offer the person a dashboard of 2-8 widgets (one table, chart or kpi alone is query_rows or show, which the person pins); they place it on the tab they choose. Each widget is {title} and one of rows (query_rows arguments), chart ({query {table, q?, where?}, chart bar|line|pie, x, y?, op count|sum|avg}: show's source plus its chart), kpi ({query {table, q?, where?}, op count|sum|avg, y?, unit?}: one total on a tile) or form ({table, columns?, prefill? {column: value}, when? {column: {key, op eq|neq, value}}}: a form that adds a row; prefill is where the person's draft starts, when shows an optional field only while another field holds a value), reader ({reader red_status|loop_runs}: the estate's red state or the SERE loop's runs, read again whenever the tab opens; tier 1 only; a morning board is these two), and up to 4 lens filters {column, op, value} the tab applies to every rows, chart and kpi widget (an empty value: the person picks). Nothing runs and nothing is placed: the person sees the offer and may place it; you never see its rows. A widget that does not fit its table is left out and you are told why.",
+      "description": "Offer the person a dashboard of 2-8 widgets (one table, chart or kpi alone is query_rows or show, which the person pins); they place it on the tab they choose. Each widget is {title} and one of rows (query_rows arguments), chart ({query {table, q?, where?}, chart bar|line|pie, x, y?, op count|sum|avg}: show's source plus its chart), kpi ({query {table, q?, where?}, op count|sum|avg, y?, unit?}: one total on a tile) or form ({table, columns?, prefill? {column: value}, when? {column: {key, op eq|neq, value}}}: a form that adds a row; prefill is where the person's draft starts, when shows an optional field only while another field holds a value), reader ({reader red_status|loop_runs}: the estate's red state or the SERE loop's runs, read again whenever the tab opens; tier 1 only; a morning board is these two), and up to 4 lens filters {column, op, value} the tab applies to every rows, chart and kpi widget (an empty value: the person picks). Nothing runs and nothing is placed: the person sees the offer and may place it; you never see its rows. A widget that does not fit its table is left out and you are told why. A sub-agent's report is not a table: to chart its findings, propose_table_create from the report first (the person approves), then offer widgets on that table.",
       "name": "offer_dashboard",
       "parameters": {
         "additionalProperties": false,
