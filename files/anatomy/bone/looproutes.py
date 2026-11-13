@@ -25,8 +25,11 @@ once by the SQLite authorizer there.
 
 from __future__ import annotations
 
+import importlib.util
+import os
 import threading
 import time
+from pathlib import Path
 import uuid
 from typing import Any
 
@@ -215,6 +218,47 @@ def list_verdicts(limit: int = Query(100, ge=1, le=500),
         return {"verdicts": led.list_verdicts(limit)}
     finally:
         led.close()
+
+
+# ── Awaiting — what the loop left on someone's desk (row face-awaiting-unreachable-kinds) ──
+# ONE reader: tools/loop-status.py awaiting(), loaded from the repo Bone judges against (the estate
+# clone). Bounded for a web route: every git call has a 10 s timeout that fails closed, one run at a
+# time (the lock), and a 60 s process-wide cache. Projection: the fields the Awaiting app shows.
+_AWAITING_LOCK = threading.Lock()
+_AWAITING_CACHE: dict[str, Any] = {}
+_AWAITING_FIELDS = ("uuid", "weakness_id", "intent_class", "state", "detail", "verdict",
+                    "verdict_at", "requires_operator")
+
+
+def _loop_status_reader():
+    path = judges._default_repo_root() / "tools" / "loop-status.py"
+    spec = importlib.util.spec_from_file_location("loop_status_reader", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    if os.environ.get("WING_DB_PATH"):
+        mod.WING_DB = Path(os.environ["WING_DB_PATH"])
+    return mod
+
+
+@router.get("/awaiting")
+def get_awaiting(_caller=Depends(require_loop_scope("read"))) -> dict[str, Any]:
+    """Unlanded proposals (unjudged | ready | re-judge | indeterminate); `unknown` when unreadable."""
+    with _AWAITING_LOCK:
+        hit = _AWAITING_CACHE.get("v")
+        if hit and time.time() - hit[0] < 60:
+            return hit[1]
+        try:
+            raw = _loop_status_reader().awaiting()
+            if raw.get("error"):
+                out: dict[str, Any] = {"unknown": "the loop ledger is unreadable", "unlanded": []}
+            else:
+                out = {"head": raw.get("head"),
+                       "unlanded": [{k: r.get(k) for k in _AWAITING_FIELDS}
+                                    for r in raw.get("unlanded", [])]}
+        except Exception as exc:  # noqa: BLE001 - a reader failure is UNKNOWN, never an empty desk
+            out = {"unknown": f"the awaiting reader failed ({type(exc).__name__})", "unlanded": []}
+        _AWAITING_CACHE["v"] = (time.time(), out)
+        return out
 
 
 @router.post("/forget")

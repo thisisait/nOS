@@ -1070,6 +1070,36 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
       summary: Events Ingest
+  /api/v1/loop/awaiting:
+    get:
+      description: Unlanded proposals (unjudged | ready | re-judge | indeterminate); `unknown` when unreadable.
+      operationId: get_awaiting_api_v1_loop_awaiting_get
+      parameters:
+      - in: header
+        name: authorization
+        required: false
+        schema:
+          default: ''
+          title: Authorization
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                title: Response Get Awaiting Api V1 Loop Awaiting Get
+                type: object
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Awaiting
+      tags:
+      - loop
   /api/v1/loop/budget:
     get:
       description: 'What a proposal judged by `gate_set` may touch.

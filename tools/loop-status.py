@@ -98,6 +98,8 @@ import sys
 
 WING_DB = pathlib.Path.home() / "wing" / "app" / "data" / "wing.db"
 REPO = pathlib.Path(__file__).resolve().parents[1]
+#: Every git call is bounded: Bone serves awaiting() on a web route (GET /api/v1/loop/awaiting).
+GIT_TIMEOUT = 10
 
 #: Weakness-id prefixes the reader emits, with what each one watches. Keep in
 #: step with `files/anatomy/bone/weaknesses.py` SOURCE_ORDER — a prefix missing
@@ -260,8 +262,10 @@ def _git(*argv: str, stdin: str | None = None) -> tuple[int, str]:
     try:
         done = subprocess.run(  # noqa: S603 — fixed argv, no shell
             ["git", *argv], cwd=REPO, input=stdin, text=True,
-            capture_output=True, check=False,
+            capture_output=True, check=False, timeout=GIT_TIMEOUT,
         )
+    except subprocess.TimeoutExpired:
+        return 124, f"git {argv[0]} timed out after {GIT_TIMEOUT}s"
     except OSError as exc:
         return 127, f"{type(exc).__name__}: {exc}"
     return done.returncode, done.stderr.strip()
@@ -319,18 +323,21 @@ def _base_moved_since(verdict_tree: str | None,
     rc, err = _git("diff", "--name-only", verdict_tree, "HEAD")
     if rc != 0:
         return [], f"cannot compare the judged tree: {err or f'git exited {rc}'}"
-    changed = [line for line in _git_lines("diff", "--name-only",
-                                           verdict_tree, "HEAD") if line]
-    return sorted(set(changed) - set(target_paths)), None
+    lines = _git_lines("diff", "--name-only", verdict_tree, "HEAD")
+    if lines is None:
+        return [], "cannot list the moved paths (git failed or timed out)"
+    return sorted(set(line for line in lines if line) - set(target_paths)), None
 
 
-def _git_lines(*argv: str) -> list[str]:
+def _git_lines(*argv: str) -> list[str] | None:
+    """stdout lines; None when git failed or timed out (fail closed: never "nothing moved")."""
     try:
         done = subprocess.run(  # noqa: S603
-            ["git", *argv], cwd=REPO, text=True, capture_output=True, check=False)
-    except OSError:
-        return []
-    return done.stdout.splitlines()
+            ["git", *argv], cwd=REPO, text=True, capture_output=True, check=False,
+            timeout=GIT_TIMEOUT)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return done.stdout.splitlines() if done.returncode == 0 else None
 
 
 def _dirty(paths: list[str]) -> list[str]:
@@ -536,9 +543,9 @@ def _git_head() -> str | None:
     try:
         done = subprocess.run(  # noqa: S603
             ["git", "rev-parse", "HEAD"], cwd=REPO, text=True,
-            capture_output=True, check=False,
+            capture_output=True, check=False, timeout=GIT_TIMEOUT,
         )
-    except OSError:
+    except (OSError, subprocess.TimeoutExpired):
         return None
     return done.stdout.strip() or None
 

@@ -31,7 +31,8 @@
 			? [
 					{ kind: 'question', title: 'Agents waiting for an answer' },
 					{ kind: 'alert', title: 'Critical or high, unread' },
-					{ kind: 'approval', title: 'Iris cards waiting for your approval' }
+					{ kind: 'approval', title: 'Iris cards waiting for your approval' },
+					{ kind: 'proposal', title: 'Loop proposals not yet landed' }
 				].map((g) => ({ ...g, rows: awaiting!.items.filter((i) => i.kind === g.kind) }))
 			: []
 	);
@@ -64,6 +65,8 @@
 							{r.since}
 							{#if r.kind === 'approval'}
 								<button class="ghost" onclick={() => openApp('iris')}>open in Iris</button>
+							{:else if r.kind === 'proposal'}
+								<button class="ghost" onclick={() => openApp('anatomy')}>open in Anatomy</button>
 							{:else}
 								<button class="ghost" onclick={() => openApp('inbox')}>open in Inbox</button>
 							{/if}
