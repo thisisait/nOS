@@ -1,0 +1,37 @@
+# =============================================================================
+# Hermes `tables` profile — ~/.hermes/profiles/tables/config.yaml (`hermes -p tables`)
+# Ansible-managed. Edit roles/pazny.hermes/templates/tables-profile-config.yaml.j2
+#
+# nos-tables lives HERE and never in the main profile: the main profile holds fetch, files,
+# terminal and messaging, and a tables reader beside them is private data + untrusted rows +
+# a way out. This profile reads tables on the CLI and nothing else; no estate bearer — the
+# receptor socket names the person (same wiring as roles/pazny.openhuman config.toml.j2).
+# =============================================================================
+
+# Same model/provider as the main profile (cli-config.yaml.j2).
+model:
+  default: "{{ hermes_primary_model_shortname }}"
+  provider: "custom"
+  base_url: "{{ hermes_ollama_host }}/v1"
+  api_key: "ollama-local"
+  temperature: {{ hermes_temperature | default(0.6) }}
+  top_p: {{ hermes_top_p | default(0.95) }}
+
+mcp_servers:
+  nos-tables:
+    command: "/usr/bin/python3"
+    args: {{ [nos_main_checkout | default(playbook_dir) ~ '/tools/mcp-tables-server.py'] | tojson }}
+    env:
+      KEAP_IDENTITY_URL: "http+unix://{{ receptor_socket | urlencode | replace('/', '%2F') }}"
+      NOS_MCP_READ_ONLY: "1"
+      NOS_MCP_AGENT: "hermes"
+
+# An explicit list per platform the pinned upstream knows (hermes_cli/platforms.py);
+# `no_mcp` with nothing else resolves to zero tools, so a gateway here can do nothing.
+platform_toolsets:
+  cli: [todo, clarify, nos-tables]
+{% for p in ['telegram', 'discord', 'slack', 'whatsapp', 'signal', 'bluebubbles', 'email', 'homeassistant',
+              'mattermost', 'matrix', 'dingtalk', 'feishu', 'wecom', 'wecom_callback', 'weixin', 'qqbot',
+              'webhook', 'api_server'] %}
+  {{ p }}: [no_mcp]
+{% endfor %}

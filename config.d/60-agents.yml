@@ -133,6 +133,8 @@ hermes_web_port: 18790
 
 hermes_enable_memory: true              # Hermes's own MCP memory server (~/.hermes/memory.json); not nOS memory
 
+hermes_tables_profile: true             # `hermes -p tables`: nOS tables read-only on the CLI only; never in the main profile
+
 keap_domain: "keap{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 
 keap_port: 8091                                # loopback publish; also the AgentKit surface

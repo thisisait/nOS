@@ -133,6 +133,28 @@
     mode: '0600'
   notify: Restart hermes
 
+# The `tables` profile (`hermes -p tables`, its own sessions/memory/gateway): nos-tables on the
+# CLI only. Off removes only the config we rendered; the profile's sessions stay.
+- name: "[Hermes] Create the tables profile directory"
+  ansible.builtin.file:
+    path: "{{ hermes_config_dir }}/profiles/tables"
+    state: directory
+    mode: '0700'
+  when: hermes_tables_profile | bool
+
+- name: "[Hermes] Render the tables profile config.yaml"
+  ansible.builtin.template:
+    src: tables-profile-config.yaml.j2
+    dest: "{{ hermes_config_dir }}/profiles/tables/config.yaml"
+    mode: '0600'
+  when: hermes_tables_profile | bool
+
+- name: "[Hermes] Remove the tables profile config.yaml (hermes_tables_profile false)"
+  ansible.builtin.file:
+    path: "{{ hermes_config_dir }}/profiles/tables/config.yaml"
+    state: absent
+  when: not (hermes_tables_profile | bool)
+
 # ── 5.5. Persona + memory seed + custom skills ─────────────────────────────
 # SOUL.md is the main persona ("Inspektor Klepitko" + nOS stack awareness).
 # MEMORY.md is the persistent memory seed with the current enabled_* service state.
@@ -322,6 +344,7 @@
       {% endif %}
 
        MCP servery v configu: {{ hermes_mcp_servers | length }} (filesystem, git, fetch, memory, time)
+       Tables profile: {{ ('tables (hermes -p tables chat; nos-tables read-only, CLI only) at ' + hermes_config_dir + '/profiles/tables/config.yaml') if hermes_tables_profile | bool else 'off (hermes_tables_profile false)' }}
 
        Prvni pouziti:
          {{ hermes_venv }}/bin/hermes                      # interactive TUI
