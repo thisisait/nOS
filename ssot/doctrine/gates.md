@@ -6,6 +6,7 @@ gates:
   - tests/anatomy/test_bookstack_role_follows_the_roster.py
   - tests/anatomy/test_build_images_are_digest_pinned.py
   - tests/anatomy/test_e2e_results_persist.py
+  - tests/anatomy/test_every_table_def_is_created.py
   - tests/anatomy/test_keap_role_journey.py
   - tests/anatomy/test_loop_budget_forbids_its_own_gates.py
   - tests/anatomy/test_nos_app_reads_state.py
