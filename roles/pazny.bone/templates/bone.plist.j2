@@ -91,6 +91,11 @@
         <key>NOS_ROOT_CA_PATH</key>
         <string>{{ stacks_dir }}/shared-certs/rootCA.pem</string>
 {% endif %}
+{% if _bone_mkcert_root_ca | default('') %}
+        <!-- The CA this host SIGNS with (mkcert CAROOT): /api/v1/estate/root-ca hashes it, never the copy above. -->
+        <key>NOS_MKCERT_ROOT_CA</key>
+        <string>{{ _bone_mkcert_root_ca }}</string>
+{% endif %}
 
         <!-- Agentic loop (ssot/doctrine/loop-contract.md). Three tokens,
              three identities: the proposer may read + propose, the evaluator

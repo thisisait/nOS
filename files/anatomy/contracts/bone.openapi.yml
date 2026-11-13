@@ -1006,6 +1006,25 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
       summary: Upgrades Plan
+  /api/v1/estate/root-ca:
+    get:
+      description: 'The trusted root CA''s digest beside what the edge serves (row
+
+        nos-root-ca-fingerprint-second-channel). Trusted = the mkcert rootCA.pem the host signs with
+
+        (NOS_MKCERT_ROOT_CA, fixed at converge), never the serving path; served = the edge''s own answer
+
+        at http://<tenant>/nos-root-ca.crt. One rule: rootca.verdict (estate-status uses it too).
+
+        Never the PEM, the key or a path. Cached 60 s.'
+      operationId: estate_root_ca_api_v1_estate_root_ca_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: Estate Root Ca
   /api/v1/events:
     post:
       description: 'HMAC-authenticated (not API-key) event ingestion from the callback
