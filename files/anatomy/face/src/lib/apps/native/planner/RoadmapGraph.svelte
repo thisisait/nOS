@@ -32,6 +32,11 @@
 	import RowDetail from './RowDetail.svelte';
 
 	const HEADER_GAP = 70; // px above the topmost row a column's header floats
+	/** The face is themed by <html data-theme>; the flow's chrome follows it (graph-theme.css does the rest). */
+	const colorMode =
+		typeof document !== 'undefined' && document.documentElement.dataset.theme === 'light'
+			? 'light'
+			: 'dark';
 
 	/** One non-interactive label node per organ-system column, at that column's x
 	 *  (the min x among its rows — depth-0 rows sit exactly at the column base,
@@ -151,7 +156,7 @@
 		const rowNodes = g.nodes.map((n) => ({
 			id: n.id,
 			position: n.position,
-			data: { label: n.data.label },
+			data: { label: n.data.label, status: n.data.status },
 			style:
 				`background:${STATUS_BG[n.data.status] ?? '#343a45'};color:#e8ecf3;` +
 				'border:1px solid var(--border,#333a45);border-radius:8px;' +
@@ -282,6 +287,7 @@
 			<SvelteFlow
 				bind:nodes
 				bind:edges
+				{colorMode}
 				fitView
 				nodesConnectable={canWrite}
 				elementsSelectable={true}
@@ -292,7 +298,12 @@
 			>
 				<Background />
 				<Controls />
-				<MiniMap pannable zoomable />
+				<!-- Minimap nodes in their status fill (the default was one grey on white, 11-13). -->
+				<MiniMap
+					pannable
+					zoomable
+					nodeColor={(n) => STATUS_BG[String(n.data?.status ?? '')] ?? '#343a45'}
+				/>
 			</SvelteFlow>
 
 			{#if selectedRow}

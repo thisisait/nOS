@@ -13,10 +13,13 @@
 
   Svelte Flow like the Roadmap graph, so drag-to-reparent is the same gesture over the
   same write: reparentPayload → tablesUpsertRow, gated by the BFF's canWrite. Rows are
-  gems; a label shows by level of detail (systems always, epics at medium zoom, leaves
-  up close) and on hover, focus and selection. Guides (wedges, rings, orbit) are one SVG
-  behind the nodes; the level of detail is one class on the wrapper, so zooming costs no
-  per-node work.
+  gems; names live in ONE screen-space label layer over the flow, placed by labelPlan: a
+  constant font size whatever the zoom, one line each, and a greedy collision pass by
+  priority (sector name > system > epic > frontier > leaf) so no label ever lies on another
+  (the operator's finding 11-13). A system reads by its apex name; each sector's name also
+  stands at the rim of its wedge, the way PoE names a class at the edge of the tree. Hover,
+  focus and selection pin a label; the full title is the gem's tooltip and the detail panel.
+  Guides (wedges, rings, orbit) are one SVG behind the nodes.
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
@@ -26,6 +29,7 @@
 		Controls,
 		MiniMap,
 		ViewportPortal,
+		ConnectionMode,
 		type Node,
 		type Edge,
 		type Viewport
@@ -37,11 +41,17 @@
 	import {
 		frontierStates,
 		skillTreeLayout,
+		skillTreeLabels,
+		labelPlan,
+		labelBox,
+		gemRank,
 		reparentPayload,
+		GEM_SIZE,
 		ORGAN_RING,
 		type TreeLayout,
 		type TreeState,
-		type TreeStateInfo
+		type TreeStateInfo,
+		type LabelItem
 	} from '$lib/tables/planner';
 	import type { DataTable } from '$lib/contracts';
 	import { StatusNote, Badge } from '$lib/components/ui';
@@ -62,9 +72,13 @@
 		{ state: 'ungrown', label: 'outside the ring' },
 		{ state: 'dormant', label: 'queued / parked' }
 	];
-	/** Node box per rank (the layout gives centres; Svelte Flow positions a top-left corner). */
-	const SIZE: Record<string, number> = { core: 56, system: 30, epic: 14, leaf: 10, halo: 8 };
-	const LOD = { mid: 0.7, near: 1.4 }; // zoom at which epic, then leaf labels appear
+	/** Zoom bounds: 2.5 shows a leaf at 25px; past that only the labels would grow. */
+	const ZOOM = { min: 0.1, max: 2.5 };
+	/** The face is themed by <html data-theme>; the flow's chrome follows it (tokens do the rest). */
+	const colorMode =
+		typeof document !== 'undefined' && document.documentElement.dataset.theme === 'light'
+			? 'light'
+			: 'dark';
 
 	let nodes = $state.raw<Node[]>([]);
 	let edges = $state.raw<Edge[]>([]);
@@ -74,14 +88,21 @@
 	let table = $state.raw<DataTable | null>(null);
 	let states = $state.raw(new Map<string, TreeStateInfo>());
 	let layout = $state.raw<TreeLayout | null>(null);
+	let labelItems = $state.raw<LabelItem[]>([]);
 	let canWrite = $derived(table?.canWrite ?? false);
 	let action = $state('');
 	let hideDormant = $state(true); // queued/parked/dropped are a third of the board
 	let selectedId = $state<string | null>(null);
-	let zoom = $state(0.2);
-	const lod = $derived(zoom >= LOD.near ? 'lod-near' : zoom >= LOD.mid ? 'lod-mid' : 'lod-far');
-	/** System labels grow against the zoom (up to 1.8×) so the 13 names read at fitView, uncollided. */
-	const lblScale = $derived(Math.min(1.8, Math.max(1, 1 / zoom)));
+	let hoverId = $state<string | null>(null);
+	let focusId = $state<string | null>(null);
+	/** Svelte Flow's viewport, bound: the label layer projects flow → screen with it. */
+	let viewport = $state<Viewport | undefined>();
+	const vp = $derived(viewport ?? { x: 0, y: 0, zoom: 0.4 });
+	/** The pass reruns on a ~4 % zoom step, not on every wheel tick; boxes are placed at the exact zoom. */
+	const zoomStep = $derived(Math.exp(Math.round(Math.log(vp.zoom) * 24) / 24));
+	const pinned = $derived(new Set([hoverId, focusId, selectedId].filter((x): x is string => !!x)));
+	const plan = $derived(labelPlan(labelItems, zoomStep, pinned));
+	const labels = $derived(plan.map((b) => labelBox(b, vp.zoom)));
 	const selectedRow = $derived(
 		selectedId && table ? (table.rows.find((r) => r.id === selectedId) ?? null) : null
 	);
@@ -95,16 +116,10 @@
 	/** Buildable rows only: the loop builds a ready spec; a needs-spec row gets an explore draft first. */
 	const specClass = (info: TreeStateInfo | undefined) =>
 		info?.ready === undefined ? '' : info.ready ? ' spec-ready' : ' spec-needed';
-	const tells = new Map(ORGAN_RING.map((r) => [r.key, r.tells]));
+	const apex = new Map(ORGAN_RING.map((r) => [r.key, r]));
 
 	function text(v: unknown): string {
 		return v == null ? '' : String(v);
-	}
-
-	function rankOf(slug: string, info: TreeStateInfo | undefined, ring: Set<string>): string {
-		if (ring.has(slug)) return 'system';
-		if (!info || info.depth < 0) return info?.state === 'milestone' ? 'epic' : 'halo';
-		return info.depth === 1 ? 'epic' : 'leaf';
 	}
 
 	/** Lay out the FULL board (positions do not jump when a filter changes); the
@@ -114,6 +129,7 @@
 		const lay = skillTreeLayout(t.rows);
 		const ring = new Set(ORGAN_RING.map((r) => r.key));
 		const stateOf = new Map<string, TreeState>();
+		const hidden = new Set<string>();
 		const rowNodes: Node[] = [];
 		for (const r of t.rows) {
 			const pos = lay.positions.get(r.id);
@@ -122,20 +138,22 @@
 			const info = st.get(slug);
 			const state = info?.state ?? 'dormant';
 			stateOf.set(r.id, state);
-			const label = text(r.title) || slug || r.id;
-			const rank = rankOf(slug, info, ring);
-			const size = SIZE[rank];
-			const tell = rank === 'system' ? tells.get(slug) : undefined;
+			const sys = apex.get(slug);
+			const label = sys?.title || text(r.title) || slug || r.id;
+			const rank = gemRank(slug, info, ring);
+			const size = GEM_SIZE[rank];
+			const hide = hideDormant && state === 'dormant' && !sys;
+			if (hide) hidden.add(r.id);
 			rowNodes.push({
 				id: r.id,
 				type: 'skill',
 				position: { x: pos.x - size / 2, y: pos.y - size / 2 },
 				width: size,
 				height: size,
-				data: { label, tells: tell },
+				data: { title: sys ? `${sys.title} — ${sys.tells}` : text(r.title) || slug },
 				class: `skill rank-${rank} st-${state}${specClass(info)}`,
-				ariaLabel: `${label} — ${state}${info?.ready === false ? ', needs a spec' : ''}${tell ? `. ${tell}` : ''}${info?.blockedBy ? `, blocked by ${info.blockedBy}` : ''}`,
-				hidden: hideDormant && state === 'dormant' && !ring.has(slug)
+				ariaLabel: `${label} — ${state}${info?.ready === false ? ', needs a spec' : ''}${sys ? `. ${sys.tells}` : ''}${info?.blockedBy ? `, blocked by ${info.blockedBy}` : ''}`,
+				hidden: hide
 			});
 		}
 		const bySlug = new Map(t.rows.map((r) => [text(r.slug), r.id]));
@@ -158,10 +176,10 @@
 		const core: Node = {
 			id: CORE,
 			type: 'skill',
-			position: { x: -SIZE.core / 2, y: -SIZE.core / 2 },
-			width: SIZE.core,
-			height: SIZE.core,
-			data: { label: 'core' },
+			position: { x: -GEM_SIZE.core / 2, y: -GEM_SIZE.core / 2 },
+			width: GEM_SIZE.core,
+			height: GEM_SIZE.core,
+			data: { title: 'core — the shipped estate' },
 			class: 'skill rank-core st-shipped',
 			ariaLabel: 'core — the shipped estate',
 			draggable: false,
@@ -171,6 +189,7 @@
 		};
 		states = st;
 		layout = lay;
+		labelItems = skillTreeLabels(t.rows, lay, st).filter((i) => !hidden.has(i.id));
 		nodes = [core, ...rowNodes];
 		edges = treeEdges;
 		phase = t.rows.length ? 'ok' : 'empty';
@@ -225,7 +244,11 @@
 		for (const e of deleted.edges ?? []) if (e.source !== CORE) void reparent(e.target, null);
 	}
 
-	const onmove = (_e: unknown, vp: Viewport) => (zoom = vp.zoom);
+	/** Keyboard focus lands on Svelte Flow's node wrapper (data-id); pin that node's label. */
+	function onfocusin(e: FocusEvent) {
+		const el = e.target as HTMLElement | null;
+		focusId = el?.closest?.('.svelte-flow__node')?.getAttribute('data-id') ?? null;
+	}
 
 	/** Guide geometry: wedge paths and ring radii, from the layout (flow coordinates). */
 	const guides = $derived.by(() => {
@@ -291,22 +314,29 @@
 	{:else if phase === 'empty'}
 		<StatusNote kind="empty" title="No rows">The roadmap table is empty.</StatusNote>
 	{:else}
-		<div class="flow {lod}" style="--lbl-scale: {lblScale.toFixed(2)}">
+		<div class="flow" {onfocusin} onfocusout={() => (focusId = null)}>
 			<SvelteFlow
 				bind:nodes
 				bind:edges
+				bind:viewport
 				{nodeTypes}
+				{colorMode}
 				fitView
-				minZoom={0.05}
-				maxZoom={4}
+				fitViewOptions={{ padding: 0.15 }}
+				minZoom={ZOOM.min}
+				maxZoom={ZOOM.max}
+				zoomOnDoubleClick={false}
+				nodesDraggable={false}
+				connectionMode={ConnectionMode.Loose}
+				connectionRadius={24}
 				onlyRenderVisibleElements
 				nodesConnectable={canWrite}
 				elementsSelectable={true}
 				{onconnect}
 				{ondelete}
 				{onbeforedelete}
-				{onmove}
-				onmoveend={onmove}
+				onnodepointerenter={({ node }) => (hoverId = node.id)}
+				onnodepointerleave={() => (hoverId = null)}
 				onselectionchange={({ nodes: sel }) => (selectedId = sel[0]?.id ?? null)}
 			>
 				<Background gap={40} size={1} />
@@ -334,8 +364,26 @@
 						</svg>
 					</ViewportPortal>
 				{/if}
-				<Controls />
-				<MiniMap pannable zoomable />
+				<!-- The label layer: screen space, so text never scales; the nodes carry the aria names. -->
+				<div class="labels" aria-hidden="true">
+					{#each labels as l (l.id)}
+						<span
+							class="lbl {l.cls}"
+							class:pinned={pinned.has(l.id)}
+							style="left:{(vp.x + l.x).toFixed(1)}px; top:{(vp.y + l.y).toFixed(
+								1
+							)}px; max-width:{l.w}px">{l.text}</span
+						>
+					{/each}
+				</div>
+				<Controls showLock={false} />
+				<MiniMap
+					pannable
+					zoomable
+					nodeClass={(n) => String(n.class ?? '')}
+					nodeStrokeWidth={20}
+					nodeBorderRadius={20}
+				/>
 			</SvelteFlow>
 
 			{#if selectedRow}
@@ -345,6 +393,9 @@
 							<i class="dot st-{selectedInfo.state}"></i>{selectedInfo.state}
 							{#if selectedInfo.system}· {selectedInfo.system}, ring {selectedInfo.depth + 1}{/if}
 						</p>
+						{#if selectedInfo.depth === 0}
+							<p class="tells">{apex.get(selectedInfo.system)?.tells}</p>
+						{/if}
 						{#if selectedInfo.ready}
 							<p class="spec">spec ready: the loop may build it</p>
 						{:else if selectedInfo.ready === false}
@@ -425,15 +476,17 @@
 		min-height: 0;
 		position: relative;
 	}
+	/* The field: a dark vignette lit from the core. */
 	.flow :global(.svelte-flow) {
 		background: radial-gradient(
-			circle at 50% 45%,
-			color-mix(in srgb, var(--ok) 7%, var(--bg)) 0,
-			var(--bg) 55%
+			circle at 50% 50%,
+			color-mix(in srgb, var(--ok) 9%, var(--bg)) 0,
+			var(--bg) 50%,
+			color-mix(in srgb, var(--bg) 85%, black) 100%
 		);
 	}
 	.flow :global(.svelte-flow__background) {
-		opacity: 0.35;
+		opacity: 0.3;
 	}
 
 	/* Guides: the systems' wedges, the rings, the milestone orbit and the halo — behind everything. */
@@ -473,7 +526,69 @@
 		stroke-dasharray: 2 8;
 	}
 
-	/* ── Nodes. The box is the gem's size; the label hangs below it. State sets --node. ── */
+	/* ── The label layer: screen px, one line, ellipsis; the state tints the ink. ── */
+	.labels {
+		position: absolute;
+		inset: 0;
+		overflow: hidden;
+		pointer-events: none;
+		z-index: 4; /* over the renderer (4, earlier in the DOM), under the panels (5) */
+	}
+	.lbl {
+		position: absolute;
+		box-sizing: border-box;
+		height: 18px; /* = LABEL_PX.small.h: the pass measures what is drawn */
+		padding: 0 7px;
+		border-radius: 999px;
+		background: color-mix(in srgb, var(--bg) 82%, transparent);
+		border: 1px solid var(--glass-brd);
+		color: var(--fg);
+		font-size: 11px;
+		line-height: 16px;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.lbl.rank-system,
+	.lbl.rank-core,
+	.lbl.rim {
+		height: 22px; /* = LABEL_PX.big.h */
+		padding: 0 8px;
+		font-size: 13px;
+		font-weight: 600;
+		line-height: 20px;
+	}
+	.lbl.rank-core {
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		font-size: 12px;
+	}
+	.lbl.rim {
+		background: transparent;
+		border-color: transparent;
+		color: color-mix(in srgb, var(--fg) 70%, var(--muted));
+		text-shadow: 0 0 12px var(--bg);
+	}
+	.lbl.st-frontier,
+	.lbl.st-doing {
+		color: var(--warn-ink);
+	}
+	.lbl.st-allocated,
+	.lbl.st-review {
+		color: var(--info-ink);
+	}
+	.lbl.st-blocked,
+	.lbl.st-dormant,
+	.lbl.rank-halo {
+		color: var(--muted);
+	}
+	.lbl.pinned {
+		border-color: var(--accent);
+		color: var(--fg);
+		z-index: 1;
+	}
+
+	/* ── Nodes. The box is the gem's size. State sets --node. ── */
 	.flow :global(.svelte-flow__node.skill) {
 		--node: var(--glass-brd);
 		--node-core: color-mix(in srgb, var(--node) 30%, var(--bg));
@@ -483,7 +598,7 @@
 		padding: 0;
 		box-shadow: none;
 		color: var(--fg);
-		font-size: 11px;
+		cursor: pointer;
 	}
 	.flow :global(.svelte-flow__node.skill:focus-visible) {
 		outline: 2px solid var(--accent);
@@ -492,7 +607,13 @@
 	.flow :global(.svelte-flow__node.skill.selected .gem) {
 		box-shadow:
 			0 0 0 2px var(--bg),
-			0 0 0 4px var(--accent);
+			0 0 0 4px var(--accent),
+			0 0 16px 4px color-mix(in srgb, var(--accent) 50%, transparent);
+	}
+	.flow :global(.svelte-flow__node.skill:hover),
+	.flow :global(.svelte-flow__node.skill:focus-visible),
+	.flow :global(.svelte-flow__node.skill.selected) {
+		z-index: 20 !important;
 	}
 
 	/* Rank shapes: core disc, system keystone (hexagon), epic ring, leaf dot, halo mote. */
@@ -523,9 +644,20 @@
 		border-radius: 50%;
 		background: var(--node);
 	}
+	/* A keystone's halo (clip-path cuts a box-shadow, so the glow is the node's own). */
+	.flow :global(.svelte-flow__node.rank-system) {
+		border-radius: 50%;
+		box-shadow: 0 0 22px 6px color-mix(in srgb, var(--node) 35%, transparent);
+	}
 	.flow :global(.svelte-flow__node.rank-epic .gem) {
 		background: var(--node-core);
-		box-shadow: inset 0 0 0 2px var(--node);
+		box-shadow:
+			inset 0 0 0 2px var(--node),
+			0 0 8px 1px color-mix(in srgb, var(--node) 45%, transparent);
+	}
+	.flow :global(.svelte-flow__node.rank-leaf.st-shipped .gem),
+	.flow :global(.svelte-flow__node.rank-leaf.st-allocated .gem) {
+		box-shadow: 0 0 6px 1px color-mix(in srgb, var(--node) 60%, transparent);
 	}
 	.flow :global(.svelte-flow__node.rank-halo .gem) {
 		opacity: 0.7;
@@ -558,6 +690,7 @@
 	/* A ready spec is a filled, pulsing gem; a needs-spec row is hollow and still (not buildable yet). */
 	.flow :global(.svelte-flow__node.st-frontier.spec-ready .gem) {
 		background: var(--node);
+		box-shadow: 0 0 8px 2px color-mix(in srgb, var(--node) 55%, transparent);
 	}
 	.flow :global(.svelte-flow__node.st-frontier.spec-needed .gem) {
 		background: var(--node-core);
@@ -622,62 +755,31 @@
 		opacity: 0.55;
 	}
 
-	/* Level of detail: systems and the core always, epics from medium zoom, leaves up close;
-	   hover, focus and selection always open a label. */
-	.flow :global(.svelte-flow__node.rank-core .lbl),
-	.flow :global(.svelte-flow__node.rank-system .lbl),
-	.flow.lod-mid :global(.svelte-flow__node.rank-epic .lbl),
-	.flow.lod-near :global(.svelte-flow__node.rank-epic .lbl),
-	.flow.lod-near :global(.svelte-flow__node.rank-leaf .lbl),
-	.flow.lod-near :global(.svelte-flow__node.rank-halo .lbl),
-	.flow :global(.svelte-flow__node.skill:hover .lbl),
-	.flow :global(.svelte-flow__node.skill:focus-visible .lbl),
-	.flow :global(.svelte-flow__node.skill.selected .lbl) {
-		display: flex;
-	}
-	.flow :global(.svelte-flow__node.rank-system .lbl) {
-		font-size: 14px;
-		font-weight: 600;
-		top: calc(100% + 8px);
-		background: color-mix(in srgb, var(--glass) 80%, var(--bg));
-	}
-	.flow :global(.svelte-flow__node.rank-core .lbl) {
-		font-size: 13px;
-		font-weight: 700;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		top: calc(100% + 10px);
-	}
-	.flow :global(.svelte-flow__node.rank-epic .lbl) {
-		font-size: 12px;
-	}
-	.flow :global(.svelte-flow__node.skill:hover),
-	.flow :global(.svelte-flow__node.skill:focus-visible),
-	.flow :global(.svelte-flow__node.skill.selected) {
-		z-index: 20 !important;
-	}
-	.flow :global(.svelte-flow__node.skill:hover .lbl),
-	.flow :global(.svelte-flow__node.skill:focus-visible .lbl),
-	.flow :global(.svelte-flow__node.skill.selected .lbl) {
-		max-width: 320px;
-		white-space: normal;
-		text-align: center;
-	}
-	.flow :global(.svelte-flow__node.skill:hover .tells),
-	.flow :global(.svelte-flow__node.skill:focus-visible .tells),
-	.flow :global(.svelte-flow__node.skill.selected .tells) {
-		display: block;
-	}
+	/* Handles: both on the gem's centre (a 1px-tall box, so the edge's end IS the centre), with a
+	   round hit area on hover; the connection snaps within connectionRadius, so a drop is forgiving. */
 	.flow :global(.svelte-flow__node.skill .svelte-flow__handle) {
-		opacity: 0;
-		width: 6px;
-		height: 6px;
+		top: 50%;
+		left: 50%;
+		right: auto;
+		bottom: auto;
+		width: 12px;
+		height: 1px;
 		min-width: 0;
 		min-height: 0;
+		border: 0;
+		border-radius: 0;
+		background: transparent;
+		transform: translate(-50%, -50%);
 	}
-	.flow :global(.svelte-flow__node.skill:hover .svelte-flow__handle),
-	.flow :global(.svelte-flow__node.skill.selected .svelte-flow__handle) {
-		opacity: 1;
+	.flow :global(.svelte-flow__node.skill .svelte-flow__handle::before) {
+		content: '';
+		position: absolute;
+		inset: -8px -2px;
+		border-radius: 50%;
+	}
+	.flow :global(.svelte-flow__node.skill:hover .svelte-flow__handle.source::before),
+	.flow :global(.svelte-flow__node.skill.selected .svelte-flow__handle.source::before) {
+		box-shadow: inset 0 0 0 1px var(--accent);
 	}
 
 	/* Connectors: allocated paths lit from the core outward; the frontier's own link dashed. */
@@ -688,7 +790,8 @@
 	.flow :global(.svelte-flow__edge.grown .svelte-flow__edge-path) {
 		stroke: var(--ok);
 		stroke-width: 2;
-		stroke-opacity: 0.85;
+		stroke-opacity: 0.9;
+		filter: drop-shadow(0 0 3px color-mix(in srgb, var(--ok) 70%, transparent));
 	}
 	.flow :global(.svelte-flow__edge.front .svelte-flow__edge-path) {
 		stroke: var(--warn);
@@ -715,7 +818,7 @@
 		border: 1px solid var(--glass-brd);
 		border-radius: 8px;
 		font-size: 0.72rem;
-		z-index: 4;
+		z-index: 6;
 	}
 	.chip {
 		display: inline-flex;
@@ -813,12 +916,14 @@
 	}
 	.state,
 	.blocker,
-	.spec {
+	.spec,
+	.tells {
 		margin: 0.4rem 0 0;
 		color: var(--fg);
 	}
 	.blocker,
-	.spec.needs {
+	.spec.needs,
+	.tells {
 		color: var(--muted);
 	}
 </style>
