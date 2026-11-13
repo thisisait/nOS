@@ -1,0 +1,38 @@
+---
+# ClamAV: the anti-malware immune cell (state/immune/indicators.yml `clamav`).
+# Signatures: the clamav:freshclam Pulse job. Judge: tools/immune-drill.py eicar.
+
+- name: "[ClamAV] Install via Homebrew"
+  community.general.homebrew:
+    name: clamav
+    state: present
+  when: ansible_os_family == 'Darwin'
+
+# The package pulls clamav-freshclam, whose daemon keeps /var/lib/clamav fresh.
+- name: "[ClamAV] Install via apt"
+  ansible.builtin.apt:
+    name: clamav
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  become: true
+  when: ansible_os_family == 'Debian'
+
+# Homebrew ships only freshclam.conf.sample, and freshclam refuses to run without a config.
+- name: "[ClamAV] freshclam config (Homebrew; an operator's own is kept)"
+  ansible.builtin.copy:
+    dest: "{{ homebrew_prefix }}/etc/clamav/freshclam.conf"
+    content: "DatabaseMirror database.clamav.net\n"
+    mode: "0644"
+    force: false
+  when: ansible_os_family == 'Darwin'
+
+# First signatures now, so the drill can judge before the first 01:10 job. Offline = UNKNOWN, not a failed converge.
+- name: "[ClamAV] First signature download (Homebrew)"
+  ansible.builtin.command:
+    cmd: "{{ homebrew_prefix }}/bin/freshclam --stdout"
+    creates: "{{ homebrew_prefix }}/var/lib/clamav/main.cvd"
+  register: _clamav_first
+  changed_when: _clamav_first.rc == 0
+  failed_when: false
+  when: ansible_os_family == 'Darwin'

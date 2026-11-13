@@ -20,8 +20,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 120 (95 core services, 3 manifest apps)
-- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (108)
+- **Processing activities:** 121 (96 core services, 3 manifest apps)
+- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (109)
 - **Transfers outside the EU:** 12 activities
 - **Activities engaging a third-party processor:** 18
 
@@ -1392,6 +1392,17 @@ container logs for security monitoring of a public endpoint.
 
 #### Ci Circadian — `svc_ci-circadian`
 - **Purpose:** Starting this repository's own CI workflows on the dev branch
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`
+- **Data categories:** `software_inventory`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** 30 days
+- **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
+
+#### Clamav — `svc_clamav`
+- **Purpose:** Downloading public malware signatures for the host's anti-malware scanner
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
 - **Data categories:** `software_inventory`

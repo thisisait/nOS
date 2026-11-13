@@ -15,10 +15,10 @@
     "limb": 133,
     "memory": 45,
     "law": 57,
-    "reflex": 50,
+    "reflex": 51,
     "heartbeat": 1,
     "internal": 79,
-    "edges": 453
+    "edges": 454
   },
   "nodes": {
     "agent:conductor": {
@@ -1266,6 +1266,10 @@
       "kind": "pulse"
     },
     "pulse:ci-circadian:nightly": {
+      "level": "reflex",
+      "kind": "pulse"
+    },
+    "pulse:clamav:freshclam": {
       "level": "reflex",
       "kind": "pulse"
     },
@@ -3859,6 +3863,11 @@
     {
       "from": "service:pulse",
       "to": "pulse:ci-circadian:nightly",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:clamav:freshclam",
       "kind": "trigger"
     },
     {

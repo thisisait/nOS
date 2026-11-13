@@ -139,7 +139,7 @@ posts, restarts or renders something.
 
 ### Estate state, renders and records
 
-- `immune-drill.py` — the immune drill: plants inert samples in a temp tree, runs the estate's own detector (gitleaks with this repo's config), records caught / missed / no detector, removes every sample (row immune-drill-known-samples). Operator only.
+- `immune-drill.py` — the immune drill: plants inert samples in a temp tree, runs the estate's own detectors (gitleaks with this repo's config, clamscan on an EICAR file), records caught / missed / UNKNOWN, removes every sample (row immune-drill-known-samples). Operator only.
 - `current-state.py` — The claim board's WRITE side: file/claim/release/progress; a claim is refused unless the match says you are capable.
 - `geo-load.py` — Load ČÚZK open data (RÚIAN address points, INSPIRE parcels + buildings) for the configured kraje into PostGIS `geo`; staged + swapped per layer.
 - `geo-project-sites.py` — Nightly one-way projection of KEAP party-site rows (+ ARES seats) into PostGIS `geo.party_site`; `--erase-party` for GDPR (called by digest-teardown).

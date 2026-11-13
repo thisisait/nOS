@@ -2743,6 +2743,13 @@
     # tasks/stacks/core-up.yml (infra/observability) and tasks/stacks/stack-up.yml
     # (other stacks). Nginx vhost renders are part of role tasks/main.yml.
 
+    # Anti-malware immune cell (row immune-clamav-cell): brew on macOS, apt on Ubuntu.
+    - import_tasks: tasks/clamav.yml
+      when:
+        - not (nos_dry_removal | default(false) | bool)
+        - install_clamav | default(false) | bool
+      tags: ['clamav', 'immune']
+
     # ──────────────────────────────────────────────────────────────────────────
     # Network - Tailscale + dnsmasq
     # ──────────────────────────────────────────────────────────────────────────

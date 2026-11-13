@@ -481,6 +481,9 @@ hardening_ssh_tcp_forwarding: false
 install_santa: false              # Santa exec telemetry; reader: tools/santa-status.py
 santa_version: "2026.9"           # github.com/northpolesec/santa release (Apache-2.0)
 santa_pkg_sha256: "96821b6439d51ece2991e1d9a8ddd9969c6278391325d8e73904ff0961dff6ea"
+# ClamAV, the anti-malware immune cell (brew/apt, tasks/clamav.yml); signatures by the
+# clamav:freshclam Pulse job. Judges the immune drill's eicar sample; scans nothing else yet.
+install_clamav: false
 
 # Agents (claude CLI children of AgentKit / pulse-run-agent.sh) run as a separate,
 # non-admin macOS user that cannot read ~/.nos. Off = agents run as the operator, as today.
