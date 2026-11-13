@@ -185,7 +185,9 @@ restic web UI + scheduler — as a **host launchd/systemd-user daemon** on loopb
 :9898, SSO-gated (Authentik forward-auth Tier-1, `backrest.<tld>`). It orchestrates
 the **off-site (copy #2)** restic leg + a browse-and-restore UI + scheduled
 `restic check`; it seeds an `offsite` repo (`autoInitialize`) + the `nos-dumps` plan over the staging dir (`nos-offsite`, the RustFS ciphertext, retired 2026-11-05: it deduped nothing)
-from `restic_repo` when set. It **complements, does not replace** `backup.sh`'s
+from `restic_repo` when set. The staged copies are `zstd --rsyncable` (`*.sql.zst`, `dir-*.tar.zst`,
+`keap-db.zst`; backup.sh `stage_zstd`), so a night with few changed rows adds few restic chunks; a
+gzip stream changed end to end (row restic-prune-runs). S3 objects keep their `.gz(.enc)` names. It **complements, does not replace** `backup.sh`'s
 app-consistent logical dumps (copy #1) — restic snapshots bytes, not quiesced DBs.
 When `install_backrest=true` it **supersedes** the legacy `tasks/backup.yml`
 off-site restic leg (gated off so two schedulers don't prune the same repo).

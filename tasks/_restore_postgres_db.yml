@@ -23,7 +23,7 @@
 - name: "[Restore][postgres-db] Count {{ pgdb }} rows in the dump"
   ansible.builtin.shell: |
     set -o pipefail
-    gunzip -c "{{ pgdb_file }}" | awk -v want="{{ pgdb_decl.verify | join(' ') }}" '
+    {{ 'zstd -dc' if pgdb_file is search('[.]zst$') else 'gunzip -c' }} "{{ pgdb_file }}" | awk -v want="{{ pgdb_decl.verify | join(' ') }}" '
       BEGIN { n = split(want, w, " "); for (i = 1; i <= n; i++) c[w[i]] = 0 }
       /^COPY public\./ { t = $2; sub(/^public\./, "", t); on = (t in c); next }
       on && $0 == "\\." { on = 0; next }
@@ -73,7 +73,7 @@
     - name: "[Restore][postgres-db] Replay the dump into {{ pgdb }}"
       ansible.builtin.shell: |
         set -o pipefail
-        gunzip -c "{{ pgdb_file }}" | docker exec -i {{ pgdb_pg }} psql -U postgres -d "{{ pgdb }}" -v ON_ERROR_STOP=1 -1 -q >/dev/null
+        {{ 'zstd -dc' if pgdb_file is search('[.]zst$') else 'gunzip -c' }} "{{ pgdb_file }}" | docker exec -i {{ pgdb_pg }} psql -U postgres -d "{{ pgdb }}" -v ON_ERROR_STOP=1 -1 -q >/dev/null
       args:
         executable: /bin/bash
       changed_when: true

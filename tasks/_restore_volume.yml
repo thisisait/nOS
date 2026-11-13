@@ -67,7 +67,7 @@
     docker run --rm -i \
       -v {{ vol_name }}:/data \
       {{ restore_alpine_image }} \
-      sh -c "tar -xzf - -C /data" < {{ vol_tarball }}
+      sh -c "tar -x{{ '' if vol_tarball is search('[.]zst$') else 'z' }}f - -C /data" < {{ '<(zstd -dc ' ~ vol_tarball ~ ')' if vol_tarball is search('[.]zst$') else vol_tarball }}
   args:
     executable: /bin/bash
   changed_when: true
