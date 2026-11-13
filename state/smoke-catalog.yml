@@ -96,10 +96,10 @@ smoke_endpoints:
     note: "Bone is intentionally not behind Traefik (LAN agent)"
 
   - id: rustfs
-    url: "https://{{ rustfs_domain }}/health"
+    url: "http://127.0.0.1:{{ rustfs_api_port | default(9010) }}/health"
     expect: [200]
     when: "install_rustfs | default(true)"
-    note: "RustFS S3 — root returns 501 by spec, /health is the live probe"
+    note: "RustFS S3 API health on loopback: the edge serves only the console, behind forward-auth (row lan-rustfs-spacetimedb-sso), so /health through it is a 302 to login"
 
   - id: code_server
     # code-server's container HTTPS handshake with curl/Go's TLS is
