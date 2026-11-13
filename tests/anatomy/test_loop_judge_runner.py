@@ -1101,7 +1101,9 @@ MEASURED_WORK = {
     # RE-DERIVED 2026-11-04 — fired at 9390 collected vs 8863 (the v0.19 wave: 26 branches). Judge-env
     # run (no wing/vendor): 9061 passed, 366 skipped, 3 failed (all 3 fixed on the same branch), so 9064;
     # no operator (vendor) reading taken, so this is the lower of the two. min_work 9064-120.
-    "pytest-anatomy": 9064,
+    # 2026-11-13 judge-env run (no vendor), the lane cut applied as the judge runs it: 8505 passed +
+    # 1 failed (this ratchet, red on growth) = 8506 executed; 690 deselected by tests/_lanes.yml.
+    "pytest-anatomy": 8506,
     "cortex-corpus-diff": 1,
 }
 
@@ -1171,7 +1173,11 @@ def test_the_pytest_ratchet_is_remeasured_against_collection(pytestconfig):
     assert collected >= len(selected), f"the lane cut invented tests: {len(selected)} selected of {collected}"
     assert collected > 1000, f"collection returned {collected} — the run is broken, not the ratchet"
 
+    # The judge executes the lane cut (tests/_lanes.yml deselects), so the record is held against
+    # what is SELECTED, not the whole corpus: against the corpus a true reading can never pass
+    # (2026-11-13: 8506 executed vs 9550 collected). GATE CHANGE, row ratchet-follows-lane-cut.
     recorded = MEASURED_WORK["pytest-anatomy"]
+    collected = len(selected)
     assert recorded >= collected * 0.95, (
         f"tests/anatomy now collects {collected} tests but the recorded "
         f"measurement is {recorded}, a {1 - recorded / collected:.0%} gap. The "
