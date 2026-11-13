@@ -29,6 +29,11 @@ non-zero is a gate wearing a reader's name.
     tools/brew-pin-status.py --lag 14       # ask a different window
     tools/brew-pin-status.py --json
 
+LOCKED / FLOATING beside each pin (row brew-deps-deterministic-pin): whether
+brew itself holds the keg (`brew list --pinned`). A recorded version brew can
+still move on any `brew upgrade` is a false lock. UNKNOWN when brew is absent
+or did not answer in time, never LOCKED.
+
 THE CARVE-OUT IS PART OF THE DESIGN, not an oversight. `tasks/nginx.yml:34`
 holds `state: latest` ON PURPOSE — REM-134 needs host nginx >= 1.31.3 for
 CVE-2026-42533, so lagging it would re-open a closed finding. A security floor
@@ -179,12 +184,32 @@ def _cmp(a: str, b: str) -> int | None:
     return (pa > pb) - (pa < pb)
 
 
+def brew_pinned() -> set[str] | None:
+    """The formulae brew itself pins, from ONE `brew list --pinned`. None = unknown."""
+    from shutil import which as _which
+    brew = _which("brew")
+    if not brew:
+        return None
+    try:
+        r = subprocess.run([brew, "list", "--pinned"], capture_output=True, text=True,
+                           timeout=TIMEOUT, env={**os.environ, "HOMEBREW_NO_AUTO_UPDATE": "1"})
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return set(r.stdout.split()) if r.returncode == 0 else None
+
+
+def _lock(pinned: bool | None) -> str:
+    return {True: "LOCKED", False: "FLOATING"}.get(pinned, "UNKNOWN")
+
+
 def survey(lag_days: int) -> list[dict]:
     now = dt.datetime.now(dt.timezone.utc)
+    held = brew_pinned()
     out = []
     for formula, (var, why) in sorted(PINNED.items()):
         row = {"formula": formula, "var": var, "why": why,
-               "pin": recorded_pin(var), "keg": linked_keg(formula)}
+               "pin": recorded_pin(var), "keg": linked_keg(formula),
+               "brew_pinned": None if held is None else formula in held}
         try:
             api = _get(FORMULA_API.format(name=formula))
             row["stable"] = (api.get("versions") or {}).get("stable")
@@ -237,7 +262,7 @@ def main() -> int:
 
     print(f"brew pins, against a {args.lag}-day lag window\n")
     for r in rows:
-        head = (f"  {r['verdict']:<10} {r['formula']:<12} "
+        head = (f"  {r['verdict']:<10} {_lock(r['brew_pinned']):<9} {r['formula']:<12} "
                 f"pin {r.get('pin') or '?':<10} upstream {r.get('stable') or '?'}")
         print(head)
         if r.get("keg") and r.get("keg") != r.get("pin"):
@@ -249,9 +274,15 @@ def main() -> int:
     if not rows:
         print("  (no formula is pinned — PINNED is empty)")
 
-    print(f"\n  exempt by design ({len(EXEMPT)}):")
+    print(f"\n  exempt by design ({len(EXEMPT)}), floats by design:")
     for formula, reason in sorted(EXEMPT.items()):
         print(f"    {formula}: {reason}")
+
+    floating = [r for r in rows if r["brew_pinned"] is False]
+    if any(r["brew_pinned"] is None for r in rows):
+        print("\n  brew pin state UNKNOWN (no brew, or it did not answer): not read as locked.")
+    print(f"\n  {len(floating)} recorded pin(s) float: brew can move them on any upgrade"
+          + (f" ({', '.join(r['formula'] for r in floating)})" if floating else ""))
 
     unknown = [r for r in rows if r["verdict"] == "UNKNOWN"]
     if unknown:
