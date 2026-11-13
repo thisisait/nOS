@@ -88,26 +88,17 @@ Update the heartbeat and the ledger after every phase. Every timestamp you write
 
 ## 2. Pick
 
-Run `nos dtt status --status active,next` and read the titles only. Never pass
-`--knowledge` (656 KB). Read one row's body with
+Run `tools/roadmap-status.py --frontier ring` and pick ONLY from its buildable list, in its
+order: nearest the centre first, then the ring order (core column, left wing, right wing).
+The roadmap is a passive tree (operator 2026-11-13, row roadmap-organic-structure): the
+centre is the shipped core, ring 1 the 13 apex organ systems, and a row grows only from a
+parent that is shipped or `active` (an allocated branch). A row not on the frontier is not
+picked, whatever its track; a blocked row names the parent that holds it. If the reader
+prints UNKNOWN, take no row this pick (explore instead). Releases (`rel-*`) are milestones,
+never picked. Never pass `--knowledge` (656 KB). Read one row's body with
 `nos dtt status --json | jq '.rows[] | select(.slug=="<slug>")'`.
 
-Candidate groups, in order (dry run 2026-11-08: by parent alone, every face row
-outside two parents fell behind 141 platform rows):
-1. track `face`, at any depth;
-2. track `digest` and the children of `digest`;
-3. track `platform`;
-4. the rest.
-
-A row under `watch`, at any depth, is picked ONLY from
-`tools/roadmap-status.py --frontier watch`. That reader lists the open rows
-whose ancestors are all `shipped`, so the tree grows from its edge and never
-past an unmerged parent (operator 2026-11-13, row roadmap-organic-structure).
-If it prints UNKNOWN, take no `watch` row this pick. Every other row keeps the
-order above.
-
-Within a group, take `next` before `active`, then board order. Skip a row
-that:
+Skip a frontier row that:
 - is listed by `tools/roadmap-stale.py`, which you run once per pick. Its
   evidence is a branch already in dev, or "CLOSED", "SHIPPED", "Built in" or
   "Propose: shipped" in the body. Skip the row without asking and without
