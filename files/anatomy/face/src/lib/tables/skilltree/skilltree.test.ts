@@ -55,8 +55,8 @@ describe('labels: measured, wrapped, never clipped', () => {
 	});
 
 	it('a single long word overflows rather than being cut', () => {
-		const w = wrap('docs/doctrine/digest.md', 'small', 40, 2, mono);
-		expect(w.lines).toEqual(['docs/doctrine/digest.md']);
+		const w = wrap('files/anatomy/face/README.md', 'small', 40, 2, mono);
+		expect(w.lines).toEqual(['files/anatomy/face/README.md']);
 		expect(w.truncated).toBe(false);
 	});
 

@@ -41,6 +41,9 @@ FACE = {
     "--glass": "panel", "--glass-brd": "line", "--accent": "accent-hi",
     "--ok": "ok", "--info": "accent-hi", "--warn": "warn", "--bad": "signal",
     "--info-soft": "accent-faint", "--info-ink": "accent-soft",
+    # the skill tree (v2 redesign 2026-11-13): settings, quiet labels, review, field light
+    "--line-hi": "line-hi", "--ink-mute": "ink-mute", "--ink-faint": "ink-faint",
+    "--data-4": "data-4", "--glow": "glow", "--glow-2": "glow-2",
 }
 
 

@@ -130,7 +130,7 @@ export function buildSnapshot(
 	return { ...lay, nodes, edges, seeds, states, slugOf };
 }
 
-/** The 13 region names, each at its petal's edge (spec/04 §2), for the rows now visible. */
+/** The 13 region names, each at its petal's edge (the design package, spec 04 section 2), for the rows now visible. */
 export function rimSeeds(
 	snap: Pick<Snapshot, 'nodes' | 'sectors' | 'rings' | 'orbit'>,
 	visible: (n: TreeNode) => boolean

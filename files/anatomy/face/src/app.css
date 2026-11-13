@@ -12,14 +12,8 @@
 	--warn-ink: color-mix(in srgb, var(--warn) 40%, var(--fg));
 	--bad-ink: color-mix(in srgb, var(--bad) 40%, var(--fg));
 
-	/* Skill-tree v2 aliases: glass-face values from files/anatomy/design/tokens.json (the design
-	   token each one names); they move into tokens.css when design-sync emits them. */
-	--line-hi: #7484a2; /* line-hi — unlit gem settings, blocked rings */
-	--ink-mute: #c0c8d4; /* ink-mute — shipped labels: readable, quieter than the frontier */
-	--ink-faint: rgba(255, 255, 255, 0.16); /* ink-faint — queued motes (decoration only) */
-	--data-4: #b48ad8; /* data-4 — the review state, a hue apart from ok / info / warn */
-	--glow: rgba(74, 127, 224, 0.35); /* glow — the light behind the core */
-	--glow-2: rgba(120, 90, 200, 0.25); /* glow-2 — the outer aurora */
+	/* The skill tree's colour aliases (--line-hi, --ink-mute, --data-4, --glow …) are generated
+	   into tokens.css by design-sync; only the font stack is face-owned. */
 	--font-code:
 		'AIT Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace; /* type.families.code */
 

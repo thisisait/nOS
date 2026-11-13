@@ -283,7 +283,7 @@
 		tick().then(() => markTrace(t));
 	});
 
-	/** A one-shot effect class on a node or edge g, removed after `ms` (spec/05 §4). */
+	/** A one-shot effect class on a node or edge g, removed after `ms` (the design package, spec 05 section 4). */
 	function fx(sel: string, cls: string, ms: number, delay = 0) {
 		if (reduced) return;
 		setTimeout(() => {
@@ -506,7 +506,7 @@
 	onMount(() => {
 		void load();
 		if (import.meta.env.DEV) {
-			// Acceptance hooks (dev build only; ACCEPTANCE.md §A): window.__skillTree.setView(z, wx, wy)
+			// Acceptance hooks (dev build only; the design acceptance, part A): window.__skillTree.setView(z, wx, wy)
 			const w = window as unknown as Record<string, unknown>;
 			w.__skillTree = {
 				setView: (z: number, wx = 0, wy = 0) => {
