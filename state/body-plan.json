@@ -15,10 +15,10 @@
     "limb": 135,
     "memory": 45,
     "law": 57,
-    "reflex": 51,
+    "reflex": 52,
     "heartbeat": 1,
     "internal": 80,
-    "edges": 454
+    "edges": 455
   },
   "nodes": {
     "agent:conductor": {
@@ -1342,6 +1342,10 @@
       "kind": "pulse"
     },
     "pulse:gitleaks:nightly-scan": {
+      "level": "reflex",
+      "kind": "pulse"
+    },
+    "pulse:immune-crawler:git-history": {
       "level": "reflex",
       "kind": "pulse"
     },
@@ -3955,6 +3959,11 @@
     {
       "from": "service:pulse",
       "to": "pulse:gitleaks:nightly-scan",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:immune-crawler:git-history",
       "kind": "trigger"
     },
     {
