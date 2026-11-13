@@ -120,9 +120,13 @@ def add_columns(table: dict, live_cols: list, declared: dict, keys: list, confir
     except urllib.error.HTTPError as e:
         print(f"\nREFUSED by KEAP ({e.code}): {e.read().decode('utf-8', 'replace').strip()}", file=sys.stderr)
         return 1
-    landed = [c["key"] for c in call(f"{API}/{table['id']}")["data"]["schema"]["columns"]]
-    if landed[: len(live_keys)] != live_keys or any(k not in landed for k in keys):
-        print(f"\nAPPLIED BUT NOT CONFIRMED — live columns now: {landed}", file=sys.stderr)
+    landed_cols = call(f"{API}/{table['id']}")["data"]["schema"]["columns"]
+    landed = [c["key"] for c in landed_cols]
+    # Whole columns, not keys: a GET form that does not round-trip through PATCH would reshape a live
+    # column under a key-only check and still read "unchanged" (review 13d MEDIUM).
+    if landed_cols[: len(live_cols)] != live_cols or any(k not in landed for k in keys):
+        changed = [c["key"] for c, o in zip(landed_cols, live_cols) if c != o]
+        print(f"\nAPPLIED BUT NOT CONFIRMED — live columns now: {landed}; reshaped: {changed}", file=sys.stderr)
         return 1
     print(f"\nApplied and verified: {', '.join(keys)} added; the {len(live_keys)} live columns unchanged.")
     return 0

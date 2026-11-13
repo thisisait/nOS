@@ -41,7 +41,9 @@ CREATED_ELSEWHERE = {
 def _converge_text() -> str:
     files = [*REPO.glob("roles/*/tasks/*.yml"), *REPO.glob("tasks/**/*.yml"), *REPO.glob("roles/*/templates/*.j2"),
              *REPO.glob("files/anatomy/plugins/*/plugin.yml")]
-    return "\n".join(p.read_text(encoding="utf-8", errors="ignore") for p in files)
+    # Comment lines out: a "# see x.table.yml" note is not a creator (review 13d).
+    return "\n".join(line for p in files for line in p.read_text(encoding="utf-8", errors="ignore").splitlines()
+                     if not line.lstrip().startswith(("#", "{#")))
 
 
 def _defs() -> list[str]:
@@ -50,7 +52,7 @@ def _defs() -> list[str]:
 
 def test_every_table_def_is_created_or_names_its_creator():
     text = _converge_text()
-    missing = [d for d in _defs() if f"{d}.table.yml" not in text and d not in CREATED_ELSEWHERE]
+    missing = [d for d in _defs() if f"keap-tables/{d}.table.yml" not in text and d not in CREATED_ELSEWHERE]
     assert not missing, (
         f"{missing}: a table definition nothing creates. Add it to roles/pazny.keap/tasks/seed-core-tables.yml "
         "(rows: [] if its rows come at runtime), or name its creator in CREATED_ELSEWHERE.")
@@ -59,6 +61,6 @@ def test_every_table_def_is_created_or_names_its_creator():
 def test_the_elsewhere_list_holds_no_created_table():
     """The list may only shrink: an entry the converge now creates must leave it."""
     text = _converge_text()
-    stale = [d for d in CREATED_ELSEWHERE if f"{d}.table.yml" in text]
+    stale = [d for d in CREATED_ELSEWHERE if f"keap-tables/{d}.table.yml" in text]
     gone = [d for d in CREATED_ELSEWHERE if d not in _defs()]
     assert not stale and not gone, f"created by a task now: {stale}; no definition any more: {gone}"

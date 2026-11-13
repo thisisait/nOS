@@ -95,7 +95,8 @@ centre is the shipped core, ring 1 the 13 apex organ systems, and a row grows on
 parent that is shipped or `active` (an allocated branch). A row not on the frontier is not
 picked, whatever its track; a blocked row names the parent that holds it. If the reader
 prints UNKNOWN, take no row this pick (explore instead). Releases (`rel-*`) are milestones,
-never picked. Never pass `--knowledge` (656 KB). Read one row's body with
+never picked. An `active` parent may not be on dev yet: a row that needs its parent's code goes on the
+parent's branch when that is in `## Built`, else it is skipped. Never pass `--knowledge` (656 KB). Read one row's body with
 `nos dtt status --json | jq '.rows[] | select(.slug=="<slug>")'`.
 
 Skip a frontier row that:
