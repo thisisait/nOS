@@ -7,7 +7,7 @@
 
 use crate::serve::{self, Server};
 use nos_contract::uid;
-use nos_contract::wire::{encode, ToShell};
+use nos_contract::wire::{decode_to_thalamus, encode, ToShell, ToThalamus};
 use serde_json::{json, Value};
 use std::collections::{HashMap, HashSet};
 use std::io::{BufRead, BufReader, Read, Write};
@@ -16,6 +16,9 @@ use std::sync::{Arc, Condvar, Mutex};
 use std::time::Duration;
 
 const HELLO: [&str; 6] = ["relay", "secret", "uid", "username", "groups", "tab"];
+/// v19: the six keys plus `read: true` is a read hello: no take_over, one approvals_open, closed.
+/// It grants strictly less than a tab (row face-awaiting-unreachable-kinds, ruled 2026-11-13).
+const READ: &str = "read";
 const MAX_HELLO: u64 = 8 << 10;
 /// A tab that says nothing is closed, not held.
 const HELLO_SECS: u64 = 10;
@@ -70,10 +73,15 @@ impl Relay {
     }
 
     /// The person and tab a hello names, or why not; the reason never carries the secret.
-    fn hello(&self, line: &str) -> Result<(serve::Person, String, String, Value), String> {
+    fn hello(&self, line: &str) -> Result<(serve::Person, String, String, Value, bool), String> {
         let not = || "the first line is not a relay hello".to_string();
         let v: Value = serde_json::from_str(line).map_err(|_| not())?;
-        let o = v.as_object().filter(|o| o.len() == HELLO.len() && HELLO.iter().all(|k| o.contains_key(*k))).ok_or_else(not)?;
+        let o = v.as_object().filter(|o| HELLO.iter().all(|k| o.contains_key(*k))).ok_or_else(not)?;
+        let read = match o.len() - HELLO.len() {
+            0 => false,
+            1 if o.get(READ) == Some(&Value::Bool(true)) => true,
+            _ => return Err(not()),
+        };
         let s = |k: &str| o[k].as_str().ok_or_else(not);
         if s("relay")? != "face" {
             return Err(not());
@@ -98,7 +106,7 @@ impl Relay {
         }
         let who = serve::person_by_uid(id, &self.srv.map).ok_or_else(|| format!("{id} is not in the identity map: Iris speaks only with a person it names; \
                                     sign in to the face as one (akadmin is the break-glass admin, not a person)"))?;
-        Ok((who, id.to_string(), tab.to_string(), groups))
+        Ok((who, id.to_string(), tab.to_string(), groups, read))
     }
 
     fn connection(&self, mut out: TcpStream) {
@@ -111,7 +119,7 @@ impl Relay {
             Ok(_) if line.ends_with('\n') => self.hello(&line),
             _ => Err("no relay hello".into()),
         };
-        let (who, id, tab, groups) = match said {
+        let (who, id, tab, groups, read) = match said {
             Ok(x) => x,
             Err(why) => {
                 self.srv.say(format!("refused a relay hello: {why}"));
@@ -123,6 +131,9 @@ impl Relay {
                 return;
             }
         };
+        if read {
+            return self.read_once(&who, input, out);
+        }
         let _ = out.set_read_timeout(None);
         let me = self.take_over(&id, &tab, &out);
         self.srv.say(format!("connected {id} via face tab {tab} (the hello's groups {groups}; the map's are used)"));
@@ -134,6 +145,18 @@ impl Relay {
             t.by_uid.remove(&id);
         }
         self.gone.notify_all();
+    }
+
+    /// A read hello: one line, approvals_open only, then closed. Never the person's tab, so the
+    /// live Iris conversation is untouched; the hello's read timeout still bounds the line.
+    fn read_once(&self, who: &serve::Person, mut input: impl BufRead, mut out: TcpStream) {
+        let mut line = String::new();
+        let read = input.by_ref().take(MAX_HELLO).read_line(&mut line);
+        match decode_to_thalamus(line.trim_end()) {
+            Ok(ToThalamus::ApprovalsOpen) if read.is_ok() && line.ends_with('\n') => self.srv.approvals_open(who, &mut out),
+            _ => refuse(&mut out, "a read hello admits one approvals_open line, nothing else"),
+        }
+        let _ = out.shutdown(Shutdown::Both);
     }
 
     /// D3: this tab becomes the person's; the older one is told, closed, and given a moment to end

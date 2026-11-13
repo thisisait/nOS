@@ -1799,7 +1799,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
 
     /// approvals_open (v17): the person's own undecided cards, read from the ledger; never another
     /// person's. A ledger that does not read is refused, never an empty list.
-    fn approvals_open(&self, who: &Person, out: &mut dyn Write) {
+    pub(crate) fn approvals_open(&self, who: &Person, out: &mut dyn Write) {
         let actor = format!("user:{}", who.uid());
         let rows = self.ledger.lock().map_err(|_| "ledger poisoned".to_string())
             .and_then(|l| l.open_approvals_of(&actor).map_err(|e| format!("the ledger does not read: {e}")));

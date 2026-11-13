@@ -1,6 +1,7 @@
 <!--
   AwaitingApp — "Awaiting you" (row face-app-awaiting, Tier 1): what cannot move without the operator,
-  read-only. Agent questions and urgent unread notifications come from Wing through /bff/awaiting; each
+  read-only. Agent questions and urgent unread notifications come from Wing, the person's open Iris cards
+  from the thalamus (a read hello), all through /bff/awaiting; each
   row hands off to the Inbox app, the one place that answers (Q15). The sources the face cannot reach are
   named, so an empty list never reads as "nothing waits" when part of the estate was not asked.
   Agent text is drawn as text, never markup.
@@ -29,7 +30,8 @@
 		awaiting
 			? [
 					{ kind: 'question', title: 'Agents waiting for an answer' },
-					{ kind: 'alert', title: 'Critical or high, unread' }
+					{ kind: 'alert', title: 'Critical or high, unread' },
+					{ kind: 'approval', title: 'Iris cards waiting for your approval' }
 				].map((g) => ({ ...g, rows: awaiting!.items.filter((i) => i.kind === g.kind) }))
 			: []
 	);
@@ -60,12 +62,19 @@
 						<p>{r.title}</p>
 						<p class="meta">
 							{r.since}
-							<button class="ghost" onclick={() => openApp('inbox')}>open in Inbox</button>
+							{#if r.kind === 'approval'}
+								<button class="ghost" onclick={() => openApp('iris')}>open in Iris</button>
+							{:else}
+								<button class="ghost" onclick={() => openApp('inbox')}>open in Inbox</button>
+							{/if}
 						</p>
 					</article>
 				{/each}
 			</section>
 		{/each}
+		{#if awaiting.unknown.length}
+			<StatusNote kind="error" title="Asked, no answer">{awaiting.unknown.join('; ')}</StatusNote>
+		{/if}
 		<StatusNote kind="empty" title="Not asked from here">
 			The face cannot reach {awaiting.unreachable.join('; ')}.
 			<code>tools/awaiting-operator.py</code> lists them on the host.

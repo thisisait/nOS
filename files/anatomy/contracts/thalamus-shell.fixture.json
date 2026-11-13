@@ -1,5 +1,5 @@
 {
-  "contract_version": 18,
+  "contract_version": 19,
   "to_thalamus": [
     {"case": "first turn opens a session", "msg": {"t": "turn", "session": null, "text": "find rows about backups in the roadmap"}},
     {"case": "turn in a session", "msg": {"t": "turn", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "text": "set its status to done"}},
