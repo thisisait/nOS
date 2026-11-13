@@ -1,4 +1,4 @@
-//! Pulse's stdout/stderr scrub, a port of pulse/redact.py scrub_text: four patterns in its order,
+//! Pulse's stdout/stderr scrub, a port of pulse/redact.py scrub_text: six patterns in its order,
 //! each keeps the labelled prefix and puts <REDACTED> where the value was. No regex crate: each
 //! pattern is a matcher tried at every char, like re.sub. tests/fixtures/pulse_redact.json holds the
 //! pairs both suites must produce, generated from the Python.
@@ -136,6 +136,55 @@ fn bearer(t: &[char], p: usize) -> Option<(usize, usize)> {
     (16..=n).rev().find(|l| boundary(t, keep + l)).map(|l| (keep, keep + l))
 }
 
+/// Case-sensitive literal at `p` (the bare-token prefixes are case-sensitive in the Python).
+fn exact(t: &[char], p: usize, s: &str) -> bool {
+    let n = s.chars().count();
+    p + n <= t.len() && t[p..p + n].iter().copied().eq(s.chars())
+}
+
+/// `[A-Za-z0-9_\-]`: a token character (ASCII only, as the Python class).
+fn tok(c: char) -> bool {
+    c.is_ascii_alphanumeric() || c == '_' || c == '-'
+}
+
+/// `(?<![A-Za-z0-9_])(gh[pousr]_|github_pat_|xox[abprs]-|sk-ant-|sk-|AKIA)[tok]{16,}`; the
+/// alternatives are tried in that order, as re's alternation is.
+fn bare(t: &[char], p: usize) -> Option<(usize, usize)> {
+    if p > 0 && (t[p - 1].is_ascii_alphanumeric() || t[p - 1] == '_') {
+        return None;
+    }
+    const PREFIXES: [&str; 14] = ["ghp_", "gho_", "ghu_", "ghs_", "ghr_", "github_pat_", "xoxa-", "xoxb-", "xoxp-",
+                                  "xoxr-", "xoxs-", "sk-ant-", "sk-", "AKIA"];
+    let pre = PREFIXES.iter().find(|s| exact(t, p, s))?;
+    let keep = p + pre.chars().count();
+    let n = run(t, keep, usize::MAX, tok);
+    (n >= 16).then_some((keep, keep + n))
+}
+
+/// `(?<![tok])eyJ[tok]{8,}\.[tok]{8,}\.[tok]{8,}`: a JWT; `.` is not a token char, so each greedy
+/// segment run is the regex's own.
+fn jwt(t: &[char], p: usize) -> Option<(usize, usize)> {
+    if (p > 0 && tok(t[p - 1])) || !exact(t, p, "eyJ") {
+        return None;
+    }
+    let keep = p + 3;
+    let mut j = keep;
+    for seg in 0..3 {
+        let n = run(t, j, usize::MAX, tok);
+        if n < 8 {
+            return None;
+        }
+        j += n;
+        if seg < 2 {
+            if t.get(j) != Some(&'.') {
+                return None;
+            }
+            j += 1;
+        }
+    }
+    Some((keep, j))
+}
+
 fn sub(t: Vec<char>, m: fn(&[char], usize) -> Option<(usize, usize)>) -> Vec<char> {
     let (mut out, mut i) = (Vec::with_capacity(t.len()), 0);
     while i < t.len() {
@@ -155,7 +204,7 @@ fn sub(t: Vec<char>, m: fn(&[char], usize) -> Option<(usize, usize)>) -> Vec<cha
 }
 
 pub fn redact(text: &str) -> String {
-    [env, cli, http, bearer].into_iter().fold(text.chars().collect(), sub).into_iter().collect()
+    [env, cli, http, bearer, bare, jwt].into_iter().fold(text.chars().collect(), sub).into_iter().collect()
 }
 
 #[cfg(test)]

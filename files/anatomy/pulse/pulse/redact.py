@@ -61,6 +61,18 @@ _BEARER_INLINE = re.compile(
 )
 
 
+# A bare token in free text (no KEY= before it): a provider's well-known prefix, then 16+ token chars.
+# The prefix stays, so the operator sees WHICH kind was hidden. sk-ant- before sk- (alternation order).
+_BARE_TOKEN = re.compile(
+	r"(?<![A-Za-z0-9_])(?P<prefix>gh[pousr]_|github_pat_|xox[abprs]-|sk-ant-|sk-|AKIA)(?P<value>[A-Za-z0-9_\-]{16,})"
+)
+
+# A JWT: eyJ then three dot-separated base64url segments of 8+.
+_JWT = re.compile(
+	r"(?<![A-Za-z0-9_\-])(?P<prefix>eyJ)(?P<value>[A-Za-z0-9_\-]{8,}\.[A-Za-z0-9_\-]{8,}\.[A-Za-z0-9_\-]{8,})"
+)
+
+
 def scrub_text(s: str | None) -> str:
 	"""Return a copy of ``s`` with secret-shaped substrings replaced
 	with ``<REDACTED>``. Idempotent: applying twice yields the same
@@ -78,4 +90,6 @@ def scrub_text(s: str | None) -> str:
 	text = _CLI_PASSWORD_FLAG.sub(lambda m: m.group(1) + "<REDACTED>", text)
 	text = _HTTP_AUTH_HEADER.sub(lambda m: m.group("prefix") + "<REDACTED>", text)
 	text = _BEARER_INLINE.sub(lambda m: m.group("prefix") + "<REDACTED>", text)
+	text = _BARE_TOKEN.sub(lambda m: m.group("prefix") + "<REDACTED>", text)
+	text = _JWT.sub(lambda m: m.group("prefix") + "<REDACTED>", text)
 	return text
