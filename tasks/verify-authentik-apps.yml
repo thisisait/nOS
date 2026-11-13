@@ -344,7 +344,8 @@
 - name: "[Verify] Declared identity logins"
   ansible.builtin.assert:
     that: _verify_ak_logins.rc | default(1) == 0
-    fail_msg: "{{ (_verify_ak_logins.stdout_lines | default([])) | select('match', 'FAIL') | list }}"
+    # FAIL names who and why; FIX (only for a refused password, never an outage) names the one command.
+    fail_msg: "{{ (_verify_ak_logins.stdout_lines | default([])) | select('match', '(FAIL|FIX) ') | list }}"
     success_msg: "{{ _verify_ak_logins.stdout_lines | default([]) }}"
   when:
     - install_authentik | default(false) | bool
