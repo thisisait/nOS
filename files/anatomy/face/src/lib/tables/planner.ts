@@ -253,6 +253,9 @@ export function frontierStates(
 		const s = cell(r, 'slug');
 		if (!s) continue;
 		bySlug.set(s, r);
+		// A ring system hung under another system is still its own root (the layout pins it on
+		// ring 1): never walk it as a child, or its subtree is labelled with the wrong system.
+		if (ring.includes(s)) continue;
 		const p = cell(r, 'parent');
 		if (!kids.has(p)) kids.set(p, []);
 		kids.get(p)!.push(r);

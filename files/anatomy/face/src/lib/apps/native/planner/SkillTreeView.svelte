@@ -160,6 +160,17 @@
 		void reparent(conn.target, conn.source);
 	}
 
+	/** Only an edge (one parent link) is ever deleted, and only by a writer: deleting a node takes
+	 *  every edge touching it, so one Backspace un-parented a row and all its children (review 13e). */
+	async function onbeforedelete({
+		nodes: n
+	}: {
+		nodes: unknown[];
+		edges: Edge[];
+	}): Promise<boolean> {
+		return canWrite && n.length === 0;
+	}
+
 	function ondelete(deleted: { edges?: Edge[] }) {
 		if (!canWrite) return;
 		for (const e of deleted.edges ?? []) if (e.source !== CORE) void reparent(e.target, null);
@@ -213,6 +224,7 @@
 				elementsSelectable={true}
 				{onconnect}
 				{ondelete}
+				{onbeforedelete}
 				onselectionchange={({ nodes: sel }) => (selectedId = sel[0]?.id ?? null)}
 			>
 				<Background />
