@@ -1,0 +1,13 @@
+# Cloud and local model rows for tools/model-catalog-gen.py, one per
+# (backend, model). The backend must be a row in llm-backends.yml.
+#
+#   - backend: mistral-eu
+#     model: mistral-small-latest
+#     caps: { thinking: false, vision: false, tools: true, context: 32000 }   # documented caps; a missing cap shows "?"
+#     price: { in: 0.2, out: 0.6, currency: EUR, source_url: "https://…", as_of: 2026-11-01 }   # per Mtok
+#
+# A price without source_url and as_of is refused by the generator, with the row
+# named. Agents may propose a row, and the operator signs the merge (ruling Q4,
+# 2026-10-16). The local ladder (ollama sizes_b) comes from llm-backends.yml,
+# so it is not repeated here. No client names in this file.
+models: []

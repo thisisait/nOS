@@ -75,6 +75,9 @@ files:
   state/tofu-authentik-services.yml:
     writer: tools/tofu-authentik-gen-registry.py
     check: [tools/tofu-authentik-gen-registry.py, --check]
+  state/genome/model-catalog.yml:
+    writer: tools/model-catalog-gen.py
+    check: [tools/model-catalog-gen.py, --check]
   state/roadmap/index.yml:
     writer: tools/roadmap-seed.py
     checked_by: nobody offline; the writer reads the private seed (NOS_SEED_DIR)

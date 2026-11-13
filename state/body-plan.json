@@ -12,7 +12,7 @@
     "organism": 0,
     "habitat": 9,
     "sense": 89,
-    "limb": 134,
+    "limb": 135,
     "memory": 45,
     "law": 57,
     "reflex": 51,
@@ -878,6 +878,10 @@
       "kind": "effector"
     },
     "effector:migration-pr": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:model-catalog-gen": {
       "level": "limb",
       "kind": "effector"
     },

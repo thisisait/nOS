@@ -274,6 +274,7 @@ posts, restarts or renders something.
 - `outline-roles.py` — Makes Outline's admins exactly Authentik's tier-1 people (Outline takes no role from OIDC).
 - `anatomy-graph-gen.py` — Compile the anatomy graph — every declared actor and edge, one address space.
 - `body-plan-gen.py` — Project the anatomy graph onto biology's levels via the lexicon's graph_kind names (state/genome/lexicon.yml, kind → level) into state/body-plan.json.
+- `model-catalog-gen.py` — Every LLM backend and model in one generated catalog (state/genome/model-catalog.yml) with EU/local badges derived from llm-backends.yml, processors.yml and models.yml; display only, binding.rs decides.
 - `imprint-gen.py` — Render IMPRINT.md, the first page a newborn model reads, from the body plan, readers, task types and doors (`--check`, ≤ 200 lines).
 - `ci-circadian.py` — Pulse job (plugin ci-circadian, off by default): `gh workflow run --ref dev` of every workflow with both `schedule` and `workflow_dispatch`, because GitHub fires schedules only on master; `--dry-run` lists them.
 - `ci-tag-check.py` — nightly CI lane: `ansible-playbook main.yml --check --tags <tag>` for each tag in `ci-tag-check.yml`; red only on an evaluation error (undefined var, missing file/include), a check-mode halt at infra bring-up is the frontier, not a failure.
