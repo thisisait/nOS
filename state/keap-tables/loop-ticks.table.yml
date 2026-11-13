@@ -3,8 +3,8 @@
 #
 # Row loop-ticks-table (operator 2026-11-12). Each tick of the three roadmap roles
 # (loop, watch, top) is ONE row here instead of prose in the pane; the pane keeps
-# one line. Append-once: tools/loop-tick.py refuses a slug that exists, so a later
-# tick never edits an earlier one. A role writes only its own rows (writer = role).
+# one line. Append-once and one-role-per-writer are refused by tools/loop-tick.py, the
+# writer the skills call; KEAP does not enforce either (any RW-bearer holder can upsert).
 # Not `loop_runs`: that name is the thalamus reader of the SERE loop's runs.
 #
 # `outcome` is the tick's own claim about itself, so it carries no

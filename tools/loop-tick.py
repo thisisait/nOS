@@ -107,13 +107,18 @@ def _is_date(v: str) -> bool:
 def _json_arg(name: str, raw: str | None, shape: type):
     if raw is None:
         return None
+    if len(raw) > MAX_JSON:   # before parsing: a deep nest is RecursionError, not ValueError
+        raise Refused(f"{name} must be a JSON {shape.__name__} of at most {MAX_JSON} chars")
     try:
         v = json.loads(raw)
-    except ValueError:
+    except (ValueError, RecursionError):
         raise Refused(f"{name} is not JSON") from None
     if not isinstance(v, shape) or len(raw) > MAX_JSON:
         raise Refused(f"{name} must be a JSON {shape.__name__} of at most {MAX_JSON} chars")
-    return _scrubbed(v)
+    try:
+        return _scrubbed(v)
+    except RecursionError:   # a deep nest parses, then overflows the recursive scrub
+        raise Refused(f"{name} is nested too deep") from None
 
 
 def build(a, now: datetime) -> dict:
