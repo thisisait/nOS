@@ -1,0 +1,68 @@
+# =============================================================================
+# immune-crawler — the first crawler cell: git history, a slice per hour
+#
+# BORN 2026-11-13 (row immune-first-crawler). ssot/doctrine/immune-system.md
+# §3 named the kind and §5 said "none exists". tools/immune-crawl.py holds a
+# cursor in ~/.nos/immune/crawl/, reads the ADDED lines of the next commits for
+# instruction shapes aimed at an assistant and invisible bidi controls, and
+# records only where they are (commit, path, line, shape id). It retires when
+# its lifespan (commits walked) is spent. No model, no KEAP, no transcripts.
+#
+# Not a Docker service: a host-side Python script, same shape as advisory-patrol.
+# =============================================================================
+
+name: immune-crawler
+version: 0.1.0
+description: |
+  Walks the checkout's git history a slice per tick for prompt-injection shapes
+  and Trojan-Source characters planted in committed text. Verdicts carry no
+  text; the shape table and the tolerated paths are committed and reviewed.
+
+type:
+  - skill
+  - scheduled-job
+
+requires:
+  feature_flag: install_pulse
+  variables:
+    - playbook_dir         # repo root -> tools/immune-crawl.py
+
+# =============================================================================
+# PULSE JOB — the verdict is pulse_runs.exit_code:
+#   0  the slice walked clean
+#   10 a shape found in this slice (~/.nos/immune/crawl/verdicts.jsonl)
+#   11 git unreadable: NOTHING FOUND IS NOT CLEAN
+#   12 lifespan spent: the cell retired and walks nothing (apoptosis's input)
+# =============================================================================
+
+pulse:
+  jobs:
+    - name: git-history
+      category: security
+      runner: subprocess
+      command: "{{ playbook_dir }}/tools/immune-crawl.py"
+      args: ["--slice", "50"]
+      schedule: "23 * * * *"
+      jitter_min: 5
+      max_runtime_s: 600
+      max_concurrent: 1
+      findings_exit_codes: [10, 11, 12]
+      env: {}
+
+gdpr:
+  purpose: "Detecting instructions planted in committed repository text"
+  legal_basis: legitimate_interests
+  data_categories:
+    - source_code_metadata    # commit ids, paths and line numbers only; no text kept
+  data_subjects: [operators]
+  retention_days: 365
+  processors: []              # local git read; nothing leaves the host
+  eu_residency: true
+
+e2e:
+  enabled: "{{ (install_wing | default(false)) }}"
+  probes:
+    - name: immune-crawler-registered-in-wing
+      url: http://127.0.0.1:{{ wing_port }}/api/v1/pulse_jobs
+      auth: {bearer: wing_api_token, headers: {X-Wing-Edge-Token: wing_edge_token}}
+      expect: {json_equals: {"jobs.immune-crawler:git-history.id": "immune-crawler:git-history"}}

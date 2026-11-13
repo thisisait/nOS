@@ -249,6 +249,20 @@ indicators:
     verdicts: ~/.nos/security/remediation-queue.json
     definition: files/vuln-scan/scan-prompt.md and the batch prompt in scan-runner.sh (not hashed in records; §4 rule 4 gap)
 
+  # ── crawlers: a cursor, one slice per tick, a lifespan ──────────────────
+  immune-crawler:git-history:
+    source: files/anatomy/plugins/immune-crawler/plugin.yml
+    kind: crawler
+    antigen: an added line in a commit that matches an injection shape or a bidi control (exit 10); git unreadable (exit 11)
+    receptor: tools/immune-crawl.py over git show -p -U0 of the next commits after its cursor (read-only)
+    effector: report
+    signal: wing-inbox (pulse_runs findings exit code)
+    heartbeat: {every_hours: 2, last_report: "pulse:immune-crawler:git-history"}  # 23 * * * *
+    lifespan: 20000 commits walked (--lifespan); then exit 12 and the cursor is retired
+    tolerance: state/immune/crawl-tolerance.yml (paths that quote shapes on purpose)
+    verdicts: ~/.nos/immune/crawl/verdicts.jsonl (commit, path, line, shape id; no text)
+    definition: the SHAPES table in tools/immune-crawl.py (not hashed in records; §4 rule 4 gap)
+
   # ── checkpoints: at a border, on crossing ───────────────────────────────
   prepush-score:
     source: tools/prepush-score.py

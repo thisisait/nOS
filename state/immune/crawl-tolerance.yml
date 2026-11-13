@@ -1,0 +1,12 @@
+# Paths the immune crawler (tools/immune-crawl.py) tolerates: they quote injection
+# shapes on purpose, as test fixtures, as the record of a fee, or as the shape
+# table itself. A glob here is reviewed like code: it is a hole in the receptor.
+globs:
+  - "tests/*"
+  - "docs/hidden_fees/*"
+  - "tools/immune-crawl.py"
+  - "state/immune/crawl-tolerance.yml"
+  # contract fixtures carry forged identities on purpose (a right-to-left override uid)
+  - "files/anatomy/contracts/*.fixture.json"
+  # the bench writes the ChatML template it sends to local models (<|im_start|>system)
+  - "tools/local-model-bench.py"

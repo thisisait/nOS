@@ -4,9 +4,9 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 606,
-    "edges": 575,
-    "nodes_pulse": 51,
+    "nodes": 607,
+    "edges": 576,
+    "nodes_pulse": 52,
     "nodes_judge": 5,
     "nodes_gateset": 5,
     "nodes_weakness": 7,
@@ -33,7 +33,7 @@
     "nodes_organ_system": 13,
     "nodes_tissue": 1,
     "edges_data": 249,
-    "edges_trigger": 83,
+    "edges_trigger": 84,
     "edges_temporal": 5,
     "edges_mutex": 21,
     "edges_governed_by": 46,
@@ -3189,6 +3189,25 @@
       "runs_agent": null,
       "anchor": "02.02.08",
       "description": "Pulse scheduled job (security): runs run-gitleaks.sh on cron `0 3 * * *` — exits [10] mean findings, not failure"
+    },
+    "pulse:immune-crawler:git-history": {
+      "kind": "pulse",
+      "source": "files/anatomy/plugins/immune-crawler/plugin.yml",
+      "schedule": "23 * * * *",
+      "jitter_min": 5,
+      "max_runtime_s": 600,
+      "category": "security",
+      "paused": false,
+      "findings_exit_codes": [
+        10,
+        11,
+        12
+      ],
+      "command_name": "immune-crawl.py",
+      "claims": [],
+      "runs_agent": null,
+      "anchor": "02.02.08",
+      "description": "Pulse scheduled job (security): runs immune-crawl.py on cron `23 * * * *` — exits [10, 11, 12] mean findings, not failure"
     },
     "pulse:invoice-vision:absorb-approved": {
       "kind": "pulse",
@@ -10564,6 +10583,14 @@
     {
       "from": "service:pulse",
       "to": "pulse:gitleaks:nightly-scan",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:immune-crawler:git-history",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
       "derived": "daemon-dispatch",
