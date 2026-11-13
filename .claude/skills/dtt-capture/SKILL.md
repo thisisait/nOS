@@ -27,6 +27,7 @@ refused before it is written.
    - `--slug` — kebab id, `[A-Za-z0-9_-]`, unique. It is the filename.
    - `--title` — one line: what the row IS (git-owned, a claim).
    - `--track` — `platform | security | agents | cortex | face | release | filesystem`.
+   - `--origin` (optional) — where the work was born: `intent` (the operator wanted it) | `immune` (an immune cell or a drill found it) | `germline` (the body/evolution loop proposed it) | `symbiont` (another vendor's defect, e.g. a CVE); omit when unsure, never guess.
    - `--parent` — an existing roadmap slug, or omit for a top-level row.
    - `--task-type` — one of `state/genome/task-types.yml` (`investigate` for research,
      `design` for a spec, `code-fix`, `seed-edit`, `review`, `doc`,
@@ -44,7 +45,7 @@ refused before it is written.
 3. **Run it:**
    ```
    nos dtt capture --slug <slug> --title "<title>" --track <track> \
-       --task-type <type> --status <status> [--parent <slug>] [--when <date>] \
+       --task-type <type> --status <status> [--origin <origin>] [--parent <slug>] [--when <date>] \
        [--refs "..."] --body "<prose>"
    ```
    Add `--update` to revise an existing row's git-owned half; `--dry-run` to
@@ -56,7 +57,7 @@ refused before it is written.
 
 ## The split (do not fight it)
 
-- The FILE owns `title/parent/track/refs/body` (git, reviewable, synced by
+- The FILE owns `title/parent/track/origin/refs/body` (git, reviewable, synced by
   `roadmap-seed.py --sync`).
 - The TABLE owns `status/target/occurred_at/verified*`. **Move status with
   `nos dtt update`, a verdict with `nos dtt verify` — never by rewriting the

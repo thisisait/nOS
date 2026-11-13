@@ -91,7 +91,7 @@ The `nos dtt` verbs:
 ```
 nos dtt status                                   # the roadmap board
 nos dtt board                                    # current-state: assignments, claims, who is capable
-nos dtt capture --slug <kebab> --title "<one line>" --track <platform|security|agents|cortex|face|release|filesystem> --task-type <investigate|design|code-fix|seed-edit|review|doc|security-remediation|converge> --status <next|queued> [--parent <slug>] --body "<the prose>"
+nos dtt capture --slug <kebab> --title "<one line>" --track <platform|security|agents|cortex|face|release|filesystem> --task-type <investigate|design|code-fix|seed-edit|review|doc|security-remediation|converge> --status <next|queued> [--origin <intent|immune|germline|symbiont>] [--parent <slug>] --body "<the prose>"
 nos dtt seed [--dry-run] [--sync]                # file the seed repo's new rows into the live table
 nos dtt update --slug <slug> --status doing|review|shipped [--owner <who>]   # move a CLAIM
 nos dtt claim <slug> · nos dtt progress <slug> working|blocked|review|done · nos dtt release <slug>

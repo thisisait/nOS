@@ -73,6 +73,7 @@ CONCEPTLESS = {
     "efferent-queue.occurred_at": "ISO-8601 UTC text (KEAP has no datetime kind; tick compares it within a day) — needs a datetime kind + concept",
     "efferent-queue.seen_why": "why tick could not judge a row; evidence.observation is json-only — needs a text evidence.reason",
     "efferent-queue.reader_args": "arguments of a closed-list reader; needs evidence.args alongside evidence.verification",
+    "roadmap.origin": "where the work was born (intent|immune|germline|symbiont); prov.source is taken by `source` (the filing process) — needs prov.origin",
     "party.trading_name": "secondary name; identity.name is (rightly) the legal name — needs identity.alias",
     "party.country": "no geography concept exists — needs place.country",
     "party-address.street": "no postal concepts exist — needs place.street",

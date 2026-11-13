@@ -18,7 +18,7 @@ status BEFORE writing — a file that would fail the seeder is not written.
     tools/dtt-capture.py --slug existing --title "..." --track platform --update
 
 Status/verified stay TABLE-owned after insert (moved by roadmap-update.py /
-roadmap-verify.py); the file's status seeds the row and title/parent/track/refs/
+roadmap-verify.py); the file's status seeds the row and title/parent/track/origin/refs/
 body are the git-owned half. Commit the file in your PRIVATE seed repo — never
 in nOS.
 """
@@ -73,11 +73,11 @@ def _live_statuses() -> set[str]:
         return set()
 
 
-def _declared_statuses() -> set[str]:
+def _declared_options(key: str = "status") -> set[str]:
     try:
         spec = yaml.safe_load(open(_TABLE_DEF, encoding="utf-8")) or {}
         cols = {c["key"]: c for c in spec.get("schema", {}).get("columns", [])}
-        return set(cols.get("status", {}).get("options") or [])
+        return set(cols.get(key, {}).get("options") or [])
     except OSError:
         return set()
 
@@ -91,6 +91,8 @@ def main() -> int:
     ap.add_argument("--parent", default="")
     ap.add_argument("--task-type", default="", dest="task_type")
     ap.add_argument("--status", default="")
+    ap.add_argument("--origin", default="",
+                    help="where the work was born: intent|immune|germline|symbiont (omit = unset)")
     ap.add_argument("--when", default="", help="YYYY-MM-DD")
     ap.add_argument("--refs", default="")
     ap.add_argument("--release", default="")
@@ -120,13 +122,21 @@ def main() -> int:
         # work offline.
         live = _live_statuses()
         allowed, where = (live, "the live table") if live else (
-            _declared_statuses(), "roadmap.table.yml")
+            _declared_options(), "roadmap.table.yml")
         if allowed and args.status not in allowed:
             _die(f"status {args.status!r} is not accepted by {where}.\n"
                  f"  it accepts: {', '.join(sorted(allowed))}"
                  + ("" if live else
                     "\n  (KEAP is unreachable, so this is the DECLARED set — the live "
                     "table may accept fewer; `nos dtt seed` is judged against it.)"))
+
+    if args.origin:
+        # Judged against the declaration alone: origin is new and git-owned, and
+        # until the column is applied the live table has no options to ask.
+        allowed = _declared_options("origin")
+        if args.origin not in allowed:
+            _die(f"origin {args.origin!r} is not declared by roadmap.table.yml.\n"
+                 f"  it accepts: {', '.join(sorted(allowed)) or '(nothing: no origin column)'}")
 
     body = args.body
     if body is None and args.body_file:
@@ -139,13 +149,13 @@ def main() -> int:
     prior = os.path.join(lib.seed_dir(), f"{args.slug}.md")
     if args.update and os.path.exists(prior):
         old = lib.parse_file(prior)
-        for k in ("status", "when", "release"):
+        for k in ("status", "when", "release", "origin"):
             if not getattr(args, k):
                 setattr(args, k, old.get(k) or "")
 
     fm = {
         "slug": args.slug, "title": args.title, "parent": args.parent,
-        "track": args.track, "task_type": args.task_type, "status": args.status,
+        "track": args.track, "origin": args.origin, "task_type": args.task_type, "status": args.status,
         "when": args.when, "refs": args.refs, "release": args.release,
     }
     rendered = lib.render_row_file(fm, body)
