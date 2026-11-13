@@ -32,6 +32,7 @@ Usage:
     tools/roadmap-status.py --knowledge --status active,next --track face
     tools/roadmap-status.py --json       # for a caller
     tools/roadmap-status.py --frontier watch [--json]   # buildable rows of one subtree
+    tools/roadmap-status.py --frontier ring [--json]    # the whole ring: all 13 organ systems
 
 Exit 0 when it could read the table. Exit 2 when it could NOT — an unreachable
 KEAP must not render as an empty roadmap, which would read as "no work left".
@@ -115,10 +116,10 @@ def order(r: dict) -> tuple:
     return (rank(r.get("status")), *explicit, r.get("slug") or "")
 
 
-#: The table's statuses that open the frontier. Only `shipped`: `review` sorts
-#: with the moving lanes in STATUS_ORDER and is not SETTLED — a claim of work
-#: not yet merged, so a child built on it stacks on code dev does not have.
-OPEN, GROWN = ("active", "next"), "shipped"
+#: The statuses that open the frontier: `shipped`, and `active` — a branch the operator has allocated
+#: and is growing (an epic ships only when its children do, so shipped-only deadlocks every epic).
+#: `review` does not: it is pushed but not landed, a child would stack on code dev does not have.
+OPEN, GROWN = ("active", "next"), ("shipped", "active")
 
 
 def frontier(rows: list[dict], root: str) -> dict:
@@ -141,7 +142,7 @@ def frontier(rows: list[dict], root: str) -> dict:
     stack = [(by_slug[root], 0, None)]
     while stack:
         node, depth, blocker = stack.pop()
-        here = blocker if node.get("status") == GROWN else node
+        here = blocker if node.get("status") in GROWN else node
         for c in kids.get(node.get("slug"), []):
             if c.get("slug") in seen:
                 cycles.append(f"{node.get('slug')} -> {c.get('slug')}")
@@ -165,6 +166,40 @@ def frontier(rows: list[dict], root: str) -> dict:
             "cycles": cycles, "missing_parent": missing}
 
 
+def ring_order() -> list[str]:
+    """The 13 apex organ systems in their ring order: core column, then left wing, then right."""
+    import yaml
+    systems = yaml.safe_load((REPO / "files/anatomy/apex/ruling.yml").read_text(encoding="utf-8"))["organ_systems"]
+    side = {"core": 0, "left": 1, "right": 2}
+    return sorted(systems, key=lambda k: (side.get(systems[k].get("side"), 9), systems[k].get("order", 99)))
+
+
+def frontier_ring(rows: list[dict]) -> dict:
+    """Every system's frontier, nearest the centre first, then ring order. Open top-level rows that
+    hang under no system are `ungrown`: the migration's remaining work, never silently dropped."""
+    ring = ring_order()
+    by_slug = {r.get("slug"): r for r in rows if r.get("slug")}
+    absent = [k for k in ring if k not in by_slug]
+    if absent:
+        return {"state": "UNKNOWN", "root": "ring", "reason": f"organ-system rows missing: {', '.join(absent)}"}
+    out, blocked, cycles, missing = [], [], [], set()
+    for i, root in enumerate(ring):
+        f = frontier(rows, root)
+        for item in f["frontier"]:
+            out.append({**item, "system": root, "_ring": i})
+        for item in f["blocked"]:
+            blocked.append({**item, "system": root, "_ring": i})
+        cycles += f["cycles"]
+        missing.update(f["missing_parent"])
+    ungrown = sorted(r.get("slug") for r in rows if not r.get("parent") and r.get("slug") not in ring
+                     and r.get("status") in OPEN)
+    def key(item: dict) -> tuple:
+        return (item["depth"], item["_ring"], *order(by_slug[item["slug"]]))
+    clean = lambda items: [{k: v for k, v in i.items() if k != "_ring"} for i in sorted(items, key=key)]  # noqa: E731
+    return {"state": "ok", "root": "ring", "root_status": "shipped", "frontier": clean(out), "blocked": clean(blocked),
+            "cycles": cycles, "missing_parent": sorted(missing), "ungrown": ungrown}
+
+
 def print_frontier(f: dict) -> None:
     if f["state"] != "ok":
         print(f"UNKNOWN: frontier under `{f['root']}` — {f['reason']}. Not an empty frontier.")
@@ -172,7 +207,8 @@ def print_frontier(f: dict) -> None:
     print(f"frontier under `{f['root']}` ({f['root_status']}) — "
           f"{len(f['frontier'])} buildable, {len(f['blocked'])} blocked")
     for r in f["frontier"]:
-        print(f"  d{r['depth']} [{r['status']:6s}] {r['slug'] or '?':28s} {r['title'] or ''}")
+        where = f"{r['system']:10s} " if "system" in r else ""
+        print(f"  d{r['depth']} [{r['status']:6s}] {where}{r['slug'] or '?':28s} {r['title'] or ''}")
     if f["blocked"]:
         print("\n  blocked — nearest unshipped ancestor:")
         for r in f["blocked"]:
@@ -183,6 +219,9 @@ def print_frontier(f: dict) -> None:
     if f["missing_parent"]:
         print(f"  ! {len(f['missing_parent'])} row(s) on the board name a parent that is not on it: "
               + ", ".join(f["missing_parent"][:8]) + (" …" if len(f["missing_parent"]) > 8 else ""))
+    if f.get("ungrown"):
+        print(f"  ! {len(f['ungrown'])} open top-level row(s) hang under no organ system (not on any frontier): "
+              + ", ".join(f["ungrown"][:8]) + (" …" if len(f["ungrown"]) > 8 else ""))
 
 
 def main() -> int:
@@ -216,7 +255,7 @@ def main() -> int:
         return 2
 
     if args.frontier:
-        f = frontier(rows, args.frontier)
+        f = frontier_ring(rows) if args.frontier == "ring" else frontier(rows, args.frontier)
         json.dump(f, sys.stdout, indent=1, ensure_ascii=False) if args.json else print_frontier(f)
         print()
         return 0
