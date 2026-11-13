@@ -228,6 +228,39 @@ export interface TreeStateInfo {
 	depth: number; // 0 = the system itself; -1 outside the ring
 	blockedBy?: string;
 	blockedByStatus?: string;
+	/** on a buildable row (allocated, frontier): does its body carry a ready spec? */
+	ready?: boolean;
+	missing?: SpecPart[];
+}
+
+// The same markers as spec_ready() in tools/roadmap-status.py (operator 2026-11-13: the loop
+// builds only a frontier row with a READY SPEC). Change both together.
+const LABEL = String.raw`(?:\s*\([^)\n]*\))?\s*:`;
+const SPEC_STAMP = /spec (?:accepted|ready)|explore rounds? \d/i;
+const SPEC_PARTS = {
+	goal: new RegExp(String.raw`\bgoal${LABEL}|^#+ *goal\b`, 'im'),
+	slice: new RegExp(
+		String.raw`smallest(?: shippable)? slice|first slice|\bslices?(?: \d+)?${LABEL}|\bslice \d|^#+[^\n]*\bslice`,
+		'im'
+	),
+	e2e: new RegExp(
+		String.raw`\be2e(?: acceptance)?${LABEL}|\bacceptance${LABEL}|^#+[^\n]*\b(?:e2e|acceptance)\b`,
+		'im'
+	),
+	'must-not': new RegExp(
+		String.raw`\bmust not${LABEL}|^#+ *must not\b|\bout of scope${LABEL}|\bnon-goals?${LABEL}`,
+		'im'
+	)
+};
+export type SpecPart = keyof typeof SPEC_PARTS;
+
+/** Ready = the top agent's stamp (SPEC ACCEPTED / SPEC READY / explore round N), or a label or
+ *  heading for each of the four parts: goal, smallest slice, e2e acceptance, must not. */
+export function specReady(body: unknown): { ready: boolean; missing: SpecPart[] } {
+	const text = body == null ? '' : String(body);
+	if (SPEC_STAMP.test(text)) return { ready: true, missing: [] };
+	const missing = (Object.keys(SPEC_PARTS) as SpecPart[]).filter((k) => !SPEC_PARTS[k].test(text));
+	return { ready: missing.length === 0, missing };
 }
 
 function byStatus(status: string): TreeState {
@@ -279,7 +312,7 @@ export function frontierStates(
 					info.state = 'blocked';
 					info.blockedBy = cell(here, 'slug');
 					info.blockedByStatus = cell(here, 'status');
-				}
+				} else if (OPEN.has(status)) Object.assign(info, specReady(c.body));
 				out.set(slug, info);
 				stack.push([c, depth + 1, here]);
 			}
@@ -311,7 +344,7 @@ export interface TreeLayout {
 
 const R1 = 340; // ring 1 (the 13 systems); raised only if their labels would not fit
 const RING_GAP = [0, 0, 150, 120, 100, 85]; // step out to ring d; the last entry repeats
-const MIN_ARC = [0, 150, 34, 24]; // arc between neighbours on ring d; the last entry repeats
+const MIN_ARC = [0, 110, 34, 24]; // arc between neighbours on ring d; the last entry repeats
 const SUB_RINGS = 5; // a crowded ring splits into up to this many radial sub-rings
 const SUB_STEP = 26; // radial distance between sub-rings (> the leaf arc, so dots never touch)
 const SECTOR_PAD = 2; // weight added per root: a bare system still owns a visible wedge
@@ -522,24 +555,29 @@ export function skillTreeLayout(
 		put(r.id, orbit, -Math.PI / 2 + ((i - (stones.length - 1) / 2) * ORBIT_ARC) / orbit)
 	);
 
-	// The halo: every row still unplaced, as constellations rooted on their own top rows.
+	// The halo: every row still unplaced, as constellations rooted on their own top rows. A
+	// milestone's children lead, in the orbit's order, and the lane is centred on them, so their
+	// edges run straight out from the crown instead of chording across the tree.
 	const loose = withId.filter((r) => !positions.has(r.id));
 	const looseSlugs = new Set(loose.map((r) => cell(r, 'slug')));
-	const isRoot = (r: DataTableRow) => !looseSlugs.has(cell(r, 'parent'));
-	const order = [...loose].sort(
-		(a, b) => Number(isRoot(b)) - Number(isRoot(a)) || (cell(a, 'slug') < cell(b, 'slug') ? -1 : 1)
-	);
+	const stoneSlugs = new Set(stones.map((r) => cell(r, 'slug')));
+	const rankOf = (r: DataTableRow) =>
+		looseSlugs.has(cell(r, 'parent')) ? 2 : stoneSlugs.has(cell(r, 'parent')) ? 0 : 1;
+	const key = (r: DataTableRow) => `${rankOf(r) ? '' : cell(r, 'parent')}\0${cell(r, 'slug')}`;
+	const order = [...loose].sort((a, b) => rankOf(a) - rankOf(b) || (key(a) < key(b) ? -1 : 1));
 	const haloRoots: string[] = [];
+	const underStone: string[] = [];
 	for (const r of order) {
 		const s = cell(r, 'slug');
 		if (weight.has(s)) continue; // reached from an earlier root (or a cycle's other half)
 		weigh(s);
 		haloRoots.push(s);
+		if (rankOf(r) === 0) underStone.push(s);
 	}
 	let halo: number[] = [];
 	if (haloRoots.length) {
 		const base = (orbit || outer) + HALO_GAP;
-		halo = constellate(haloRoots, base, HALO_GAP_D, HALO_ARC, [], false).rings.slice(1);
+		halo = constellate(haloRoots, base, HALO_GAP_D, HALO_ARC, underStone, false).rings.slice(1);
 		for (const r of loose) put(r.id, radius.get(cell(r, 'slug'))!, angle.get(cell(r, 'slug'))!);
 	}
 	return { positions, absent, sectors: tree.sectors, rings: tree.rings, orbit, halo };

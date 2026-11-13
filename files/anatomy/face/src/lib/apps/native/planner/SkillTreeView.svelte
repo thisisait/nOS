@@ -6,7 +6,8 @@
   own wedge), every row growing outward from its system. A node's colour is its state
   under the frontier rule of tools/roadmap-status.py (frontierStates in
   $lib/tables/planner.ts): shipped and active rows are the allocated tree, drawn as lit
-  connectors from the core; the frontier (buildable now) pulses; a row under an ungrown
+  connectors from the core; a frontier row with a ready spec (the loop builds it) is filled
+  and pulses, one that needs a spec first is hollow and still; a row under an ungrown
   ancestor is dim and its detail names the blocker. Milestones orbit the tree; rows that
   hang under no system form the dim halo outside it.
 
@@ -49,10 +50,11 @@
 
 	const CORE = '__core__';
 	const nodeTypes = { skill: SkillNode };
-	const LEGEND: { state: TreeState; label: string }[] = [
+	const LEGEND: { state: TreeState; label: string; spec?: string }[] = [
 		{ state: 'shipped', label: 'shipped' },
 		{ state: 'allocated', label: 'active' },
-		{ state: 'frontier', label: 'frontier' },
+		{ state: 'frontier', label: 'frontier, spec ready', spec: 'spec-ready' },
+		{ state: 'frontier', label: 'frontier, needs a spec', spec: 'spec-needed' },
 		{ state: 'doing', label: 'doing' },
 		{ state: 'review', label: 'review' },
 		{ state: 'blocked', label: 'blocked' },
@@ -78,8 +80,8 @@
 	let selectedId = $state<string | null>(null);
 	let zoom = $state(0.2);
 	const lod = $derived(zoom >= LOD.near ? 'lod-near' : zoom >= LOD.mid ? 'lod-mid' : 'lod-far');
-	/** System labels grow against the zoom (up to 3×) so the 13 names read at fitView. */
-	const lblScale = $derived(Math.min(3, Math.max(1, 1 / zoom)));
+	/** System labels grow against the zoom (up to 1.8×) so the 13 names read at fitView, uncollided. */
+	const lblScale = $derived(Math.min(1.8, Math.max(1, 1 / zoom)));
 	const selectedRow = $derived(
 		selectedId && table ? (table.rows.find((r) => r.id === selectedId) ?? null) : null
 	);
@@ -87,6 +89,12 @@
 		selectedRow ? states.get(String(selectedRow.slug ?? '')) : undefined
 	);
 	const count = (s: TreeState) => [...states.values()].filter((v) => v.state === s).length;
+	const readyCount = $derived(
+		[...states.values()].filter((v) => v.state === 'frontier' && v.ready).length
+	);
+	/** Buildable rows only: the loop builds a ready spec; a needs-spec row gets an explore draft first. */
+	const specClass = (info: TreeStateInfo | undefined) =>
+		info?.ready === undefined ? '' : info.ready ? ' spec-ready' : ' spec-needed';
 	const tells = new Map(ORGAN_RING.map((r) => [r.key, r.tells]));
 
 	function text(v: unknown): string {
@@ -125,8 +133,8 @@
 				width: size,
 				height: size,
 				data: { label, tells: tell },
-				class: `skill rank-${rank} st-${state}`,
-				ariaLabel: `${label} — ${state}${tell ? `. ${tell}` : ''}${info?.blockedBy ? `, blocked by ${info.blockedBy}` : ''}`,
+				class: `skill rank-${rank} st-${state}${specClass(info)}`,
+				ariaLabel: `${label} — ${state}${info?.ready === false ? ', needs a spec' : ''}${tell ? `. ${tell}` : ''}${info?.blockedBy ? `, blocked by ${info.blockedBy}` : ''}`,
 				hidden: hideDormant && state === 'dormant' && !ring.has(slug)
 			});
 		}
@@ -262,7 +270,7 @@
 			>{/if}
 		{#if action}<span class="action" class:err={action !== 'saving…'}>{action}</span>{/if}
 		<span class="tally">
-			<span>{count('frontier')} frontier</span>
+			<span>{count('frontier')} frontier ({readyCount} spec ready)</span>
 			<span>{count('blocked')} blocked</span>
 			<span>{count('ungrown')} outside the ring</span>
 			<label class="chk"
@@ -337,6 +345,14 @@
 							<i class="dot st-{selectedInfo.state}"></i>{selectedInfo.state}
 							{#if selectedInfo.system}· {selectedInfo.system}, ring {selectedInfo.depth + 1}{/if}
 						</p>
+						{#if selectedInfo.ready}
+							<p class="spec">spec ready: the loop may build it</p>
+						{:else if selectedInfo.ready === false}
+							<p class="spec needs">
+								needs a spec: no {selectedInfo.missing?.join(', no ')}. An explore draft comes
+								first.
+							</p>
+						{/if}
 						{#if selectedInfo.blockedBy}
 							<p class="blocker">
 								blocked by <code>{selectedInfo.blockedBy}</code> ({selectedInfo.blockedByStatus})
@@ -352,8 +368,8 @@
 				<span class="chip"><i class="gem-sm leaf"></i>row</span>
 				<span class="chip"><i class="gem-sm stone"></i>milestone</span>
 				<span class="sep" aria-hidden="true"></span>
-				{#each LEGEND as l (l.state)}
-					<span class="chip"><i class="dot st-{l.state}"></i>{l.label}</span>
+				{#each LEGEND as l (l.label)}
+					<span class="chip"><i class="dot st-{l.state} {l.spec ?? ''}"></i>{l.label}</span>
 				{/each}
 			</div>
 		</div>
@@ -538,6 +554,17 @@
 		border: 2px solid var(--warn);
 		pointer-events: none;
 		animation: pulse 2.4s ease-out infinite;
+	}
+	/* A ready spec is a filled, pulsing gem; a needs-spec row is hollow and still (not buildable yet). */
+	.flow :global(.svelte-flow__node.st-frontier.spec-ready .gem) {
+		background: var(--node);
+	}
+	.flow :global(.svelte-flow__node.st-frontier.spec-needed .gem) {
+		background: var(--node-core);
+		box-shadow: inset 0 0 0 2px var(--node);
+	}
+	.flow :global(.svelte-flow__node.st-frontier.spec-needed::after) {
+		display: none;
 	}
 	@keyframes pulse {
 		0% {
@@ -727,6 +754,13 @@
 			inset 0 0 0 2px var(--node),
 			0 0 6px 1px var(--warn);
 	}
+	.dot.st-frontier.spec-ready {
+		background: var(--node);
+	}
+	.dot.st-frontier.spec-needed {
+		background: transparent;
+		box-shadow: inset 0 0 0 2px var(--node);
+	}
 	.dot.st-review {
 		--node: var(--info-ink);
 		background: var(--info-soft);
@@ -778,11 +812,13 @@
 		box-shadow: inset 0 0 0 2px var(--node);
 	}
 	.state,
-	.blocker {
+	.blocker,
+	.spec {
 		margin: 0.4rem 0 0;
 		color: var(--fg);
 	}
-	.blocker {
+	.blocker,
+	.spec.needs {
 		color: var(--muted);
 	}
 </style>

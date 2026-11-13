@@ -3,6 +3,7 @@ import {
 	rowsToGraph,
 	reparentPayload,
 	frontierStates,
+	specReady,
 	skillTreeLayout,
 	ORGAN_RING,
 	OUTSIDE_RING
@@ -160,7 +161,13 @@ const systems = () => RING.map((s) => ({ id: s, slug: s, status: 'shipped', pare
 const board = () => [
 	...systems(),
 	{ id: 'we', slug: 'w-epic', status: 'active', parent: 'watch' },
-	{ id: 'wa', slug: 'w-a', status: 'next', parent: 'w-epic' },
+	{
+		id: 'wa',
+		slug: 'w-a',
+		status: 'next',
+		parent: 'w-epic',
+		body: 'Why.\n\nSLICE 1 SPEC ACCEPTED (top agent 2026-11-13).'
+	},
 	{ id: 'wd', slug: 'w-doing', status: 'doing', parent: 'watch' },
 	{ id: 'wc', slug: 'w-c', status: 'next', parent: 'w-doing' },
 	{ id: 'wr', slug: 'w-review', status: 'review', parent: 'watch' },
@@ -174,6 +181,57 @@ const board = () => [
 	{ id: 'l', slug: 'loose', status: 'next', parent: '' },
 	{ id: 'lk', slug: 'loose-kid', status: 'next', parent: 'loose' }
 ];
+
+describe('specReady (mirrors spec_ready in roadmap-status.py)', () => {
+	const full = [
+		'Goal: the thing.',
+		'Slice 1: the first cut.',
+		'E2E (operator, Studio): click it.',
+		'Must not: widen a token.'
+	];
+
+	it('all four parts as labels or headings, any case: ready', () => {
+		expect(specReady(full.join('\n'))).toEqual({ ready: true, missing: [] });
+		expect(
+			specReady('## Goal\nx\n## Smallest slice\nx\n## E2E acceptance (operator)\nx\n## Must not\nx')
+				.ready
+		).toBe(true);
+		expect(
+			specReady('GOAL: x. smallest shippable slice x. ACCEPTANCE: x. OUT OF SCOPE: x.').ready
+		).toBe(true);
+	});
+
+	it('each missing part is named, in order', () => {
+		for (let i = 0; i < full.length; i++) {
+			const r = specReady(full.filter((_, j) => j !== i).join('\n'));
+			expect(r.ready).toBe(false);
+			expect(r.missing).toEqual([['goal', 'slice', 'e2e', 'must-not'][i]]);
+		}
+	});
+
+	it("the top agent's stamp is ready on its own", () => {
+		for (const b of [
+			'SLICE SPEC ACCEPTED (top agent)',
+			'SPEC READY, WAITS',
+			'Rulings (explore rounds 1-2)'
+		])
+			expect(specReady(b).ready).toBe(true);
+	});
+
+	it('prose is not a part: a two-line body, tests/e2e/, a bare "never" stay needs-spec', () => {
+		expect(specReady('Measured: it breaks.\nInvestigate the fix.')).toEqual({
+			ready: false,
+			missing: ['goal', 'slice', 'e2e', 'must-not']
+		});
+		expect(specReady('the goal is to slice tests/e2e/x and never must not').missing).toEqual([
+			'goal',
+			'slice',
+			'e2e',
+			'must-not'
+		]);
+		expect(specReady(null).ready).toBe(false);
+	});
+});
 
 describe('frontierStates (mirrors roadmap-status.py --frontier ring)', () => {
 	it('the generated ring is the apex order: core column, left wing, right wing', () => {
@@ -196,6 +254,19 @@ describe('frontierStates (mirrors roadmap-status.py --frontier ring)', () => {
 		expect([of('loose'), of('loose-kid')]).toEqual(['ungrown', 'ungrown']);
 		expect(st.get('w-a')!.system).toBe('watch');
 		expect(st.get('loose')!.system).toBe('');
+	});
+
+	it('a buildable row carries ready/needs-spec; no other state does', () => {
+		const st = frontierStates(board());
+		expect(st.get('w-a')).toMatchObject({ state: 'frontier', ready: true, missing: [] });
+		expect(st.get('s-next')).toMatchObject({
+			state: 'frontier',
+			ready: false,
+			missing: ['goal', 'slice', 'e2e', 'must-not']
+		});
+		expect(st.get('w-epic')!.ready).toBe(false); // allocated is buildable too (Python's list)
+		for (const s of ['watch', 'w-c', 'w-doing', 'loose', 'rel-020'])
+			expect(st.get(s)!.ready).toBeUndefined();
 	});
 
 	it('a blocked row names its nearest ungrown ancestor (review/doing do not open it)', () => {
@@ -355,6 +426,43 @@ describe('skillTreeLayout', () => {
 		const a = skillTreeLayout(board()).positions;
 		const b = skillTreeLayout([...board()].reverse()).positions;
 		expect([...b].sort()).toEqual([...a].sort());
+	});
+
+	it('a big system gets room: the ring-1 floor leaves it over a quarter of the circle', () => {
+		const rows = [
+			...systems(),
+			...Array.from({ length: 200 }, (_, i) => ({
+				id: `w${i}`,
+				slug: `w-${i}`,
+				status: 'next',
+				parent: 'watch'
+			}))
+		];
+		const w = skillTreeLayout(rows).sectors.find((s) => s.key === 'watch')!;
+		expect(w.to - w.from).toBeGreaterThan(Math.PI / 2); // 0.99 rad under the old 150px floor
+	});
+
+	it("a milestone's children lead the halo, centred under the orbit's crown, in orbit order", () => {
+		const rows = [
+			...systems(),
+			...Array.from({ length: 30 }, (_, i) => ({
+				id: `a${i}`,
+				slug: `a-loose-${String(i).padStart(2, '0')}`,
+				status: 'next',
+				parent: ''
+			})),
+			{ id: 'r0', slug: 'rel-020', status: 'next', parent: '' },
+			{ id: 'r1', slug: 'rel-021', status: 'next', parent: '' },
+			{ id: 'k0', slug: 'z-kid-0', status: 'next', parent: 'rel-020' },
+			{ id: 'k1', slug: 'y-kid-1', status: 'next', parent: 'rel-021' }
+		];
+		const { positions } = skillTreeLayout(rows);
+		const ang = (id: string) => Math.atan2(positions.get(id)!.y, positions.get(id)!.x);
+		const top = -Math.PI / 2;
+		for (const k of ['k0', 'k1']) expect(Math.abs(ang(k) - top)).toBeLessThan(Math.PI / 4);
+		expect(ang('k0')).toBeLessThan(ang('k1')); // rel-020's child before rel-021's, as the orbit runs
+		expect(positions.get('k0')!.x).toBeLessThan(0); // the pair straddles the crown
+		expect(positions.get('k1')!.x).toBeGreaterThan(0);
 	});
 
 	it('names ring systems missing from the board', () => {
