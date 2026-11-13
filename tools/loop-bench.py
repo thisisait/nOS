@@ -96,7 +96,7 @@ def sha256(*paths: Path) -> str:
 
 def commits(*args: str) -> list[dict]:
     """git log rows {sha, ct, subject, body, msg, files}; subject is git's (the first paragraph)."""
-    out = git("log", "--name-only", "--format=%x1e%H%x1f%ct%x1f%B%x1f", *args)
+    out = git("--no-pager", "log", "--name-only", "--format=%x1e%H%x1f%ct%x1f%B%x1f", *args)
     rows = []
     for chunk in out.split("\x1e")[1:]:
         sha, ct, msg, files = chunk.split("\x1f", 3)
