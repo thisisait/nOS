@@ -4,7 +4,7 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 605,
+    "nodes": 606,
     "edges": 575,
     "nodes_pulse": 51,
     "nodes_judge": 5,
@@ -28,7 +28,7 @@
     "nodes_tasktype": 9,
     "nodes_skill": 16,
     "nodes_reader": 71,
-    "nodes_effector": 127,
+    "nodes_effector": 128,
     "nodes_article": 28,
     "nodes_organ_system": 13,
     "nodes_tissue": 1,
@@ -2050,6 +2050,13 @@
       "title": "tools/migration-pr.sh — validate an authored migration record + its version",
       "anchor": "02.02.04",
       "description": "Effector tools/migration-pr.sh: tools/migration-pr.sh — validate an authored migration record + its version"
+    },
+    "effector:model-catalog-gen": {
+      "kind": "effector",
+      "source": "tools/model-catalog-gen.py",
+      "title": "Every LLM backend and model in one generated catalog (state/genome/model-catalog.yml) with EU/local badges derived from llm-backends.yml, processors.yml and models.yml; display only, binding.rs decides.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/model-catalog-gen.py: Every LLM backend and model in one generated catalog (state/genome/model-catalog.yml) with EU/local badges derived from llm-backends.yml, processors.yml and models.yml; display only, binding.rs decides."
     },
     "effector:morning-verdict": {
       "kind": "effector",

@@ -1,0 +1,46 @@
+# Processor records: who processes a prompt when a backend in llm-backends.yml
+# serves it. Keyed by that backend's `processor_match` token. Read by
+# tools/model-catalog-gen.py, and only for display: binding.rs and Wing's
+# BindingResolver still decide what may serve, and gdpr_posture still refuses.
+#
+# eu_processing: true | false | null. null means unassessed, never "probably fine".
+# The catalog shows the EU badge only when this is true AND the backend's own
+# residency.eu is true.
+# verified_on: the date someone checked the record against the vendor's pages.
+# null means it is a draft. The source URLs for the 2026-10-16 drafts are in
+# that Fable session's report (roadmap row model-catalog-with-quality). They are
+# not here yet, so every draft says so.
+# A token with no record here shows as unassessed, never as EU.
+processors:
+  on-device:
+    entity: "the operator (no third party)"
+    seat_country: "CZ"
+    eu_processing: true
+    transfer: "none: inference runs on this host"
+    verified_on: null
+    sources: []
+  Anthropic:
+    entity: "Anthropic Ireland (EEA contracts)"
+    seat_country: "US"
+    eu_processing: false
+    transfer: "DPA + SCCs; no EU inference region"
+    training_default: "no training on API data"
+    retention_default: "30 d; ZDR by agreement"
+    verified_on: null
+    sources: []
+  Mistral:
+    entity: "Mistral AI SAS, Paris"
+    seat_country: "FR"
+    eu_processing: true
+    transfer: "EU processing on api.eu.mistral.ai; DPA"
+    training_default: "pay-as-you-go default unverified"
+    retention_default: "30 d; ZDR on request"
+    verified_on: null
+    sources: []
+  MiniMax:
+    entity: "Nanonoble Pte, Singapore"
+    seat_country: "SG"
+    eu_processing: false
+    transfer: "US data centre; no DPA or SCC found"
+    verified_on: null
+    sources: []
