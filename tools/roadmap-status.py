@@ -127,8 +127,8 @@ SPEC_STAMP = re.compile(r"spec (?:accepted|ready)|explore rounds? \d", re.I)
 SPEC_PARTS = {
     "goal": re.compile(rf"\bgoal{_LABEL}|^#+ *goal\b", re.I | re.M),
     "slice": re.compile(rf"smallest(?: shippable)? slice|first slice|\bslices?(?: \d+)?{_LABEL}|\bslice \d"
-                        r"|^#+[^\n]*\bslice", re.I | re.M),
-    "e2e": re.compile(rf"\be2e(?: acceptance)?{_LABEL}|\bacceptance{_LABEL}|^#+[^\n]*\b(?:e2e|acceptance)\b",
+                        r"|^#{1,6} [^\n]*\bslice", re.I | re.M),
+    "e2e": re.compile(rf"\be2e(?: acceptance)?{_LABEL}|\bacceptance{_LABEL}|^#{{1,6}} [^\n]*\b(?:e2e|acceptance)\b",
                       re.I | re.M),
     "must-not": re.compile(rf"\bmust not{_LABEL}|^#+ *must not\b|\bout of scope{_LABEL}|\bnon-goals?{_LABEL}",
                            re.I | re.M),
@@ -146,7 +146,7 @@ def spec_ready(body: str | None) -> tuple[bool, list[str]]:
       must-not  `Must not:` · `## Must not` · `Out of scope:` · `Non-goals:`
     Returns (ready, the missing parts in that order). A heuristic over text, not a judge: it says
     whether the shape is there, never whether the spec is good."""
-    body = body or ""
+    body = str(body or "")
     if SPEC_STAMP.search(body):
         return True, []
     missing = [part for part, pat in SPEC_PARTS.items() if not pat.search(body)]

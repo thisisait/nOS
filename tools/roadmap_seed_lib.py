@@ -122,14 +122,14 @@ def parse_file(path: str) -> dict:
         title=title,
         parent=str(meta.get("parent") or "").strip(),
         track=str(meta.get("track") or "").strip(),
-        release=str(meta.get("release") or "").strip(),
         refs=str(meta.get("refs") or "").strip(),
         body=body.strip(),
     )
-    # origin (where the work was born) is a fact of birth: emitted only when the file
-    # says it, so an unset one is never guessed and --sync never blanks a live value.
-    if origin := str(meta.get("origin") or "").strip():
-        row["origin"] = origin
+    # origin (where the work was born) and release (its milestone) are emitted only when the
+    # file says them, so an unset one is never guessed and --sync never blanks a live value.
+    for k in ("origin", "release"):
+        if v := str(meta.get(k) or "").strip():
+            row[k] = v
     if status:
         row["status"] = status
     if when:

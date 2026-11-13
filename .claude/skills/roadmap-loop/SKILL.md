@@ -88,7 +88,7 @@ Update the heartbeat and the ledger after every phase. Every timestamp you write
 
 ## 2. Pick
 
-Run `tools/roadmap-status.py --frontier ring` and pick ONLY from its buildable list, in its
+Run `tools/roadmap-status.py --frontier ring` and pick ONLY from its `ready` rows, in its
 order: nearest the centre first, then the ring order (core column, left wing, right wing).
 The roadmap is a passive tree (operator 2026-11-13, row roadmap-organic-structure): the
 centre is the shipped core, ring 1 the 13 apex organ systems, and a row grows only from a
@@ -238,7 +238,7 @@ the session that integrates, answers.
 
 - Next wakeup: if a row is left to build, 60s with `noop: false`. After an
   explore iteration, 1800s with `noop: false`. If there is nothing left to
-  build and nothing left to explore (no vague rows, every draft waiting on the
+  build and nothing left to explore (no `needs-spec` rows, every draft waiting on the
   top agent), 3600s with `noop: true`. After three such iterations in a row,
   stop with `stop: true`.
 - Stop at once with `stop: true`, after a Roadblocks line, if any of these

@@ -240,11 +240,11 @@ const SPEC_STAMP = /spec (?:accepted|ready)|explore rounds? \d/i;
 const SPEC_PARTS = {
 	goal: new RegExp(String.raw`\bgoal${LABEL}|^#+ *goal\b`, 'im'),
 	slice: new RegExp(
-		String.raw`smallest(?: shippable)? slice|first slice|\bslices?(?: \d+)?${LABEL}|\bslice \d|^#+[^\n]*\bslice`,
+		String.raw`smallest(?: shippable)? slice|first slice|\bslices?(?: \d+)?${LABEL}|\bslice \d|^#{1,6} [^\n]*\bslice`,
 		'im'
 	),
 	e2e: new RegExp(
-		String.raw`\be2e(?: acceptance)?${LABEL}|\bacceptance${LABEL}|^#+[^\n]*\b(?:e2e|acceptance)\b`,
+		String.raw`\be2e(?: acceptance)?${LABEL}|\bacceptance${LABEL}|^#{1,6} [^\n]*\b(?:e2e|acceptance)\b`,
 		'im'
 	),
 	'must-not': new RegExp(
