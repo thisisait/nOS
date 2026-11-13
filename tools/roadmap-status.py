@@ -230,7 +230,7 @@ def frontier_ring(rows: list[dict]) -> dict:
         cycles += f["cycles"]
         missing.update(f["missing_parent"])
     ungrown = sorted(r.get("slug") for r in rows if not r.get("parent") and r.get("slug") not in ring
-                     and r.get("status") in OPEN)
+                     and r.get("status") in OPEN and not str(r.get("slug")).startswith("rel-"))  # a milestone, as planner.ts isMilestone
     def key(item: dict) -> tuple:
         return (item["depth"], item["_ring"], *order(by_slug[item["slug"]]))
     clean = lambda items: [{k: v for k, v in i.items() if k != "_ring"} for i in sorted(items, key=key)]  # noqa: E731
