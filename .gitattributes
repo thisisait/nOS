@@ -10,6 +10,7 @@ state/routing-graph.json merge=regen
 files/anatomy/face/src/lib/anatomy/routing-graph.json merge=regen
 state/loop-graph.json merge=regen
 files/anatomy/face/src/lib/anatomy/loop-graph.json merge=regen
+files/anatomy/face/src/lib/tables/organ-ring.json merge=regen
 IMPRINT.md merge=regen
 IMPRINT.short.md merge=regen
 AGENTS.md merge=regen

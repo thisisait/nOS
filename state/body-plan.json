@@ -12,7 +12,7 @@
     "organism": 0,
     "habitat": 9,
     "sense": 89,
-    "limb": 133,
+    "limb": 134,
     "memory": 45,
     "law": 57,
     "reflex": 51,
@@ -942,6 +942,10 @@
       "kind": "effector"
     },
     "effector:operator-tasks": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:organ-ring-gen": {
       "level": "limb",
       "kind": "effector"
     },

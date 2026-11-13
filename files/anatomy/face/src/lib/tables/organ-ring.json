@@ -1,0 +1,57 @@
+{
+  "generated_by": "tools/organ-ring-gen.py",
+  "ring": [
+    {
+      "key": "gatehouse",
+      "side": "core"
+    },
+    {
+      "key": "spine",
+      "side": "core"
+    },
+    {
+      "key": "stores",
+      "side": "core"
+    },
+    {
+      "key": "vault",
+      "side": "core"
+    },
+    {
+      "key": "keel",
+      "side": "core"
+    },
+    {
+      "key": "archive",
+      "side": "left"
+    },
+    {
+      "key": "forge",
+      "side": "left"
+    },
+    {
+      "key": "backoffice",
+      "side": "left"
+    },
+    {
+      "key": "commons",
+      "side": "left"
+    },
+    {
+      "key": "watch",
+      "side": "right"
+    },
+    {
+      "key": "wits",
+      "side": "right"
+    },
+    {
+      "key": "clockwork",
+      "side": "right"
+    },
+    {
+      "key": "voice",
+      "side": "right"
+    }
+  ]
+}

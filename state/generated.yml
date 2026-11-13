@@ -40,6 +40,9 @@ files:
   files/anatomy/face/src/lib/anatomy/loop-graph.json:
     writer: tools/loop-graph-gen.py
     check: [tools/loop-graph-gen.py, --check]
+  files/anatomy/face/src/lib/tables/organ-ring.json:
+    writer: tools/organ-ring-gen.py
+    check: [tools/organ-ring-gen.py, --check]
   IMPRINT.md:
     writer: tools/imprint-gen.py
     check: [tools/imprint-gen.py, --check]

@@ -43,3 +43,5 @@ src/lib/keap-contracts/field-concepts.ts
 src/lib/anatomy/routing-graph.json
 # Same rule for the design tokens: tools/design-sync.py is their one writer.
 src/lib/design/tokens.css
+# `src/lib/tables/organ-ring.json` is emitted by tools/organ-ring-gen.py from the apex ruling — same rule.
+src/lib/tables/organ-ring.json
