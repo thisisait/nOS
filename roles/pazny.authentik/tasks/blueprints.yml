@@ -61,3 +61,13 @@
     # converge (cloud e2e idempotence tier, 2026-09-25). Match the loader.
     trim_blocks: false
   notify: Reapply authentik blueprints
+
+# The reapply door (row operator-login-is-verified): the handler fires only on a changed
+# render, so a password changed in the UI never came back. `nos --tags authentik
+# -e authentik_reapply=true` applies every blueprint now; 00 skips an owned password.
+- name: "[pazny.authentik Blueprints] Reapply on request (authentik_reapply)"
+  ansible.builtin.debug:
+    msg: "authentik_reapply: every blueprint is applied again at the handler flush"
+  changed_when: true
+  notify: Reapply authentik blueprints
+  when: authentik_reapply | default(false) | bool

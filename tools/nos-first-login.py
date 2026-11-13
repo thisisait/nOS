@@ -14,6 +14,9 @@ Prints one line per identity × app; exit 1 if any declared walk failed.
 --login-only stops after the Authentik login (tasks/verify-authentik-apps.yml).
 "own_password": true marks a person whose password is theirs after the first
 sign-in: a refused login is not a failure, an accepted one is named.
+A failed login says why: "Authentik unreachable" (connection, timeout, 5xx) gets
+no fix; "password refused" gets one FIX line naming the reapply door
+(row operator-login-is-verified).
 Passwords come only from the environment and are never printed.
 """
 from __future__ import annotations
@@ -30,6 +33,7 @@ from urllib.parse import parse_qs, urljoin, urlparse
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+import requests  # noqa: E402  (nos_sso's own dependency)
 from nos_sso import REACHED, login, loopback_for_unresolvable, tls_verify, walk  # noqa: E402
 
 
@@ -77,6 +81,21 @@ def js_finish(sess, w, page: str, verify) -> bool | None:
     return r.status_code == 200 and "AccessToken" in r.text
 
 
+REAPPLY = "nos --tags authentik -e authentik_reapply=true"
+
+
+def why_refused(exc: Exception) -> tuple[str, bool]:
+    """(what to print, whether the reapply door fixes it). An outage is never sold as a password."""
+    if isinstance(exc, (requests.ConnectionError, requests.Timeout)):
+        return f"Authentik unreachable ({type(exc).__name__})", False
+    m = re.search(r"HTTP (\d{3})", str(exc))
+    if m and m.group(1).startswith("5"):
+        return f"Authentik unreachable (HTTP {m.group(1)})", False
+    if "ak-stage-password" in str(exc) or (m and str(exc).endswith("at password")):
+        return "password refused", True
+    return f"authentik login refused ({exc})", False
+
+
 def within_tier(ident: dict, row: dict) -> bool:
     """RBAC: tier 1 reaches every app, tier 4 only tier-4 apps. An identity
     walked into an app above its tier is refused by design, not a failure."""
@@ -107,7 +126,10 @@ def main(argv: list[str] | None = None) -> int:
             if ident.get("own_password"):
                 print(f"-     {name}: signs in with their own password now; app accounts came from the first walk")
                 continue
-            print(f"FAIL  {name}: authentik login refused ({exc})")
+            why, fixable = why_refused(exc)
+            print(f"FAIL  {name}: {why}")
+            if fixable:
+                print(f"FIX   {name}: {REAPPLY} (restores the declared password)")
             failed += 1
             continue
         if a.login_only:
