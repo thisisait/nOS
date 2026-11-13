@@ -200,6 +200,8 @@ async def root_ca():
 
 
 _ROOT_CA_CACHE: dict = {}
+# One computation at a time: a cold cache must not fan N callers into N edge fetches (review 11-13).
+_ROOT_CA_LOCK = asyncio.Lock()
 
 
 def _ca_details(pem: str) -> dict:
@@ -215,15 +217,25 @@ def _ca_details(pem: str) -> dict:
 
 @app.get("/api/v1/estate/root-ca")
 async def estate_root_ca():
+    hit = _ROOT_CA_CACHE.get("v")
+    if hit and time.time() - hit[0] < 60:
+        return hit[1]
+    async with _ROOT_CA_LOCK:
+        hit = _ROOT_CA_CACHE.get("v")      # a waiter finds the answer the first caller stored
+        if hit and time.time() - hit[0] < 60:
+            return hit[1]
+        out = await _estate_root_ca()
+        _ROOT_CA_CACHE["v"] = (time.time(), out)
+        return out
+
+
+async def _estate_root_ca() -> dict:
     """The trusted root CA's digest beside what the edge serves (row
     nos-root-ca-fingerprint-second-channel). Trusted = the mkcert rootCA.pem the host signs with
     (NOS_MKCERT_ROOT_CA, fixed at converge), never the serving path; served = the edge's own answer
     at http://<tenant>/nos-root-ca.crt. One rule: rootca.verdict (estate-status uses it too).
     Never the PEM, the key or a path. PUBLIC (ruled 2026-11-13): public facts; no Traefik router
     names it (bone is in traefik_skip_ids); the 60 s cache bounds the served-side fetch."""
-    hit = _ROOT_CA_CACHE.get("v")
-    if hit and time.time() - hit[0] < 60:
-        return hit[1]
     path = os.environ.get("NOS_MKCERT_ROOT_CA", "")
     try:
         trusted = Path(path).read_text(encoding="ascii") if path else ""
@@ -254,7 +266,6 @@ async def estate_root_ca():
             served, v = {"unknown": f"the edge did not answer ({type(exc).__name__})"}, None
         out = {"trusted": {"sha256": want, **_ca_details(trusted)}, "served": served,
                "agree": bool(v and v["agree"])}
-    _ROOT_CA_CACHE["v"] = (time.time(), out)
     return out
 
 
