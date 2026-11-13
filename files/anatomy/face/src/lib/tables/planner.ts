@@ -16,6 +16,7 @@
  */
 import type { DataTable, DataTableRow } from '$lib/contracts';
 import organRing from './organ-ring.json';
+import { sectorAngles, stableAngles } from './skilltree/guides';
 
 export interface PlannerNode {
 	id: string;
@@ -340,14 +341,24 @@ export interface TreeLayout {
 	orbit: number;
 	/** the halo's ring radii (rows hung under no system), [] when every row is hung. */
 	halo: number[];
+	/** each system's wedge in radians, the hysteresis input for the next layout (skill-tree v2). */
+	angles: Record<string, number>;
 }
 
 const R1 = 340; // ring 1 (the 13 systems); raised only if their labels would not fit
-const RING_GAP = [0, 0, 150, 120, 100, 85]; // step out to ring d; the last entry repeats
+/** Step out to ring d; the last entry repeats. Floored at 120 from ring 3 on (skill-tree v2):
+ *  the decaying 100 / 85 crowded the outer rings, where most leaves live. */
+const RING_GAP = [0, 0, 150, 120];
 const MIN_ARC = [0, 110, 40, 28]; // arc between neighbours on ring d; the last entry repeats
 const SUB_RINGS = 5; // a crowded ring splits into up to this many radial sub-rings
 const SUB_STEP = 30; // radial distance between sub-rings (> the leaf arc, so dots never touch)
-const SECTOR_PAD = 2; // weight added per root: a bare system still owns a visible wedge
+/** Sector weight = rows ^ SECTOR_POWER with a SECTOR_FLOOR_DEG floor (skill-tree v2): linear
+ *  weights gave the spine 97.5° for 199 rows and a one-row system 18.5°; the square root
+ *  gives 67° and 14°, so no petal is empty and none is crammed. */
+const SECTOR_POWER = 0.5;
+const SECTOR_FLOOR_DEG = 14;
+/** A refresh keeps the previous wedges unless a target moved by more than this fraction. */
+const SECTOR_HYSTERESIS = 0.15;
 const ORBIT_GAP = 140; // the milestone orbit sits this far beyond the tree
 const ORBIT_ARC = 110;
 const HALO_GAP = 160; // unhung constellations start this far beyond the orbit
@@ -368,16 +379,18 @@ function spread(as: number[], lo: number, hi: number, gap: number): number[] {
 }
 
 /** Radial placement: the systems on ring 1, the core column's arc centred at the top, the
- *  left wing down the left, the right wing down the right. A system's wedge is proportional
- *  to its subtree size with a floor wide enough for its label; a node's children split its
- *  wedge by their subtree sizes, sorted by slug. Ring d's radius is the smallest at which
+ *  left wing down the left, the right wing down the right. A system's wedge weighs
+ *  rows^0.5 with a 14° floor, held still between refreshes by hysteresis (`prevAngles`); a
+ *  node's children split its wedge by their subtree sizes, sorted by slug (a stable order:
+ *  a row changing state never changes place). Ring d's radius is the smallest at which
  *  every system's ring-d rows fit its wedge MIN_ARC apart (then spread to that gap inside
  *  the wedge) and at least RING_GAP beyond ring d−1 — sector-aware packing, so one crowded
  *  system never pushes the whole board out. Milestones orbit beyond the tree, centred at
  *  the top; rows hung under no system form a dim halo of their own constellations outside. */
 export function skillTreeLayout(
 	rows: readonly DataTableRow[],
-	ring: readonly { key: string; side: string }[] = ORGAN_RING
+	ring: readonly { key: string; side: string }[] = ORGAN_RING,
+	prevAngles: Record<string, number> | null = null
 ): TreeLayout {
 	const withId = rows.filter((r) => typeof r.id === 'string' && r.id);
 	const bySlug = new Map(withId.map((r) => [cell(r, 'slug'), r] as const));
@@ -427,24 +440,20 @@ export function skillTreeLayout(
 		wedged: boolean
 	): { rings: number[]; sectors: { key: string; from: number; to: number }[] } => {
 		const rings = [0, Math.max(r1, (roots.length * arcs[1]) / (2 * Math.PI))];
-		const minSpan = wedged ? arcs[1] / rings[1] : 0;
-		const span = new Map(roots.map((k) => [k, 0]));
-		const fixed = new Set<string>();
-		for (let pass = 0; pass <= roots.length; pass++) {
-			const free = roots.filter((k) => !fixed.has(k));
-			const total = free.reduce((n, k) => n + weight.get(k)! + SECTOR_PAD, 0) || 1;
-			const left = 2 * Math.PI - fixed.size * minSpan;
-			let short = false;
-			for (const k of free) {
-				const s = (left * (weight.get(k)! + SECTOR_PAD)) / total;
-				if (s < minSpan) {
-					fixed.add(k);
-					short = true;
-				} else span.set(k, s);
-			}
-			if (!short) break;
-		}
-		for (const k of fixed) span.set(k, minSpan);
+		// Wedges ∝ rows^0.5 with a 14° floor; the previous layout's angles hold unless a target
+		// drifted > 15 % (hysteresis), so a refresh does not make the petals breathe. The halo
+		// (one lane) keeps spans ∝ rows: they only seed its roots' bearings before packing.
+		const total = roots.reduce((n, k) => n + weight.get(k)!, 0) || 1;
+		const target = wedged
+			? sectorAngles(
+					Object.fromEntries(roots.map((k) => [k, weight.get(k)!])),
+					SECTOR_POWER,
+					SECTOR_FLOOR_DEG
+				)
+			: Object.fromEntries(roots.map((k) => [k, (2 * Math.PI * weight.get(k)!) / total]));
+		const span = new Map(
+			Object.entries(wedged ? stableAngles(prevAngles, target, SECTOR_HYSTERESIS) : target)
+		);
 		const sectors: { key: string; from: number; to: number }[] = [];
 		let at = 0;
 		for (const k of roots) {
@@ -580,7 +589,8 @@ export function skillTreeLayout(
 		halo = constellate(haloRoots, base, HALO_GAP_D, HALO_ARC, underStone, false).rings.slice(1);
 		for (const r of loose) put(r.id, radius.get(cell(r, 'slug'))!, angle.get(cell(r, 'slug'))!);
 	}
-	return { positions, absent, sectors: tree.sectors, rings: tree.rings, orbit, halo };
+	const angles = Object.fromEntries(tree.sectors.map((s) => [s.key, s.to - s.from]));
+	return { positions, absent, sectors: tree.sectors, rings: tree.rings, orbit, halo, angles };
 }
 
 // ── Labels: the level of detail is a collision pass (operator 2026-11-13: overlapping texts) ──

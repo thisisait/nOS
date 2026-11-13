@@ -14,6 +14,7 @@ import {
 	OUTSIDE_RING,
 	type LabelBox
 } from './planner';
+import { RING, systems, synthetic } from './skilltree/fixture';
 import type { DataTable } from '$lib/contracts';
 
 function table(rows: Record<string, unknown>[]): DataTable {
@@ -147,22 +148,6 @@ describe('reparentPayload', () => {
 	});
 });
 
-const RING = [
-	'gatehouse',
-	'spine',
-	'stores',
-	'vault',
-	'keel',
-	'archive',
-	'forge',
-	'backoffice',
-	'commons',
-	'watch',
-	'wits',
-	'clockwork',
-	'voice'
-];
-const systems = () => RING.map((s) => ({ id: s, slug: s, status: 'shipped', parent: '' }));
 // A small board: the ring, grown and ungrown parents, a blocked chain, a milestone, an orphan.
 const board = () => [
 	...systems(),
@@ -353,41 +338,9 @@ describe('skillTreeLayout', () => {
 		expect(skillTreeLayout(systems()).halo).toEqual([]);
 	});
 
-	/** A fully hung board the size of the real one: 13 systems, 3..20 epics each, 0..12 leaves,
-	 *  some grand-leaves, one 52-fan epic, 6 milestones; deterministic (LCG). */
-	function synthetic(): Record<string, unknown>[] {
-		let seed = 7;
-		const rnd = (n: number) => (seed = (seed * 48271) % 2147483647) % n;
-		const rows: Record<string, unknown>[] = systems();
-		const statuses = ['shipped', 'active', 'next', 'queued', 'review', 'doing', 'parked'];
-		for (const sys of RING) {
-			const epics = 3 + rnd(18);
-			for (let e = 0; e < epics; e++) {
-				const es = `${sys}-e${e}`;
-				rows.push({ slug: es, status: statuses[rnd(4)], parent: sys });
-				const leaves = sys === 'spine' && e === 0 ? 52 : rnd(13);
-				for (let l = 0; l < leaves; l++) {
-					const ls = `${es}-l${l}`;
-					rows.push({ slug: ls, status: statuses[rnd(7)], parent: es });
-					if (rnd(5) === 0)
-						for (let g = 0; g < 1 + rnd(4); g++)
-							rows.push({ slug: `${ls}-g${g}`, status: statuses[rnd(7)], parent: ls });
-				}
-			}
-		}
-		for (let m = 0; m < 6; m++) rows.push({ slug: `rel-02${m}`, status: 'next', parent: '' });
-		while (rows.length < 1100)
-			rows.push({ slug: `extra-${rows.length}`, status: 'next', parent: 'voice-e1' });
-		// Live-shaped titles: a system's row reads "The Spine: its tells", a row's is a sentence.
-		const tells = new Map(ORGAN_RING.map((r) => [r.key, `${r.title}: ${r.tells}`]));
-		return rows.map((r, i) => ({
-			...r,
-			id: `s${i}`,
-			title: tells.get(r.slug as string) ?? `${r.slug} — one sentence of ${30 + rnd(40)} chars`
-		}));
-	}
-
-	it('packs an 1100-row board: no two tree nodes closer than 20px, the orbit inside 1300px', () => {
+	// 1215 under v1's linear sector weights; the rows^0.5 balance (skill-tree v2) gives the 52-fan
+	// epic's system 39° instead of 47°, so its leaves take a third sub-ring band (+200 on the orbit).
+	it('packs an 1100-row board: no two tree nodes closer than 20px, the orbit inside 1450px', () => {
 		const rows = synthetic();
 		expect(rows.length).toBeGreaterThanOrEqual(1100);
 		const lay = skillTreeLayout(rows as never);
@@ -400,7 +353,7 @@ describe('skillTreeLayout', () => {
 			for (let j = i + 1; j < inTree.length && inTree[j].x - inTree[i].x < 20; j++)
 				min = Math.min(min, Math.hypot(inTree[i].x - inTree[j].x, inTree[i].y - inTree[j].y));
 		expect(min).toBeGreaterThanOrEqual(20);
-		expect(lay.orbit).toBeLessThan(1300);
+		expect(lay.orbit).toBeLessThan(1450);
 		expect(lay.halo).toEqual([]); // every row hangs under a system (milestones orbit)
 	});
 
