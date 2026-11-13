@@ -7842,3 +7842,37 @@ fn a_models_steps_never_say_done_or_failed() {
         assert!(e["error"].as_str().is_some_and(|e| e.contains("the thalamus's to say")), "{status}: {e}");
     }
 }
+
+/// Contract v19 (row face-awaiting-unreachable-kinds): a read hello answers one approvals_open and
+/// closes; it never takes over the person's live tab, never opens a session, and admits nothing else.
+#[test]
+fn a_read_hello_answers_approvals_only_and_leaves_the_live_tab() {
+    let rig = rig("relayread", mapped(), ROWS, vec![answer("never")]);
+    let addr = relay(&rig);
+    let read_hello = |uid: &str, username: &str, read: serde_json::Value| {
+        let mut h: serde_json::Value = serde_json::from_str(hello(uid, username, "r1").trim_end()).unwrap();
+        h["read"] = read;
+        format!("{h}\n")
+    };
+    // The live tab first: a read hello must not end it.
+    let (live, mut live_r) = tab(addr, &hello("alice-smith", "Alice Smith", "t1"));
+    std::thread::sleep(std::time::Duration::from_millis(200));
+    // A read hello + approvals_open: one answer, then closed.
+    let (s, mut r) = tab(addr, &read_hello("alice-smith", "Alice Smith", serde_json::json!(true)));
+    (&s).write_all(encode(&ToThalamus::ApprovalsOpen).as_bytes()).unwrap();
+    assert!(matches!(next(&mut r), Some(ToShell::ApprovalsOpen { .. })), "a read hello answers approvals_open");
+    assert!(next(&mut r).is_none(), "a read link closes after its one answer");
+    // A read hello + anything else: refused, closed, nothing opened.
+    let (s2, mut r2) = tab(addr, &read_hello("alice-smith", "Alice Smith", serde_json::json!(true)));
+    (&s2).write_all(encode(&ToThalamus::Turn { session: None, text: "hi".into() }).as_bytes()).unwrap();
+    assert!(matches!(next(&mut r2), Some(ToShell::Refused { .. })), "a read hello admits approvals_open only");
+    assert!(next(&mut r2).is_none());
+    // `read` other than true is not a hello at all.
+    for bad in [serde_json::json!(false), serde_json::json!("yes"), serde_json::json!(1)] {
+        refused(addr, &read_hello("alice-smith", "Alice Smith", bad));
+    }
+    // The live tab is still the person's: it answers.
+    (&live).write_all(encode(&ToThalamus::ApprovalsOpen).as_bytes()).unwrap();
+    assert!(matches!(next(&mut live_r), Some(ToShell::ApprovalsOpen { .. })), "the live tab was taken over by a read hello");
+    assert_eq!(session_count(&rig.ledger), 0, "a read hello opened a session");
+}
