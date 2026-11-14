@@ -18,6 +18,7 @@
   # remainder default.config.yml (tools/nos_identity.default_layers, pinned by
   # test_config_d_is_one_layer_set). A variable lives in exactly one of them.
   vars_files:
+    - config.d/05-filesystem.yml
     - config.d/10-host-desktop.yml
     - config.d/20-host-software.yml
     - config.d/30-edge.yml
@@ -290,6 +291,7 @@
       ansible.builtin.stat:
         path: "{{ item }}"
       loop:
+        - "{{ playbook_dir }}/config.d/05-filesystem.yml"
         - "{{ playbook_dir }}/config.d/10-host-desktop.yml"
         - "{{ playbook_dir }}/config.d/20-host-software.yml"
         - "{{ playbook_dir }}/config.d/30-edge.yml"
