@@ -45,7 +45,12 @@ fn handle(mut s: TcpStream, db: &Path) -> std::io::Result<()> {
     let mut req = lines.next().unwrap_or_default().split(' ');
     let (method, target) = (req.next().unwrap_or_default(), req.next().unwrap_or_default());
     let headers: Vec<(String, String)> = lines.filter_map(|l| l.split_once(':')).map(|(k, v)| (k.trim().to_ascii_lowercase(), v.trim().to_owned())).collect();
-    let header = |name: &str| headers.iter().find(|(k, _)| k == name).map(|(_, v)| v.clone());
+    // A repeated header reaches PHP joined with ", " (FrankenPHP), so a doubled uid fails CanonicalUid there;
+    // join here too, never answer as the first copy (review 11-14).
+    let header = |name: &str| {
+        let all: Vec<&str> = headers.iter().filter(|(k, _)| k == name).map(|(_, v)| v.as_str()).collect();
+        (!all.is_empty()).then(|| all.join(", "))
+    };
     if headers.iter().any(|(k, v)| k == "content-length" && v.parse::<usize>().map_or(true, |n| n > MAX_HEAD)) {
         return respond(&mut s, "413 Payload Too Large", "text/plain", b"request too large\n", false);
     }
