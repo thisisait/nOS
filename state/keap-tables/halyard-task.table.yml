@@ -1,0 +1,30 @@
+# =============================================================================
+# KEAP DataTable — "Halyard · Task" (business fixture, row fixture-halyard-studio).
+#
+# The unit of work at the dev shop. `task_type` mirrors the live enum: its
+# options are the keys of state/genome/task-types.yml, so a question asked of
+# the fixture uses the same words the estate's own board uses. A change to that
+# enum is a change here too. `project` nests the task under its project.
+# =============================================================================
+title: "Halyard · Task"
+description: >-
+  A task at the synthetic Halyard Studio fixture: its project, its task type
+  (the estate's own enum), status, open/due dates and a note.
+driver: libsql
+anchors: ["nos.fixture.halyard"]
+visibility: tier-managers
+client_scope: rowRef:project
+schema:
+  columns:
+    - { key: slug,      label: "Slug",      kind: text,   role: dimension, required: true, concept: identity.slug }
+    - { key: title,     label: "Title",     kind: text,   role: dimension, required: true, concept: identity.name }
+    - { key: project,   label: "Project",   kind: rowRef, role: dimension, required: true,
+        refTable: "halyard-project", refDisplay: "name", onDelete: "restrict", concept: graph.parent }
+    - { key: task_type, label: "Task type", kind: select, role: dimension, required: true, concept: class.kind,
+        options: ["investigate", "code-fix", "seed-edit", "review", "design", "doc",
+                  "security-remediation", "converge", "use-case"] }
+    - { key: status,    label: "Status",    kind: select, role: dimension, required: true, concept: lifecycle.status,
+        options: ["open", "in-progress", "review", "done"] }
+    - { key: opened,    label: "Opened",    kind: date,   role: attribute, concept: time.occurred_at }
+    - { key: due,       label: "Due",       kind: date,   role: attribute, concept: time.target }
+    - { key: note,      label: "Note",      kind: text,   role: attribute, concept: identity.description }

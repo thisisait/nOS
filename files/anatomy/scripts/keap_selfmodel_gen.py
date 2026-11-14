@@ -993,6 +993,10 @@ META_DOMAINS: list[tuple[str, str, str, list[tuple[str, str, str]]]] = [
           "projects, tickets and time entries. A services archetype (billable "
           "time booked against projects and tickets), distinct from the print "
           "shop's physical resources."),
+         ("nos.fixture.halyard", "halyard",
+          "The Halyard Studio fixture domain — a dev shop: projects, tasks typed "
+          "by the estate's own task_type enum, and CI builds per task. A software "
+          "archetype, where work can be green on CI and still not deployed."),
      ]),
     ("nos.loop", "loop",
      "The estate's agentic loops — SERE, the self-enhancing loop that proposes a "

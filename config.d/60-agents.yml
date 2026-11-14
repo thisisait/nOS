@@ -170,6 +170,14 @@ keap_seed_business_fixture: false
 # tests/anatomy/test_kolben_fixture_declares_the_business.py.
 keap_seed_kolben_fixture: false
 
+# The THIRD business fixture (row fixture-halyard-studio): Halyard Studio, a
+# synthetic dev shop whose tasks carry the estate's own task_type enum and
+# whose builds make "green on CI, not deployed" a join
+# (state/keap-tables/halyard-*.table.yml + the shared party table, seeded from
+# state/fixtures/halyard-studio.seed.yml). DataTables only: it seeds no Docker
+# service. Independent opt-in; same synthetic-people rule as Kolben.
+keap_seed_halyard_fixture: false
+
 # Accounting fixture (accounting-knowledge-graph): a small CZ chart of accounts
 # mapped to the universal reporting skeleton (nos.accounting.*) + one balanced
 # journal entry (state/fixtures/accounting.seed.yml → account/journal-entry/

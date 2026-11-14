@@ -95,7 +95,7 @@ written. Spec + gates author on the operator's go — the store/doors spec
 **after** the `dtt-share-model` zod, so the visibility invariant cites a
 real module, not a promised one.
 
-**The measurement that made this a re-labelling, not a refactor:** 45
+**The measurement that made this a re-labelling, not a refactor:** 48
 DataTable DEFINITIONS live in nOS git (`state/keap-tables/*.table.yml`, gated
 by `test_keap_table_concepts.py`); 36 of them are SYSTEM (estate tables nOS
 emits — `cnb-fx` joined 2026-09-21 with the n8n packs, `party-site` 2026-10-03 with geo,
@@ -103,7 +103,7 @@ emits — `cnb-fx` joined 2026-09-21 with the n8n packs, `party-site` 2026-10-03
 `efferent-queue` 2026-11-12 with the operator's command queue,
 `morning-verdict` 2026-11-12 with the readers' morning record,
 `loop-ticks` 2026-11-13 with one row per loop/watch/top tick);
-9 are fixture/user-shaped (`print-*`, `kolben-*`) — tenant-demo
+12 are fixture/user-shaped (`print-*`, `kolben-*`, `halyard-*`) — tenant-demo
 furniture that happens to live in git, not KEAP-born USER tables. Zero
 definitions are KEAP's; every row-store consumer is nOS. KEAP PROVIDES the
 store, the two doors, row history, ref integrity, and card/graph

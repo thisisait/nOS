@@ -13,12 +13,12 @@
     "habitat": 9,
     "sense": 90,
     "limb": 136,
-    "memory": 45,
+    "memory": 48,
     "law": 57,
     "reflex": 53,
     "heartbeat": 1,
     "internal": 81,
-    "edges": 456
+    "edges": 459
   },
   "nodes": {
     "agent:conductor": {
@@ -2221,6 +2221,18 @@
       "level": "memory",
       "kind": "table"
     },
+    "table:halyard-build": {
+      "level": "memory",
+      "kind": "table"
+    },
+    "table:halyard-project": {
+      "level": "memory",
+      "kind": "table"
+    },
+    "table:halyard-task": {
+      "level": "memory",
+      "kind": "table"
+    },
     "table:invoice": {
       "level": "memory",
       "kind": "table"
@@ -4353,6 +4365,16 @@
       "kind": "references"
     },
     {
+      "from": "table:halyard-project",
+      "to": "table:halyard-task",
+      "kind": "references"
+    },
+    {
+      "from": "table:halyard-task",
+      "to": "table:halyard-build",
+      "kind": "references"
+    },
+    {
       "from": "table:invoice",
       "to": "table:invoice-line",
       "kind": "references"
@@ -4415,6 +4437,11 @@
     {
       "from": "table:party",
       "to": "table:book-access",
+      "kind": "references"
+    },
+    {
+      "from": "table:party",
+      "to": "table:halyard-project",
       "kind": "references"
     },
     {
