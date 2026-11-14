@@ -101,6 +101,11 @@ pub fn auth_scoped(db: &Connection, action: &str, operator_reads: &[&str], bff_a
     if granted.contains(&"wing.answer") {
         return Ok(Err(err(403, "the wing-answer token reaches the inbox answer and nothing else")));
     }
+    // wing.intents (ruled 2026-11-14) confines its token to Intents:due/pick/outcome, whatever else it names;
+    // no read set here is one of them. The minted row also carries wing.read, so permits alone would pass it.
+    if granted.contains(&"wing.intents") {
+        return Ok(Err(err(403, "the wing-intents token reaches the intent door and nothing else")));
+    }
     if !granted.is_empty() && !granted.iter().any(|s| *s == "wing.read" || *s == "wing.write") {
         return Ok(Err(err(403, "Token scope does not permit GET on the ops plane")));
     }
