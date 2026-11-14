@@ -138,6 +138,8 @@ VALID_TYPES = {
     # which side is short. An approval stays on the two names above; these carry
     # free-text questions and choices.
     "agent_question_asked", "agent_question_answered",
+    # wing-apply-through-medulla (twin of Wing's VALID_TYPES): intent filed / outcome recorded.
+    "intent_filed", "intent_executed",
     #   Big-red-button platform halt (A12 — /admin emergency control).
     "admin_emergency_halt", "admin_emergency_resume",
     #   A setting the medulla set (state/genome/settings.yml), recorded by Wing only.

@@ -61,6 +61,8 @@ types:
   - gdpr_forget_user
   - handler_ok
   - handler_start
+  - intent_executed
+  - intent_filed
   - loops_paused
   - loops_resumed
   - migration_authored

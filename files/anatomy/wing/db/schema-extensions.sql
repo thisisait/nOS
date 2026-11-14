@@ -856,6 +856,27 @@ CREATE TABLE IF NOT EXISTS agent_questions (
     created_at      TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- Intents (row wing-apply-through-medulla, rulings 2026-11-11/13/14): an operator's apply that Wing
+-- FILES and the medulla EXECUTES under its own Bone token, so Wing never holds an apply scope. The
+-- RESOLUTION table, like agent_questions: picked_at and outcome_at are each set once by a conditional
+-- UPDATE (IntentRepository); events (intent_filed, intent_executed) are the lineage. Only Wing writes
+-- it: the medulla asks to pick and reports the outcome over the wing.intents door.
+CREATE TABLE IF NOT EXISTS intents (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    uuid         TEXT NOT NULL UNIQUE,
+    verb         TEXT NOT NULL CHECK (verb IN ('upgrade.apply')),
+    target_json  TEXT NOT NULL,                       -- {service, recipe}
+    dry_run      INTEGER NOT NULL DEFAULT 1 CHECK (dry_run IN (0, 1)),
+    actor_id     TEXT NOT NULL,                       -- the person Wing identified (getActorId)
+    tier         INTEGER NOT NULL,
+    filed_at     TEXT NOT NULL,
+    picked_at    TEXT,
+    picked_by    TEXT,                                -- the token that won the pick
+    outcome_rc   INTEGER,
+    outcome_at   TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_intents_due ON intents(picked_at, id);
 CREATE INDEX IF NOT EXISTS idx_agent_questions_status  ON agent_questions (status, created_at);
 CREATE INDEX IF NOT EXISTS idx_agent_questions_session ON agent_questions (session_uuid);
 CREATE INDEX IF NOT EXISTS idx_agent_questions_expiry  ON agent_questions (status, expires_at);

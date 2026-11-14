@@ -1204,6 +1204,75 @@ paths:
           required: true
           schema:
             type: string
+  /api/v1/intents/due:
+    get:
+      summary: unpicked intents, oldest first
+      operationId: Intents_due_get
+      tags:
+        - Intents
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+  '/api/v1/intents/{uuid}/outcome':
+    post:
+      summary: '{rc, summary}: Wing records the outcome once, emits intent_executed'
+      operationId: Intents_outcome_post
+      tags:
+        - Intents
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+  '/api/v1/intents/{uuid}/pick':
+    post:
+      summary: Wing stamps picked_at once; 409 if already picked
+      operationId: Intents_pick_post
+      tags:
+        - Intents
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
   /api/v1/metrics:
     get:
       summary: 'Metrics::actiondefault'
@@ -2544,6 +2613,37 @@ paths:
     get:
       summary: 'Upgrades::actionapplyDetached'
       operationId: Upgrades_applyDetached_get
+      tags:
+        - Upgrades
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
+        '404':
+          description: Not found
+      security:
+        - BearerAuth:
+            - wing.operator
+      parameters:
+        - name: service
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: recipe
+          in: path
+          required: true
+          schema:
+            type: string
+  '/api/v1/upgrades/{service}/{recipe}/apply-intent':
+    post:
+      summary: file the apply as an intent the medulla executes
+      operationId: Upgrades_applyIntent_post
       tags:
         - Upgrades
       responses:

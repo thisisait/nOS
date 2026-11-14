@@ -8,7 +8,7 @@
 PRAGMA foreign_keys = ON;
 
 -- ============================================================
--- TABLES (43)
+-- TABLES (44)
 -- ============================================================
 
 CREATE TABLE advisories (
@@ -366,6 +366,21 @@ CREATE TABLE gitleaks_findings (
     resolved_by   TEXT,                         -- Authentik client_id or free-text note
     created_at    TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE intents (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    uuid         TEXT NOT NULL UNIQUE,
+    verb         TEXT NOT NULL CHECK (verb IN ('upgrade.apply')),
+    target_json  TEXT NOT NULL,                       -- {service, recipe}
+    dry_run      INTEGER NOT NULL DEFAULT 1 CHECK (dry_run IN (0, 1)),
+    actor_id     TEXT NOT NULL,                       -- the person Wing identified (getActorId)
+    tier         INTEGER NOT NULL,
+    filed_at     TEXT NOT NULL,
+    picked_at    TEXT,
+    picked_by    TEXT,                                -- the token that won the pick
+    outcome_rc   INTEGER,
+    outcome_at   TEXT
 );
 
 CREATE TABLE loop_forgets (
@@ -892,7 +907,7 @@ CREATE VIEW components AS
 		FROM systems;
 
 -- ============================================================
--- INDEXS (92)
+-- INDEXS (93)
 -- ============================================================
 
 CREATE INDEX idx_adv_date ON advisories(date);
@@ -970,6 +985,8 @@ CREATE INDEX idx_gitleaks_rule_id           ON gitleaks_findings(rule_id);
 CREATE INDEX idx_gitleaks_scan_id           ON gitleaks_findings(scan_id);
 
 CREATE INDEX idx_gitleaks_severity          ON gitleaks_findings(severity, resolved_at);
+
+CREATE INDEX idx_intents_due ON intents(picked_at, id);
 
 CREATE INDEX idx_loop_forgets_fp ON loop_forgets (fingerprint);
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Presenters\Api;
 
 use App\Model\EventRepository;
+use App\Model\IntentRepository;
 use App\Model\MigrationAuthoredRepository;
 use App\Model\UpgradeRepository;
 
@@ -15,16 +16,18 @@ use App\Model\UpgradeRepository;
  * POST /api/v1/upgrades/{service}/{recipe}/plan  — dry-run a recipe; returns the plan + diff
  * POST /api/v1/upgrades/{service}/{recipe}/plan-choice — plan-choice branch: migration vs coexist  [B3]
  * POST /api/v1/upgrades/{service}/{recipe}/apply — execute a recipe; returns run_id + tail
+ * POST /api/v1/upgrades/{service}/{recipe}/apply-intent — file the apply as an intent the medulla executes
  * GET  /api/v1/upgrades/history                  — local history mirror (filterable by service)
  */
 final class UpgradesPresenter extends BaseApiPresenter
 {
-	protected array $operatorActions = ['apply', 'applyDetached', 'queue', 'planChoice'];
+	protected array $operatorActions = ['apply', 'applyDetached', 'applyIntent', 'queue', 'planChoice'];
 
 	public function __construct(
 		private UpgradeRepository $upgrades,
 		private MigrationAuthoredRepository $authored,
 		private EventRepository $events,
+		private IntentRepository $intents,
 	) {
 	}
 
@@ -79,6 +82,25 @@ final class UpgradesPresenter extends BaseApiPresenter
 	{
 		$this->requireMethod('POST');
 		$this->proxyBoxApi($this->upgrades->applyDetached($service, $recipe, $this->getActorId()));
+	}
+
+	/**
+	 * POST /api/v1/upgrades/{service}/{recipe}/apply-intent — file the apply as an intent the medulla
+	 * executes under its own Bone token (row wing-apply-through-medulla). Tier 1 (operator action); the
+	 * actor is the forwarded identity, never the body; slice 1 files a dry run only. 202 + the intent uuid.
+	 */
+	public function actionApplyIntent(string $service, string $recipe): void
+	{
+		$this->requireMethod('POST');
+		if ($this->upgrades->getRecipe($service, $recipe) === null) {
+			$this->sendError('Recipe not found', 404);
+		}
+		$body = $this->getJsonBody();
+		if (array_key_exists('dry_run', $body) && $body['dry_run'] !== true) {
+			$this->sendError('slice 1 files dry runs only (dry_run must be true or absent)', 400);
+		}
+		$uuid = $this->intents->file('upgrade.apply', ['service' => $service, 'recipe' => $recipe], $this->requireActorId(), 1);
+		$this->sendSuccess(['intent_uuid' => $uuid, 'status' => 'filed', 'dry_run' => true], 202);
 	}
 
 	/**
