@@ -5,6 +5,7 @@ use std::process::ExitCode;
 
 mod audit_reads;
 mod inbox_reads;
+mod intents;
 mod metrics;
 mod notification_reads;
 mod pulse;
@@ -29,6 +30,7 @@ fn main() -> ExitCode {
         (_, Some("unpause")) => pause(&args[1..], false),
         (_, Some("questions")) => questions(&args[1..]),
         (_, Some("answer")) => answer(&args[1..]),
+        (_, Some("intents")) => intents::cli(&args[1..]),
         (_, Some("--version")) => {
             println!("medulla {}", env!("CARGO_PKG_VERSION"));
             ExitCode::SUCCESS
@@ -38,7 +40,7 @@ fn main() -> ExitCode {
 }
 
 fn usage() -> ExitCode {
-    eprintln!("usage: medulla thalamus [serve --data-dir <dir>] | medulla wing serve --db <wing.db> --port <n> | medulla pulse plan --db <wing.db> | medulla state [--json] | medulla halt [--reason <text>] | medulla resume | medulla pause <job> [--reason <text>] | medulla unpause <job> | medulla questions [--agent <name>] | medulla answer <uuid> <answer> | medulla --version");
+    eprintln!("usage: medulla thalamus [serve --data-dir <dir>] | medulla wing serve --db <wing.db> --port <n> | medulla pulse plan --db <wing.db> | medulla state [--json] | medulla halt [--reason <text>] | medulla resume | medulla pause <job> [--reason <text>] | medulla unpause <job> | medulla questions [--agent <name>] | medulla answer <uuid> <answer> | medulla intents tick | medulla --version");
     ExitCode::from(2)
 }
 
