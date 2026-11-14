@@ -272,6 +272,16 @@ authentik_agent_clients:
     client_secret: "{{ nos_derived_secrets.agent_openclaw }}"
     capabilities: "{{ authentik_agent_scopes }}"  # full operational
 
+  # The medulla runs intents Wing files (wing-apply-through-medulla): its own client, so Wing keeps read
+  # scopes only. Secret GENERATED into custody (tasks/medulla-custody.yml), never derived, never secrets.yml.
+  # Read only for now (the dry run is Bone's /plan); nos:upgrades:apply lands with the slice that applies.
+  - name: "nOS Medulla"
+    slug: "nos-medulla"
+    client_id: "nos-medulla"
+    client_secret: "{{ medulla_bone_client_secret }}"
+    capabilities:
+      - "nos:upgrades:read"
+
   - name: "nOS Wing"
     slug: "nos-wing"
     client_id: "nos-wing"

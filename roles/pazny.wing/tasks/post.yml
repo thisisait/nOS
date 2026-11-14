@@ -457,6 +457,25 @@
     or 'Updated' in (_wing_answer_token.stdout | default(''))
   no_log: true
 
+# The medulla's intent door (wing-apply-through-medulla, ruled 2026-11-14). wing.intents reaches
+# Intents:due/pick/outcome and nothing else (BaseApiPresenter); the bearer lives in the medulla's
+# custody (tasks/medulla-custody.yml), never ~/.nos/secrets.yml.
+- name: "[pazny.wing] Reconverge API token — wing-intents (medulla intent door)"
+  ansible.builtin.command:
+    argv:
+      - "{{ wing_php_cli }}"
+      - "{{ wing_app_dir }}/bin/provision-token.php"
+      - --db={{ wing_data_dir }}/wing.db
+      - --token={{ wing_intents_token }}
+      - --name=wing-intents
+      - --scopes=wing.intents,wing.read,wing.write
+    chdir: "{{ wing_app_dir }}"
+  register: _wing_intents_token
+  changed_when: >
+    'Created' in (_wing_intents_token.stdout | default(''))
+    or 'Updated' in (_wing_intents_token.stdout | default(''))
+  no_log: true
+
 # Roster close 2026-08-26 left retired/parked agents' rows live; ruling 4
 # (docs/doctrine/agentkit.md §6.4) ends that: measured 2026-09-03, all five
 # were NULL-scope, active, and NEVER used. Reactivating one is a deliberate
