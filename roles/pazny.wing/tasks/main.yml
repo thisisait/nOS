@@ -191,7 +191,7 @@
          if ansible_os_family == 'Darwin' else
          ('linux-' ~ ('aarch64' if ansible_architecture in ['aarch64', 'arm64'] else 'x86_64')) }}
   ansible.builtin.get_url:
-    url: "https://github.com/php/frankenphp/releases/download/v{{ frankenphp_version }}/frankenphp-{{ _fp_asset }}"
+    url: "https://github.com/thisisait/nOS/releases/download/mirror-frankenphp-v{{ frankenphp_version }}/frankenphp-{{ _fp_asset }}"
     dest: "{{ _wing_frankenphp_bin }}"
     mode: '0755'
     checksum: "sha256:{{ frankenphp_checksums[_fp_asset] }}"

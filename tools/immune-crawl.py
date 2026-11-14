@@ -149,7 +149,13 @@ def main(argv: list[str] | None = None) -> int:
     todo = revs.stdout.split()[: min(a.slice, a.lifespan - steps)]
     found: list[dict] = []
     if todo:
-        diff = _git(repo, "show", "--no-color", "--format=%x00%H", "-p", "-U0", "--no-ext-diff", "--no-textconv", *todo)
+        try:
+            # a merge as a plain diff to its first parent: a combined diff (`++`, `@@@`) defeats the line-start shapes
+            diff = _git(repo, "show", "--no-color", "--format=%x00%H", "-p", "-U0", "--diff-merges=first-parent",
+                        "--no-ext-diff", "--no-textconv", *todo)
+        except (OSError, subprocess.SubprocessError) as exc:  # a huge slice times out: say unreadable, never crash
+            print(f"immune-crawl: git show unreadable: {exc}", file=sys.stderr)
+            return EXIT_UNREADABLE
         if diff.returncode != 0:
             print(f"immune-crawl: git show failed: {diff.stderr.strip()[:200]}", file=sys.stderr)
             return EXIT_UNREADABLE

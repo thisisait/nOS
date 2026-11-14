@@ -1830,9 +1830,9 @@
     "effector:frankenphp-repin": {
       "kind": "effector",
       "source": "tools/frankenphp-repin.py",
-      "title": "re-pin frankenphp_checksums to upstream's nightly rebuild, only for assets `gh attestation verify` proves its release workflow signed; `--write` rewrites (the nightly frankenphp-digest workflow runs it).",
+      "title": "checks frankenphp_checksums against our mirror release (`mirror-frankenphp-v<version>`); `--mirror` copies upstream's assets there, only those `gh attestation verify` proves its release workflow built from the tag or main, never overwriting a mirrored asset, and writes the pins.",
       "anchor": "02.02.04",
-      "description": "Effector tools/frankenphp-repin.py: re-pin frankenphp_checksums to upstream's nightly rebuild, only for assets `gh attestation verify` proves its release workflow signed; `--write` rewrites (the nightly frankenphp-digest workflow runs it)."
+      "description": "Effector tools/frankenphp-repin.py: checks frankenphp_checksums against our mirror release (`mirror-frankenphp-v<version>`); `--mirror` copies upstream's assets there, only those `gh attestation verify` proves its release workflow built from the tag or main, never overwriting a mirrored asset, and writes the pins."
     },
     "effector:gdpr-dpa-register": {
       "kind": "effector",
