@@ -13,7 +13,7 @@
  */
 import { timingSafeEqual } from 'node:crypto';
 import { env } from '$env/dynamic/private';
-import type { Handle } from '@sveltejs/kit';
+import type { Handle } from '@sveltejs/kit/hooks';
 import { ANON, type Identity } from '$lib/contracts';
 import { canonicalUid } from '$lib/security/uid';
 
