@@ -4048,9 +4048,9 @@
     "reader:roadmap-status": {
       "kind": "reader",
       "source": "tools/roadmap-status.py",
-      "title": "What the roadmap says, right now.",
+      "title": "What the roadmap says, right now. `--row SLUG`: one row — columns, body, children, spec and frontier verdict.",
       "anchor": "02.02.04",
-      "description": "Reader tools/roadmap-status.py: What the roadmap says, right now."
+      "description": "Reader tools/roadmap-status.py: What the roadmap says, right now. `--row SLUG`: one row — columns, body, children, spec and frontier verdict."
     },
     "reader:router-status": {
       "kind": "reader",
