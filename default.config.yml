@@ -37,29 +37,11 @@ host_alias: ""                            # Per-host segment ("" drops it; "lab"
 apps_subdomain: "apps"                    # Subdomain segment for manifest apps (Coolify-imported et al.)
 
 # ── Filesystem doctrine (ssot/doctrine/filesystem.md) ─────────────────────────
-# Single persistent-data root. Every service data/config path derives from this
-# in its ROLE default (not here) — see the doctrine. Point at an SSD by setting
-# this one var; ~/.nos stays the runtime sidecar (never persistent data).
-nos_data_root: "{{ ansible_facts['env']['HOME'] }}/nos"
-# Verified image cache (tools/nos-image-cache.py): a SIBLING of nos_data_root,
-# never inside it, so no removal level takes it (declared `never` in
-# tasks/removal-set.yml). Converge loads from it whenever its lock exists;
-# filling it writes one tar per image (~70 GB for a full estate), so that is opt-in.
-artifact_cache_dir: "{{ nos_data_root.rsplit('/', 1)[0] }}/nos-cache"
-artifact_cache_seed: false
-# Short per-tenant slug for the on-disk tree (full domain kept as tenant_domain).
-nos_tenant_slug: "{{ (tenant_domain | default('dev.local')).split('.')[0] }}"
-
-# ── FS doctrine — derived service paths (ssot/doctrine/filesystem.md) ─────────
-# Global (referenced by core-up dir-creation + blank-reset before roles run, so
-# they must resolve pre-core-up); value mirrors each role default. The config-
-# surface-revision epic will DRY this via a trap-safe generator.
+# Moved to the 05-filesystem layer of config.d (row config-d-filesystem). What stays here: the keys an upgrade
+# recipe names (the upgrade-vars reader reads this file literally) and the grafana sqlite plugin pins.
 authentik_data_dir: "{{ nos_data_root }}/platform/services/authentik/data"
 bluesky_pds_data_dir: "{{ nos_data_root }}/platform/services/bluesky_pds/data"
 bookstack_data_dir: "{{ nos_data_root }}/platform/services/bookstack/data"
-code_server_data_dir: "{{ nos_data_root }}/platform/services/code_server/data"
-erpnext_data_dir: "{{ nos_data_root }}/platform/services/erpnext/data"
-mikopbx_data_dir: "{{ nos_data_root }}/platform/services/mikopbx"
 freescout_data_dir: "{{ nos_data_root }}/platform/services/freescout/data"
 gitea_data_dir: "{{ nos_data_root }}/platform/services/gitea/data"
 gitlab_config_dir: "{{ nos_data_root }}/platform/services/gitlab/config"
@@ -69,49 +51,13 @@ grafana_data_dir: "{{ nos_data_root }}/platform/services/grafana/data"
 # pazny.grafana from github.com/fr-ser/grafana-sqlite-datasource releases.
 grafana_sqlite_plugin_version: "4.0.6"
 grafana_sqlite_plugin_sha256: "e5ce2354dd26ba9bea56b37f9ed4050cc917a46b858a0a191e1cafda382bf18a"
-hedgedoc_data_dir: "{{ nos_data_root }}/platform/services/hedgedoc/data"
-# Rendered config.json — HedgeDoc's database TLS, which its connection URL
-# cannot express (ssot/doctrine/foreign-properties.md §5.2). Separate from data/
-# because it is a render, not state: a blank may wipe it and the next converge
-# writes it back, while compose must find a FILE there before it binds it.
-hedgedoc_config_dir: "{{ nos_data_root }}/platform/services/hedgedoc/config"
-geolibre_data_dir: "{{ nos_data_root }}/platform/services/geolibre/data"
-homeassistant_config_dir: "{{ nos_data_root }}/platform/services/homeassistant/config"
 infisical_data_dir: "{{ nos_data_root }}/platform/services/infisical/data"
-influxdb_config_dir: "{{ nos_data_root }}/platform/services/influxdb/config"
-influxdb_data_dir: "{{ nos_data_root }}/platform/services/influxdb/data"
-keap_data_dir: "{{ nos_data_root }}/platform/services/keap/data"
-kiwix_data_dir: "{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/shared/kiwix/data"
-mailpit_data_dir: "{{ nos_data_root }}/platform/services/mailpit/data"
-maps_data_dir: "{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/shared/maps/data"
 mariadb_data_dir: "{{ nos_data_root }}/platform/services/mariadb/data"
-mcpo_data_dir: "{{ nos_data_root }}/platform/services/mcpo/data"
-# The medulla's settings store (state/genome/settings.yml; thalamus settings.rs): estate/ and people/<uid>/.
-medulla_data_dir: "{{ nos_data_root }}/platform/services/medulla/data"
-metabase_data_dir: "{{ nos_data_root }}/platform/services/metabase/data"
-nextcloud_data_dir: "{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/shared/nextcloud/data"
-nodered_data_dir: "{{ nos_data_root }}/platform/services/nodered/data"
-ntfy_data_dir: "{{ nos_data_root }}/platform/services/ntfy/data"
-onlyoffice_data_dir: "{{ nos_data_root }}/platform/services/onlyoffice/data"
-openwebui_data_dir: "{{ nos_data_root }}/platform/services/openwebui/data"
-outline_data_dir: "{{ nos_data_root }}/platform/services/outline/data"
-nos_forum_data_dir: "{{ nos_data_root }}/platform/services/nos_forum/data"
 paperclip_data_dir: "{{ nos_data_root }}/platform/services/paperclip/data"
-paperclip_workspaces_dir: "{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/shared/paperclip/workspaces"  # agents' files (class 2), at /workspaces
-portainer_data_dir: "{{ nos_data_root }}/platform/services/portainer/data"
 postgresql_data_dir: "{{ nos_data_root }}/platform/services/postgresql/data"
-qgis_data_dir: "{{ nos_data_root }}/platform/services/qgis/data"
 redis_data_dir: "{{ nos_data_root }}/platform/services/redis/data"
 rustfs_data_dir: "{{ nos_data_root }}/platform/services/rustfs/data"
-snappymail_data_dir: "{{ nos_data_root }}/platform/services/snappymail/data"
-spacetimedb_data_dir: "{{ nos_data_root }}/platform/services/spacetimedb/data"
-stalwart_data_dir: "{{ nos_data_root }}/platform/services/stalwart/data"
-superset_data_dir: "{{ nos_data_root }}/platform/services/superset/data"
-thalamus_data_dir: "{{ nos_data_root }}/platform/services/thalamus/data"
 uptime_kuma_data_dir: "{{ nos_data_root }}/platform/services/uptime_kuma/data"
-vaultwarden_data_dir: "{{ nos_data_root }}/platform/services/vaultwarden/data"
-watchtower_data_dir: "{{ nos_data_root }}/platform/services/watchtower/data"
-woodpecker_data_dir: "{{ nos_data_root }}/platform/services/woodpecker/data"
 
 # Normalize host_alias by stripping leading/trailing dots. Operators may
 # accidentally type '.lab' or 'lab.' — both should produce a clean '.lab'
