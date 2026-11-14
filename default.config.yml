@@ -255,9 +255,7 @@ install_loops: true
 # iiab_net docker network. UI at https://mail.<tld>, gated by Authentik
 # forward_auth (Tier 2 manager). See roles/pazny.mailpit/README.md.
 install_mailpit: true                     # SMTP sink + web UI for dev mail capture
-mailpit_domain: "mail{{ _host_alias_seg }}.{{ tenant_domain }}"
-mailpit_smtp_port: 1025                   # Apps relay here (mailpit:1025 inside iiab_net)
-mailpit_ui_port: 8025                     # Web UI + REST API port (nginx fronts at mail.<tld>)
+# (the rest of this section is a config.d layer)
 
 # ── Stalwart Mail Server (production SMTP / IMAP / JMAP — Track G) ──────────
 # Disabled by default. Enable AFTER:
@@ -285,7 +283,7 @@ install_smtp_stalwart: false
 # auto-restarting anything. Stateful upgrades stay manual via upgrade
 # recipes. See roles/pazny.watchtower/defaults/main.yml for tuning.
 install_watchtower: true                  # Docker image drift watcher
-watchtower_mode: "notify"                 # notify | apply (per-host opt-in)
+# (the rest of this section is a config.d layer)
 
 # ── Provider Access ──────────────────────────────────────────────────────────
 
