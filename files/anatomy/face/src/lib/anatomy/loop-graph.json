@@ -342,7 +342,9 @@
       "loop": "news-scout",
       "x": 900,
       "y": 0,
-      "runner": "agent"
+      "runner": "agent",
+      "disabled": true,
+      "graph_only": true
     },
     {
       "id": "step:news-scout:digest",
@@ -351,7 +353,9 @@
       "loop": "news-scout",
       "x": 1200,
       "y": 0,
-      "runner": "tool"
+      "runner": "tool",
+      "disabled": true,
+      "graph_only": true
     },
     {
       "id": "trigger:pipeline-exercise",

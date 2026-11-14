@@ -33,7 +33,10 @@ steps:
   - id: extract
     runner: tool
     label: "extract + dedup"
+  # graph_only: tools/loops/news-scout.py runs neither of the next two steps (row loop-steps-match-run):
+  # it drops an inbox .md and calls no librarian and no A9. Drawn dashed until a runner executes them.
   - id: consolidate
+    graph_only: true
     runner: agent
     agent: librarian
     label: "consolidate → KEAP corpus"
@@ -41,6 +44,7 @@ steps:
       - target: "keap:corpus"
         via: "capture rows into the KEAP review queue"
   - id: digest
+    graph_only: true
     runner: tool
     label: "operator digest → A9"
     writes:
