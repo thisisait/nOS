@@ -110,6 +110,7 @@ services:
 	# Consumed by Api\InboxPresenter and Tools\AskOperatorTool. NOT a ticket
 	# queue — durable work is the KEAP roadmap table, human support is FreeScout.
 	- App\Model\AgentQuestionRepository
+	- App\Model\IntentRepository
 
 	# ── Cortex-lang executor (P1, read verbs, 2026-08-09) ────────────────────
 	# KEAP owns MEANING (validate), Wing owns PERMISSION. The handler map is

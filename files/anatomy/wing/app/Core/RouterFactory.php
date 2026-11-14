@@ -74,6 +74,8 @@ final class RouterFactory
 		$api->addRoute('api/v1/upgrades/<service>/<recipe>/plan-choice', 'Upgrades:planChoice');
 		$api->addRoute('api/v1/upgrades/<service>/<recipe>/plan', 'Upgrades:plan');
 		$api->addRoute('api/v1/upgrades/<service>/<recipe>/apply-detached', 'Upgrades:applyDetached');
+		// wing-apply-through-medulla: the operator files an intent; the medulla runs it (IntentsPresenter).
+		$api->addRoute('api/v1/upgrades/<service>/<recipe>/apply-intent', 'Upgrades:applyIntent');
 		$api->addRoute('api/v1/upgrades/<service>/<recipe>/apply', 'Upgrades:apply');
 		$api->addRoute('api/v1/upgrades/<service>/<recipe>', 'Upgrades:recipe');
 		$api->addRoute('api/v1/upgrades/<service>', 'Upgrades:service');
@@ -135,6 +137,9 @@ final class RouterFactory
 		// first-match-wins reason as pulse_runs/summary above, and here the
 		// cost of getting it wrong is an answer 404-ing instead of landing.
 		$api->addRoute('api/v1/inbox/questions/<uuid>/answer', 'Inbox:answer');
+		$api->addRoute('api/v1/intents/due', 'Intents:due');
+		$api->addRoute('api/v1/intents/<uuid>/pick', 'Intents:pick');
+		$api->addRoute('api/v1/intents/<uuid>/outcome', 'Intents:outcome');
 		$api->addRoute('api/v1/inbox/questions/<uuid>/cancel', 'Inbox:cancel');
 		$api->addRoute('api/v1/inbox/questions[/<uuid>]', 'Inbox:questions');
 

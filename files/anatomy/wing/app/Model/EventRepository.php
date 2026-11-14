@@ -61,6 +61,8 @@ final class EventRepository
 		//     per question. Mirror rule: both names must also exist in Bone's
 		//     VALID_TYPES or a Bone-proxied replay of these rows 400s.
 		'agent_question_asked', 'agent_question_answered',
+		// wing-apply-through-medulla: an operator's apply filed as an intent, and the medulla's outcome Wing recorded.
+		'intent_filed', 'intent_executed',
 		// Big-red-button platform halt (A12 — /admin emergency control, 2026-05-07).
 		//   admin_emergency_halt     — Tier-1 operator halts all Pulse cron firing
 		//   admin_emergency_resume   — Tier-1 operator resumes after halt

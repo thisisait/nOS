@@ -55,6 +55,9 @@ abstract class BaseApiPresenter extends Presenter
 	/** POST actions the wing.answer bearer (the medulla's answer relay) reaches; it reaches nothing else. */
 	protected array $answerActions = [];
 
+	/** Actions the wing.intents bearer (the medulla's intent door) reaches; it reaches nothing else. */
+	protected array $intentActions = [];
+
 	public function startup(): void
 	{
 		parent::startup();
@@ -72,6 +75,12 @@ abstract class BaseApiPresenter extends Presenter
 		if (TokenRepository::grants($this->validatedToken['scopes'] ?? null, 'wing.answer')
 			&& !($this->getMethod() === 'POST' && in_array(strtolower($this->getAction()), $this->answerActions, true))) {
 			$this->sendError('the wing-answer token reaches the inbox answer and nothing else', IResponse::S403_Forbidden);
+		}
+
+		// wing.intents (row wing-apply-through-medulla, ruled 2026-11-14) confines its token the same way.
+		if (TokenRepository::grants($this->validatedToken['scopes'] ?? null, 'wing.intents')
+			&& !in_array(strtolower($this->getAction()), $this->intentActions, true)) {
+			$this->sendError('the wing-intents token reaches the intent door and nothing else', IResponse::S403_Forbidden);
 		}
 
 		if (!TokenRepository::permits($this->validatedToken['scopes'] ?? null, $this->getMethod())) {
