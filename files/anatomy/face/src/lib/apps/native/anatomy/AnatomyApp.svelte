@@ -22,6 +22,7 @@
 	import BoneView from './BoneView.svelte';
 	import GraphView from './GraphView.svelte';
 	import RunsView from './RunsView.svelte';
+	import UpgradesView from './UpgradesView.svelte';
 	import { Tabs, type TabSpec } from '$lib/components/ui';
 	import { anatomyFocus, type AnatomyView } from '$lib/anatomy/focus';
 
@@ -62,7 +63,8 @@
 		{ key: 'wing', label: 'Wing', icon: '🪶', badge: thread ? 'thread' : undefined },
 		{ key: 'bone', label: 'Bone', icon: '🦴' },
 		{ key: 'graph', label: 'Graph', icon: '🕸' },
-		{ key: 'runs', label: 'Runs', icon: '◎' }
+		{ key: 'runs', label: 'Runs', icon: '◎' },
+		{ key: 'upgrades', label: 'Upgrades', icon: '⬆' }
 	]);
 </script>
 
@@ -78,6 +80,8 @@
 			<GraphView focusNode={graphNode} onclearfocus={() => (graphNode = '')} />
 		{:else if active === 'runs'}
 			<RunsView onfollowthread={follow} />
+		{:else if active === 'upgrades'}
+			<UpgradesView />
 		{:else}
 			<BoneView />
 		{/if}

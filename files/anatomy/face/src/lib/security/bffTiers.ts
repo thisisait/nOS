@@ -16,6 +16,7 @@ export const BFF_TIERS: Record<string, Tier> = {
 	'/bff/loop/judge': 1,
 	'/bff/pulse': 1,
 	'/bff/pulse/run': 1,
+	'/bff/upgrades': 1,
 	'/bff/wing': 1,
 	'/bff/agent-sessions/[uuid]': 4,
 	// Wing narrows it: Tier 1 stops any run, anyone else their own (operator 2026-11-08).

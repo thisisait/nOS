@@ -255,6 +255,34 @@ export async function pulseRunNow(user: WingUser, jobId: string): Promise<unknow
 	return asJson(await fetch(u, { method: 'POST', headers: asUser(user) }));
 }
 
+/** Wing's upgrade matrix: one row per service (two for a coexisting one). Each row carries `recipes[]` with
+ *  steps and `reset`: the BFF projects it (lib/anatomy/upgrades.ts), never forwards it. */
+export async function wingUpgrades(user: WingUser): Promise<unknown> {
+	return wingGet(user, '/upgrades');
+}
+
+/** The queued upgrades (status planned), newest first. */
+export async function wingUpgradesPlanned(user: WingUser): Promise<unknown> {
+	return wingGet(user, '/upgrades/planned');
+}
+
+/** The applied-upgrade history mirror, newest first. Each item carries `raw_record_json`: projected away. */
+export async function wingUpgradesHistory(user: WingUser): Promise<unknown> {
+	return wingGet(user, '/upgrades/history', { limit: '40' });
+}
+
+/** Wing's public origin, for the one link out to its Upgrades page. A URL, not a secret; '' when unset or
+ *  not http(s), and the view then names the page without a link. */
+export function wingPublicUrl(): string {
+	const raw = env.NOS_WING_PUBLIC_URL || '';
+	try {
+		const u = new URL(raw);
+		return u.protocol === 'https:' || u.protocol === 'http:' ? u.origin : '';
+	} catch {
+		return '';
+	}
+}
+
 /** Recent events — the audit spine. `actor_action_id` is the thread that ties
  *  a Pulse run to the events it produced, which is why Anatomy is one app. */
 export async function wingEvents(

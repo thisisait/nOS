@@ -23,6 +23,9 @@ final class UpgradesPresenter extends BaseApiPresenter
 {
 	protected array $operatorActions = ['apply', 'applyDetached', 'applyIntent', 'queue', 'planChoice'];
 
+	/** The face Anatomy Upgrades tab reads the matrix, the queue and the history as a Tier-1 person (GET only). */
+	protected array $bffOperatorReads = ['default', 'planned', 'history'];
+
 	public function __construct(
 		private UpgradeRepository $upgrades,
 		private MigrationAuthoredRepository $authored,

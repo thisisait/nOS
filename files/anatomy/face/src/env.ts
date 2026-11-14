@@ -25,6 +25,7 @@ export const variables = defineEnvVars({
 	NOS_VFS_API_URL: optional,
 	NOS_WING_API_URL: optional,
 	NOS_WING_BFF_TOKEN: optional,
+	NOS_WING_PUBLIC_URL: optional,
 	PUPIL_FIXTURE: optional,
 	THALAMUS_RELAY_SECRET: optional,
 	WING_EVENTS_HMAC_SECRET: optional
