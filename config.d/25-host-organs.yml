@@ -85,6 +85,7 @@ medulla_routes: []
 # [inbox] = GET /api/v1/inbox/questions and /<uuid>: open agent questions and a poll (answer, cancel stay PHP's).
 # [notifications] = GET /api/v1/notifications: the operator's notification list (insert and mark-read stay off it).
 # [events] = GET /api/v1/events: the filtered event list (the callback's HMAC POST and /events/<id> stay PHP's).
+# [hub] = GET /api/v1/hub/systems and /<id>: the system inventory (?tree, ?listed, POST and /hub/health stay PHP's).
 medulla_read_routes: []
 
 # The medulla's loopback HTTP door. 8095: free (8096 is Jellyfin; 8097 relay, 8098 cortex, 8099 Bone).
