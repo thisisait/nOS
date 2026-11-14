@@ -1065,7 +1065,6 @@ vllm_require_gpu: false
 # start (~minutes), and signup stays off per the pure-SSO doctrine.
   # REM-245 patch bump, then REM-270 0.11.1 -> 0.11.4 (ghcr manifest 200, arm64).
 openwebui_version: "0.11.4"
-openwebui_secret_key: "{{ nos_derived_secrets.openwebui }}"
 openwebui_enable_signup: false   # pure-SSO: public local signup OFF (was true →
                                  # public /auth/signup first-admin race). Users
                                  # onboard via Authentik OIDC; admin is DB-seeded
@@ -1074,7 +1073,6 @@ openwebui_enable_signup: false   # pure-SSO: public local signup OFF (was true �
                                  # explicit value was the live source of truth.
 openwebui_admin_name: "Admin"
 openwebui_admin_email: "{{ default_admin_email }}"
-openwebui_admin_password: "{{ nos_derived_secrets.openwebui_admin }}"
 
 # ==============================================================================
 # IIAB – WOODPECKER CI (CI/CD connected to Gitea)
@@ -1562,7 +1560,6 @@ superset_port: 8089
 superset_version: "6.0.0-dev"           # CVE-2026-23982 (auth bypass), CVE-2025-48912 (RLS SQLi). The -dev tag is REQUIRED: apache/superset:6.0.0 (non-dev) ships without any PostgreSQL Python driver (known upstream regression) and crash-loops with ModuleNotFoundError: psycopg2; the -dev variant bundles psycopg2 2.9.6.
 superset_db_name: "superset"
 superset_db_user: "superset"
-superset_db_password: "{{ nos_derived_secrets.superset }}"
 superset_secret_key: "{{ nos_derived_secrets.superset_secret }}"
 superset_admin_email: "{{ default_admin_email }}"
 superset_admin_password: "{{ global_password_prefix }}_pw_superset"
@@ -1583,9 +1580,6 @@ authentik_oidc_superset_client_secret: "{{ nos_derived_secrets.oidc_superset }}"
 bluesky_pds_hostname: "{{ 'bsky.dev.lan' if (tenant_domain_is_local | default(true)) else 'bsky.' + (tenant_domain | default('dev.local')) }}"
 bluesky_pds_port: 2583
 bluesky_pds_version: "0.4"               # ghcr.io/bluesky-social/pds (no semver tags; 0.4 tracks latest)
-bluesky_pds_admin_password: "{{ nos_derived_secrets.bluesky }}"
-bluesky_pds_jwt_secret: "{{ global_password_prefix }}_pw_bluesky_jwt"
-bluesky_pds_rotation_key: ""           # Generate: openssl rand -hex 32
 bluesky_pds_invite_required: true      # Invite-only registration (true = closed PDS)
 bluesky_pds_email_smtp_url: ""         # SMTP URL for PDS notifications (empty = disabled)
 bluesky_pds_email_from: ""             # Email sender (default: noreply@<bluesky_pds_hostname>)

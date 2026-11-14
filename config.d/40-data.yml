@@ -70,7 +70,6 @@ restic_launchd_label: "eu.thisisait.nos.backup.offsite"
 # IIAB – MARIADB
 # ==============================================================================
 
-mariadb_root_password: "{{ nos_derived_secrets.mariadb }}"   # OVERRIDE in credentials.yml!
 mariadb_port: 3306
 # ── Server-side TLS material on disk (REM-217, rungs 1 and 2) ───────────────
 # MariaDB reports have_ssl=YES with ssl_cert EMPTY, because 11.x generates
@@ -104,7 +103,6 @@ postgresql_port: 5432
 
 postgresql_root_user: "postgres"
 
-postgresql_root_password: "{{ nos_derived_secrets.postgresql }}"
 
 # ── Server-side TLS, AT PLAY SCOPE — and it has to be here, not in the role ──
 # This began as a `pazny.postgresql` role default, which is where it belongs
@@ -232,8 +230,6 @@ external_storage_caches: true           # npm, pip, Composer, Homebrew cache (~1
 rustfs_api_port: 9010               # S3 API (aws-cli, rclone, restic, SDK...) – 9000 taken by PHP-FPM
 rustfs_console_port: 9001           # Web console
 rustfs_domain: "fs{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-rustfs_access_key: "{{ nos_derived_secrets.rustfs_access }}"
-rustfs_secret_key: "{{ nos_derived_secrets.rustfs_secret }}"
 
 postgresql_certs_dir: "{{ nos_data_root }}/platform/services/postgresql/certs"
 
