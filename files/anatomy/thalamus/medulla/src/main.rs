@@ -3,6 +3,7 @@
 //! Run as `nos-<organ>` it is `medulla <organ>`: Activity Monitor and top show the file's name.
 use std::process::ExitCode;
 
+mod agent_session_reads;
 mod audit_reads;
 mod events_reads;
 mod hub_reads;

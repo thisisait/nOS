@@ -74,9 +74,16 @@ pub fn err(code: u16, msg: &str) -> (u16, Value) {
     (code, json!({"error": msg, "code": code}))
 }
 
-/// BaseApiPresenter::startup() for a GET: requireTokenAuth, permits, EndUser, the thalamus and face-bff doors.
-/// `operator_reads` is the caller presenter's $bffOperatorReads: one set's list never opens another's.
+/// auth_scoped() for a presenter with no $bffActions: face-bff reaches its $bffOperatorReads only, as Tier 1.
 pub fn auth(db: &Connection, action: &str, operator_reads: &[&str], header: &dyn Fn(&str) -> Option<String>) -> rusqlite::Result<Result<(), (u16, Value)>> {
+    Ok(auth_scoped(db, action, operator_reads, &[], header)?.map(|_| ()))
+}
+
+/// BaseApiPresenter::startup() for a GET: requireTokenAuth, permits, EndUser, the thalamus and face-bff doors.
+/// `operator_reads` and `bff_actions` are the caller presenter's $bffOperatorReads and $bffActions: one set's
+/// list never opens another's. Ok is EndUser::scope(): None sees every row, Some("user:<uid>") its own. The
+/// scope comes from the forwarded uid and groups alone, and only on the face-bff bearer.
+pub fn auth_scoped(db: &Connection, action: &str, operator_reads: &[&str], bff_actions: &[&str], header: &dyn Fn(&str) -> Option<String>) -> rusqlite::Result<Result<Option<String>, (u16, Value)>> {
     let Some(token) = header("authorization").and_then(|h| h.strip_prefix("Bearer ").map(str::to_owned)) else {
         return Ok(Err(err(401, "Missing or invalid Authorization header. Use: Authorization: Bearer <token>")));
     };
@@ -98,20 +105,25 @@ pub fn auth(db: &Connection, action: &str, operator_reads: &[&str], header: &dyn
         return Ok(Err(err(403, "Token scope does not permit GET on the ops plane")));
     }
     if name != "face-bff" && name != "thalamus" {
-        return Ok(Ok(()));
+        return Ok(Ok(None));
     }
-    if !canonical(&header("x-nos-user-uid").unwrap_or_default()) {
+    let uid = header("x-nos-user-uid").unwrap_or_default();
+    if !canonical(&uid) {
         return Ok(Err(err(401, &format!("{name} request without a canonical X-Nos-User-Uid"))));
     }
     if name == "thalamus" {
         return Ok(Err(err(403, "the thalamus token speaks for a person only to start or stop an agent session and read it")));
     }
-    if !operator_reads.contains(&action) {
+    let operator_read = operator_reads.contains(&action);
+    if !operator_read && !bff_actions.contains(&action) {
         return Ok(Err(err(403, "the face-bff token does not reach this action")));
     }
     let groups = header("x-nos-user-groups").unwrap_or_default().to_ascii_lowercase();
     let operator = groups.split([' ', '\t', '\n', '\x0B', '\x0C', '\r', ',', '|']).any(|g| g == "nos-providers" || g == "nos-admins");
-    Ok(if operator { Ok(()) } else { Err(err(403, "This estate-wide read is Tier 1 (nos-providers or nos-admins) only")) })
+    if operator_read && !operator {
+        return Ok(Err(err(403, "This estate-wide read is Tier 1 (nos-providers or nos-admins) only")));
+    }
+    Ok(Ok((!operator).then(|| format!("user:{uid}"))))
 }
 
 /// CanonicalUid::isCanonical: non-empty and already folded (lowercase alnum runs joined by one dash, ≤ 64).
