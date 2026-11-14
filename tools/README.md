@@ -267,6 +267,7 @@ posts, restarts or renders something.
 
 ### Provisioning, secrets, identity
 
+- `session-trace-status.py` — Did a persistence surface of the operator session (shell rc, git hooks, Claude settings hooks/permissions, crontab) change since it was accepted? Hashes only, exit 0; a limb because `--accept` writes the baseline (~/.nos/session-trace.json, 0600).
 - `fetch-authentik-bootstrap-token.py` — Retrieve the ``nos-api`` Authentik token and persist it to secrets.yml.
 - `woodpecker-token.py` — Mint the Woodpecker personal token as an SSO identity — no browser, no form.
 - `nos-image-cache.py` — A verified local cache of container images, so a rebuild does not re-pull.

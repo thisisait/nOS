@@ -4,7 +4,7 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 609,
+    "nodes": 610,
     "edges": 578,
     "nodes_pulse": 53,
     "nodes_judge": 5,
@@ -28,7 +28,7 @@
     "nodes_tasktype": 9,
     "nodes_skill": 16,
     "nodes_reader": 71,
-    "nodes_effector": 128,
+    "nodes_effector": 129,
     "nodes_article": 28,
     "nodes_organ_system": 13,
     "nodes_tissue": 1,
@@ -2386,6 +2386,13 @@
       "title": "Record the nightly scan's output on its own branch, without touching yours.",
       "anchor": "02.02.04",
       "description": "Effector tools/scan-state-snapshot.py: Record the nightly scan's output on its own branch, without touching yours."
+    },
+    "effector:session-trace-status": {
+      "kind": "effector",
+      "source": "tools/session-trace-status.py",
+      "title": "Did a persistence surface of the operator session (shell rc, git hooks, Claude settings hooks/permissions, crontab) change since it was accepted? Hashes only, exit 0; a limb because `--accept` writes the baseline (~/.nos/session-trace.json, 0600).",
+      "anchor": "02.02.04",
+      "description": "Effector tools/session-trace-status.py: Did a persistence surface of the operator session (shell rc, git hooks, Claude settings hooks/permissions, crontab) change since it was accepted? Hashes only, exit 0; a limb because `--accept` writes the baseline (~/.nos/session-trace.json, 0600)."
     },
     "effector:sync-trunk-to-gitea": {
       "kind": "effector",

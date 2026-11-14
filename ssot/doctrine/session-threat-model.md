@@ -37,6 +37,8 @@ first look. The first look is the push.
 | the operator's attention | approval prompts, the push output | a rubber-stamped prompt is a granted capability |
 | telemetry | Santa log (exec paths + args), `~/.nos/events/` | it is itself sensitive data |
 
+`tools/session-trace-status.py` reads the shell rc, git-hook, Claude-settings and crontab surfaces as hashes against an accepted baseline (row session-trace-reader).
+
 ## 3. Capabilities
 
 Everything the operator's user can do: read any file that user can, write the
