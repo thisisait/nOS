@@ -122,15 +122,18 @@ def _serve(exe: pathlib.Path, db: pathlib.Path):
     return p, port
 
 
-def _wait(p: subprocess.Popen, port: int, what: str) -> None:
-    for _ in range(100):
-        if p.poll() is not None:
-            break
+def _wait(p: subprocess.Popen, port: int, what: str, php_log: pathlib.Path | None = None) -> None:
+    # With frankenphp's log, ready also means PHP started: 1.12 may listen first, and a request in that gap
+    # never returns nor lets SIGTERM finish (2026-11-14: 11/11 sent in the gap hung, 0/109 sent after it).
+    deadline = time.monotonic() + 30
+    while p.poll() is None and time.monotonic() < deadline:
         try:
             socket.create_connection(("127.0.0.1", port), timeout=0.1).close()
-            return
+            if php_log is None or "FrankenPHP started" in php_log.read_text(errors="replace"):
+                return
         except OSError:
-            time.sleep(0.05)
+            pass
+        time.sleep(0.05)
     p.kill()
     out, _ = p.communicate()
     pytest.fail(f"{what}: no (exit {p.returncode}) {out}")

@@ -13,6 +13,7 @@ CI without one runs the rendered-shape half only.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import re
@@ -33,6 +34,9 @@ APP = WING / "app"
 CADDY = REPO / "roles" / "pazny.wing" / "templates" / "wing.Caddyfile.j2"
 ENV = REPO / "roles/pazny.wing/templates/wing.env.j2"
 PLIST = REPO / "roles/pazny.wing/templates/wing.plist.j2"
+_spec = importlib.util.spec_from_file_location("_metrics", REPO / "tests/anatomy/test_medulla_serves_metrics.py")
+_metrics = importlib.util.module_from_spec(_spec)  # its _wait: ready = PHP started, not only the port
+_spec.loader.exec_module(_metrics)
 
 
 # ── shared Caddy harness (api log + multipart) ──────────────────────────────
@@ -62,12 +66,7 @@ def _serve(tmp_path: Path, index_php: str):
     proc = subprocess.Popen([str(_frankenphp()), "run", "--config", str(tmp_path / "Caddyfile")],
                             cwd=tmp_path, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                             env={**os.environ, "XDG_DATA_HOME": str(tmp_path), "XDG_CONFIG_HOME": str(tmp_path)})
-    for _ in range(50):
-        try:
-            socket.create_connection(("127.0.0.1", port), timeout=0.2).close()
-            break
-        except OSError:
-            time.sleep(0.1)
+    _metrics._wait(proc, port, "frankenphp served the rendered Caddyfile", php_log=tmp_path / "access.log")
     return proc, port
 
 

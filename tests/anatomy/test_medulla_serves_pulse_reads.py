@@ -96,7 +96,7 @@ def test_caddy_sends_only_the_reads_to_the_medulla(tmp_path, reads):
     p = subprocess.Popen([m._frankenphp(), "run", "--config", str(tmp_path / "Caddyfile")],
                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     try:
-        m._wait(p, port, "frankenphp served the rendered Caddyfile")
+        m._wait(p, port, "frankenphp served the rendered Caddyfile", php_log=tmp_path / "access.log")
         for method, path, who in ROUTING:
             req = urllib.request.Request(f"http://127.0.0.1:{port}{path}", method=method, data=b"{}" if method == "POST" else None)
             try:
