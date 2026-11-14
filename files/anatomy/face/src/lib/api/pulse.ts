@@ -7,6 +7,7 @@ import { bffGet, bffPost } from './client';
 import { asKeyedList, type PulseSnapshot } from '$lib/anatomy/pulse';
 import type { WingSnapshot } from '$lib/anatomy/wing';
 import type { BoneSnapshot } from '$lib/anatomy/bone';
+import type { UpgradesSnapshot } from '$lib/anatomy/upgrades';
 
 /** The snapshot, plus the two ways it can be unavailable. `configured: false`
  *  means the token is not wired; `error` means Wing answered badly. Neither is
@@ -80,4 +81,17 @@ export type BoneResponse = Partial<BoneSnapshot> & { configured: boolean };
 
 export async function loadBone(): Promise<BoneResponse> {
 	return bffGet<BoneResponse>('/bff/bone');
+}
+
+/** The Upgrades tab: Wing's matrix, queue and history, or one of the two ways it is unavailable. */
+export type UpgradesResponse = Partial<UpgradesSnapshot> & {
+	configured: boolean;
+	/** Wing's public origin for the link out; '' when the face was not told. */
+	wingUrl?: string;
+	note?: string;
+	error?: string;
+};
+
+export async function loadUpgrades(): Promise<UpgradesResponse> {
+	return bffGet<UpgradesResponse>('/bff/upgrades');
 }

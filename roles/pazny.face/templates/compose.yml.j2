@@ -57,6 +57,8 @@ services:
       # re-checks Tier 1 (face-wing.yml). Never the ansible-provisioned token:
       # tests/anatomy/test_end_user_services_hold_no_estate_token.py.
       NOS_WING_BFF_TOKEN: "{{ face_bff_wing_api_token | default('') }}"
+      # Wing's public origin: the Upgrades tab links out to it for every verb (a URL, not a secret).
+      NOS_WING_PUBLIC_URL: "https://{{ wing_domain }}"
       # Bone VFS (host daemon) — the real per-user tree. Endpoint lands in M2;
       # until then the file browser degrades gracefully (shows "unreachable").
       NOS_VFS_API_URL: "http://host.docker.internal:{{ bone_port | default(8099) }}/api/v1/vfs"
