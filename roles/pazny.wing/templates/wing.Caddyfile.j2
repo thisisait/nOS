@@ -108,6 +108,7 @@
     # remediation: GET of the queue and one item; the scanner's POST and PUT, bulk-status and next-id stay PHP's.
     # patches: GET of the patch list, one patch and the applied history; POST, PUT, plan, apply and /<id>/events stay PHP's.
     # pentest: GET of the target list and one target with its areas and findings; every pentest write and /pentest/patches stay PHP's.
+    # scan: GET of the scan state and the recent cycles; starting a cycle and every scan PUT stay PHP's.
 {% set _medulla_reads = {'pulse': ['path_regexp ^/api/v1/(pulse_jobs|pulse_runs|pulse_runs/summary|pulse_runs/[^/]+)$', 'not query since=*', 'not query until=*'],
                          'admin': ['path /api/v1/admin/state'], 'audit': ['path /api/v1/audit/verify'],
                          'inbox': ['path_regexp ^/api/v1/inbox/questions(/[^/]+)?$'],
@@ -117,7 +118,8 @@
                          'agent-sessions': ['path_regexp ^/api/v1/agents/[^/]+/sessions$'],
                          'remediation': ['path_regexp ^/api/v1/remediation(/[^/]+)?$', 'not path /api/v1/remediation/bulk-status', 'not path /api/v1/remediation/next-id'],
                          'patches': ['path_regexp ^/api/v1/patches(/[^/]+)?$'],
-                         'pentest': ['path_regexp ^/api/v1/pentest/targets(/[^/]+)?$']} %}
+                         'pentest': ['path_regexp ^/api/v1/pentest/targets(/[^/]+)?$'],
+                         'scan': ['path_regexp ^/api/v1/scan/(state|cycles)$']} %}
 {% for name in medulla_read_routes | default([]) %}
     @medulla_read_{{ name }} {
         method GET
