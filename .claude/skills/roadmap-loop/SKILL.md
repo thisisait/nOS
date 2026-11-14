@@ -47,12 +47,17 @@ End by reporting:
 
 `~/.cache/nos-roadmap-loop/` (create it if missing):
 - `ledger.md`:
-  - first line: `heartbeat: <ISO> · phase: pick|build|push|idle|stopped`;
+  - first line: `heartbeat: <ISO> · phase: pick|build|push|idle|stopped · next-wake: <ISO>|-`;
+    next-wake is when this tick's ScheduleWakeup should fire (`date -u -v+<s>S` on macOS, `date -u -d +<s>sec`
+    on Linux), so the watcher can see a wake that never came (11-14: a wake was lost to an idle compaction);
   - `## Built`: branch@sha7 · row · notes path, oldest first. This is the
     integrator's input;
   - `## Questions`: row · question · 2–4 options · recommendation;
   - `## To capture`: proposed child rows (slug · title · parent · body);
   - `## Roadblocks`: what stopped, since when, what would unblock it;
+  - `## Not loop work`: `<slug> · session|gate|live|other-repo|ruling|design|epic · <one line why>`, for each
+    needs-spec row an explore read and could not draft; the top agent marks it blocked with that reason and
+    removes the line, so no tick reads it again;
   - `## Log`: the last 20 lines, each
     `<ISO> · <row> · <branch>@<sha7> · built|idle|blocked|failed|stopped · next: 60s|1800s|stop`.
 - `notes/<branch>.md`: the notes for one branch (§4).
@@ -221,7 +226,8 @@ the session that integrates, answers.
   - `revise: <what>`: rewrite the draft accordingly, as round 2 or later;
   - `operator`: it went to the operator; leave the draft alone.
 - Then take up to 3 `needs-spec` frontier rows (§2), in the reader's order:
-  not stale, not gate-only, not live-estate. Write one
+  not stale, not gate-only, not live-estate, not under `## Not loop work`. A row you read and cannot draft
+  goes under `## Not loop work` with its class and why. Write one
   draft each, `~/.cache/nos-roadmap-loop/explore/<slug>.md`, containing:
   - the goal;
   - the files and organs it touches;
@@ -240,7 +246,8 @@ the session that integrates, answers.
 - Next wakeup: if a row is left to build, 60s with `noop: false`. After an
   explore iteration, 1800s with `noop: false`. If there is nothing left to
   build and nothing left to explore (no `needs-spec` rows, every draft waiting on the
-  top agent), 3600s with `noop: true`. After three such iterations in a row,
+  top agent), 1800s with `noop: true` (operator 11-14: a long wait is a wake that can be lost). After three
+  such iterations in a row,
   stop with `stop: true`.
 - Stop at once with `stop: true`, after a Roadblocks line, if any of these
   happens:

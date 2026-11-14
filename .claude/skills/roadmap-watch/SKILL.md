@@ -61,6 +61,8 @@ only the lines that apply:
 - `questions: <n>` (slugs);
 - `stalled: heartbeat <age>`, when it is older than 45 min and the phase is
   not idle/stopped;
+- `MISSED WAKE: expected <next-wake>, heartbeat <ISO>`, when the heartbeat's next-wake is more than 10 min in
+  the past and the phase is not stopped: the loop's scheduled wake never fired, and the top agent re-starts it;
 - `discrepancies: <n>` (see watch-to-loop.md).
 
 End of every run: one `loop-ticks` row, `tools/loop-tick.py --role watch --phase idle --outcome noop|blocked
