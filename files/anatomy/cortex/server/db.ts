@@ -1,3 +1,4 @@
+// nOS BEHIND organ: KEAP server/db.ts:217-225 and :2883 add the curator work-log (curator_runs, curator_visits) this copy lacks (no `curator` here); KEAP's own cites there (:218, :269, :2883 docs/plans/keap-curator-agent.md, keap-semantic-lens.md) point at nOS docs/archive/
 /**
  * SQLite persistence — full port of the old src/services/database.server.ts.
  *

@@ -105,6 +105,34 @@ DECLARED_DIFF = re.compile(r"nOS\s+S\d+\s+DIFF", re.I)
 #: change would make the tool as unreadable as having no tool."
 VENDOR_BANNER = re.compile(r"^>\s*Vendored from \S+ @ \S+", re.M)
 
+#: STALENESS IS NOT DIVERGENCE (row cortex-vendor-staleness, 2026-11-14). A file can differ because one
+#: side is simply behind: KEAP citing a doc nOS moved, or the organ missing a migration KEAP shipped.
+#: The organ says which, in its first 20 lines: `// nOS BEHIND keap|organ: <why, with file:line on both
+#: sides>` (`>` instead of `//` in Markdown). JSON never carries one. Another side or an empty why is a
+#: bad marker; a marker on an identical or organ-only file is stale. Read, never inferred from history:
+#: ~/keap/src is a shallow clone.
+BEHIND = re.compile(r"^\s*(?://|>)\s*nOS BEHIND (\S+):\s*(.*)$")
+SIDES = ("keap", "organ")
+
+
+def _behind(lines: list[str] | None, rel: str) -> tuple[list[dict], list[str]]:
+    """(markers, bad) from the first 20 lines; JSON is never read for one."""
+    if not lines or rel.endswith(".json"):
+        return [], []
+    found, bad = [], []
+    for line in lines[:20]:
+        m = BEHIND.match(line.rstrip("\n"))
+        if not m:
+            continue
+        side, why = m.group(1).rstrip(":"), m.group(2).strip()
+        if side not in SIDES:
+            bad.append(f"{rel}: side '{side}' (keap or organ)")
+        elif not why:
+            bad.append(f"{rel}: no why")
+        else:
+            found.append({"side": side, "why": why})
+    return found, bad
+
 
 def _files(root: pathlib.Path) -> dict[str, pathlib.Path]:
     out: dict[str, pathlib.Path] = {}
@@ -137,9 +165,11 @@ def compare(keap_root: pathlib.Path) -> dict:
     organ_files = _files(ORGAN)
     keap_files = _files(keap_root)
 
-    rows = []
+    rows, bad_markers = [], []
     for rel in sorted(organ_files):
         ours = organ_files[rel]
+        behind, bad = _behind(_read(ours), rel)
+        bad_markers += bad
         head = "".join((_read(ours) or [])[:12])
         if LOCALLY_AUTHORED.search(head):
             # Not a copy, so it cannot have drifted from one. Counted, so a
@@ -149,14 +179,20 @@ def compare(keap_root: pathlib.Path) -> dict:
             continue
         theirs = keap_files.get(rel)
         if theirs is None:
-            rows.append({"file": rel, "state": "organ_only", "changed_lines": None})
+            rows.append({"file": rel, "state": "stale_marker" if behind else "organ_only",
+                         "changed_lines": None, "behind": behind})
             continue
         ours_lines, theirs_lines = _read(organ_files[rel]), _read(theirs)
+        if ours_lines is not None and behind:
+            # The marker is the organ's own annotation: compared without it, so a file that is
+            # KEAP's again apart from its marker reads stale_marker, not drifted.
+            ours_lines = [ln for ln in ours_lines if not BEHIND.match(ln.rstrip("\n"))]
         if ours_lines is None or theirs_lines is None:
             rows.append({"file": rel, "state": "not_comparable", "changed_lines": None})
             continue
         if ours_lines == theirs_lines:
-            rows.append({"file": rel, "state": "identical", "changed_lines": 0})
+            rows.append({"file": rel, "state": "stale_marker" if behind else "identical",
+                         "changed_lines": 0, "behind": behind})
             continue
         diff = list(difflib.unified_diff(
             ours_lines, theirs_lines,
@@ -166,9 +202,14 @@ def compare(keap_root: pathlib.Path) -> dict:
                       if line[:1] in "+-" and not line.startswith(("+++", "---")))
         body = "".join(ours_lines)
         declared = len(DECLARED_DIFF.findall(body)) or len(VENDOR_BANNER.findall(body))
+        sides = {b["side"] for b in behind}
+        state = ("declared_diff" if declared else
+                 "behind_both" if sides == set(SIDES) else
+                 f"behind_{sides.pop()}" if sides else "drifted")
         rows.append({
             "file": rel,
-            "state": "declared_diff" if declared else "drifted",
+            "state": state,
+            "behind": behind,
             "declared_markers": declared,
             "changed_lines": changed,
             "diff": "".join(diff),
@@ -186,6 +227,7 @@ def compare(keap_root: pathlib.Path) -> dict:
         if (ORGAN / "VERSION").is_file() else "unknown",
         "keap_version": _keap_version(keap_root),
         "files": rows,
+        "bad_markers": bad_markers,
         "keap_only_count": keap_only,
     }
 
@@ -233,6 +275,21 @@ def main() -> int:
     if declared:
         print("  declared (an `nOS Sn DIFF` marker block, or a vendoring banner): "
               + ", ".join(f"{r['file'].split('/')[-1]}×{r['declared_markers']}" for r in declared))
+
+    behind = [r for r in report["files"] if r["state"].startswith("behind_")]
+    stale = [r for r in report["files"] if r["state"] == "stale_marker"]
+    bad = report.get("bad_markers") or []
+    n_keap = sum(1 for r in behind if r["state"] in ("behind_keap", "behind_both"))
+    n_organ = sum(1 for r in behind if r["state"] in ("behind_organ", "behind_both"))
+    print(f"  {len(behind)} behind ({n_keap} keap, {n_organ} organ), {len(stale)} stale marker(s), "
+          f"{len(bad)} bad marker(s)")
+    for r in behind:
+        for b in r["behind"]:
+            print(f"    {r['state']:<13} {r['file']}: {b['why'][:160]}")
+    for r in stale:
+        print(f"    stale_marker  {r['file']}: the file is {'identical' if r['changed_lines'] == 0 else 'organ-only'}; delete its marker")
+    for b in bad:
+        print(f"    bad_marker    {b}")
 
     for row in sorted(drifted, key=lambda r: -r["changed_lines"]):
         print(f"\n  ~ {row['file']}  ({row['changed_lines']} changed line(s))")

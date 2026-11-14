@@ -1,3 +1,4 @@
+// nOS BEHIND keap: KEAP server/cortex-lang.ts:7 cites nOS docs/plans/nos-cortex-lang.md §3; the doc moved to nOS docs/archive/nos-cortex-lang.md (this file's line 8 follows it), docs/plans/ holds it in neither repo
 /**
  * cortex-lang — the PURE half of `POST /agent/v1/validate`: a hand-written
  * tokenizer, an LL(1) recursive-descent parser, the AST types, and the
