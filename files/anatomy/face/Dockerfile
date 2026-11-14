@@ -16,6 +16,9 @@ RUN --mount=type=secret,id=nos_build_ca,required=false \
     if [ -s /run/secrets/nos_build_ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/nos_build_ca; fi; \
     npm ci || npm install
 COPY . .
+# NOS_FACE_OPERATOR_APPS=0 (face_operator_apps: false): the tier-1 apps are left out of the client bundle.
+ARG NOS_FACE_OPERATOR_APPS=1
+ENV VITE_OPERATOR_APPS=$NOS_FACE_OPERATOR_APPS
 RUN npm run build && npm prune --omit=dev
 
 FROM ${FACE_NODE_IMAGE} AS run

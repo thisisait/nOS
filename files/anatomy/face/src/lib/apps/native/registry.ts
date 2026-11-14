@@ -77,6 +77,19 @@ export interface FaceApp {
 const registry = new Map<string, FaceApp>();
 
 /**
+ * False in a face built with NOS_FACE_OPERATOR_APPS=0 (the image's VITE_OPERATOR_APPS): a minTier-1 app is
+ * not registered and its component loader is a dead branch, so vite emits no chunk for it and its code
+ * reaches no browser (row face-operator-apps-build-flag). A BUILD-time replacement, never read from the
+ * running host; unset = built in. The tiers stay enforced at runtime either way (mayOpen, the BFF, Wing).
+ */
+const OPERATOR_APPS = import.meta.env.VITE_OPERATOR_APPS !== '0';
+
+/** Did this build ship the operator (minTier 1) apps? For an empty state that says why a tile is absent. */
+export function operatorAppsBuilt(): boolean {
+	return OPERATOR_APPS;
+}
+
+/**
  * Register (or replace) a face app. Idempotent per slug — last write wins, so
  * re-running `registerBuiltinNativeApps()` on HMR is safe.
  *
@@ -86,6 +99,8 @@ const registry = new Map<string, FaceApp>();
  * throw makes it a failing unit test instead of a window that renders nothing.
  */
 export function registerNativeApp(app: FaceApp): void {
+	// Not in this build: a tier-1 app's loader below is `undefined`. A hub frame is a service tile, not app code.
+	if (app.form !== 'frame' && app.minTier === 1 && !OPERATOR_APPS) return;
 	if (app.form === 'frame' && app.component)
 		throw new TypeError(`${app.slug}: form=frame carries a component — a frame is an iframe`);
 	if (app.form !== 'frame' && !app.component)
@@ -358,7 +373,7 @@ export function registerBuiltinNativeApps(): void {
 		icon: '🫀',
 		form: 'view',
 		build: 'F3',
-		component: () => import('./anatomy/AnatomyApp.svelte'),
+		component: OPERATOR_APPS ? () => import('./anatomy/AnatomyApp.svelte') : undefined,
 		defaultSize: { w: 980, h: 660 },
 		apiScopes: ['pulse'],
 		limbs: [
@@ -419,7 +434,7 @@ export function registerBuiltinNativeApps(): void {
 		icon: '📥',
 		form: 'view',
 		build: 'F2',
-		component: () => import('./InboxApp.svelte'),
+		component: OPERATOR_APPS ? () => import('./InboxApp.svelte') : undefined,
 		defaultSize: { w: 760, h: 620 },
 		apiScopes: ['inbox']
 	});
@@ -431,7 +446,7 @@ export function registerBuiltinNativeApps(): void {
 		icon: '⏳',
 		form: 'view',
 		build: 'F2',
-		component: () => import('./AwaitingApp.svelte'),
+		component: OPERATOR_APPS ? () => import('./AwaitingApp.svelte') : undefined,
 		defaultSize: { w: 620, h: 520 },
 		apiScopes: ['awaiting']
 	});
@@ -443,7 +458,7 @@ export function registerBuiltinNativeApps(): void {
 		icon: '🤖',
 		form: 'view',
 		build: 'F2',
-		component: () => import('./AgentsApp.svelte'),
+		component: OPERATOR_APPS ? () => import('./AgentsApp.svelte') : undefined,
 		defaultSize: { w: 900, h: 600 },
 		apiScopes: ['agents']
 	});
@@ -509,7 +524,7 @@ export function registerBuiltinNativeApps(): void {
 		icon: '🫀',
 		form: 'widget',
 		build: 'F1',
-		component: () => import('../widgets/AnatomyWidget.svelte'),
+		component: OPERATOR_APPS ? () => import('../widgets/AnatomyWidget.svelte') : undefined,
 		apiScopes: ['pulse']
 	});
 }

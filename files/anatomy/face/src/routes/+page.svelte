@@ -72,6 +72,9 @@
 		if (linked) {
 			launchNativeApp(linked);
 			deepLinkRequest(linked, query); // a view or a session inside it (wing-inc2)
+		} else if (query.has('app')) {
+			// Not built into this face, above the viewer's tier, or a typo: nothing opens, and it says so.
+			console.warn(`face: ?app=${query.get('app')} names no app this face can open`);
 		}
 
 		void (async () => {
