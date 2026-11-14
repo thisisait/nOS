@@ -254,6 +254,17 @@
     - install_keap | default(false) | bool
     - keap_seed_halyard_fixture | default(false) | bool
 
+# ── Apiary co-op business fixture (row fixture-apiary-coop) ─────────────────
+# A synthetic beekeeping co-op (the party table + apiary-* domain tables): sites,
+# hives, scale readings, alerts. No natural person. DataTables only. Independent opt-in.
+- name: "[pazny.keap] Seed the Apiary co-op business fixture DataTables"
+  ansible.builtin.include_tasks: seed-bundle.yml
+  vars:
+    _bundle_seed_path: "state/fixtures/apiary-coop.seed.yml"
+  when:
+    - install_keap | default(false) | bool
+    - keap_seed_apiary_fixture | default(false) | bool
+
 # ── Accounting fixture (accounting-knowledge-graph, increment 2) ─────────────
 # A small CZ chart of accounts mapped to the universal reporting skeleton
 # (nos.accounting.*) + one balanced journal entry. Independent opt-in.

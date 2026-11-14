@@ -1,0 +1,65 @@
+# =============================================================================
+# Apiary co-op fixture — answer key (row fixture-apiary-coop).
+#
+# Never seeded and never shown to the model that is asked: a judge reads it.
+# Every answer is derived from state/fixtures/apiary-coop.seed.yml alone.
+# A hive "lost" weight by its first reading minus its last. "The last seeded
+# week" starts 2026-09-15T00:00:00Z (1789430400). A hive with no reading at
+# all has no reading in that week either.
+#
+#   exact:  id -> question, the tables a correct answer joins, and the one
+#           answer (a number or a slug).
+#   recall: id -> question, tables, `must` (every slug a correct answer names)
+#           and `decoys` (rows that share the question's words but fail its
+#           condition; an answer naming one is wrong however many `must` rows
+#           it also names).
+# =============================================================================
+
+exact:
+  hives-lost-over-2kg:
+    question: "How many hives lost more than 2 kg between their first and their last reading?"
+    tables: [apiary-reading]
+    answer: 4
+  open-alerts:
+    question: "How many alerts are still open?"
+    tables: [apiary-alert]
+    answer: 5
+  site-most-queenless-or-dead:
+    question: "Which site has the most hives that are queenless or dead?"
+    tables: [apiary-hive, apiary-site]
+    answer: site-sazava-luh
+  open-alert-no-recent-reading:
+    question: "How many hives have an open alert and no reading in the last seeded week?"
+    tables: [apiary-alert, apiary-reading, apiary-hive]
+    answer: 3
+  member-with-most-hives:
+    question: "Which member keeps the most hives?"
+    tables: [apiary-hive, apiary-site, party]
+    answer: synthetic-vcelari-podlesi
+
+recall:
+  hives-at-swarm-risk:
+    question: "Which hives are at swarm risk right now?"
+    tables: [apiary-alert, apiary-hive]
+    must: [hive-luh-1, hive-stran-4]
+    decoys: [hive-sad-1, hive-stran-1, hive-luh-4]   # swarm alerts already handled; an open tamper alert on the same site
+  hives-losing-weight:
+    question: "Which hives lost more than 2 kg over the readings?"
+    tables: [apiary-reading, apiary-hive]
+    must: [hive-luh-2, hive-sad-2, hive-sad-3, hive-stran-2]
+    decoys: [hive-sad-1, hive-stran-3]   # 2.0 kg exactly and 1.9 kg: not more than 2
+  queenless-or-dead-hives:
+    question: "Which hives are queenless or dead?"
+    tables: [apiary-hive]
+    must: [hive-luh-2, hive-luh-3, hive-sad-2, hive-statek-1]
+    decoys: [hive-sad-3, hive-skolka-1, hive-stran-3]   # weak, but with a queen and alive
+  alerts-waiting-for-a-person:
+    question: "Which alerts has nobody dealt with yet?"
+    tables: [apiary-alert]
+    must: [alert-luh-1-swarm-risk, alert-luh-3-tamper, alert-luh-4-tamper, alert-sad-2-weight-drop, alert-stran-4-swarm-risk]
+    decoys: [alert-sad-1-swarm-risk, alert-skolka-2-cold-brood]   # raised by the agent, and already reviewed
+  hives-on-sites-not-active:
+    question: "Which hives stand on a site that is wintering or closed?"
+    tables: [apiary-hive, apiary-site]
+    must: [hive-skolka-1, hive-skolka-2, hive-statek-1]
+    decoys: [hive-luh-3, hive-sad-2]   # dead or queenless, but on an active site

@@ -1,0 +1,139 @@
+# =============================================================================
+# Apiary co-op — synthetic business fixture seed (row fixture-apiary-coop).
+#
+# A beekeeping co-operative: member organisations, apiary sites, hives, scale
+# readings and alerts. It is the LOW-PII fixture: every member is an
+# organisation and no row names a natural person, so a personal-data detector
+# run over it has nothing to flag. The answer key is
+# state/fixtures/apiary-coop/expected.yml (never seeded).
+#
+# A map keyed by table slug; each value a list of row dicts. Top-to-bottom is
+# DEPENDENCY ORDER (a rowRef target appears above its referencer); seed-bundle.yml
+# walks the keys in this order. A row's `slug` is its KEAP row id (idempotent
+# upsert), so every rowRef value is a target-row slug, never a display string.
+#
+# SYNTHETIC BY RULE: party slugs start `synthetic-`, emails/web end `.invalid`,
+# phones start `+420 000`, tax ids match (CZ)?000001\d\d (the apiary holds 40-49).
+# Dates are fixed epoch seconds (UTC) so the seed is byte-deterministic: readings
+# run 2026-09-01 to 2026-09-18, two a week. A reading taken by hand has no
+# `brood_temp_c`; a hive with no scale has no reading at all. `raised_by` is a
+# label (`agent:apiary-watch` or `keeper`), not an identity.
+# =============================================================================
+
+# ── The shared EN-16931 party table (the co-op's members ARE parties) ────────
+party:
+  - { slug: synthetic-vcelari-podlesi, legal_name: "Vcelari Podlesi z.s. (synthetic)", trading_name: "Vcelari Podlesi", party_kind: org, country: CZ, notes: "synthetic beekeepers' association, the co-op's largest member" }
+  - { slug: synthetic-medarna-sazava, legal_name: "Medarna Sazava s.r.o. (synthetic)", trading_name: "Medarna Sazava", party_kind: org, country: CZ, notes: "synthetic honey producer member" }
+  - { slug: synthetic-obec-luka, legal_name: "Obec Luka (synthetic)", party_kind: org, country: CZ, notes: "synthetic municipality with a teaching apiary" }
+  - { slug: synthetic-skolni-statek-habr, legal_name: "Skolni statek Habr (synthetic)", party_kind: org, country: CZ, notes: "synthetic school farm member" }
+
+party-tax-identity:
+  - { slug: tax-apiary-podlesi-ico, party: synthetic-vcelari-podlesi, scheme: ICO, value: "00000140" }
+  - { slug: tax-apiary-sazava-vat, party: synthetic-medarna-sazava, scheme: VAT, value: "CZ00000141", valid_from: 1767225600 }
+  - { slug: tax-apiary-luka-ico, party: synthetic-obec-luka, scheme: ICO, value: "00000142" }
+  - { slug: tax-apiary-habr-ico, party: synthetic-skolni-statek-habr, scheme: ICO, value: "00000143" }
+
+party-contact:
+  - { slug: contact-apiary-podlesi-email, party: synthetic-vcelari-podlesi, kind: email, value: "spolek@vcelari-podlesi.invalid" }
+  - { slug: contact-apiary-sazava-email, party: synthetic-medarna-sazava, kind: email, value: "provoz@medarna-sazava.invalid" }
+  - { slug: contact-apiary-luka-web, party: synthetic-obec-luka, kind: web, value: "https://obec-luka.invalid" }
+  - { slug: contact-apiary-habr-phone, party: synthetic-skolni-statek-habr, kind: phone, value: "+420 000 000 143" }
+
+# ── The co-op's own domain ───────────────────────────────────────────────────
+apiary-site:
+  - { slug: site-podlesi-stran, name: "Podlesi hillside", member: synthetic-vcelari-podlesi, status: active, note: "south slope above the village" }
+  - { slug: site-podlesi-sad, name: "Podlesi orchard", member: synthetic-vcelari-podlesi, status: active, note: "old apple orchard" }
+  - { slug: site-sazava-luh, name: "Sazava meadow", member: synthetic-medarna-sazava, status: active, note: "river meadow, flood line marked" }
+  - { slug: site-luka-skolka, name: "Luka nursery garden", member: synthetic-obec-luka, status: wintering, note: "teaching apiary, closed to visits until spring" }
+  - { slug: site-habr-statek, name: "Habr farmyard", member: synthetic-skolni-statek-habr, status: closed, note: "stand given up after the last colony died" }
+
+apiary-hive:
+  - { slug: hive-stran-1, label: "Hive stran-1", site: site-podlesi-stran, queen_year: 2025, status: strong }
+  - { slug: hive-stran-2, label: "Hive stran-2", site: site-podlesi-stran, queen_year: 2024, status: strong }
+  - { slug: hive-stran-3, label: "Hive stran-3", site: site-podlesi-stran, queen_year: 2023, status: weak }
+  - { slug: hive-stran-4, label: "Hive stran-4", site: site-podlesi-stran, queen_year: 2025, status: strong }
+  - { slug: hive-sad-1, label: "Hive sad-1", site: site-podlesi-sad, queen_year: 2024, status: strong }
+  - { slug: hive-sad-2, label: "Hive sad-2", site: site-podlesi-sad, queen_year: 2022, status: queenless }
+  - { slug: hive-sad-3, label: "Hive sad-3", site: site-podlesi-sad, queen_year: 2024, status: weak }
+  - { slug: hive-luh-1, label: "Hive luh-1", site: site-sazava-luh, queen_year: 2025, status: strong }
+  - { slug: hive-luh-2, label: "Hive luh-2", site: site-sazava-luh, queen_year: 2023, status: queenless }
+  - { slug: hive-luh-3, label: "Hive luh-3", site: site-sazava-luh, queen_year: 2022, status: dead }
+  - { slug: hive-luh-4, label: "Hive luh-4", site: site-sazava-luh, queen_year: 2024, status: strong }
+  - { slug: hive-skolka-1, label: "Hive skolka-1", site: site-luka-skolka, queen_year: 2024, status: weak }
+  - { slug: hive-skolka-2, label: "Hive skolka-2", site: site-luka-skolka, queen_year: 2025, status: strong }
+  - { slug: hive-statek-1, label: "Hive statek-1", site: site-habr-statek, queen_year: 2021, status: dead }
+
+apiary-reading:
+  - { slug: read-stran-1-0901, hive: hive-stran-1, measured_at: 1788242400, weight_kg: 41.2, brood_temp_c: 35.0, source: scale }
+  - { slug: read-stran-1-0904, hive: hive-stran-1, measured_at: 1788501600, weight_kg: 41.1, brood_temp_c: 34.9, source: scale }
+  - { slug: read-stran-1-0908, hive: hive-stran-1, measured_at: 1788847200, weight_kg: 40.9, brood_temp_c: 34.8, source: scale }
+  - { slug: read-stran-1-0911, hive: hive-stran-1, measured_at: 1789106400, weight_kg: 40.8, brood_temp_c: 35.0, source: scale }
+  - { slug: read-stran-1-0915, hive: hive-stran-1, measured_at: 1789452000, weight_kg: 40.6, brood_temp_c: 34.9, source: scale }
+  - { slug: read-stran-1-0918, hive: hive-stran-1, measured_at: 1789711200, weight_kg: 40.4, brood_temp_c: 34.8, source: scale }
+  - { slug: read-stran-2-0901, hive: hive-stran-2, measured_at: 1788242400, weight_kg: 38.8, brood_temp_c: 35.0, source: scale }
+  - { slug: read-stran-2-0904, hive: hive-stran-2, measured_at: 1788501600, weight_kg: 38.3, brood_temp_c: 34.9, source: scale }
+  - { slug: read-stran-2-0908, hive: hive-stran-2, measured_at: 1788847200, weight_kg: 37.6, brood_temp_c: 34.8, source: scale }
+  - { slug: read-stran-2-0911, hive: hive-stran-2, measured_at: 1789106400, weight_kg: 37.0, brood_temp_c: 35.0, source: scale }
+  - { slug: read-stran-2-0915, hive: hive-stran-2, measured_at: 1789452000, weight_kg: 36.3, brood_temp_c: 34.9, source: scale }
+  - { slug: read-stran-2-0918, hive: hive-stran-2, measured_at: 1789711200, weight_kg: 35.7, brood_temp_c: 34.8, source: scale }
+  - { slug: read-stran-3-0901, hive: hive-stran-3, measured_at: 1788242400, weight_kg: 30.1, brood_temp_c: 33.6, source: scale }
+  - { slug: read-stran-3-0904, hive: hive-stran-3, measured_at: 1788501600, weight_kg: 29.8, brood_temp_c: 33.5, source: scale }
+  - { slug: read-stran-3-0908, hive: hive-stran-3, measured_at: 1788847200, weight_kg: 29.3, brood_temp_c: 33.4, source: scale }
+  - { slug: read-stran-3-0911, hive: hive-stran-3, measured_at: 1789106400, weight_kg: 29.0, brood_temp_c: 33.6, source: scale }
+  - { slug: read-stran-3-0915, hive: hive-stran-3, measured_at: 1789452000, weight_kg: 28.5, brood_temp_c: 33.5, source: scale }
+  - { slug: read-stran-3-0918, hive: hive-stran-3, measured_at: 1789711200, weight_kg: 28.1, brood_temp_c: 33.4, source: scale }
+  - { slug: read-stran-4-0901, hive: hive-stran-4, measured_at: 1788242400, weight_kg: 45.5, brood_temp_c: 35.0, source: scale }
+  - { slug: read-stran-4-0904, hive: hive-stran-4, measured_at: 1788501600, weight_kg: 45.7, brood_temp_c: 34.9, source: scale }
+  - { slug: read-stran-4-0908, hive: hive-stran-4, measured_at: 1788847200, weight_kg: 46.0, brood_temp_c: 34.8, source: scale }
+  - { slug: read-stran-4-0911, hive: hive-stran-4, measured_at: 1789106400, weight_kg: 46.2, brood_temp_c: 35.0, source: scale }
+  - { slug: read-stran-4-0915, hive: hive-stran-4, measured_at: 1789452000, weight_kg: 46.5, brood_temp_c: 34.9, source: scale }
+  - { slug: read-stran-4-0918, hive: hive-stran-4, measured_at: 1789711200, weight_kg: 46.7, brood_temp_c: 34.8, source: scale }
+  - { slug: read-sad-1-0901, hive: hive-sad-1, measured_at: 1788242400, weight_kg: 36.7, brood_temp_c: 35.0, source: scale }
+  - { slug: read-sad-1-0904, hive: hive-sad-1, measured_at: 1788501600, weight_kg: 36.4, brood_temp_c: 34.9, source: scale }
+  - { slug: read-sad-1-0908, hive: hive-sad-1, measured_at: 1788847200, weight_kg: 35.9, brood_temp_c: 34.8, source: scale }
+  - { slug: read-sad-1-0911, hive: hive-sad-1, measured_at: 1789106400, weight_kg: 35.7, brood_temp_c: 35.0, source: scale }
+  - { slug: read-sad-1-0915, hive: hive-sad-1, measured_at: 1789452000, weight_kg: 35.2, brood_temp_c: 34.9, source: scale }
+  - { slug: read-sad-1-0918, hive: hive-sad-1, measured_at: 1789711200, weight_kg: 34.8, brood_temp_c: 34.8, source: scale }
+  - { slug: read-sad-2-0901, hive: hive-sad-2, measured_at: 1788242400, weight_kg: 32.2, brood_temp_c: 31.8, source: scale }
+  - { slug: read-sad-2-0904, hive: hive-sad-2, measured_at: 1788501600, weight_kg: 30.8, brood_temp_c: 31.7, source: scale }
+  - { slug: read-sad-2-0908, hive: hive-sad-2, measured_at: 1788847200, weight_kg: 29.3, brood_temp_c: 31.6, source: scale }
+  - { slug: read-sad-2-0911, hive: hive-sad-2, measured_at: 1789106400, weight_kg: 27.8, brood_temp_c: 31.8, source: scale }
+  - { slug: read-sad-3-0901, hive: hive-sad-3, measured_at: 1788242400, weight_kg: 29.0, brood_temp_c: 33.6, source: scale }
+  - { slug: read-sad-3-0904, hive: hive-sad-3, measured_at: 1788501600, weight_kg: 28.6, brood_temp_c: 33.5, source: scale }
+  - { slug: read-sad-3-0908, hive: hive-sad-3, measured_at: 1788847200, weight_kg: 28.0, source: manual }
+  - { slug: read-sad-3-0911, hive: hive-sad-3, measured_at: 1789106400, weight_kg: 27.5, brood_temp_c: 33.6, source: scale }
+  - { slug: read-sad-3-0915, hive: hive-sad-3, measured_at: 1789452000, weight_kg: 26.9, brood_temp_c: 33.5, source: scale }
+  - { slug: read-sad-3-0918, hive: hive-sad-3, measured_at: 1789711200, weight_kg: 26.4, brood_temp_c: 33.4, source: scale }
+  - { slug: read-luh-1-0901, hive: hive-luh-1, measured_at: 1788242400, weight_kg: 43.0, brood_temp_c: 35.0, source: scale }
+  - { slug: read-luh-1-0904, hive: hive-luh-1, measured_at: 1788501600, weight_kg: 43.1, brood_temp_c: 34.9, source: scale }
+  - { slug: read-luh-1-0908, hive: hive-luh-1, measured_at: 1788847200, weight_kg: 43.2, brood_temp_c: 34.8, source: scale }
+  - { slug: read-luh-1-0911, hive: hive-luh-1, measured_at: 1789106400, weight_kg: 43.3, brood_temp_c: 35.0, source: scale }
+  - { slug: read-luh-1-0915, hive: hive-luh-1, measured_at: 1789452000, weight_kg: 43.4, brood_temp_c: 34.9, source: scale }
+  - { slug: read-luh-1-0918, hive: hive-luh-1, measured_at: 1789711200, weight_kg: 43.5, brood_temp_c: 34.8, source: scale }
+  - { slug: read-luh-2-0901, hive: hive-luh-2, measured_at: 1788242400, weight_kg: 34.0, brood_temp_c: 31.8, source: scale }
+  - { slug: read-luh-2-0904, hive: hive-luh-2, measured_at: 1788501600, weight_kg: 33.1, brood_temp_c: 31.7, source: scale }
+  - { slug: read-luh-2-0908, hive: hive-luh-2, measured_at: 1788847200, weight_kg: 31.9, brood_temp_c: 31.6, source: scale }
+  - { slug: read-luh-2-0911, hive: hive-luh-2, measured_at: 1789106400, weight_kg: 31.0, brood_temp_c: 31.8, source: scale }
+  - { slug: read-luh-2-0915, hive: hive-luh-2, measured_at: 1789452000, weight_kg: 29.8, brood_temp_c: 31.7, source: scale }
+  - { slug: read-luh-2-0918, hive: hive-luh-2, measured_at: 1789711200, weight_kg: 28.8, brood_temp_c: 31.6, source: scale }
+  - { slug: read-luh-4-0901, hive: hive-luh-4, measured_at: 1788242400, weight_kg: 40.2, brood_temp_c: 35.0, source: scale }
+  - { slug: read-luh-4-0904, hive: hive-luh-4, measured_at: 1788501600, weight_kg: 40.1, brood_temp_c: 34.9, source: scale }
+  - { slug: read-luh-4-0908, hive: hive-luh-4, measured_at: 1788847200, weight_kg: 39.8, brood_temp_c: 34.8, source: scale }
+  - { slug: read-luh-4-0911, hive: hive-luh-4, measured_at: 1789106400, weight_kg: 39.6, brood_temp_c: 35.0, source: scale }
+  - { slug: read-skolka-1-0901, hive: hive-skolka-1, measured_at: 1788242400, weight_kg: 31.5, brood_temp_c: 33.6, source: scale }
+  - { slug: read-skolka-1-0904, hive: hive-skolka-1, measured_at: 1788501600, weight_kg: 31.4, brood_temp_c: 33.5, source: scale }
+  - { slug: read-skolka-1-0908, hive: hive-skolka-1, measured_at: 1788847200, weight_kg: 31.1, source: manual }
+  - { slug: read-skolka-1-0911, hive: hive-skolka-1, measured_at: 1789106400, weight_kg: 30.9, source: manual }
+  - { slug: read-skolka-1-0915, hive: hive-skolka-1, measured_at: 1789452000, weight_kg: 30.6, brood_temp_c: 33.5, source: scale }
+  - { slug: read-skolka-1-0918, hive: hive-skolka-1, measured_at: 1789711200, weight_kg: 30.4, brood_temp_c: 33.4, source: scale }
+
+apiary-alert:
+  - { slug: alert-sad-2-weight-drop, hive: hive-sad-2, kind: weight-drop, raised_at: 1789203600, status: open, raised_by: "agent:apiary-watch", note: "weight fell on four readings in a row" }
+  - { slug: alert-luh-4-tamper, hive: hive-luh-4, kind: tamper, raised_at: 1789290000, status: open, raised_by: "agent:apiary-watch", note: "scale stopped reporting after a lid-open event" }
+  - { slug: alert-luh-3-tamper, hive: hive-luh-3, kind: tamper, raised_at: 1789030800, status: open, raised_by: "keeper", note: "lid found moved, no colony inside" }
+  - { slug: alert-stran-4-swarm-risk, hive: hive-stran-4, kind: swarm-risk, raised_at: 1789549200, status: open, raised_by: "agent:apiary-watch", note: "weight rising fast in a strong colony" }
+  - { slug: alert-luh-1-swarm-risk, hive: hive-luh-1, kind: swarm-risk, raised_at: 1789635600, status: open, raised_by: "agent:apiary-watch", note: "weight rising, brood temperature steady" }
+  - { slug: alert-stran-1-swarm-risk, hive: hive-stran-1, kind: swarm-risk, raised_at: 1788598800, status: dismissed, raised_by: "agent:apiary-watch", note: "false alarm after a super was added" }
+  - { slug: alert-sad-1-swarm-risk, hive: hive-sad-1, kind: swarm-risk, raised_at: 1788944400, status: reviewed, raised_by: "agent:apiary-watch", note: "keeper checked, queen cells removed" }
+  - { slug: alert-skolka-2-cold-brood, hive: hive-skolka-2, kind: cold-brood, raised_at: 1789376400, status: reviewed, raised_by: "agent:apiary-watch", note: "manual check, cluster is tight and warm" }
+  - { slug: alert-statek-1-cold-brood, hive: hive-statek-1, kind: cold-brood, raised_at: 1788339600, status: dismissed, raised_by: "keeper", note: "colony already dead" }

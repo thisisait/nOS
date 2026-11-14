@@ -13,12 +13,12 @@
     "habitat": 9,
     "sense": 90,
     "limb": 136,
-    "memory": 48,
+    "memory": 52,
     "law": 57,
     "reflex": 54,
     "heartbeat": 1,
     "internal": 81,
-    "edges": 460
+    "edges": 464
   },
   "nodes": {
     "agent:conductor": {
@@ -2166,6 +2166,22 @@
       "kind": "skill"
     },
     "table:account": {
+      "level": "memory",
+      "kind": "table"
+    },
+    "table:apiary-alert": {
+      "level": "memory",
+      "kind": "table"
+    },
+    "table:apiary-hive": {
+      "level": "memory",
+      "kind": "table"
+    },
+    "table:apiary-reading": {
+      "level": "memory",
+      "kind": "table"
+    },
+    "table:apiary-site": {
       "level": "memory",
       "kind": "table"
     },
@@ -4354,6 +4370,21 @@
       "kind": "part_of"
     },
     {
+      "from": "table:apiary-hive",
+      "to": "table:apiary-alert",
+      "kind": "references"
+    },
+    {
+      "from": "table:apiary-hive",
+      "to": "table:apiary-reading",
+      "kind": "references"
+    },
+    {
+      "from": "table:apiary-site",
+      "to": "table:apiary-hive",
+      "kind": "references"
+    },
+    {
       "from": "table:application",
       "to": "table:package",
       "kind": "references"
@@ -4441,6 +4472,11 @@
     {
       "from": "table:party",
       "to": "table:account",
+      "kind": "references"
+    },
+    {
+      "from": "table:party",
+      "to": "table:apiary-site",
       "kind": "references"
     },
     {
