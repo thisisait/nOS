@@ -147,7 +147,7 @@ final class AgentsPresenter extends BaseApiPresenter
 	 *                       uuid the caller can see (else 404, like absent), or
 	 *                       thalamus:<uuid> (an Iris run; shape-checked only)
 	 *   limits?: object   — per-run bounds {max_calls?, wall_clock_s?, token_ceiling?}:
-	 *                       integers >= 1, unknown keys 400, each clamped to the
+	 *                       integers >= 1 (max_calls >= 2), unknown keys 400, clamped to the
 	 *                       estate ceiling; the 202 says limits_applied + clamped
 	 *
 	 * actor_id is NEVER read from the body. It is always

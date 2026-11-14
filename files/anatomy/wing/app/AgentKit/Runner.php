@@ -1330,8 +1330,10 @@ final class Runner
 			if (!array_key_exists((string) $key, $ceil)) {
 				throw new \InvalidArgumentException("limits has no {$key}");
 			}
-			if (!is_int($value) || $value < 1) {
-				throw new \InvalidArgumentException("limits.{$key} must be an integer >= 1");
+			// a call cap at or under the synthesis reserve would run only the wrap-up turn (review 11-14)
+			$min = $key === 'max_calls' ? self::SYNTHESIS_CALLS_RESERVED + 1 : 1;
+			if (!is_int($value) || $value < $min) {
+				throw new \InvalidArgumentException("limits.{$key} must be an integer >= {$min}");
 			}
 			if ($value > $ceil[$key]) {
 				$value = $ceil[$key];
