@@ -22,6 +22,11 @@ concurrency rises.
     tools/current-state.py progress <slug> working|blocked|review|done
     tools/current-state.py file <slug> --title T --work W --task-type CO \
         [--where local --kam repo --note N]
+
+THE JOIN (row plat-active-work-datatable): `work` must be a roadmap row's slug. `file` reads the roadmap
+the way `nos dtt status` does (roadmap-status.py: the human door, GET only, never this tool's RW token)
+and refuses an absent slug; an unreadable roadmap refuses too (UNKNOWN, nothing filed). `board` adds the
+rows grouped by their step: open steps, closed steps (shipped / dropped / review), and orphans (absent).
 """
 
 from __future__ import annotations
@@ -34,6 +39,7 @@ import pathlib
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.request
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
@@ -48,6 +54,40 @@ def _load(mod: str):
 
 
 wa = _load("work-assignment")
+
+#: A step in one of these is CLOSED, not gone (state/keap-tables/roadmap.table.yml status options).
+CLOSED = ("shipped", "dropped", "review")
+
+
+class RoadmapUnknown(Exception):
+    """The roadmap could not be read: a refusal, never an empty roadmap."""
+
+
+def roadmap_steps() -> dict[str, dict]:
+    """slug -> {title, status}, read like `nos dtt status` (GET through the human door)."""
+    try:
+        rs = _load("roadmap-status")
+        rows = [r.get("values", r) for r in rs.paged(rs.get, rs.BASE + "/rows")["data"]["rows"]]
+    except (urllib.error.URLError, OSError, KeyError, ValueError, TypeError, SystemExit) as exc:
+        raise RoadmapUnknown(str(exc)[:200] or type(exc).__name__) from None
+    steps = {str(r["slug"]): {"title": r.get("title") or "", "status": r.get("status") or ""}
+             for r in rows if r.get("slug")}
+    if not steps:
+        raise RoadmapUnknown("the roadmap answered with no rows")
+    return steps
+
+
+def group_by_step(rows: list[dict], steps: dict[str, dict]) -> dict[str, list]:
+    """{"open": [(step, rows)], "closed": [(step, rows)], "orphans": [rows]} — pure, for the board."""
+    by: dict[str, list] = {}
+    orphans = []
+    for r in rows:
+        w = str(r.get("work") or "")
+        (by.setdefault(w, []) if w in steps else orphans).append(r)
+    out = {"open": [], "closed": [], "orphans": orphans}
+    for w, rs in sorted(by.items()):
+        out["closed" if steps[w]["status"] in CLOSED else "open"].append((w, rs))
+    return out
 
 
 # ── pure claim logic (gated offline) ─────────────────────────────────────────
@@ -154,6 +194,17 @@ def _progress(slug: str, status: str) -> int:
 
 
 def _file(a) -> int:
+    try:
+        steps = roadmap_steps()
+    except RoadmapUnknown as exc:
+        print(f"REFUSED: roadmap UNKNOWN ({exc}): nothing filed", file=sys.stderr)
+        return 2
+    step = steps.get(a.work)
+    if step is None:
+        print(f"REFUSED: '{a.work}' is not a roadmap row: nothing filed", file=sys.stderr)
+        return 2
+    if step["status"] in CLOSED:
+        print(f"  note: step {a.work} is {step['status']}", file=sys.stderr)
     row = {"slug": a.slug, "title": a.title, "work": a.work, "task_type": a.task_type,
            "where": a.where, "kam": a.kam, "status": "unclaimed"}
     if a.note:
@@ -191,7 +242,26 @@ def main() -> int:
 
 def _board() -> int:
     sys.argv = ["work-assignment.py"]
-    return wa.main()
+    rc = wa.main()
+    try:
+        steps, rows = roadmap_steps(), wa._live_rows(SLUG)
+    except RoadmapUnknown as exc:
+        print(f"\nby roadmap step: UNKNOWN (roadmap unreadable: {exc})")
+        return rc
+    except (urllib.error.URLError, OSError, ValueError) as exc:
+        print(f"\nby roadmap step: UNKNOWN (board unreadable: {str(exc)[:200]})")
+        return rc
+    g = group_by_step(rows, steps)
+    for label, groups in (("open steps", g["open"]), ("closed steps", g["closed"])):
+        print(f"\n{label} ({len(groups)}):")
+        for w, rs in groups:
+            print(f"  {w} [{steps[w]['status']}] {steps[w]['title'][:80]}")
+            for r in rs:
+                print(f"      {r.get('slug')} · {r.get('status')} · {r.get('claim') or 'unclaimed'}")
+    print(f"\norphans ({len(g['orphans'])}): work names no roadmap row")
+    for r in g["orphans"]:
+        print(f"  {r.get('slug')} · work={r.get('work') or '(empty)'} · {r.get('status')}")
+    return rc
 
 
 if __name__ == "__main__":
