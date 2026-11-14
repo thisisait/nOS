@@ -35,6 +35,9 @@ CREATED_ELSEWHERE = {
     "kolben-project": "a tenant-demo fixture definition, not an estate table",
     "kolben-ticket": "a tenant-demo fixture definition, not an estate table",
     "kolben-time-entry": "a tenant-demo fixture definition, not an estate table",
+    "halyard-build": "a tenant-demo fixture definition, not an estate table",
+    "halyard-project": "a tenant-demo fixture definition, not an estate table",
+    "halyard-task": "a tenant-demo fixture definition, not an estate table",
 }
 
 
