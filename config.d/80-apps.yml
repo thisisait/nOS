@@ -1,5 +1,5 @@
 # ==============================================================================
-# config.d/80-apps.yml — apps: WordPress, Nextcloud, Kiwix, n8n, Gitea, GitLab, Open WebUI, Woodpecker, Portainer, Jellyfin, Uptime Kuma, Calibre-Web, SnappyMail, and the b2b/data apps (ERPNext, FreeScout, Outline, Metabase) (row config-split-apps).
+# config.d/80-apps.yml — apps: WordPress, Nextcloud, Kiwix, n8n, Gitea, GitLab, Open WebUI, Woodpecker, Portainer, Jellyfin, Uptime Kuma, Calibre-Web, SnappyMail, and the b2b/data apps (ERPNext, FreeScout, Outline, Metabase) (row config-split-apps); Mailpit, Stalwart, Mastodon, Watchtower (row config-d-mail-social).
 #
 # One of the default layers (config.d/*.yml in order, then default.config.yml;
 # the set is tools/nos_identity.default_layers and main.yml vars_files). Every
@@ -358,3 +358,20 @@ metabase_admin_email: "{{ default_admin_email }}"
 metabase_admin_password: "{{ nos_derived_secrets.metabase_admin }}"
 metabase_admin_first_name: "Admin"
 metabase_admin_last_name: "nOS"
+
+# ── Mailpit (dev SMTP capture-all + modern web UI) ───────────────────────────
+# Every other service relays SMTP into mailpit:1025 inside the iiab_net docker
+# network. UI at https://mail.<tld>, gated by Authentik forward_auth (Tier 2
+# manager). The switch install_mailpit stays in default.config.yml.
+mailpit_domain: "mail{{ _host_alias_seg }}.{{ tenant_domain }}"
+mailpit_smtp_port: 1025                   # Apps relay here (mailpit:1025 inside iiab_net)
+mailpit_ui_port: 8025                     # Web UI + REST API port (nginx fronts at mail.<tld>)
+
+# ── Stalwart Mail Server, Mastodon ───────────────────────────────────────────
+# Nothing to declare here yet: each section holds only its switch (install_smtp_stalwart) or a
+# reserved note (Mastodon has no role), and both stay in default.config.yml.
+
+# ── Watchtower (Docker image freshness watcher) ──────────────────────────────
+# NOTIFY-ONLY by default: surfaces stale images in Mailpit without restarting anything.
+# The switch install_watchtower stays in default.config.yml.
+watchtower_mode: "notify"                 # notify | apply (per-host opt-in)
