@@ -11,7 +11,8 @@
     path: /etc/nos/medulla.env
   register: _medulla_env_file
   become: true
-  failed_when: false
+  # only an absent file means "not held": any other read failure stops, never regenerates (review 11-14)
+  failed_when: _medulla_env_file.failed | default(false) and 'not found' not in (_medulla_env_file.msg | default(''))
   no_log: true
   when: ansible_facts['system'] == 'Linux'
   tags: ['always']
@@ -22,7 +23,8 @@
   loop: [bone-client-secret, wing-intents-token]
   register: _medulla_keychain
   changed_when: false
-  failed_when: false
+  # rc 44 = no such item (not held); a locked or unreachable Keychain stops instead of rotating the secret
+  failed_when: _medulla_keychain.rc not in [0, 44]
   no_log: true
   when: ansible_facts['system'] == 'Darwin'
   tags: ['always']
