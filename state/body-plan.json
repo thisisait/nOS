@@ -12,7 +12,7 @@
     "organism": 0,
     "habitat": 9,
     "sense": 89,
-    "limb": 135,
+    "limb": 136,
     "memory": 45,
     "law": 57,
     "reflex": 53,
@@ -1066,6 +1066,10 @@
       "kind": "effector"
     },
     "effector:scan-state-snapshot": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:session-trace-status": {
       "level": "limb",
       "kind": "effector"
     },

@@ -41,6 +41,18 @@ indicators:
     tolerance: the Pulse runner trees plus OS, Homebrew and /Applications
     verdicts: none
     definition: none
+  session-trace-status:
+    source: tools/session-trace-status.py
+    kind: sentinel
+    antigen: a persistence surface of the operator session changed since the operator accepted it
+    receptor: shell rc, git hooks, claude settings, crontab (read-only, hashes)
+    effector: report
+    signal: none (read on demand; red-status wiring is a follow-on)
+    heartbeat: none (read on demand)
+    lifespan: none
+    tolerance: the accepted baseline (~/.nos/session-trace.json, written only by --accept)
+    verdicts: none
+    definition: none
   advisory-status:
     source: tools/advisory-status.py
     kind: sentinel
