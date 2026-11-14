@@ -227,35 +227,10 @@ heartbeat_api_key: "{{ nos_derived_secrets.heartbeat }}"
 # ── Bone (local FastAPI — structure/state/dispatcher organ) ──────────────────
 # Formerly BoxAPI. See docs/anatomy.md.
 install_bone: true                        # FastAPI management API — required for Wing telemetry sink
-bone_port: 8099
-bone_domain: "api{{ _host_alias_seg }}.{{ tenant_domain }}"
 bone_secret: "{{ global_password_prefix }}_pw_bone"
-# Retired chain keys, comma-separated, newest first. The audit hash-chain's key
-# derives from bone_secret (App\Model\AuditChain::chainKey), so rotating the
-# secret used to invalidate every signed row. The verifier now carries a RING:
-# a key is elected per recorded segment anchor and is the only one accepted
-# until the next, so retired keys verify the history they signed and cannot
-# sign new rows. Empty until the first rotation; main.yml appends the outgoing
-# value when `bone_secret_rotate=true`, and ~/.nos/secrets.yml persists it.
-bone_secret_retired: ""
-# HMAC secret for /api/v1/events ingestion. Both sides (Bone server +
-# apps_runner client + callback_plugins/wing_telemetry.py) MUST share this.
-# Default mirrors bone_secret so the symmetry holds without operator setup.
-# Override in credentials.yml for stronger hardening (recommended: 32+
-# random bytes — see docs/secrets-hardening.md once it lands).
-wing_events_hmac_secret: "{{ bone_secret }}"
 
 # ── Notification dispatch (Anatomy A9 — wing.db.notifications fanout) ───────
-# `mail_digest_floor`: severities at-or-below this rank get queued for the
-# daily digest mail instead of one-immediate-mail-per-event. The minute-tick
-# dispatch worker still fires critical/high immediately; medium/low/info
-# (with this default) batch into the 09:00 UTC summary. Set to "none" to
-# disable digest behavior (every severity fires immediate — pre-A9-daily
-# behavior). Set to "critical" to put EVERYTHING into the digest.
-# Ranking: critical < high < medium < low < info (less severe → larger rank).
-mail_digest_floor: "medium"
-# Cron expression for the digest flush job. Defaults to 09:00 UTC daily.
-mail_digest_cron: "0 9 * * *"
+# (the rest of this section is a config.d layer)
 
 # ── Pulse (host launchd — scheduled-job daemon, A4 of the host-organs refactor)
 # Local Python daemon that polls Wing API for due jobs and fires them.
@@ -265,18 +240,11 @@ mail_digest_cron: "0 9 * * *"
 # return 404 today and Pulse idle-tolerates that gracefully (warns once
 # per minute, no crash-loop). Endpoints land alongside A7 (gitleaks plugin).
 install_pulse: true
-# The jobs the medulla fires (`medulla pulse serve`, eu.thisisait.nos.medulla-pulse); the Python daemon
-# skips exactly these. Empty = the medulla fires nothing. A secret: job is refused at converge (it needs
-# install_thalamus for the binary). Rollback: empty it, then `nos --tags pulse`.
-pulse_medulla_jobs: []
 
 # The maintainer's development loops: loops/*.loop.yml, loop-base (propose,
 # drive, review), trunk-sync and the cells that serve only them (proposer,
 # surveyor, upgrade-architect, ...). A client host turns it off (profiles/core.yml).
 install_loops: true
-# Whose host this is. maintainer: the nOS repo's CI (dev/master runs) is this host's red to act on.
-# client: a firm's host that runs nOS; tools/red-status.py shows that CI as info only (2026-10-18).
-nos_host_role: maintainer   # maintainer | client
 
 # wing_telemetry_enabled lives in main.yml as a PLAY-level var (not here)
 # because Ansible callback plugins can only see play.get_vars(), not the
@@ -743,65 +711,9 @@ php_composer_packages:
   #   state: present
 
 # ── Wing Security Dashboard ─────────────────────────────────────────────
-wing_domain: "wing{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-# wing_port MUST be at top level (not just role default) — the Traefik
-# file-provider template (roles/pazny.traefik/templates/dynamic/services.yml.j2)
-# resolves it via `lookup('vars', s.port_var)` from PLAY scope, which
-# only sees top-level config vars + role defaults of currently-included
-# roles. The Traefik render runs in pre_compose hook (host scope, no
-# pazny.wing inclusion), so role-local wing_port=9000 was invisible →
-# rendered upstream URL was `http://nos-host:0` and wing.<tld> 502'd
-# at the Traefik upstream layer (C11, 2026-05-08).
-wing_port: 9000
-# The PHP CLI that runs Wing's bin/*.php from Ansible. macOS: Homebrew php(-zts).
-# Linux: ~/.local/bin/nos-php (pazny.wing), a shim over `frankenphp php-cli` — a fresh Ubuntu has
-# no `php`, and the bare `php` these tasks used failed there behind
-# failed_when: false (the CI runner and the cloud sandbox both ship a php).
-wing_php_cli: "{{ 'php' if ansible_os_family == 'Darwin' else (ansible_facts['env']['HOME'] ~ '/.local/bin/nos-php') }}"
-wing_home: "{{ ansible_facts['env']['HOME'] }}/wing"
-wing_app_dir: "{{ wing_home }}/app"
-wing_data_dir: "{{ wing_app_dir }}/data"
+# (the rest of this section is a config.d layer)
 # ── the strangler seam (ssot/doctrine/medulla.md §5) ──
-# Whole /api/v1/<prefix> names Wing's Caddy hands to the medulla; [] = everything is still PHP.
-# The operator moves a prefix in config.yml (e.g. [metrics]), then converges --tags wing,thalamus.
-medulla_routes: []
-# Named read sets whose GETs alone move; their writes stay PHP's (ruling 2026-10-25). [] = none.
-# [pulse] = GET /api/v1/pulse_jobs, /pulse_runs, /pulse_runs/summary, /pulse_runs/<id> (not /due).
-# [admin] = GET /api/v1/admin/state: PHP's halt_active + job_counts and the medulla's state struct.
-# [audit] = GET /api/v1/audit/verify: the cached audit-chain verdict (MEDULLA_AUDIT_CHAIN, never the secret).
-# [inbox] = GET /api/v1/inbox/questions and /<uuid>: open agent questions and a poll (answer, cancel stay PHP's).
-# [notifications] = GET /api/v1/notifications: the operator's notification list (insert and mark-read stay off it).
-medulla_read_routes: []
-# The medulla's loopback HTTP door. 8095: free (8096 is Jellyfin; 8097 relay, 8098 cortex, 8099 Bone).
-medulla_http_port: 8095
-wing_json_source: "{{ playbook_dir }}/docs/llm/security"
-# Tracy debug bar gate. Empty (default) = debug NEVER renders — the bar leaks
-# $_COOKIE/config/SQL dumps and must stay off on any reachable install. To
-# debug: set this to a long random value, redeploy, then set a `tracy-debug`
-# browser cookie to the same value (constant-time compared in Booting.php).
-# IP gating can't work behind loopback+Traefik (every request looks local).
-wing_tracy_secret: ""
-# Audit-log retention horizon (GDPR Art. 5(1)(e) storage limitation). Enforced
-# on-demand by `--tags audit-retention` (dry-run unless -e retention_confirm=true);
-# see docs/security-baseline.md §4. Not auto-scheduled.
-wing_audit_retention_days: 365
-
-# Tamper-evident audit hash-chain (gov-readiness P1). When true, every events
-# row is HMAC-chained at INSERT (Bone Python + Wing PHP seams), WORM triggers
-# block content UPDATE / unguarded DELETE on chained rows, the retention purge
-# re-anchors, and bin/verify-audit-chain.php confirms integrity. Pre-enable rows
-# stay unsigned (accepted baseline). DETECT-not-prevent vs a DB-only attacker;
-# the chain key is on-box (derived from wing_events_hmac_secret). Default OFF
-# (behavior-changing-control doctrine). Toggling OFF->ON re-runs
-# backfill-event-chain.php (post.yml does this when on) to record the segment
-# anchor. Verify: php files/anatomy/wing/bin/verify-audit-chain.php --db=<wing.db>
-wing_audit_chain_enabled: false
-
-# PEM bundle trusted while nOS BUILDS its own images (face, superset), never
-# baked into them — a BuildKit secret on the download steps. For a TLS-intercepting
-# egress: a corporate proxy, or the Claude cloud sandbox (tools/cloud/e2e.sh
-# passes its bundle). Empty = the image's own trust store only.
-nos_build_ca_bundle: ""
+# (the rest of this section is a config.d layer)
 
 # ==============================================================================
 # OPENCLAW – self-hosted AI agent (Ollama backend, no API key)
