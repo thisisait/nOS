@@ -4,8 +4,9 @@
 //! The medulla executes, it never writes the record: it asks Wing to pick an intent (Wing stamps
 //! picked_at once), runs the verb against Bone with a token only it holds, and reports the outcome to
 //! Wing, which records it once. Slice 1 runs one verb, an upgrade's dry run (Bone's POST /plan,
-//! nos:upgrades:read). Off unless MEDULLA_EXECUTES_INTENTS=1 (config medulla_executes_intents), held by
+//! nos:upgrades:read). Off unless MEDULLA_EXECUTES_INTENTS=1 (the install_medulla_intents job sets it), held by
 //! the halt, and the credentials come from custody only (/etc/nos/medulla.env, the macOS Keychain).
+//! Exit: 0 clean / held / off · 10 a pick, outcome or run failed · 11 unreadable (halt, custody, Wing) · 64 usage.
 
 use serde_json::{json, Value};
 use std::process::{Command, ExitCode};
@@ -26,7 +27,7 @@ pub fn cli(args: &[String]) -> ExitCode {
 
 fn tick() -> ExitCode {
     if std::env::var("MEDULLA_EXECUTES_INTENTS").as_deref() != Ok("1") {
-        println!("intents: off (medulla_executes_intents is false)");
+        println!("intents: off (MEDULLA_EXECUTES_INTENTS is not 1; install_medulla_intents runs the job that sets it)");
         return ExitCode::SUCCESS;
     }
     match std::fs::metadata(thalamus::state::halt_file()) {
@@ -37,14 +38,14 @@ fn tick() -> ExitCode {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
         Err(e) => {
             eprintln!("intents: halt UNKNOWN ({e}); nothing run");
-            return ExitCode::from(1);
+            return ExitCode::from(11);
         }
     }
     let (bone_secret, wing_token) = match custody() {
         Ok(c) => c,
         Err(e) => {
             eprintln!("intents: {e}");
-            return ExitCode::from(1);
+            return ExitCode::from(11);
         }
     };
     let http: ureq::Agent = ureq::Agent::config_builder().proxy(None).max_redirects(0).http_status_as_error(false)
@@ -54,7 +55,7 @@ fn tick() -> ExitCode {
         Ok(v) => v["intents"].as_array().cloned().unwrap_or_default(),
         Err(e) => {
             eprintln!("intents: {e}");
-            return ExitCode::from(1);
+            return ExitCode::from(11);
         }
     };
     let mut failed = false;
@@ -84,7 +85,7 @@ fn tick() -> ExitCode {
         }
         failed |= rc != 0;
     }
-    if failed { ExitCode::from(1) } else { ExitCode::SUCCESS }
+    if failed { ExitCode::from(10) } else { ExitCode::SUCCESS }
 }
 
 /// The verb, run against Bone with the medulla's own token. (rc, summary); never panics.
@@ -101,7 +102,7 @@ fn run(http: &ureq::Agent, intent: &Value, bone_secret: &str) -> (i64, String) {
         Ok(t) => t,
         Err(e) => return (3, e),
     };
-    let url = format!("{}/api/upgrades/{service}/{recipe}/plan", env_url("NOS_BONE_URL", "http://127.0.0.1:8099"));
+    let url = format!("{}/api/upgrades/{service}/{recipe}/plan", env_url("BONE_API_URL", "http://127.0.0.1:8099"));
     match http.post(&url).header("Authorization", format!("Bearer {token}")).header("User-Agent", "nos-medulla").send_empty() {
         Err(e) => (3, format!("Bone unreachable: {e}")),
         Ok(mut r) => {
@@ -112,10 +113,15 @@ fn run(http: &ureq::Agent, intent: &Value, bone_secret: &str) -> (i64, String) {
     }
 }
 
-/// client_credentials for nos-medulla at MEDULLA_AUTHENTIK_TOKEN_URL; the secret never reaches a log.
+/// The Bone bearer: MEDULLA_BONE_TOKEN when the Pulse wrapper did the https grant (this client has no
+/// TLS; files/anatomy/scripts/medulla-intents-tick.sh), else client_credentials for nos-medulla at a
+/// loopback MEDULLA_AUTHENTIK_TOKEN_URL. The secret never reaches a log.
 fn bone_token(http: &ureq::Agent, secret: &str) -> Result<String, String> {
-    let url = std::env::var("MEDULLA_AUTHENTIK_TOKEN_URL").ok().filter(|u| u.starts_with("https://") || u.starts_with("http://127."))
-        .ok_or("MEDULLA_AUTHENTIK_TOKEN_URL is unset (or not https / loopback): no Bone token")?;
+    if let Some(t) = std::env::var("MEDULLA_BONE_TOKEN").ok().filter(|t| !t.is_empty()) {
+        return Ok(t);
+    }
+    let url = std::env::var("MEDULLA_AUTHENTIK_TOKEN_URL").ok().filter(|u| u.starts_with("http://127."))
+        .ok_or("no MEDULLA_BONE_TOKEN and no loopback MEDULLA_AUTHENTIK_TOKEN_URL: no Bone token")?;
     let mut r = http.post(&url)
         .send_form([("grant_type", "client_credentials"), ("client_id", CLIENT_ID), ("client_secret", secret),
                     ("scope", "nos:upgrades:read")])
