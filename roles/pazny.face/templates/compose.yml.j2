@@ -24,6 +24,7 @@ services:
       dockerfile: Dockerfile
       args:
         FACE_NODE_IMAGE: "{{ face_node_image }}"
+        NOS_FACE_OPERATOR_APPS: "{{ '1' if face_operator_apps | default(true) | bool else '0' }}"
 {% if nos_build_ca_bundle | default('', true) | length > 0 %}
       # BUILD-time trust only (a BuildKit secret, never a layer): see
       # nos_build_ca_bundle in default.config.yml.
