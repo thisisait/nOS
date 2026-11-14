@@ -17,7 +17,8 @@ Usage:  python3 tools/roadmap-seed.py [--dry-run] [--sync [--parents] | --adopt-
   (no flag)  insert rows whose slug is not in the table yet; skip existing.
   --sync     also reconcile the git-owned half of rows that already exist; a parent drift (a skill-tree move) is listed, not written.
   --sync --parents  restore the files' parents over the table's (undo skill-tree moves).
-  --adopt-parents   write the table's parents into the seed files, to review and commit there; never writes the table.
+  --adopt-parents   write the table's parents into the seed files, to review and commit there; never writes the table
+                    (the public index refreshes at the next plain `nos dtt seed`).
   --dry-run  print what would change; write nothing.
   --only     touch only these slugs (the rest of the files is still checked as a set).
 
@@ -174,7 +175,7 @@ if ONLY is not None:
     held = [h for h in held if h[0] in ONLY]
 
 if ADOPT:  # the seed FILE takes the table's parent; the operator reviews `git diff` in the seed repo
-    refused = adopt_parents(held, slugs & existing, DRY_RUN)
+    refused = adopt_parents(held, slugs & existing, DRY_RUN, {r["slug"]: r.get("parent") or "" for r in R})
     sys.exit(f"REFUSED {len(refused)}: {', '.join(refused)}" if refused else 0)
 
 

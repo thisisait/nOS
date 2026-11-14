@@ -234,14 +234,30 @@ def set_parent(path: str, parent: str) -> None:
         fh.write(render_row_file({**fm, "parent": parent}, body))
 
 
-def adopt_parents(held: list[tuple[str, str, str]], board: set[str], dry_run: bool) -> list[str]:
+def adopt_parents(held: list[tuple[str, str, str]], board: set[str], dry_run: bool,
+                  parents: dict[str, str] | None = None) -> list[str]:
     """Each (slug, table parent, file parent) rewrites `<slug>.md` to the table's parent; never the
-    table. A parent not in `board` (rows with a seed file) is refused. Returns the refused slugs."""
+    table. A parent not in `board` (rows with a seed file) is refused, and so is a move that would
+    close a loop (`parents`: every file's parent, the adopted moves applied). Returns the refused slugs."""
+    after = dict(parents or {})
+    after.update({s: t for s, t, _ in held})
+
+    def loops(s: str) -> bool:
+        seen, cur = {s}, after.get(s, "")
+        while cur:
+            if cur in seen:
+                return True
+            seen.add(cur)
+            cur = after.get(cur, "")
+        return False
+
     refused = []
     for s, t, f in held:
         try:
             if t and t not in board:
                 raise ValueError(f"table parent {t!r} is not a row on the board with a seed file")
+            if t == s or loops(s):
+                raise ValueError(f"table parent {t!r} would put {s!r} in a parent loop")
             if not dry_run:
                 set_parent(os.path.join(seed_dir(), f"{s}.md"), t)
             print(f"  {'[dry] would adopt' if dry_run else 'adopted'} {s:<24} parent {f or '(top)'} -> {t or '(top)'}")
