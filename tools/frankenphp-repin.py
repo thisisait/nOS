@@ -1,22 +1,25 @@
 #!/usr/bin/env python3
-"""Re-pin frankenphp_checksums to the current release assets, but only what upstream's own
-release workflow signed.
+"""Pin frankenphp_checksums to OUR mirror of the static binaries, filled only with what upstream's
+own release workflow signed.
 
-php/frankenphp rebuilds its LATEST tag every night and re-uploads the assets (--clobber), so a
-sha256 pin goes stale within days (master Integration red 11-01 and 11-04; row
-frankenphp-nightly-digest). The install keeps pinning bytes; this moves the pin, and moves it only
-for a file `gh attestation verify` proves was built by SIGNER — never a digest GitHub merely lists.
+php/frankenphp re-uploads every release's assets nightly from its `main` branch (--clobber), so a
+pin on upstream's URL went stale within a day (dev nightly red 11-13 and 11-14), and no asset was
+ever built from its tag (attestation source refs/heads/main, v1.13.4 and v1.13.5 alike). Operator
+ruling 2026-11-14: mirror the attested binary into a release of this repo and pin that copy, so the
+digest stops moving; the trust stays upstream's signed build, as before.
 
-  tools/frankenphp-repin.py              # report: which pins are stale (needs gh, network)
-  tools/frankenphp-repin.py --write      # rewrite the stale ones in the layer that declares them
-Exit: 0 nothing stale or rewritten, 1 stale (report mode), 2 a changed asset failed attestation
-(nothing written), 3 the release or the pin block could not be read.
+  tools/frankenphp-repin.py              # report: do the pins match the mirror's assets
+  tools/frankenphp-repin.py --mirror     # copy upstream's attested assets into the mirror, write pins
+Exit: 0 pins match (or were written), 1 a pin differs from the mirror, 2 an asset failed attestation
+or the mirror already holds different bytes (nothing written), 3 a release or the pin block could
+not be read.
 """
 from __future__ import annotations
 
 import argparse
 import datetime
 import hashlib
+import json
 import re
 import subprocess
 import sys
@@ -27,10 +30,16 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "tools"))
 import nos_identity as ni  # noqa: E402
 UPSTREAM = "php/frankenphp"
+MIRROR = "thisisait/nOS"
 SIGNER = "php/frankenphp/.github/workflows/static.yaml"
 VERSION = re.compile(r'^frankenphp_version:\s*"([^"]+)"', re.M)
 PIN = re.compile(r'^(  )([a-z0-9_-]+): "([0-9a-f]{64})"', re.M)
 DATED = re.compile(r"(of v[\d.]+ as rebuilt )\d{4}-\d{2}-\d{2}( ~[\d:]+ UTC)?")
+
+
+def mirror_tag(version: str) -> str:
+    """Not `v*`: that prefix is this repo's release namespace (pages.yml deploys on it)."""
+    return f"mirror-frankenphp-v{version}"
 
 
 def gh(*args: str) -> subprocess.CompletedProcess:
@@ -47,9 +56,36 @@ def pin_block(text: str) -> tuple[int, int]:
     return start, end
 
 
+def assets(repo: str, tag: str) -> set[str] | None:
+    r = gh("release", "view", tag, "-R", repo, "--json", "assets", "--jq", ".assets[].name")
+    return set(r.stdout.split()) if r.returncode == 0 else None
+
+
+def fetch(repo: str, tag: str, name: str, tmp: str) -> tuple[Path | None, str]:
+    got = gh("release", "download", tag, "-R", repo, "-p", name, "-D", tmp, "--clobber")
+    path = Path(tmp) / name
+    if got.returncode != 0 or not path.is_file():
+        return None, got.stderr.strip()
+    return path, hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def attested_source(path: Path, version: str) -> str | None:
+    """The source ref upstream's signer built this file from, if it is the tag or main; else None."""
+    att = gh("attestation", "verify", str(path), "-R", UPSTREAM, "--signer-workflow", SIGNER, "--format", "json")
+    if att.returncode != 0:
+        return None
+    try:
+        cert = json.loads(att.stdout)[0]["verificationResult"]["signature"]["certificate"]
+        ref, commit = cert["sourceRepositoryRef"], cert["sourceRepositoryDigest"]
+    except (ValueError, LookupError, TypeError):
+        return None
+    # the operator's trust (2026-11-14): upstream's signed build of its tag or of main, nothing else
+    return f"{ref}@{commit[:12]}" if ref in (f"refs/tags/v{version}", "refs/heads/main") else None
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--write", action="store_true")
+    ap.add_argument("--mirror", action="store_true", help="copy upstream's attested assets into the mirror, write pins")
     ap.add_argument("--config", help="default: the committed layer that declares frankenphp_checksums")
     a = ap.parse_args(argv)
     cfg = Path(a.config) if a.config else next(
@@ -64,50 +100,81 @@ def main(argv: list[str] | None = None) -> int:
     except (AttributeError, ValueError):
         print(f"cannot read frankenphp_version / frankenphp_checksums in {cfg}", file=sys.stderr)
         return 3
-    listed = gh("release", "view", f"v{version}", "-R", UPSTREAM, "--json", "assets", "--jq", ".assets[].name")
-    if listed.returncode != 0:
-        print(f"cannot list v{version} assets: {listed.stderr.strip()}", file=sys.stderr)
+    tag, block = mirror_tag(version), text[start:end]
+    keys = [(k, p) for _, k, p in PIN.findall(block)]
+    mirrored = assets(MIRROR, tag)
+    if not a.mirror:
+        if mirrored is None:
+            print(f"no mirror release {MIRROR}@{tag}: run --mirror", file=sys.stderr)
+            return 1
+        bad = 0
+        with tempfile.TemporaryDirectory() as tmp:
+            for key, pinned in keys:
+                name = f"frankenphp-{key}"
+                if name not in mirrored:
+                    print(f"  -      {key}: not mirrored; pin kept (the fetch fails closed)")
+                    continue
+                path, digest = fetch(MIRROR, tag, name, tmp)
+                if path is None:
+                    print(f"cannot download {name} from the mirror: {digest}", file=sys.stderr)
+                    return 3
+                ok = digest == pinned
+                bad += not ok
+                print(f"  {'ok    ' if ok else 'DIFFER'} {key}: pin {pinned[:12]}, mirror {digest[:12]}")
+        return 1 if bad else 0
+
+    upstream = assets(UPSTREAM, f"v{version}")
+    if upstream is None:
+        print(f"cannot list {UPSTREAM} v{version} assets", file=sys.stderr)
         return 3
-    assets = set(listed.stdout.split())
-    block, changed, refused = text[start:end], {}, []
-    with tempfile.TemporaryDirectory() as tmp:
-        for _, key, pinned in PIN.findall(block):
-            name = f"frankenphp-{key}"
-            if name not in assets:
-                print(f"  -      {key}: no {name} asset in v{version}; pin kept")
-                continue
-            got = gh("release", "download", f"v{version}", "-R", UPSTREAM, "-p", name, "-D", tmp, "--clobber")
-            path = Path(tmp) / name
-            if got.returncode != 0 or not path.is_file():
-                print(f"cannot download {name}: {got.stderr.strip()}", file=sys.stderr)
-                return 3
-            digest = hashlib.sha256(path.read_bytes()).hexdigest()
-            if digest == pinned:
-                print(f"  ok     {key}: pin current")
-                continue
-            # the signer alone is not enough: upstream's nightly re-uploads main-HEAD builds onto the release,
-            # signed by the same workflow (2026-11-14). Only a build from the version's own tag is that version.
-            att = gh("attestation", "verify", str(path), "-R", UPSTREAM, "--signer-workflow", SIGNER,
-                     "--source-ref", f"refs/tags/v{version}")
-            if att.returncode != 0:
+    plan: dict[str, tuple[Path, str, str]] = {}
+    refused = []
+    tmp = tempfile.mkdtemp()
+    for key, _ in keys:
+        name = f"frankenphp-{key}"
+        if name not in upstream:
+            print(f"  -      {key}: no {name} asset in v{version}; pin kept")
+            continue
+        path, digest = fetch(UPSTREAM, f"v{version}", name, tmp)
+        if path is None:
+            print(f"cannot download {name}: {digest}", file=sys.stderr)
+            return 3
+        src = attested_source(path, version)
+        if src is None:
+            refused.append(key)
+            print(f"  REFUSE {key}: {digest[:12]} is not {SIGNER}'s build of the tag or main")
+            continue
+        if mirrored and name in mirrored:
+            _, have = fetch(MIRROR, tag, name, tempfile.mkdtemp())
+            if have != digest:
                 refused.append(key)
-                print(f"  REFUSE {key}: {digest[:12]} is not signed by {SIGNER} from refs/tags/v{version}: "
-                      f"{att.stderr.strip()[:200]}")
+                print(f"  REFUSE {key}: the mirror already holds {have[:12]}; a mirror is never overwritten")
                 continue
-            changed[key] = digest
-            print(f"  stale  {key}: {pinned[:12]} -> {digest[:12]} (attested by {SIGNER})")
+        plan[key] = (path, digest, src)
+        print(f"  mirror {key}: {digest[:12]} ({src})")
     if refused:
-        print(f"REFUSED: {len(refused)} changed asset(s) without upstream's attestation; nothing written")
+        print(f"REFUSED: {len(refused)} asset(s); nothing uploaded or written")
         return 2
-    if not changed:
-        return 0
-    if not a.write:
-        print(f"{len(changed)} pin(s) stale; --write rewrites them")
-        return 1
+    if mirrored is None:
+        notes = "\n".join(f"- frankenphp-{k}: sha256 {d}, built by {SIGNER} from {s}" for k, (_, d, s) in plan.items())
+        made = gh("release", "create", tag, "-R", MIRROR, "--prerelease", "--latest=false",
+                  "--title", f"Mirror: FrankenPHP {version} static binaries (upstream-attested)",
+                  "--notes", f"Pinned copies for the nOS converge (tools/frankenphp-repin.py --mirror).\n\n{notes}")
+        if made.returncode != 0:
+            print(f"cannot create {MIRROR}@{tag}: {made.stderr.strip()}", file=sys.stderr)
+            return 3
+        mirrored = set()
+    new = [str(p) for k, (p, _, _) in plan.items() if f"frankenphp-{k}" not in mirrored]
+    if new:
+        up = gh("release", "upload", tag, "-R", MIRROR, *new)  # no --clobber: an existing asset stays
+        if up.returncode != 0:
+            print(f"upload to {MIRROR}@{tag} failed: {up.stderr.strip()}", file=sys.stderr)
+            return 3
+    changed = {k: d for k, (_, d, _) in plan.items()}
     block = PIN.sub(lambda m: f'{m.group(1)}{m.group(2)}: "{changed.get(m.group(2), m.group(3))}"', block)
     head = DATED.sub(lambda m: m.group(1) + datetime.date.today().isoformat(), text[:start], count=1)
     cfg.write_text(head + block + text[end:], encoding="utf-8")
-    print(f"wrote {len(changed)} pin(s) to {cfg}")
+    print(f"mirrored {len(new)} asset(s) to {MIRROR}@{tag}; wrote {len(changed)} pin(s) to {cfg}")
     return 0
 
 

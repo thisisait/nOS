@@ -55,7 +55,8 @@ gh api repos/:owner/:repo/rulesets/<id>            # expect the five rules above
 
 ## nos-bot GitHub App — one-time operator setup
 
-Bot workflows (`frankenphp-digest.yml`) push and open PRs with a GitHub App token, because
+Bot workflows push and open PRs with a GitHub App token (none today: `frankenphp-digest.yml` was
+retired 2026-11-14, when the FrankenPHP binaries moved to a pinned mirror release), because
 a push or PR made with `GITHUB_TOKEN` starts no workflow run, so the PR would carry no CI
 checks. The org keeps `GITHUB_TOKEN` read-only (Settings → Actions → Workflow permissions
 is greyed out at repo level); that stays as is, the App holds the write rights.
@@ -65,8 +66,8 @@ is greyed out at repo level); that stays as is, the App holds the write rights.
 2. Repo Settings → Secrets and variables → Actions → **Repository secrets** (not an
    environment): `NOS_BOT_CLIENT_ID` = the App's Client ID, `NOS_BOT_APP_KEY` = a private
    key (`.pem`) generated on the App page.
-3. Run the workflow once by hand (`gh workflow run frankenphp-digest.yml`). When the pins
-   moved, the PR it opens must show CI checks; without the secrets the first step fails.
+3. Run a bot workflow once by hand (`gh workflow run <name>.yml`). The PR it opens must show
+   CI checks; without the secrets the first step fails.
 
 ```bash
 gh api repos/:owner/:repo/actions/secrets --jq '.secrets[].name'   # expect both names

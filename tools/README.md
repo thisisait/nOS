@@ -257,7 +257,7 @@ posts, restarts or renders something.
 - `worktree-lease.py` — A lease over a worktree's SHAPE, so a long agent run cannot be cut from under.
 - `ci-local.sh` — tools/ci-local.sh — run a command inside a FROZEN venv that reproduces the CI
 - `deploy-from-ci.sh` — host-side deploy wrapper invoked by Wing's
-- `frankenphp-repin.py` — re-pin frankenphp_checksums to upstream's nightly rebuild, only for assets `gh attestation verify` proves its release workflow signed; `--write` rewrites (the nightly frankenphp-digest workflow runs it).
+- `frankenphp-repin.py` — checks frankenphp_checksums against our mirror release (`mirror-frankenphp-v<version>`); `--mirror` copies upstream's assets there, only those `gh attestation verify` proves its release workflow built from the tag or main, never overwriting a mirrored asset, and writes the pins.
 - `ears-asr-bench.py` — score Czech ASR models (parakeet, whisper-turbo cs, Canary-1B-v2) on the operator's own recordings: WER/CER, wake hits, latency, peak RSS; `--record`/`--setup` need NOS_LIVE=1.
 - `estate-adopt.sh` — give a host's estate its own main clone (origin = upstream, push disabled; fork as a second remote), carrying config/credentials and repointing NOS_SRC; dry-run unless `--confirm`.
 - `deploy-sync.sh` — make this checkout a clean, current mirror of upstream before a converge (ends the scan-drift reconcile dance).
