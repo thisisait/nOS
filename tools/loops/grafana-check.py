@@ -75,15 +75,19 @@ def digest(now: str, fire: list[str] | None, errors: int | None, prev: dict | No
 
 
 def note(d: dict) -> bool:
-    secret = os.environ.get("WING_EVENTS_HMAC_SECRET", "")
-    if not secret:
-        return False
     title = f"Observability: {len(d['firing'])} firing — +{len(d['started'])} / -{len(d['stopped'])} since the last digest"
     body = "\n".join([f"started: {', '.join(d['started']) or '-'}", f"stopped: {', '.join(d['stopped']) or '-'}",
                       f"Loki error lines (6 h): {d['loki_errors_6h'] if d['loki_errors_6h'] is not None else 'UNKNOWN'}"])
-    payload = {"severity": "medium" if d["started"] else "info", "title": title, "body": body,
-               "origin_plugin": "loop:grafana-check", "actor_id": "pulse:loop:grafana-check",
-               "supersede_key": "grafana-check-digest", "metadata": {"started": d["started"], "stopped": d["stopped"]}}
+    return post({"severity": "medium" if d["started"] else "info", "title": title, "body": body,
+                 "origin_plugin": "loop:grafana-check", "actor_id": "pulse:loop:grafana-check",
+                 "supersede_key": "grafana-check-digest", "metadata": {"started": d["started"], "stopped": d["stopped"]}})
+
+
+def post(payload: dict) -> bool:
+    """One signed A9 note to Bone; False when there is no secret or Bone does not take it. ops-digest.py posts through it too."""
+    secret = os.environ.get("WING_EVENTS_HMAC_SECRET", "")
+    if not secret:
+        return False
     raw = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
     ts = str(int(time.time()))
     sig = hmac.new(secret.encode(), ts.encode() + b"." + raw, hashlib.sha256).hexdigest()
