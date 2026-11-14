@@ -13,9 +13,11 @@ NOS_SEED_DIR; commit those in your private repo. Thereafter the files are the
 source of the git-owned half (title/parent/track/origin/refs/body); the table owns
 status/target/occurred_at/verified* (moved by roadmap-update.py / -verify.py).
 
-Usage:  python3 tools/roadmap-seed.py [--dry-run] [--sync] [--only SLUG[,SLUG...]] [--restore-from KEAP.db]
+Usage:  python3 tools/roadmap-seed.py [--dry-run] [--sync [--parents] | --adopt-parents] [--only SLUG[,SLUG...]] [--restore-from KEAP.db]
   (no flag)  insert rows whose slug is not in the table yet; skip existing.
-  --sync     also reconcile the git-owned half of rows that already exist.
+  --sync     also reconcile the git-owned half of rows that already exist; a parent drift (a skill-tree move) is listed, not written.
+  --sync --parents  restore the files' parents over the table's (undo skill-tree moves).
+  --adopt-parents   write the table's parents into the seed files, to review and commit there; never writes the table.
   --dry-run  print what would change; write nothing.
   --only     touch only these slugs (the rest of the files is still checked as a set).
 
@@ -27,17 +29,15 @@ refuses (naming the missing columns) rather than POSTing an unknown key.
 
 import json
 import os
-import subprocess
 import sys
 import urllib.error
 import urllib.request
 
 from keap_api import human_base, human_headers, paged, write_row  # noqa: E402 — sibling helper in tools/
-from roadmap_seed_lib import GIT_OWNED, invalid, only_arg, refuse_unknown_args, is_estate_checkout, load_rows, restore_table_owned, seed_dir, write_index  # noqa: E402
+from roadmap_seed_lib import GIT_OWNED, invalid, only_arg, refuse_unknown_args, is_estate_checkout, load_rows, restore_table_owned, seed_dir, adopt_parents, write_index  # noqa: E402
 refuse_unknown_args(sys.argv[1:], __doc__)  # an unknown flag used to seed live (loop dry run 2026-11-10)
 
-_REPO = __import__("os").path.abspath(__import__("os").path.join(
-    __import__("os").path.dirname(__file__), ".."))
+_REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 #: NOS_ROADMAP_TABLE_ID overrides for an estate whose roadmap table was minted
 #: through the agent door (id == slug, e.g. "roadmap"); KEAP_API_URL for a
 #: non-default loopback publish. Defaults are the operator estate's values.
@@ -68,6 +68,11 @@ print(f"loaded {len(R)} rows from {seed_dir()} · orphan check: OK · duplicate 
 
 DRY_RUN = "--dry-run" in sys.argv
 SYNC = "--sync" in sys.argv
+# The face skill tree re-hangs rows in the TABLE, so a parent drift may be a deliberate move (11-14):
+# --sync never reverts it silently; --parents restores the file's, --adopt-parents files the table's.
+PARENTS, ADOPT = "--parents" in sys.argv, "--adopt-parents" in sys.argv
+if PARENTS and (ADOPT or not SYNC):
+    sys.exit("REFUSING: --parents restores parents during --sync; not alone, not with --adopt-parents.")
 # --only: file chosen rows without the rest (2026-10-28: one new row could not reach the table
 # without 789 inserts riding along — rows the 10-17 blank had lost, see --restore-from).
 _only_arg = only_arg(sys.argv[1:])
@@ -77,8 +82,8 @@ if ONLY is not None and ONLY - slugs:
 
 # Keep the PUBLIC structural index current from the private files (the offline
 # gates read it). Derived from the files, not the table, so it is written on a
-# real run regardless of what the table does; a dry run touches nothing.
-if not DRY_RUN:
+# real run regardless of what the table does; a dry run (and --adopt-parents) touches nothing here.
+if not (DRY_RUN or ADOPT):
     # The public index belongs to the ESTATE roadmap in the nOS checkout; a
     # personal/project table (dtt-per-user-tables) has no public half, and a
     # non-maintainer cannot write the checkout anyway.
@@ -145,8 +150,8 @@ existing = set(live_rows)
 fresh = [r for r in R if r["slug"] not in existing]
 skipped = len(R) - len(fresh)
 
-drifted = []
-if SYNC:
+drifted, held = [], []  # held: (slug, table parent, file parent) — written only on --parents
+if SYNC or ADOPT:
     for r in R:
         cur = live_rows.get(r["slug"])
         if cur is None:
@@ -154,6 +159,8 @@ if SYNC:
         delta = {k: r[k] for k in GIT_OWNED
                  if k in r and r[k] != (_refs_file(cur["values"].get(k)) if k == "refs"
                                         else (cur["values"].get(k) or ""))}
+        if "parent" in delta and not PARENTS:
+            held.append((r["slug"], cur["values"].get("parent") or "", delta.pop("parent")))
         if delta:
             drifted.append((r, delta, cur["id"]))
 
@@ -164,6 +171,11 @@ if _restore := next((sys.argv[i + 1] for i, a in enumerate(sys.argv[:-1]) if a =
 if ONLY is not None:
     fresh = [r for r in fresh if r["slug"] in ONLY]
     drifted = [d for d in drifted if d[0]["slug"] in ONLY]
+    held = [h for h in held if h[0] in ONLY]
+
+if ADOPT:  # the seed FILE takes the table's parent; the operator reviews `git diff` in the seed repo
+    refused = adopt_parents(held, slugs & existing, DRY_RUN)
+    sys.exit(f"REFUSED {len(refused)}: {', '.join(refused)}" if refused else 0)
 
 
 # Every row is checked against the live schema BEFORE the first write (dry run too). 2026-10-28:
@@ -177,7 +189,11 @@ if _rejects:
              + "\n".join(f"  ✗ {slug:<26} {'; '.join(why)}" for slug, why in _rejects))
 
 print(f"already present: {skipped} · to insert: {len(fresh)}"
-      + (f" · git-owned drift on {len(drifted)}" if SYNC else ""))
+      + (f" · git-owned drift on {len(drifted)} · parent drift on {len(held)}" if SYNC else ""))
+if held:
+    print("parent drift, not written (--sync --parents restores the file's; --adopt-parents files the table's):")
+    for s, t, f in held:
+        print(f"  parent drift {s}: table={t or '(top)'} file={f or '(top)'}")
 
 if DRY_RUN:
     for r in fresh:
@@ -192,26 +208,6 @@ if DRY_RUN:
 # the ID (= slug here). A row inserted through the human door can never be
 # changed afterwards — an "update" matches nothing and inserts a duplicate.
 # tools/keap-reid-rows.py exists to repair rows created the wrong way.
-_agent_tok = None
-
-
-def _agent_token():
-    global _agent_tok
-    if _agent_tok is None:
-        import os
-        _agent_tok = os.environ.get("KEAP_AGENT_TOKEN_RW", "").strip() or subprocess.run(
-            ["docker", "exec", "iiab-keap-1", "printenv", "KEAP_AGENT_TOKEN_RW"],
-            capture_output=True, text=True).stdout.strip()
-        if not _agent_tok:
-            sys.exit("REFUSING: no KEAP_AGENT_TOKEN_RW. The human API has no row "
-                     "update at all, and its inserts mint ids no later write can "
-                     "reach — so neither half of this run may use it.")
-    return _agent_tok
-
-
-AGENT = f"http://127.0.0.1:8091/agent/v1/tables/{TABLE}/rows"
-
-
 def agent_write(values):
     if "refs" in values:
         values = {**values, "refs": _refs_wire(values["refs"])}

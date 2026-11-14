@@ -62,7 +62,7 @@ def refuse_unknown_args(argv: list[str], doc: str) -> None:
     for a in it:
         if a in ("--only", "--restore-from"):
             next(it, None)
-        elif a not in ("--dry-run", "--sync") and not a.startswith("--only="):
+        elif a not in ("--dry-run", "--sync", "--parents", "--adopt-parents") and not a.startswith("--only="):
             sys.exit(f"roadmap-seed: unknown argument {a!r}; see --help. Nothing was written.")
 
 
@@ -218,6 +218,37 @@ def render_row_file(fm: dict, body: str) -> str:
     lines.append((body or "").strip())
     lines.append("")
     return "\n".join(lines)
+
+
+def set_parent(path: str, parent: str) -> None:
+    """Rewrite one `<slug>.md`'s parent through render_row_file, the writer dtt-capture uses
+    (roadmap-seed --adopt-parents: a skill-tree move in the table becomes a reviewable file diff)."""
+    _, fm, body = open(path, encoding="utf-8").read().split("---", 2)
+    meta = yaml.safe_load(fm) or {}
+    if str(meta.get("slug") or "") != os.path.basename(path)[:-3]:
+        raise ValueError(f"{path}: its slug is {meta.get('slug')!r}, not the file name")
+    if extra := set(meta) - set(FILE_FM_ORDER):  # the writer would drop them
+        raise ValueError(f"{path}: frontmatter keys the writer does not carry: {sorted(extra)}")
+    fm = {k: "" if v is None else str(v) for k, v in meta.items()}
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(render_row_file({**fm, "parent": parent}, body))
+
+
+def adopt_parents(held: list[tuple[str, str, str]], board: set[str], dry_run: bool) -> list[str]:
+    """Each (slug, table parent, file parent) rewrites `<slug>.md` to the table's parent; never the
+    table. A parent not in `board` (rows with a seed file) is refused. Returns the refused slugs."""
+    refused = []
+    for s, t, f in held:
+        try:
+            if t and t not in board:
+                raise ValueError(f"table parent {t!r} is not a row on the board with a seed file")
+            if not dry_run:
+                set_parent(os.path.join(seed_dir(), f"{s}.md"), t)
+            print(f"  {'[dry] would adopt' if dry_run else 'adopted'} {s:<24} parent {f or '(top)'} -> {t or '(top)'}")
+        except (OSError, ValueError) as e:
+            refused.append(s)
+            print(f"  ✗ refused {s:<24} {e}")
+    return refused
 
 
 def invalid(values: dict, columns: list[dict]) -> list[str]:
