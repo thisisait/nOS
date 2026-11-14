@@ -47,8 +47,8 @@ URLS = [LIST] + [f"{LIST}?{q}" for q in (
     "health=up", "health=0", "health=", "stack=infra&health=up&type=docker", "tree=", "tree=0", "listed=0",
     "has_findings=1", "parent_id=traefik", "stack=infra&stack=observability")] + [f"{LIST}/{i}" for i in (
         "traefik", "grafana", "zero", "a%20b", "nodomain", "infra", "does-not-exist", "neg?stack=x")]
-#: Public: a bearer refused anywhere else still gets PHP's answer here.
-BEARERS = ("no bearer", "unknown token", "face-bff, tier 3")
+#: Public: a bearer refused anywhere else (wing.intents everywhere else) still gets PHP's answer here.
+BEARERS = ("no bearer", "unknown token", "face-bff, tier 3", "wing.intents")
 
 
 def _seed_systems(db: pathlib.Path) -> None:

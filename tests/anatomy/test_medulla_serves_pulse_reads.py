@@ -161,7 +161,9 @@ echo json_encode($out);
 TOKENS = {"read": ("conductor", "wing.read", 1), "write": ("cortex-executor", "wing.write", 1),
           "null": ("scout", None, 1), "blank": ("blank", "", 1), "halt": ("wing-halt", "wing.halt", 1),
           "run": ("medulla", "pulse.run", 1), "gone": ("retired", "wing.read", 0),
-          "bff": ("face-bff", "wing.operator,wing.write", 1), "thal": ("thalamus", "wing.write", 1)}
+          "bff": ("face-bff", "wing.operator,wing.write", 1), "thal": ("thalamus", "wing.write", 1),
+          # Minted as roles/pazny.wing/tasks/post.yml does: wing.read beside it, so permits alone would let it read.
+          "intents": ("wing-intents", "wing.intents,wing.read,wing.write", 1)}
 
 AUTH = {
     "no bearer": {}, "basic": {"Authorization": "Basic cmVhZA=="}, "lowercase bearer": {"Authorization": "bearer read"},
@@ -175,7 +177,15 @@ AUTH = {
     "face-bff, tier 1": {"Authorization": "Bearer bff", "X-Nos-User-Uid": "alice", "X-Nos-User-Groups": "x|Nos-Admins"},
     "thalamus, no uid": {"Authorization": "Bearer thal"},
     "thalamus, a person": {"Authorization": "Bearer thal", "X-Nos-User-Uid": "alice", "X-Nos-User-Groups": "nos-admins"},
+    "wing.intents": {"Authorization": "Bearer intents"},
 }
+INTENTS_REFUSED = (403, {"error": "the wing-intents token reaches the intent door and nothing else", "code": 403})
+
+
+def _intents_refused(cases: list[dict], got: list[tuple[int, str, str]]) -> None:
+    """Operator ruling 2026-11-14: wing.intents reaches the intent door and nothing else, so every read set refuses it."""
+    seen = [(code, json.loads(body)) for c, (code, _, body) in zip(cases, got) if c["auth"] == "wing.intents"]
+    assert seen and all(s == INTENTS_REFUSED for s in seen), seen
 
 ROUTES = ["/api/v1/pulse_jobs", "/api/v1/pulse_runs", "/api/v1/pulse_runs?limit=2", "/api/v1/pulse_runs?limit=abc",
           "/api/v1/pulse_runs?limit=", "/api/v1/pulse_runs?limit=999", "/api/v1/pulse_runs?limit=-5",
@@ -273,6 +283,7 @@ def test_php_and_the_medulla_answer_every_read_the_same(tmp_path, monkeypatch):
         codes[(c["auth"], code)] = codes.get((c["auth"], code), 0) + 1
     # The seed reaches every outcome; a fixture gone blind would pass the comparison vacuously.
     assert {code for _, code in codes} == {200, 401, 403, 404}, codes
+    _intents_refused(cases, got)
     jobs = json.loads(got[ROUTES.index("/api/v1/pulse_jobs") * len(AUTH) + list(AUTH).index("wing.read")][2])["jobs"]
     assert jobs["p:a"]["env_keys"] == ["WING_API_TOKEN", "PLAIN"] and "env_json" not in jobs["p:a"], jobs["p:a"]
     assert "q:gone" not in jobs, "a removed job is listed"

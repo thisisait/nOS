@@ -104,6 +104,7 @@ def test_php_and_the_medulla_answer_every_events_read_the_same(tmp_path, monkeyp
     # The seed reaches every outcome; a fixture gone blind would pass the comparison vacuously.
     assert set().union(*codes.values()) == {200, 401, 403}, codes
     assert (codes["face-bff, tier 1"], codes["face-bff, tier 3"], codes["thalamus, a person"]) == ({200}, {403}, {403}), codes
+    p._intents_refused(cases, got)
     read = [i for i, c in enumerate(cases) if c["auth"] == "wing.read"]
     seen = lambda url: json.loads(got[read[URLS.index(url)]][2])  # noqa: E731
     everything = seen("/api/v1/events")
