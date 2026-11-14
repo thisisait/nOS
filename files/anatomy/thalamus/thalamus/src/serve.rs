@@ -35,6 +35,8 @@ const MAX_TOOL_CALLS: usize = 8;
 const MAX_PAGES: usize = 40;
 /// How long a control's reader may take before it is killed.
 pub const READER_SECS: u64 = 120;
+/// A line a poller or a port probe repeats is written once, then as one count per this long.
+const QUIET_EVERY: Duration = Duration::from_secs(600);
 
 pub struct Server {
     pub map: PathBuf,
@@ -65,6 +67,8 @@ pub struct Server {
     pub tree_max: usize,
     /// start_agent's way into Wing; an empty token is no door.
     pub wing: WingDoor,
+    /// quiet()'s lines: when each was last written and how many came since.
+    pub quiet: Mutex<HashMap<String, (Instant, u64)>>,
 }
 
 /// Wing's agent door (NOS_WING_URL, the `thalamus` bearer read as nos:wing_token, NOS_IRIS_STARTABLE_AGENTS):
@@ -1123,6 +1127,34 @@ impl Server {
         }
     }
 
+    /// The first of a repeating line is said; the rest are counted and said as one line per QUIET_EVERY.
+    /// ponytail: the next repeat after the window writes the count, so a poller that stops leaves its
+    /// last count unsaid; a timer thread if that count ever matters.
+    pub(crate) fn quiet(&self, line: String) {
+        let now = Instant::now();
+        let said = {
+            let mut q = self.quiet.lock().unwrap_or_else(|p| p.into_inner());
+            match q.get_mut(&line) {
+                None => {
+                    q.insert(line.clone(), (now, 0));
+                    Some(format!("{line} (repeats are counted, one line per {} min)", QUIET_EVERY.as_secs() / 60))
+                }
+                Some((at, n)) => {
+                    *n += 1;
+                    let since = now.duration_since(*at);
+                    let s = (since >= QUIET_EVERY).then(|| format!("{line}: {n} more in the last {} min", since.as_secs() / 60));
+                    if s.is_some() {
+                        (*at, *n) = (now, 0);
+                    }
+                    s
+                }
+            }
+        };
+        if let Some(s) = said {
+            self.say(s);
+        }
+    }
+
     fn connection(&self, mut out: UnixStream) {
         let login = peer_login(&out);
         let who = login.as_deref().and_then(|l| person(l, &self.map));
@@ -1131,7 +1163,9 @@ impl Server {
             self.say(format!("refused {l}: not in the identity map"));
             return refuse(&mut out, &format!("{l} is not in the identity map"));
         };
-        self.say(format!("connected {} as {}", login.as_deref().unwrap_or("?"), who.username));
+        // nOS.app asks state every 5 s, each on a new connection (166k lines by 2026-11-14): counted.
+        // The refusal above and a session begin() opens are said every time.
+        self.quiet(format!("connected {} as {}", login.as_deref().unwrap_or("?"), who.username));
         let (Ok(input), Ok(probe)) = (out.try_clone(), out.try_clone()) else { return };
         self.converse(who, BufReader::new(input), out, &|| peer(&probe));
     }
@@ -1315,6 +1349,7 @@ impl Server {
         if open.is_none() {
             match self.open(who, out, how) {
                 Ok((mut o, resumed)) => {
+                    self.say(format!("opened {} for {}", o.session, who.username));
                     o.tab = tab.map(str::to_string);
                     KEPT.set(Some((self.chat_file(who, tab), o.session.clone())));
                     if let Some(t) = tab {

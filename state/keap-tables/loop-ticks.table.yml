@@ -39,7 +39,7 @@ schema:
     - { key: ref,         label: "Ref",       kind: text,   role: dimension, required: true }
     # The tick's own claim; no concept fits (CONCEPTLESS).
     - { key: outcome,     label: "Outcome",   kind: select, role: dimension, required: true,
-        options: ["built", "idle", "blocked", "failed", "stopped", "noop", "skipped", "revised", "accepted"] }
+        options: ["built", "idle", "blocked", "failed", "stopped", "noop", "skipped", "revised", "accepted", "explored"] }
     # Seconds to the next wake (0 = stopped); no concept fits (CONCEPTLESS).
     - { key: next_wake_s, label: "Next wake (s)", kind: number, role: measure }
     - { key: reason,      label: "Reason",    kind: text,   role: attribute, concept: identity.description }

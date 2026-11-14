@@ -233,7 +233,7 @@ the session that integrates, answers.
   than none.
 - Never capture a row and never change a row's status. The top agent does
   both.
-- Add `explore · <slugs> · drafted|revised` to the Log.
+- Add `explore · <slugs> · drafted|revised` to the Log; the tick's row is `--phase explore --outcome explored`.
 
 ## 7. Pacing and stopping
 

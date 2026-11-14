@@ -204,7 +204,9 @@ if [ "${1:-}" = "dtt" ]; then
       cat >&2 <<'DTT'
 nos dtt <verb> [args] — DataTables ops (run from $NOS_SRC over NOS_SEED_DIR)
   capture   file an idea/plan/spec into the private seed repo (dtt-capture skill)
-  seed      insert / --sync the roadmap table from the seed files
+  seed      insert / --sync the roadmap table from the seed files (a parent drift is listed, not written)
+  seed --sync --parents  restore the seed files' parents over skill-tree moves in the table
+  seed --adopt-parents   write the table's parents (skill-tree moves) into the seed files to commit
   status    read the board
   update    move a row's CLAIM (status/target/…)
   verify    write a row's VERDICT (an exit code, never an argument)

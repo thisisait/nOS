@@ -33,7 +33,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 HOME = Path.home()
 BASELINE = HOME / ".nos" / "session-trace.json"
-RC_FILES = (".zshrc", ".zprofile", ".bashrc", ".bash_profile", ".profile")
+RC_FILES = (".zshenv", ".zshrc", ".zprofile", ".zlogin", ".bashrc", ".bash_profile", ".profile")  # .zshenv: every zsh, hooks and cron too
 SECTIONS = ("hooks", "permissions")
 
 
@@ -94,14 +94,17 @@ def _launchd() -> dict:
 
 def surfaces() -> list[dict]:
     out = [_file("rc", HOME / n) for n in RC_FILES]
+    # The hooks git RUNS: --git-path honours core.hooksPath (this checkout: tools/git-hooks) and worktrees;
+    # the hooksPath value itself is a surface, so re-pointing it is a change (review 11-14).
     hooks = REPO / ".git" / "hooks"
-    if (REPO / ".git").is_file():  # a worktree: hooks live in the common dir
-        try:
-            common = subprocess.run(["git", "-C", str(REPO), "rev-parse", "--git-common-dir"],
-                                    capture_output=True, text=True, timeout=10).stdout.strip()
-            hooks = (REPO / common).resolve() / "hooks"
-        except (OSError, subprocess.SubprocessError):
-            pass
+    try:
+        def vcs(*a):
+            return subprocess.run(["git", "-C", str(REPO), *a], capture_output=True, text=True, timeout=10)
+        hooks = (REPO / vcs("rev-parse", "--git-path", "hooks").stdout.strip()).resolve()
+        hp = vcs("config", "--get", "core.hooksPath").stdout.strip()
+        out.append({"kind": "git-hooks-path", "path": "core.hooksPath", "sha256": _sha(hp.encode()) if hp else None})
+    except (OSError, subprocess.SubprocessError):
+        out.append({"kind": "git-hooks-path", "path": "core.hooksPath", "sha256": None, "unknown": "unreadable"})
     if hooks.is_dir():
         for h in sorted(hooks.iterdir()):
             if h.is_file() and not h.name.endswith(".sample") and os.access(h, os.X_OK):
