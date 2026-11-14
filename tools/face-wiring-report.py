@@ -10,7 +10,7 @@ enforces them. Paired gate: tests/anatomy/test_face_shell_journey.py +
 test_face_security_gates.py.
 
 Checks:
-  1. Vendored source present (package.json, VERSION, Dockerfile, svelte.config.js).
+  1. Vendored source present (package.json, VERSION, Dockerfile, vite.config.ts).
   2. face-base plugin wiring: forward_auth SSO, hub_card, gdpr, gated on install_face.
   3. Compose env carries the trust + upstream tokens (FACE_EDGE_TOKEN,
      NOS_VFS_API_TOKEN, NOS_HUB_API_URL, NOS_KEAP_TABLES_URL).
@@ -52,7 +52,7 @@ def _iter_src(*suffixes: str):
 
 def check_vendored() -> list[str]:
     fails = []
-    for f in ("package.json", "VERSION", "Dockerfile", "svelte.config.js"):
+    for f in ("package.json", "VERSION", "Dockerfile", "vite.config.ts"):
         if not (FACE / f).is_file():
             fails.append(f"vendored source missing {f}")
     if not (SRC / "hooks.server.ts").is_file():
