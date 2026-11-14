@@ -118,39 +118,9 @@ def order(r: dict) -> tuple:
     return (rank(r.get("status")), *explicit, r.get("slug") or "")
 
 
-#: A label: the word, an optional "(operator)", then a colon ("E2E (operator, Studio):").
-_LABEL = r"(?:\s*\([^)\n]*\))?\s*:"
-#: The top agent's stamp: it wrote "SPEC ACCEPTED" / "SPEC READY" or its explore-round rulings in.
-SPEC_STAMP = re.compile(r"spec (?:accepted|ready)|explore rounds? \d", re.I)
-#: The four parts of the house spec shape (the roadmap-loop skill, section 6), each a label or a heading, never a bare
-#: word: "tests/e2e/" in prose is not an acceptance, "never" in prose is not a must-not.
-SPEC_PARTS = {
-    "goal": re.compile(rf"\bgoal{_LABEL}|^#+ *goal\b", re.I | re.M),
-    "slice": re.compile(rf"smallest(?: shippable)? slice|first slice|\bslices?(?: \d+)?{_LABEL}|\bslice \d"
-                        r"|^#{1,6} [^\n]*\bslice", re.I | re.M),
-    "e2e": re.compile(rf"\be2e(?: acceptance)?{_LABEL}|\bacceptance{_LABEL}|^#{{1,6}} [^\n]*\b(?:e2e|acceptance)\b",
-                      re.I | re.M),
-    "must-not": re.compile(rf"\bmust not{_LABEL}|^#+ *must not\b|\bout of scope{_LABEL}|\bnon-goals?{_LABEL}",
-                           re.I | re.M),
-}
-
-
-def spec_ready(body: str | None) -> tuple[bool, list[str]]:
-    """Does the row carry a READY SPEC (operator 2026-11-13: the loop builds only those)?
-
-    Ready = the top agent's stamp (`SPEC ACCEPTED`, `SPEC READY`, `explore round(s) N`), or all four
-    parts of the house spec shape, each found case-insensitively as a label or a markdown heading:
-      goal      `Goal:` · `## Goal`
-      slice     `smallest (shippable) slice` · `first slice` · `Slice:` / `Slice 1` / `Slices:` · a heading naming a slice
-      e2e       `E2E:` · `E2E acceptance` · `E2E (operator):` · `Acceptance:` · a heading naming e2e/acceptance
-      must-not  `Must not:` · `## Must not` · `Out of scope:` · `Non-goals:`
-    Returns (ready, the missing parts in that order). A heuristic over text, not a judge: it says
-    whether the shape is there, never whether the spec is good."""
-    body = str(body or "")
-    if SPEC_STAMP.search(body):
-        return True, []
-    missing = [part for part, pat in SPEC_PARTS.items() if not pat.search(body)]
-    return not missing, missing
+#: The readiness judge (_LABEL, SPEC_STAMP, SPEC_PARTS, spec_ready) lives in roadmap_seed_lib since
+#: row dtt-capture-spec-shape, so the capture tool asks the same function; imported under the same names.
+from roadmap_seed_lib import SPEC_PARTS, SPEC_STAMP, _LABEL, spec_ready  # noqa: E402,F401
 
 
 #: The statuses that open the frontier: `shipped`, and `active` — a branch the operator has allocated

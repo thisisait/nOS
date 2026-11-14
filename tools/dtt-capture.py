@@ -43,6 +43,12 @@ def _die(msg: str) -> None:
     sys.exit(f"REFUSING: {msg}")
 
 
+#: Rows whose body --require-spec holds to the house spec shape (row dtt-capture-spec-shape): the ones the loop
+#: builds from. An investigate row may be bare prose. 65 = EX_DATAERR: the input, not the tool, is wrong.
+SPEC_DEMANDED = {"code-fix", "doc", "design"}
+SPEC_REFUSED = 65
+
+
 def _known_task_types() -> set[str]:
     try:
         return set((yaml.safe_load(open(_TASK_TYPES, encoding="utf-8")) or {}).get("task_types", {}))
@@ -106,6 +112,8 @@ def main() -> int:
     ap.add_argument("--body-file", default=None)
     ap.add_argument("--update", action="store_true", help="overwrite an existing file")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--require-spec", action="store_true",
+                    help=f"refuse (exit {SPEC_REFUSED}) a {'/'.join(sorted(SPEC_DEMANDED))} row whose body lacks the spec shape")
     args = ap.parse_args()
 
     if not lib.SLUG_RE.match(args.slug):
@@ -158,6 +166,15 @@ def main() -> int:
         body = open(args.body_file, encoding="utf-8").read()
     if body is None:
         body = sys.stdin.read() if not sys.stdin.isatty() else ""
+
+    # The spec shape, said at filing time by the one judge the frontier uses (roadmap_seed_lib.spec_ready).
+    ready, missing = lib.spec_ready(body)
+    print("spec: ready" if ready else f"spec: needs-spec ({', '.join('no ' + m for m in missing)})", file=sys.stderr)
+    if args.require_spec and not ready and args.task_type in SPEC_DEMANDED:
+        print(f"REFUSING: a {args.task_type} row is filed with its spec (--require-spec); missing: "
+              f"{', '.join(missing)}. Add Goal:, Smallest slice:, E2E acceptance (operator):, Must not:.",
+              file=sys.stderr)
+        sys.exit(SPEC_REFUSED)
 
     # --update rewrites the git-owned half; a field not given keeps the file's value instead of
     # blanking it (2026-10-28: two --update runs left status "" and the seeder refused the rows).
