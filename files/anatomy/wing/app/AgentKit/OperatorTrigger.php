@@ -68,6 +68,7 @@ final class OperatorTrigger
 		?string $vault = null,
 		array $env = [],
 		?string $parentRef = null,
+		?array $limits = null,
 	): array {
 		// Validate the agent resolves on disk before spawning anything. Mirrors
 		// the AgentsPresenter pre-spawn load() — catches a malformed name that
@@ -117,6 +118,9 @@ final class OperatorTrigger
 		}
 		if ($parentRef !== null) {
 			$argv[] = '--parent=' . $parentRef;
+		}
+		if ($limits !== null && $limits !== []) {
+			$argv[] = '--limits=' . json_encode($limits, JSON_THROW_ON_ERROR);
 		}
 
 		$descriptors = [

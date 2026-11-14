@@ -7,6 +7,8 @@ declare(strict_types=1);
  *
  *   php bin/run-agent.php --agent=conductor [--prompt=...] [--vault=...] [--trigger=pulse] [--trigger-id=...] [--session-uuid=...] [--image=...]
  *
+ *   [--limits=JSON]              per-run bounds {max_calls, wall_clock_s, token_ceiling}, each an
+ *                                integer >= 1, clamped to the estate ceiling (Runner::validateLimits).
  *   [--parent=REF]               the run this session is started for: a session
  *                                uuid or thalamus:<uuid> (agent_sessions.parent_ref).
  *   [--actor=ID]                 actor_id written onto the session (must match
@@ -39,7 +41,7 @@ $opts = parseArgs($argv);
 if (empty($opts['agent'])) {
 	fwrite(STDERR, "Usage: php bin/run-agent.php --agent=NAME [--prompt=TEXT] [--vault=NAME]"
 		. " [--trigger=pulse|webhook|operator|coordinator] [--trigger-id=ID]"
-		. " [--session-uuid=UUID] [--actor=ID] [--parent=REF]\n");
+		. " [--session-uuid=UUID] [--actor=ID] [--parent=REF] [--limits=JSON]\n");
 	exit(2);
 }
 
@@ -51,6 +53,17 @@ if (empty($opts['agent'])) {
 if (!empty($opts['session-uuid'])) {
 	if (!preg_match('/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/', (string) $opts['session-uuid'])) {
 		fwrite(STDERR, "--session-uuid must be a UUID (8-4-4-4-12 hex)\n");
+		exit(2);
+	}
+}
+
+$limits = null;
+if (isset($opts['limits'])) {
+	try {
+		$limits = json_decode((string) $opts['limits'], true, 4, JSON_THROW_ON_ERROR);
+		Runner::validateLimits($limits);
+	} catch (\JsonException | \InvalidArgumentException $exc) {
+		fwrite(STDERR, "--limits: {$exc->getMessage()}\n");
 		exit(2);
 	}
 }
@@ -99,6 +112,7 @@ try {
 		sessionUuid: $opts['session-uuid'] ?? null,
 		imagePath: $opts['image'] ?? null,
 		parentRef: $opts['parent'] ?? null,
+		limits: $limits,
 	);
 } catch (AgentLoadException $exc) {
 	fwrite(STDERR, "agent.yml load error: {$exc->getMessage()}\n");
