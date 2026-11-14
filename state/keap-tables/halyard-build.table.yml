@@ -1,0 +1,26 @@
+# =============================================================================
+# KEAP DataTable — "Halyard · Build" (business fixture, row fixture-halyard-studio).
+#
+# One CI run of a task. `ci_status` and `deployed_at` are separate columns on
+# purpose: "green on CI, not deployed" is then a join (build -> task), never a
+# lookup. A build with no `deployed_at` was never deployed. time.occurred_at is
+# claimed by `built_at` (once-per-table rule), so `deployed_at` is conceptless,
+# as print-job-step.actual_start is.
+# =============================================================================
+title: "Halyard · Build"
+description: >-
+  A CI build of a task at the synthetic Halyard Studio fixture: its CI status,
+  when it was built and when (if ever) it was deployed.
+driver: libsql
+anchors: ["nos.fixture.halyard"]
+visibility: tier-managers
+client_scope: rowRef:task
+schema:
+  columns:
+    - { key: slug,        label: "Slug",        kind: text,   role: dimension, required: true, concept: identity.slug }
+    - { key: task,        label: "Task",        kind: rowRef, role: dimension, required: true,
+        refTable: "halyard-task", refDisplay: "title", onDelete: "restrict", concept: graph.parent }
+    - { key: ci_status,   label: "CI status",   kind: select, role: dimension, required: true, concept: lifecycle.status,
+        options: ["green", "red", "running"] }
+    - { key: built_at,    label: "Built",       kind: date,   role: attribute, required: true, concept: time.occurred_at }
+    - { key: deployed_at, label: "Deployed",    kind: date,   role: attribute }

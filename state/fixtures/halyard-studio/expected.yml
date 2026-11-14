@@ -1,0 +1,64 @@
+# =============================================================================
+# Halyard Studio fixture — answer key (row fixture-halyard-studio).
+#
+# Never seeded and never shown to the model that is asked: a judge reads it.
+# Every answer is derived from state/fixtures/halyard-studio.seed.yml alone.
+# "Green, not deployed" means a halyard-build row with ci_status green and no
+# deployed_at; a task is green-not-deployed when it has at least one such build.
+#
+#   exact:  id -> question, the tables a correct answer joins, and the one
+#           answer (a number, a slug or a sorted list of slugs).
+#   recall: id -> question, tables, `must` (every slug a correct answer names)
+#           and `decoys` (rows that share the question's words but fail its
+#           condition; they sit below the floor, so an answer naming one is
+#           wrong however many `must` rows it also names).
+# =============================================================================
+
+exact:
+  green-not-deployed-builds:
+    question: "How many builds are green on CI and were never deployed?"
+    tables: [halyard-build]
+    answer: 5
+  oldest-green-undeployed-task:
+    question: "Which task has the oldest green build that is still not deployed?"
+    tables: [halyard-build, halyard-task]
+    answer: task-catalogue-isbn-search
+  green-not-deployed-tasks:
+    question: "How many tasks have at least one green build that was never deployed?"
+    tables: [halyard-build, halyard-task]
+    answer: 4
+  code-fix-tasks:
+    question: "How many tasks are of task type code-fix?"
+    tables: [halyard-task]
+    answer: 4
+  project-with-most-undeployed-green:
+    question: "Which project holds the most green builds that were never deployed?"
+    tables: [halyard-build, halyard-task, halyard-project]
+    answer: proj-lodenice-booking
+
+recall:
+  tasks-green-not-deployed:
+    question: "Which tasks are green on CI but not deployed?"
+    tables: [halyard-build, halyard-task]
+    must: [task-booking-staging-converge, task-booking-tide-table, task-catalogue-isbn-search, task-loyalty-push-design]
+    decoys: [task-booking-double-berth, task-loyalty-dep-cve, task-loyalty-stamp-sync]
+  erasure-against-history:
+    question: "Which work is about deleting a person's data that git history still holds?"
+    tables: [halyard-task]
+    must: [task-booking-erasure-request]
+    decoys: [task-booking-double-berth, task-catalogue-handbook]
+  security-remediation-work:
+    question: "Which tasks are security remediation?"
+    tables: [halyard-task]
+    must: [task-loyalty-dep-cve]
+    decoys: [task-booking-erasure-request]
+  open-work-for-the-boat-yard:
+    question: "What is not done yet for the boat-yard client?"
+    tables: [party, halyard-project, halyard-task]
+    must: [task-booking-erasure-request, task-booking-staging-converge, task-booking-tide-table]
+    decoys: [task-booking-double-berth, task-loyalty-push-design]
+  tasks-on-held-projects:
+    question: "Which tasks belong to a project that is on hold?"
+    tables: [halyard-project, halyard-task]
+    must: [task-catalogue-handbook, task-catalogue-isbn-search]
+    decoys: [task-portfolio-gallery-review]

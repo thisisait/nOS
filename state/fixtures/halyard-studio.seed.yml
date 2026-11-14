@@ -1,0 +1,71 @@
+# =============================================================================
+# Halyard Studio — synthetic business fixture seed (row fixture-halyard-studio).
+#
+# A dev shop: projects for clients, tasks typed by the estate's own task_type
+# enum, and CI builds per task. The question it exists to ask is "which work
+# is green on CI but not deployed", a join over halyard-build and halyard-task.
+# The answer key is state/fixtures/halyard-studio/expected.yml (never seeded).
+#
+# A map keyed by table slug; each value a list of row dicts. Top-to-bottom is
+# DEPENDENCY ORDER (a rowRef target appears above its referencer); seed-bundle.yml
+# walks the keys in this order. A row's `slug` is its KEAP row id (idempotent
+# upsert), so every rowRef value is a target-row slug, never a display string.
+#
+# SYNTHETIC BY RULE: party slugs start `synthetic-`, emails/web end `.invalid`,
+# phones start `+420 000`, tax ids match (CZ)?000001\d\d (Halyard holds 20-29).
+# Dates are fixed epoch seconds (UTC) so the seed is byte-deterministic. A build
+# without `deployed_at` was never deployed.
+# =============================================================================
+
+# ── The shared EN-16931 party spine (Halyard's clients ARE parties) ──────────
+party:
+  - { slug: synthetic-lodenice-vltava, legal_name: "Lodenice Vltava s.r.o. (synthetic)", trading_name: "Lodenice Vltava", party_kind: org, country: CZ, notes: "synthetic boat-yard client" }
+  - { slug: synthetic-kavarna-kotva, legal_name: "Kavarna Kotva s.r.o. (synthetic)", trading_name: "Kavarna Kotva", party_kind: org, country: CZ, notes: "synthetic cafe client" }
+  - { slug: synthetic-knihovna-orlik, legal_name: "Knihovna Orlik (synthetic)", party_kind: org, country: CZ, notes: "synthetic municipal library client" }
+  - { slug: synthetic-vesela-marta, legal_name: "Marta Vesela (synthetic)", party_kind: person, country: CZ, notes: "synthetic sole-trader client" }
+
+party-tax-identity:
+  - { slug: tax-halyard-lodenice-vat, party: synthetic-lodenice-vltava, scheme: VAT, value: "CZ00000120", valid_from: 1767225600 }
+  - { slug: tax-halyard-kotva-vat, party: synthetic-kavarna-kotva, scheme: VAT, value: "CZ00000121", valid_from: 1767225600 }
+  - { slug: tax-halyard-orlik-ico, party: synthetic-knihovna-orlik, scheme: ICO, value: "00000122" }
+  - { slug: tax-halyard-vesela-ico, party: synthetic-vesela-marta, scheme: ICO, value: "00000123" }
+
+party-contact:
+  - { slug: contact-halyard-lodenice-email, party: synthetic-lodenice-vltava, kind: email, value: "it@lodenice-vltava.invalid", role: "primary" }
+  - { slug: contact-halyard-lodenice-phone, party: synthetic-lodenice-vltava, kind: phone, value: "+420 000 000 120" }
+  - { slug: contact-halyard-kotva-email, party: synthetic-kavarna-kotva, kind: email, value: "provoz@kavarna-kotva.invalid", role: "primary" }
+  - { slug: contact-halyard-orlik-web, party: synthetic-knihovna-orlik, kind: web, value: "https://knihovna-orlik.invalid" }
+  - { slug: contact-halyard-vesela-email, party: synthetic-vesela-marta, kind: email, value: "marta@vesela.invalid" }
+
+# ── Halyard Studio's own domain ──────────────────────────────────────────────
+halyard-project:
+  - { slug: proj-lodenice-booking, name: "Lodenice berth booking", client: synthetic-lodenice-vltava, status: active, repo: "https://git.halyard-studio.invalid/halyard/lodenice-booking", started: 1767225600 }
+  - { slug: proj-kotva-loyalty, name: "Kotva loyalty app", client: synthetic-kavarna-kotva, status: active, repo: "https://git.halyard-studio.invalid/halyard/kotva-loyalty", started: 1769904000 }
+  - { slug: proj-orlik-catalogue, name: "Orlik library catalogue", client: synthetic-knihovna-orlik, status: on-hold, repo: "https://git.halyard-studio.invalid/halyard/orlik-catalogue", started: 1772323200 }
+  - { slug: proj-vesela-portfolio, name: "Vesela portfolio site", client: synthetic-vesela-marta, status: closed, repo: "https://git.halyard-studio.invalid/halyard/vesela-portfolio", started: 1759276800 }
+
+halyard-task:
+  - { slug: task-booking-double-berth, title: "Double booking on the same berth", project: proj-lodenice-booking, task_type: code-fix, status: done, opened: 1772409600, due: 1772755200, note: "unique constraint on berth and night; shipped" }
+  - { slug: task-booking-tide-table, title: "Tide table import", project: proj-lodenice-booking, task_type: code-fix, status: review, opened: 1772582400, due: 1773360000, note: "passes CI; waits for the client's release window" }
+  - { slug: task-booking-erasure-request, title: "Erasure request against git history", project: proj-lodenice-booking, task_type: investigate, status: open, opened: 1773014400, due: 1773964800, note: "Art. 17 request: the person's email sits in old commits and history is immutable; decide redact or rewrite" }
+  - { slug: task-booking-staging-converge, title: "Converge staging after the database move", project: proj-lodenice-booking, task_type: converge, status: in-progress, opened: 1773100800, due: 1773273600, note: "staging is up; the production deploy is pending" }
+  - { slug: task-loyalty-stamp-sync, title: "Stamp sync loses offline stamps", project: proj-kotva-loyalty, task_type: code-fix, status: in-progress, opened: 1772496000, due: 1773273600, note: "the sync test fails on CI" }
+  - { slug: task-loyalty-push-design, title: "Push notification design", project: proj-kotva-loyalty, task_type: design, status: review, opened: 1772668800, due: 1773619200, note: "two variants in a preview build; the client picks one" }
+  - { slug: task-loyalty-dep-cve, title: "Patch the image library vulnerability", project: proj-kotva-loyalty, task_type: security-remediation, status: done, opened: 1772755200, due: 1773014400, note: "dependency bumped and shipped the same day" }
+  - { slug: task-catalogue-isbn-search, title: "ISBN search returns duplicates", project: proj-orlik-catalogue, task_type: code-fix, status: open, opened: 1771545600, due: 1774569600, note: "fix is built; the project went on hold before the release" }
+  - { slug: task-catalogue-handbook, title: "Librarian handbook", project: proj-orlik-catalogue, task_type: doc, status: open, opened: 1772323200, due: 1775779200, note: "" }
+  - { slug: task-portfolio-gallery-review, title: "Gallery code review", project: proj-vesela-portfolio, task_type: review, status: done, opened: 1760054400, due: 1760659200, note: "approved and shipped" }
+
+halyard-build:
+  - { slug: build-double-berth-1, task: task-booking-double-berth, ci_status: red, built_at: 1772532000 }
+  - { slug: build-double-berth-2, task: task-booking-double-berth, ci_status: green, built_at: 1772614800, deployed_at: 1772636400 }
+  - { slug: build-tide-table-1, task: task-booking-tide-table, ci_status: green, built_at: 1772794800 }
+  - { slug: build-tide-table-2, task: task-booking-tide-table, ci_status: green, built_at: 1773140400 }
+  - { slug: build-staging-converge-1, task: task-booking-staging-converge, ci_status: green, built_at: 1773151200 }
+  - { slug: build-staging-converge-2, task: task-booking-staging-converge, ci_status: red, built_at: 1773219600 }
+  - { slug: build-stamp-sync-1, task: task-loyalty-stamp-sync, ci_status: red, built_at: 1772726400 }
+  - { slug: build-stamp-sync-2, task: task-loyalty-stamp-sync, ci_status: running, built_at: 1773223200 }
+  - { slug: build-push-design-1, task: task-loyalty-push-design, ci_status: green, built_at: 1772971200 }
+  - { slug: build-dep-cve-1, task: task-loyalty-dep-cve, ci_status: green, built_at: 1772802000, deployed_at: 1772816400 }
+  - { slug: build-isbn-search-1, task: task-catalogue-isbn-search, ci_status: green, built_at: 1771927200 }
+  - { slug: build-gallery-review-1, task: task-portfolio-gallery-review, ci_status: green, built_at: 1760522400, deployed_at: 1760605200 }
