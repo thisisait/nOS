@@ -15,10 +15,10 @@
     "limb": 135,
     "memory": 45,
     "law": 57,
-    "reflex": 52,
+    "reflex": 53,
     "heartbeat": 1,
     "internal": 81,
-    "edges": 455
+    "edges": 456
   },
   "nodes": {
     "agent:conductor": {
@@ -1426,6 +1426,10 @@
       "kind": "pulse"
     },
     "pulse:loop:vision-bench": {
+      "level": "reflex",
+      "kind": "pulse"
+    },
+    "pulse:medulla-intents:tick": {
       "level": "reflex",
       "kind": "pulse"
     },
@@ -4063,6 +4067,11 @@
     {
       "from": "service:pulse",
       "to": "pulse:loop:vision-bench",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:medulla-intents:tick",
       "kind": "trigger"
     },
     {

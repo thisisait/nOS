@@ -1,0 +1,60 @@
+# =============================================================================
+# medulla-intents — the medulla runs the intents Wing filed (row wing-apply-through-medulla)
+#
+# Wing's apply files an intent (POST upgrades/<s>/<r>/apply-intent); this job asks the medulla to pick
+# due intents once a minute and run them under its own credentials (custody: /etc/nos/medulla.env, the
+# macOS Keychain), reporting each outcome to Wing, which records it. Wing never holds an apply scope.
+# Off unless install_medulla_intents is true: with it false this plugin is inactive and no job exists.
+# Slice 1 runs dry runs only (Bone's /plan, nos:upgrades:read).
+# =============================================================================
+
+name: medulla-intents
+version: 0.1.0
+description: |
+  Once a minute, files/anatomy/scripts/medulla-intents-tick.sh obtains the nos-medulla Bone token over
+  https and execs `medulla intents tick`: GET due intents, pick each once through Wing, run its dry run
+  against Bone, report the outcome to Wing. Held by the halt; the medulla never writes wing.db.
+
+type:
+  - scheduled-job
+
+requires:
+  feature_flag: install_medulla_intents
+  variables:
+    - playbook_dir         # repo root -> files/anatomy/scripts/medulla-intents-tick.sh
+
+# Exit: 0 nothing due / all ran / held; 10 a pick, an outcome or a run failed (Wing's intent row carries
+# its rc); 11 something unreadable (custody, Authentik, Wing, the halt): NOTHING RAN IS NOT CLEAN.
+pulse:
+  jobs:
+    - name: tick
+      category: platform
+      runner: subprocess
+      command: "{{ playbook_dir }}/files/anatomy/scripts/medulla-intents-tick.sh"
+      schedule: "* * * * *"
+      jitter_min: 0
+      max_runtime_s: 300
+      max_concurrent: 1
+      findings_exit_codes: [10, 11]
+      env:
+        # BARE catalog tokens only (discover-pulse-catalog.py substitutes a fixed literal table).
+        NOS_AUTHENTIK_URL: "https://{{ authentik_domain }}"
+        BONE_API_URL: "http://127.0.0.1:{{ bone_port }}"
+
+gdpr:
+  purpose: "Executing operator-filed upgrade intents on the operator's own estate"
+  legal_basis: legitimate_interests
+  data_categories:
+    - operational_metadata    # intent uuid, service and recipe names, exit codes
+  data_subjects: [operators]
+  retention_days: 365
+  processors: []              # local Wing, Authentik and Bone only; nothing leaves the host
+  eu_residency: true
+
+e2e:
+  enabled: "{{ (install_wing | default(false)) }}"
+  probes:
+    - name: medulla-intents-registered-in-wing
+      url: http://127.0.0.1:{{ wing_port }}/api/v1/pulse_jobs
+      auth: {bearer: wing_api_token, headers: {X-Wing-Edge-Token: wing_edge_token}}
+      expect: {json_equals: {"jobs.medulla-intents:tick.id": "medulla-intents:tick"}}
