@@ -1,6 +1,7 @@
 /* Vendored from thisisait/nos-keap @ v1.39.0 shared/contracts/field-concepts.ts — organ-side copy.
  * DO NOT EDIT HERE. Edit the original in the KEAP repo and re-vendor, or the
  * change dies at the next re-vendor while every gate stays green. */
+// nOS BEHIND organ: KEAP shared/contracts/field-concepts.ts:122-124 lists rowRef in graph.depends_on / graph.uses / graph.parent kinds; this copy (lines 126-128) does not (w-keap-relations, shipped KEAP-side)
 /**
  * Field concepts — L1 of the nOS genome: the common vocabulary for WHAT A
  * COLUMN MEANS.
