@@ -178,6 +178,13 @@ keap_seed_kolben_fixture: false
 # service. Independent opt-in; same synthetic-people rule as Kolben.
 keap_seed_halyard_fixture: false
 
+# The FOURTH business fixture (row fixture-apiary-coop): a synthetic beekeeping
+# co-op (state/keap-tables/apiary-*.table.yml + the shared party table, seeded
+# from state/fixtures/apiary-coop.seed.yml): sites, hives, scale readings and
+# alerts. The low-PII fixture: every member is an organisation. DataTables only;
+# independent opt-in; same synthetic rule as Kolben and Halyard.
+keap_seed_apiary_fixture: false
+
 # Accounting fixture (accounting-knowledge-graph): a small CZ chart of accounts
 # mapped to the universal reporting skeleton (nos.accounting.*) + one balanced
 # journal entry (state/fixtures/accounting.seed.yml → account/journal-entry/
