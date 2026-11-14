@@ -15,10 +15,10 @@
     "limb": 136,
     "memory": 48,
     "law": 57,
-    "reflex": 53,
+    "reflex": 54,
     "heartbeat": 1,
     "internal": 81,
-    "edges": 459
+    "edges": 460
   },
   "nodes": {
     "agent:conductor": {
@@ -1410,6 +1410,10 @@
       "kind": "pulse"
     },
     "pulse:loop:news-scout": {
+      "level": "reflex",
+      "kind": "pulse"
+    },
+    "pulse:loop:ops-digest": {
       "level": "reflex",
       "kind": "pulse"
     },
@@ -4062,6 +4066,11 @@
     {
       "from": "service:pulse",
       "to": "pulse:loop:news-scout",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:loop:ops-digest",
       "kind": "trigger"
     },
     {

@@ -1,0 +1,51 @@
+# ops-digest — a default operational loop (row loop-ops-digest, rsi-ops-loop step 2). repo-check logs
+# reader tails; this loop writes ONE report whose numbers are the readers' own JSON fields, keeps it on
+# disk, and notifies only when the set of red indicators changed since the last digest. No model, no
+# table write: the digest files and the one note are everything it writes.
+---
+id: ops-digest
+owner: install_loops
+label: "ops-digest — one operator report from the readers"
+blurb: >-
+  Every four hours, ask five readers for their JSON (what is red, the remediation queue, proposals
+  awaiting an act, host against checkout, agent runs), copy their verdicts and counts into one digest
+  and tell the operator once when the red set moved. A reader that does not answer is UNKNOWN in the
+  digest, never a calm zero, and holds the note back.
+
+trigger:
+  cadence: "41 */4 * * *"  # every 4 h, off repo-check's minute (17)
+
+steps:
+  - id: red-status
+    runner: tool
+    label: "red-status — what is red right now"
+  - id: rem-status
+    runner: tool
+    label: "rem-status — the remediation queue"
+  - id: loop-status
+    runner: tool
+    label: "loop-status — proposals awaiting an act"
+  - id: estate-status
+    runner: tool
+    label: "estate-status — host vs checkout (no fetch)"
+  - id: agent-status
+    runner: tool
+    label: "agent-status — agent runs"
+  - id: digest
+    runner: tool
+    label: "digest → file, A9 when the red set changed"
+    writes:
+      - target: "file:~/.nos/loops/ops-digest"
+        via: "one JSON + one Markdown digest per run"
+      - target: "notification:wing-inbox"
+        via: "one note when the red set changed"
+
+run: "{{ playbook_dir }}/tools/loops/ops-digest.py"
+pulse:
+  category: platform
+  max_runtime_s: 300
+  jitter_min: 10
+  env:
+    # BARE tokens: the catalog does a literal replace (alert-relay-base explains why).
+    BONE_API_URL: "http://127.0.0.1:{{ bone_port }}"
+    WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"

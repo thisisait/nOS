@@ -20,6 +20,11 @@
       "blurb": "On a daily cadence, fetch the declared external feeds, extract and dedup, then consolidate the signal into the KEAP corpus and hand the operator a digest. The consolidation is the point — raw fetch is easy; corpus-linked knowledge is the loop. GDPR/EU-residency applies to anything stored."
     },
     {
+      "id": "ops-digest",
+      "label": "ops-digest — one operator report from the readers",
+      "blurb": "Every four hours, ask five readers for their JSON (what is red, the remediation queue, proposals awaiting an act, host against checkout, agent runs), copy their verdicts and counts into one digest and tell the operator once when the red set moved. A reader that does not answer is UNKNOWN in the digest, never a calm zero, and holds the note back."
+    },
+    {
       "id": "pipeline-exercise",
       "label": "pipeline-exercise — a degraded document through intake, verify, absorb",
       "blurb": "Nightly, take the least-tried (document, degradation) cell — crumpled, stained, low-resolution, skewed, shadowed, JPEG-mangled — render it, sweep it into the verify queue, approve or reject it against the rendered truth, absorb, and assert what the books now hold: one row per document, the DERIVED identity, a balanced entry. Then remove that cycle's rows. Prerequisites, or it reports it cannot run: tools/gen-invoice-images.py once, qwen2.5vl:7b pulled, ollama armed, KEAP reachable."
@@ -358,6 +363,70 @@
       "graph_only": true
     },
     {
+      "id": "trigger:ops-digest",
+      "kind": "trigger",
+      "label": "⏱ 41 */4 * * *",
+      "loop": "ops-digest",
+      "x": 0,
+      "y": 0,
+      "cadence": "41 */4 * * *",
+      "event": null
+    },
+    {
+      "id": "step:ops-digest:red-status",
+      "kind": "step",
+      "label": "red-status — what is red right now",
+      "loop": "ops-digest",
+      "x": 300,
+      "y": 0,
+      "runner": "tool"
+    },
+    {
+      "id": "step:ops-digest:rem-status",
+      "kind": "step",
+      "label": "rem-status — the remediation queue",
+      "loop": "ops-digest",
+      "x": 600,
+      "y": 0,
+      "runner": "tool"
+    },
+    {
+      "id": "step:ops-digest:loop-status",
+      "kind": "step",
+      "label": "loop-status — proposals awaiting an act",
+      "loop": "ops-digest",
+      "x": 900,
+      "y": 0,
+      "runner": "tool"
+    },
+    {
+      "id": "step:ops-digest:estate-status",
+      "kind": "step",
+      "label": "estate-status — host vs checkout (no fetch)",
+      "loop": "ops-digest",
+      "x": 1200,
+      "y": 0,
+      "runner": "tool"
+    },
+    {
+      "id": "step:ops-digest:agent-status",
+      "kind": "step",
+      "label": "agent-status — agent runs",
+      "loop": "ops-digest",
+      "x": 1500,
+      "y": 0,
+      "runner": "tool"
+    },
+    {
+      "id": "step:ops-digest:digest",
+      "kind": "step",
+      "label": "digest → file, A9 when the red set changed",
+      "loop": "ops-digest",
+      "x": 1800,
+      "y": 0,
+      "runner": "tool"
+    },
+    {
       "id": "trigger:pipeline-exercise",
       "kind": "trigger",
       "label": "⏱ 47 2 * * *",
@@ -689,6 +758,48 @@
       "target": "step:news-scout:digest",
       "kind": "flow",
       "loop": "news-scout"
+    },
+    {
+      "id": "trigger:ops-digest=>step:ops-digest:red-status",
+      "source": "trigger:ops-digest",
+      "target": "step:ops-digest:red-status",
+      "kind": "flow",
+      "loop": "ops-digest"
+    },
+    {
+      "id": "step:ops-digest:red-status=>step:ops-digest:rem-status",
+      "source": "step:ops-digest:red-status",
+      "target": "step:ops-digest:rem-status",
+      "kind": "flow",
+      "loop": "ops-digest"
+    },
+    {
+      "id": "step:ops-digest:rem-status=>step:ops-digest:loop-status",
+      "source": "step:ops-digest:rem-status",
+      "target": "step:ops-digest:loop-status",
+      "kind": "flow",
+      "loop": "ops-digest"
+    },
+    {
+      "id": "step:ops-digest:loop-status=>step:ops-digest:estate-status",
+      "source": "step:ops-digest:loop-status",
+      "target": "step:ops-digest:estate-status",
+      "kind": "flow",
+      "loop": "ops-digest"
+    },
+    {
+      "id": "step:ops-digest:estate-status=>step:ops-digest:agent-status",
+      "source": "step:ops-digest:estate-status",
+      "target": "step:ops-digest:agent-status",
+      "kind": "flow",
+      "loop": "ops-digest"
+    },
+    {
+      "id": "step:ops-digest:agent-status=>step:ops-digest:digest",
+      "source": "step:ops-digest:agent-status",
+      "target": "step:ops-digest:digest",
+      "kind": "flow",
+      "loop": "ops-digest"
     },
     {
       "id": "trigger:pipeline-exercise=>step:pipeline-exercise:plan",
