@@ -23,7 +23,8 @@ The loop never pushes to `dev`/`master` (`tools/nos-push` refuses it from an
 agent session), never converges the estate, never
 edits `config.yml`/`credentials.yml`, never calls `AskUserQuestion`, and never
 runs `tests/fast.sh`. CLAUDE.md applies in full, except the test rule in §3,
-which the operator waived for this loop only.
+which the operator waived for this loop only. It removes no worktree by hand: disk cleanup
+is `nos worktrees` (the shipped pruner), never `git worktree remove`.
 
 ## Dry run: `/roadmap-loop dry`
 

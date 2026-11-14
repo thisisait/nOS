@@ -103,6 +103,16 @@ ansible verbatim — a `--remove=*` found INSIDE the passthrough is refused
 `tools/ci-local.sh` and `nos smoke` runs `tools/nos-smoke.py`, each from `$NOS_SRC` with your
 arguments, its own refusals and its exit code. The `tools/` paths keep working for one release.
 
+## `nos worktrees` — the one door for removing worktrees
+
+`nos worktrees [--base origin/dev]` runs `tools/worktree-prune.py` as a dry run: every worktree with its
+state, and under "kept: local changes" the changed and untracked paths (up to 10 each) a removal would lose.
+`nos worktrees --confirm` removes only the listed `merged-clean` ones, deepest first, with no `--force`.
+A branch counts as landed when its HEAD is an ancestor of the base or every commit it adds is already there
+by patch (`git cherry`): branches land here by cherry-pick. It never removes the main checkout, the worktree
+it runs from, a parent of a kept worktree, or a branch ref; an unreadable base exits 2 and removes nothing.
+Never `git worktree remove` by hand: it deletes every worktree nested inside the one removed.
+
 ## `nos push` — push this checkout (not a converge)
 
 `nos push [git push args]` runs `tools/nos-push` from `$NOS_SRC` on the checkout you stand in: the push,

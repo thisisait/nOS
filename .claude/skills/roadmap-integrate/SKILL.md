@@ -47,6 +47,8 @@ ruling it cites.
   files, then the full suite once more at the end. If the batch is still red
   after two full runs, drop the guilty branch and put it in `## Roadblocks`.
 - Remove the suite worktree on every exit path.
+- Any other disk cleanup of worktrees goes through `nos worktrees` (dry run, then `--confirm`), never
+  `git worktree remove` by hand: a removed parent takes every worktree nested in it (2026-11-14).
 
 ## 4. Postproduction (every batch)
 
