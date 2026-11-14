@@ -16,6 +16,7 @@ mod pentest_reads;
 mod pulse;
 mod pulse_reads;
 mod remediation_reads;
+mod scan_reads;
 mod security_reads;
 
 fn main() -> ExitCode {
