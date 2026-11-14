@@ -2228,6 +2228,12 @@
         # This is the third, and it is blocked, not done.
       tags: ['always']
 
+    # The medulla's own credentials (wing-apply-through-medulla 1b): custody first, generated else,
+    # never secrets.yml; before every blueprint render, so Authentik and Wing read the same value.
+    - name: "Medulla custody — the Bone client secret and the wing-intents bearer"
+      ansible.builtin.import_tasks: tasks/medulla-custody.yml
+      tags: ['always']
+
     - name: "Lazy-regenerate Wing events HMAC (mirrors bone_secret unless overridden)"
       no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
       # Two-step because the value of bone_secret above has to be

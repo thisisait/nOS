@@ -17,7 +17,7 @@
     "law": 57,
     "reflex": 52,
     "heartbeat": 1,
-    "internal": 80,
+    "internal": 81,
     "edges": 455
   },
   "nodes": {
@@ -346,6 +346,10 @@
       "kind": "authentik"
     },
     "authentik:nos-librarian": {
+      "level": "internal",
+      "kind": "authentik"
+    },
+    "authentik:nos-medulla": {
       "level": "internal",
       "kind": "authentik"
     },

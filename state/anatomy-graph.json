@@ -4,8 +4,8 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 607,
-    "edges": 576,
+    "nodes": 608,
+    "edges": 577,
     "nodes_pulse": 52,
     "nodes_judge": 5,
     "nodes_gateset": 5,
@@ -20,7 +20,7 @@
     "nodes_backend": 9,
     "nodes_repo": 4,
     "nodes_tofu": 1,
-    "nodes_authentik": 62,
+    "nodes_authentik": 63,
     "nodes_table": 45,
     "nodes_doctrine": 29,
     "nodes_faceapp": 11,
@@ -32,7 +32,7 @@
     "nodes_article": 28,
     "nodes_organ_system": 13,
     "nodes_tissue": 1,
-    "edges_data": 249,
+    "edges_data": 250,
     "edges_trigger": 84,
     "edges_temporal": 5,
     "edges_mutex": 21,
@@ -929,6 +929,20 @@
       "managed_by": "files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2",
       "anchor": "02.02.08",
       "description": "Authentik machine identity 'nos-librarian' — the client_credentials client an automated actor authenticates as, scoped to 5 declared capabilities; files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2"
+    },
+    "authentik:nos-medulla": {
+      "kind": "authentik",
+      "source": "default.config.yml authentik_agent_clients",
+      "mode": "client_credentials",
+      "tier": null,
+      "client_id": "nos-medulla",
+      "service": null,
+      "capabilities": [
+        "nos:upgrades:read"
+      ],
+      "managed_by": "files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2",
+      "anchor": "02.02.08",
+      "description": "Authentik machine identity 'nos-medulla' — the client_credentials client an automated actor authenticates as, scoped to 1 declared capabilities; files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2"
     },
     "authentik:nos-migration-author": {
       "kind": "authentik",
@@ -7057,6 +7071,14 @@
     {
       "from": "service:authentik",
       "to": "authentik:nos-librarian",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=client_credentials) — applied into the running service by files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2 from default.config.yml authentik_agent_clients",
+      "derived": "authentik-hosting",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:nos-medulla",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=client_credentials) — applied into the running service by files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2 from default.config.yml authentik_agent_clients",
       "derived": "authentik-hosting",
