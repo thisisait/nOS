@@ -105,13 +105,15 @@
     # hub: GET of the system list and one system (public in PHP too); ?tree, ?listed, POST and /hub/health stay PHP's (test_medulla_serves_hub.py).
     # security: GET of the advisory and gitleaks lists and one row of each; an advisory id that is not a positive int, the ingest POSTs and /resolve stay PHP's.
     # agent-sessions: GET of one agent's session list (own rows below Tier 1); the POST that starts one, the detail and the catalogue stay PHP's.
+    # remediation: GET of the queue and one item; the scanner's POST and PUT, bulk-status and next-id stay PHP's.
 {% set _medulla_reads = {'pulse': ['path_regexp ^/api/v1/(pulse_jobs|pulse_runs|pulse_runs/summary|pulse_runs/[^/]+)$', 'not query since=*', 'not query until=*'],
                          'admin': ['path /api/v1/admin/state'], 'audit': ['path /api/v1/audit/verify'],
                          'inbox': ['path_regexp ^/api/v1/inbox/questions(/[^/]+)?$'],
                          'notifications': ['path /api/v1/notifications'], 'events': ['path /api/v1/events'],
                          'hub': ['path_regexp ^/api/v1/hub/systems(/[^/]+)?$', 'not query tree=*', 'not query listed=*'],
                          'security': ['path_regexp ^/api/v1/(advisories(/[1-9][0-9]{0,17})?|gitleaks_findings(/[^/]+)?)$', 'not path_regexp /resolve$'],
-                         'agent-sessions': ['path_regexp ^/api/v1/agents/[^/]+/sessions$']} %}
+                         'agent-sessions': ['path_regexp ^/api/v1/agents/[^/]+/sessions$'],
+                         'remediation': ['path_regexp ^/api/v1/remediation(/[^/]+)?$', 'not path /api/v1/remediation/bulk-status', 'not path /api/v1/remediation/next-id']} %}
 {% for name in medulla_read_routes | default([]) %}
     @medulla_read_{{ name }} {
         method GET
