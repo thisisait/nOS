@@ -11,8 +11,9 @@ declare(strict_types=1);
  * This script reads ``app/Core/RouterFactory.php`` for the route list and
  * walks the ``app/Presenters/Api/*Presenter.php`` files for class-level
  * docblocks describing HTTP methods + summaries. Auth requirement is
- * derived from ``protected array $publicActions`` per presenter; the
- * wing.operator scope from ``$operatorActions``.
+ * derived from ``protected array $publicActions`` per presenter (narrowed
+ * to ``$publicMethods`` when the presenter names any); the wing.operator
+ * scope from ``$operatorActions``.
  *
  * The output is intentionally pragmatic: paths + methods + auth +
  * summaries. Request/response body schemas are NOT introspected (Wing's
@@ -188,6 +189,7 @@ foreach ($matches as $row) {
 			'docblock' => parse_presenter_docblock($presenterFile, $responses),
 			'responses' => $responses,
 			'public'   => parse_action_list($presenterFile, 'publicActions'),
+			'publicMethods' => parse_action_list($presenterFile, 'publicMethods'),
 			'operator' => parse_action_list($presenterFile, 'operatorActions'),
 		];
 	}
@@ -229,7 +231,10 @@ foreach ($matches as $row) {
 					'404' => ['description' => 'Not found'],
 				],
 			];
-			if (!$isPublic) {
+			// $publicMethods narrows a public action to those methods (Events: the HMAC POST alone);
+			// every other method of it is a bearer route, as BaseApiPresenter::startup() reads it.
+			$open = $isPublic && (!$pInfo['publicMethods'] || in_array(strtoupper($method), $pInfo['publicMethods'], true));
+			if (!$open) {
 				// BaseApiPresenter refuses a bearer whose scopes do not permit the call (2026-10-25:
 				// pulse.run on the run record and the due feed); every bearer route can answer it.
 				$op['responses']['403'] = ['description' => "The token's scopes do not permit this call"];

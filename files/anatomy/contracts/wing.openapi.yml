@@ -675,8 +675,12 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
+      security:
+        - BearerAuth: []
     post:
       summary: ingestion from the callback plugin. HMAC-protected.
       operationId: Events_default_post
