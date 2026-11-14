@@ -175,6 +175,8 @@ def validate_manifest(path: str, m: dict | None = None, root: str = REPO) -> lis
         seen.add(s["id"])
         if s.get("runner") not in _STEP_RUNNERS:
             why.append(f"step `{s['id']}` runner must be one of {sorted(_STEP_RUNNERS)}")
+        if "graph_only" in s and not isinstance(s["graph_only"], bool):
+            why.append(f"step `{s['id']}` graph_only must be true or false (true = drawn, never run by the runner)")
         fe = s.get("for_each")
         if fe is not None and fe not in params:
             why.append(f"step `{s['id']}` for_each `{fe}` is not a declared param "
@@ -246,17 +248,19 @@ def _manifest_graph(m: dict) -> tuple[list[dict], list[dict]]:
     for i, step in enumerate(m["steps"]):
         x = (i + 1) * _STEP_BAND
         fe = step.get("for_each")
+        # graph_only: the runner does not execute this step; the face draws a disabled node dashed.
+        unrun = {"disabled": True, "graph_only": True} if step.get("graph_only") else {}
         layer: list[str] = []
         if fe:
             for j, item in enumerate(params.get(fe, [])):
                 layer.append(N(f"step:{loop}:{step['id']}:{item['id']}", "step",
                                _tmpl(str(step.get("label", step["id"])), item),
                                x, j * _ITEM_H, runner=step.get("runner", ""),
-                               param=fe, item=item["id"]))
+                               param=fe, item=item["id"], **unrun))
         else:
             layer.append(N(f"step:{loop}:{step['id']}", "step",
                            str(step.get("label", step["id"])), x, 0,
-                           runner=step.get("runner", "")))
+                           runner=step.get("runner", ""), **unrun))
         for p in prev:
             for c in layer:
                 E(p, c)

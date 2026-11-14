@@ -8,7 +8,8 @@ to the manifest is fetched with no code change — the parametrisation the graph
 shows is the parametrisation the runner executes.
 
   Phase 1 (this file): fetch → parse (RSS + Atom) → normalise → dedup → emit.
-  Phase 2 (next): `--to-keap` consolidates the items into the KEAP corpus.
+  Phase 2 (not built): the manifest's `consolidate` (librarian → KEAP corpus) and `digest` (A9) steps are
+  `graph_only: true`: this runner executes neither. `--to-keap` only drops an inbox .md for the review queue.
 
 A scout that dies on one dead feed is useless, so a source that 404s, times out
 or fails to parse is logged to stderr and SKIPPED — the run continues and the
