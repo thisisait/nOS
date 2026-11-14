@@ -49,7 +49,8 @@ refused before it is written.
        [--refs "..."] --body "<prose>"
    ```
    Add `--update` to revise an existing row's git-owned half; `--dry-run` to
-   preview. (`NOS_SEED_DIR` must point at your private seed repo — export it in
+   preview. The tool prints `spec: ready` or `spec: needs-spec (no …)`; `--require-spec` refuses (exit 65,
+   nothing written) a code-fix/doc/design row without Goal, Smallest slice, E2E acceptance and Must not. (`NOS_SEED_DIR` must point at your private seed repo — export it in
    your shell profile once.)
 4. **Commit it in the PRIVATE seed repo** (`NOS_SEED_DIR`) — never in nOS. Then
    `nos dtt seed --dry-run` shows it as a pending insert; `nos dtt seed` files
