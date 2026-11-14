@@ -1176,8 +1176,12 @@ def test_the_pytest_ratchet_is_remeasured_against_collection(pytestconfig):
     # The judge executes the lane cut (tests/_lanes.yml deselects), so the record is held against
     # what is SELECTED, not the whole corpus: against the corpus a true reading can never pass
     # (2026-11-13: 8506 executed vs 9550 collected). GATE CHANGE, row ratchet-follows-lane-cut.
+    # The cut is applied HERE, from tests/_lanes.yml, whatever NOS_LANE says: the nightly, a manual run
+    # and a PR to master set NOS_LANE=all and select the whole corpus (2026-11-14: 9539 vs 8506, red).
+    import _lanes
+    cut = set(_lanes.listed())
     recorded = MEASURED_WORK["pytest-anatomy"]
-    collected = len(selected)
+    collected = len([n for n in selected if n.split("::")[0] not in cut])
     assert recorded >= collected * 0.95, (
         f"tests/anatomy now collects {collected} tests but the recorded "
         f"measurement is {recorded}, a {1 - recorded / collected:.0%} gap. The "
