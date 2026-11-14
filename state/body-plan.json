@@ -11,7 +11,7 @@
     "organ system": 13,
     "organism": 0,
     "habitat": 9,
-    "sense": 89,
+    "sense": 90,
     "limb": 136,
     "memory": 45,
     "law": 57,
@@ -1706,6 +1706,10 @@
       "kind": "reader"
     },
     "reader:stuck-status": {
+      "level": "sense",
+      "kind": "reader"
+    },
+    "reader:symbiont-status": {
       "level": "sense",
       "kind": "reader"
     },
