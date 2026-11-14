@@ -53,6 +53,18 @@ indicators:
     tolerance: the accepted baseline (~/.nos/session-trace.json, written only by --accept)
     verdicts: none
     definition: none
+  symbiont-status:
+    source: tools/symbiont-status.py
+    kind: sentinel
+    antigen: a symbiont writing outside its mounts
+    receptor: docker ps/inspect/diff (read-only)
+    effector: report
+    signal: none (read on demand; red-status wiring is a follow-on)
+    heartbeat: none
+    lifespan: none
+    tolerance: "cache paths: /home/node/.cache, /tmp for paperclip until symbiosome-tidy-paperclip"
+    verdicts: none
+    definition: none
   advisory-status:
     source: tools/advisory-status.py
     kind: sentinel
