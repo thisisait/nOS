@@ -245,8 +245,9 @@ def test_fetch_renders_the_pinned_asset_with_a_checksum(family, arch, asset):
         ctx[key] = _render(str(expr), **ctx).strip()
     url = _render(mod["url"], **ctx)
     assert url == (
-        f"https://github.com/php/frankenphp/releases/download/"
-        f"v{cfg['frankenphp_version']}/{asset}"
+        # our attested mirror, not upstream (operator ruling 2026-11-14, tools/frankenphp-repin.py --mirror)
+        f"https://github.com/thisisait/nOS/releases/download/"
+        f"mirror-frankenphp-v{cfg['frankenphp_version']}/{asset}"
     ), url
     checksum = _render(mod["checksum"], **ctx)
     assert checksum.startswith("sha256:") and len(checksum) == len("sha256:") + 64, (

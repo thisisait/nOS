@@ -36,7 +36,7 @@ case "$1 $2" in
   "attestation verify")
     [ "$ATTEST_RC" = 0 ] || exit "$ATTEST_RC"
     printf '[{"verificationResult":{"signature":{"certificate":{"sourceRepositoryRef":"%s","sourceRepositoryDigest":"%s"}}}}]' \
-      "$ATTEST_REF" "0123456789abcdef0123456789abcdef01234567" ;;
+      "$ATTEST_REF" "FAKE_SOURCE_COMMIT" ;;
 esac
 """
 

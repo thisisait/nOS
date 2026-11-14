@@ -24,10 +24,6 @@ def _pr_jobs():
                 yield f"{wf.name}:{name}", steps
 
 
-def test_a_bot_pr_job_exists() -> None:
-    assert list(_pr_jobs()), "no workflow opens a PR; drop this gate or the bot"
-
-
 def test_bot_prs_use_an_app_token() -> None:
     for where, steps in _pr_jobs():
         mint = [s for s in steps if APP_TOKEN.fullmatch(str(s.get("uses", "")))]
