@@ -9,6 +9,8 @@ gates:
   - tests/anatomy/test_medulla_is_one_static_binary.py
   - tests/anatomy/test_medulla_role.py
   - tests/anatomy/test_medulla_serves_audit_verify.py
+  - tests/anatomy/test_medulla_serves_events.py
+  - tests/anatomy/test_medulla_serves_hub.py
   - tests/anatomy/test_medulla_serves_inbox_questions.py
   - tests/anatomy/test_medulla_serves_metrics.py
   - tests/anatomy/test_medulla_serves_notifications.py

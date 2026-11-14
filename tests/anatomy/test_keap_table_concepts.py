@@ -109,6 +109,8 @@ CONCEPTLESS = {
     "print-job-step.planned_end": "time.target is claimed by planned_start (once-per-table rule); needs a window pair",
     "print-job-step.actual_start": "time.occurred_at is claimed by actual_end (same) — same window pair",
     "kolben-project.client": "no counterparty concept; graph.parent would claim the project nests under the client — same as print-order.customer",
+    "halyard-project.client": "no counterparty concept — needs graph.counterparty (same as kolben-project.client)",
+    "halyard-build.deployed_at": "time.occurred_at is claimed by built_at (once-per-table rule) — needs a second event concept (same as print-job-step.actual_start)",
     "kolben-project.budget": "no money/measure concept — needs measure.amount (a budget is not identity.* or a lifecycle)",
     "kolben-time-entry.hours": "no measure concept — needs measure.duration (hours logged is a quantity, like print-job.quantity)",
     "current-state.where": "no execution-locus concept — needs deploy.locus (local/eu-cloud/ext-cloud is the nos-work:// WHERE segment, not access.tier)",
