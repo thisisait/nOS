@@ -5,14 +5,19 @@ Dry run by default: prints each worktree, its branch, its state and size, and
 which ones would go. `--confirm` runs `git worktree remove` (no --force) on those.
 
 A worktree is prunable only when ALL hold: not the main or current one, not
-locked, no uncommitted or untracked change, its HEAD is an ancestor of --base
-(default origin/dev, as last fetched; no fetch here), its admin HEAD/index were
+locked, no uncommitted or untracked change, its branch has LANDED in --base
+(default origin/dev, as last fetched; no fetch here): its HEAD is an ancestor,
+or every commit it adds is patch-equivalent there (`git cherry` shows no `+`:
+branches here land by cherry-pick, re-signed, so none is ever an ancestor;
+2026-11-14: 0 of 101 counted, and an ad-hoc script was written instead), its admin HEAD/index were
 not touched in the last --min-age-hours (default 24: a fresh or just-landed
 worktree a live session works in looks landed too), and no kept worktree sits
 inside it (nested agent chains live under the gitignored .claude/, which
 `git worktree remove` would delete with the parent). A removal that fails keeps
 its ancestors too. An unresolvable base is UNKNOWN: nothing is listed and
---confirm exits 2.
+--confirm exits 2. The dry run names, for each worktree kept for local changes,
+up to 10 changed or untracked paths: what a removal by hand would lose.
+This is the one door for removing worktrees (`nos worktrees`); never `git worktree remove` by hand.
 
     tools/worktree-prune.py [--repo PATH] [--base origin/dev] [--json] [--no-size]
                             [--min-age-hours 24] [--confirm]
@@ -56,19 +61,37 @@ def last_used(path):
                 if gd and os.path.exists(os.path.join(gd, f))), default=time.time())
 
 
+def landed(wt, base):
+    """"ancestor", "patch-equivalent" or None. A cherry that fails or runs past its time is not landed."""
+    if git(wt["path"], "merge-base", "--is-ancestor", wt["head"], base).returncode == 0:
+        return "ancestor"
+    try:
+        r = subprocess.run(["git", "--no-optional-locks", "-C", wt["path"], "cherry", base, wt["head"]],
+                           capture_output=True, text=True, timeout=120)
+    except subprocess.TimeoutExpired:
+        return None
+    lines = r.stdout.split("\n")
+    if r.returncode or not r.stdout.strip() or any(ln.startswith("+") for ln in lines):
+        return None
+    return "patch-equivalent"
+
+
 def state(wt, base, min_age_s):
+    """(state, extra): extra carries the changed paths of a dirty worktree, or how a clean one landed."""
     if wt["locked"]:
-        return "locked"
+        return "locked", {}
     if not os.path.isdir(wt["path"]):
-        return "missing"  # `git worktree prune` clears these
+        return "missing", {}  # `git worktree prune` clears these
     st = git(wt["path"], "status", "--porcelain")
     if st.returncode or st.stdout.strip():
-        return "dirty"
-    if git(wt["path"], "merge-base", "--is-ancestor", wt["head"], base).returncode:
-        return "unmerged"
+        changes = [ln for ln in st.stdout.splitlines() if ln.strip()]
+        return "dirty", {"changes": changes[:10], "changes_total": len(changes)}
+    how = landed(wt, base)
+    if how is None:
+        return "unmerged", {}
     if time.time() - last_used(wt["path"]) < min_age_s:
-        return "recent"
-    return "merged-clean"
+        return "recent", {"landed_by": how}
+    return "merged-clean", {"landed_by": how}
 
 
 def size_kb(path):
@@ -98,8 +121,8 @@ def main() -> int:
     for i, wt in enumerate(wts):
         if i == 0 or wt["path"] == here:
             continue  # the main worktree and the one we run from are never candidates
-        s = state(wt, a.base, a.min_age_hours * 3600) if base_ok else "UNKNOWN"
-        rows.append({"path": wt["path"], "branch": wt["branch"], "state": s,
+        s, extra = state(wt, a.base, a.min_age_hours * 3600) if base_ok else ("UNKNOWN", {})
+        rows.append({"path": wt["path"], "branch": wt["branch"], "state": s, **extra,
                      "size_kb": None if a.no_size or s == "missing" else size_kb(wt["path"])})
     # Every worktree that stays (main and current included) pins its ancestors.
     keep = [w["path"] for w in wts if w["path"] not in
@@ -120,6 +143,16 @@ def main() -> int:
         for r in rows:
             mb = "?" if r["size_kb"] is None else f"{r['size_kb'] // 1024}M"
             print(f"{r['state']:17} {mb:>8}  {r['branch'] or '(detached)'}  {r['path']}")
+        dirty = [r for r in rows if r["state"] == "dirty"]
+        if dirty:
+            print(f"kept: local changes ({len(dirty)} worktree(s)); a removal by hand would lose:")
+            for r in dirty:
+                print(f"  {r['branch'] or '(detached)'}  {r['path']}")
+                for ln in r.get("changes", []):
+                    print(f"      {ln}")
+                more = r.get("changes_total", 0) - len(r.get("changes", []))
+                if more > 0:
+                    print(f"      … and {more} more")
         verb = "removing" if a.confirm else "would remove (dry run; --confirm to act)"
         print(f"{verb}: {len(prunable)} worktree(s), {report['prunable_kb'] // 1024} MB")
 
