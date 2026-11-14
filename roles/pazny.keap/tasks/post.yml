@@ -244,7 +244,7 @@
     - keap_seed_kolben_fixture | default(false) | bool
 
 # ── Halyard Studio business fixture (row fixture-halyard-studio) ─────────────
-# A synthetic dev shop (party spine + halyard-* domain tables): tasks typed by
+# A synthetic dev shop (the party table + halyard-* domain tables): tasks typed by
 # the task_type enum, CI builds per task. DataTables only. Independent opt-in.
 - name: "[pazny.keap] Seed the Halyard Studio business fixture DataTables"
   ansible.builtin.include_tasks: seed-bundle.yml

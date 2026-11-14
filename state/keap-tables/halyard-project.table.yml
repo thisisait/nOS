@@ -2,7 +2,7 @@
 # KEAP DataTable — "Halyard · Project" (business fixture, row fixture-halyard-studio).
 #
 # A client engagement at Halyard Studio, a synthetic dev shop. `client` is a
-# rowRef into the shared `party` spine, so seeding Halyard re-seeds the party
+# rowRef into the shared `party` table, so seeding Halyard re-seeds the party
 # rows it references (idempotent upsert by slug). No counterparty concept
 # exists, so `client` is conceptless, exactly as kolben-project.client is.
 # =============================================================================
