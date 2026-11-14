@@ -57,7 +57,8 @@ fn handle(mut s: TcpStream, db: &Path) -> std::io::Result<()> {
             .or_else(|| crate::notification_reads::answer(db, path, query, &header))
             .or_else(|| crate::events_reads::answer(db, path, query, &header))
             .or_else(|| crate::hub_reads::answer(db, path, query))
-            .or_else(|| crate::security_reads::answer(db, path, query, &header));
+            .or_else(|| crate::security_reads::answer(db, path, query, &header))
+            .or_else(|| crate::agent_session_reads::answer(db, path, &header));
         if let Some((code, body)) = read {
             let status = match code {
                 200 => "200 OK", 401 => "401 Unauthorized", 403 => "403 Forbidden", 404 => "404 Not Found", 503 => "503 Service Unavailable",

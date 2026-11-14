@@ -87,6 +87,7 @@ medulla_routes: []
 # [events] = GET /api/v1/events: the filtered event list (the callback's HMAC POST and /events/<id> stay PHP's).
 # [hub] = GET /api/v1/hub/systems and /<id>: the system inventory (?tree, ?listed, POST and /hub/health stay PHP's).
 # [security] = GET /api/v1/advisories, /gitleaks_findings and one row of each (the ingest POSTs and /resolve stay PHP's).
+# [agent-sessions] = GET /api/v1/agents/<name>/sessions: one agent's runs, own rows below Tier 1 (start, detail, catalogue stay PHP's).
 medulla_read_routes: []
 
 # The medulla's loopback HTTP door. 8095: free (8096 is Jellyfin; 8097 relay, 8098 cortex, 8099 Bone).
