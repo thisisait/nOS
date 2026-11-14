@@ -231,6 +231,9 @@ once they're ready.
 apps_runner_enabled: false
 ```
 
+`apps_runner_enabled` is a switch, so its default (`true`) is declared in the remainder of the default layers,
+not in a `config.d/` domain layer; `tools/estate-status.py --config apps_runner_enabled` prints what this host resolves.
+
 The render task skips, the apps stack is not deployed, no post-hooks
 fire. Existing manifest-app containers stay up (Docker doesn't tear them
 down on a skipped task) — `docker compose -p apps down` cleans them

@@ -1,6 +1,6 @@
 # Cross-platform — macOS, Linux, Windows (WSL2)
 
-**One playbook, one `default.config.yml`, no per-OS profile.** The goal is that an
+**One playbook, one set of committed defaults (the `config.d/` layers and their remainder), no per-OS profile.** The goal is that an
 operator on any of the three runs `ansible-playbook main.yml` with the committed
 defaults and gets the same estate. Platform differences are resolved by FACTS,
 never by asking the operator for a toggle.
@@ -33,7 +33,7 @@ cannot mean anything. The playbook gates on the fact and skips; the operator's
 
 Target is ARM64 (M1+) with Docker Desktop for Mac (not Colima/Lima); Ollama 0.19+ runs
 the native MLX backend. `homebrew_prefix` is **ISA-bound, not die-variant-bound**:
-`default.config.yml` resolves it via `ansible_facts['machine'] == 'arm64'` →
+`config.d/20-host-software.yml` resolves it via `ansible_facts['machine'] == 'arm64'` →
 `/opt/homebrew`, else `/usr/local`. Homebrew keys its prefix on the instruction set, so
 every Apple Silicon family — M1, M2, M3, M4 (incl. Pro/Max/Ultra), M5+ — reports `arm64`
 and shares `/opt/homebrew`; there is no per-die path to add. The `/usr/local` branch is
