@@ -22,8 +22,10 @@ import json
 import subprocess
 import sys
 
-#: Writes outside mounts that are expected and harmless (the registry row's tolerance), as path prefixes.
-TOLERATED = ("/home/node/.cache", "/tmp")
+#: Writes outside mounts the registry row tolerates, as path prefixes: cache paths for every symbiont, and
+#: /tmp for paperclip only, until row symbiosome-tidy-paperclip lands (state/immune/indicators.yml).
+TOLERATED = ("/home/node/.cache",)
+TOLERATED_FOR = {"paperclip": ("/tmp",)}
 
 
 def _run(args: list[str], timeout: int = 30) -> str | None:
@@ -64,7 +66,8 @@ def symbiont(c: dict, docker: str) -> dict:
             if any(path == d or path.startswith(d + "/") for d in dests):
                 continue
             outside.append(path)
-        kept = [p for p in outside if not any(p == t or p.startswith(t + "/") for t in TOLERATED)]
+        tol = TOLERATED + TOLERATED_FOR.get(name, ())
+        kept = [p for p in outside if not any(p == t or p.startswith(t + "/") for t in tol)]
         # A changed directory and the files under it both appear; count the leaves only.
         leaves = [p for p in kept if not any(q != p and q.startswith(p + "/") for q in kept)]
         writes = {"count": len(leaves), "tolerated": len(outside) - len(kept),
