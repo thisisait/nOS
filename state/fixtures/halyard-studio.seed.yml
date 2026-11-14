@@ -17,7 +17,7 @@
 # without `deployed_at` was never deployed.
 # =============================================================================
 
-# ── The shared EN-16931 party spine (Halyard's clients ARE parties) ──────────
+# ── The shared EN-16931 party table (Halyard's clients ARE parties) ──────────
 party:
   - { slug: synthetic-lodenice-vltava, legal_name: "Lodenice Vltava s.r.o. (synthetic)", trading_name: "Lodenice Vltava", party_kind: org, country: CZ, notes: "synthetic boat-yard client" }
   - { slug: synthetic-kavarna-kotva, legal_name: "Kavarna Kotva s.r.o. (synthetic)", trading_name: "Kavarna Kotva", party_kind: org, country: CZ, notes: "synthetic cafe client" }
