@@ -51,11 +51,16 @@ fn serve(db: &Path, query: &str, header: &dyn Fn(&str) -> Option<String>) -> rus
 
 /// hydrate(): json_decode($s, true) when it yields an array, else []; PHP's arrays re-encode as json_encode would.
 fn decoded(s: &str) -> Value {
-    // ponytail: PHP nests to 512, serde_json to 128; a row between the two decodes there and is [] here.
-    match serde_json::from_str::<Php>(s) {
-        Ok(Php(v @ (Value::Array(_) | Value::Object(_)))) => v,
+    match json_decode(s) {
+        v @ (Value::Array(_) | Value::Object(_)) => v,
         _ => json!([]),
     }
+}
+
+/// json_decode($s, true) as PHP would re-encode it; null when $s is not JSON.
+pub fn json_decode(s: &str) -> Value {
+    // ponytail: PHP nests to 512, serde_json to 128; a row between the two decodes there and is null here.
+    serde_json::from_str::<Php>(s).map_or(Value::Null, |p| p.0)
 }
 
 /// One json_decode(.., true) value: an object keyed 0..n-1 in document order (or empty) is a list, and an

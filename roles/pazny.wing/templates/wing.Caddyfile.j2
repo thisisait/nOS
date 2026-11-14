@@ -101,10 +101,11 @@
     # audit: GET /api/v1/audit/verify, the cached verdict (test_medulla_serves_audit_verify.py).
     # inbox: GET of the open list and one poll; POST answer and cancel stay PHP's (test_medulla_serves_inbox_questions.py).
     # notifications: GET of the list; Bone's insert and PHP's mark-read stay off it (test_medulla_serves_notifications.py).
+    # events: GET of the list only; the callback's HMAC POST and /events/<id> stay PHP's.
 {% set _medulla_reads = {'pulse': ['path_regexp ^/api/v1/(pulse_jobs|pulse_runs|pulse_runs/summary|pulse_runs/[^/]+)$', 'not query since=*', 'not query until=*'],
                          'admin': ['path /api/v1/admin/state'], 'audit': ['path /api/v1/audit/verify'],
                          'inbox': ['path_regexp ^/api/v1/inbox/questions(/[^/]+)?$'],
-                         'notifications': ['path /api/v1/notifications']} %}
+                         'notifications': ['path /api/v1/notifications'], 'events': ['path /api/v1/events']} %}
 {% for name in medulla_read_routes | default([]) %}
     @medulla_read_{{ name }} {
         method GET
