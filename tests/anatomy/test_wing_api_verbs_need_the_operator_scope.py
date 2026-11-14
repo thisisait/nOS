@@ -49,6 +49,9 @@ NOT_DECISIONS = {
     ("Advisories", "default"): "scan pipeline ingests an advisory record",
     ("Agents", "sessions"): "opens an agent session; the BFF path narrows to metadata.end_user below Tier 1",
     ("AgentSessions", "cancel"): "the thalamus stops, for its person, a run its own Iris session started; no person: wing.operator inline",
+    # operator ruling 2026-11-14 (wing-apply-through-medulla): the medulla picks and reports over its own door
+    ("Intents", "pick"): "the medulla's wing.intents door (BaseApiPresenter confines that token to it); Wing stamps picked_at once",
+    ("Intents", "outcome"): "the medulla's wing.intents door (BaseApiPresenter confines that token to it); Wing writes the outcome once",
     ("CortexExecutor", "execute"): "gated by its own three cortex axes (CortexBindingGate)",
     ("DeployTrigger", "default"): "HMAC-only from CI with branch+tag allowlists; no bearer reaches it",
     ("Events", "default"): "POST is the HMAC ingestion path; agents report through it",

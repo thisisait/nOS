@@ -152,6 +152,22 @@
   when: nos_system_user | length > 0
   become: true
 
+# The other half (review 11-14): a demoted or locked roster login LEAVES group nos, or it keeps the
+# set-points after the identity map took tier 1 away. Runs BEFORE the operator's own join below,
+# so a converging operator who left here is back in the group by the end of the play.
+- name: "[unix] A login that is no longer active tier 1 leaves the service account's group"
+  ansible.builtin.command: "gpasswd -d {{ item.name }} {{ nos_system_user }}"
+  loop: "{{ _unix_people | list }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - nos_system_user | length > 0
+    - not (item.tier == 1 and item.active)
+    - item.name in (ansible_facts['getent_group'][nos_system_user][2] | default('')).split(',')
+  changed_when: true
+  no_log: true   # _unix_people items carry the initial password
+  become: true
+
 # The operator's pulse and `nos halt` reach the set-points (/var/lib/nos/settings, root:nos 0770).
 # ponytail: takes effect at the operator's next login (their systemd --user pulse too); until then it reads no halt.
 - name: "[unix] The operator is in the service account's group"
