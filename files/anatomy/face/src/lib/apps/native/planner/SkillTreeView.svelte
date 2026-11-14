@@ -100,6 +100,9 @@
 	let canWrite = $derived(table?.canWrite ?? false);
 	let action = $state('');
 	let hideDormant = $state(true); // queued/parked/dropped are a third of the board
+	/** Re-hanging is a mode, off by default: with centred handles any drag that began on a gem
+	 *  re-parented its neighbour (11-14: 8 rows moved by accident, watch under stores). */
+	let rehang = $state(false);
 	let selectedId = $state<string | null>(null);
 	let hoverId = $state<string | null>(null);
 	let focusId = $state(CORE_ID); // the one tab stop of the tree (roving tabindex)
@@ -404,8 +407,11 @@
 		}
 	}
 
+	const slugOf = (id: string) => String(table?.rows.find((r) => r.id === id)?.slug ?? id);
+
 	function onconnect(conn: { source: string; target: string }) {
-		if (conn.source === CORE_ID || conn.target === CORE_ID) return; // the core is not a row
+		if (!rehang || conn.source === CORE_ID || conn.target === CORE_ID) return; // the core is not a row
+		if (!confirm(`Re-hang ${slugOf(conn.target)} under ${slugOf(conn.source)}?`)) return;
 		void reparent(conn.target, conn.source);
 	}
 
@@ -417,12 +423,14 @@
 		nodes: unknown[];
 		edges: Edge[];
 	}): Promise<boolean> {
-		return canWrite && n.length === 0;
+		return canWrite && rehang && n.length === 0;
 	}
 
 	function ondelete(deleted: { edges?: Edge[] }) {
-		if (!canWrite) return;
-		for (const e of deleted.edges ?? []) if (e.source !== CORE_ID) void reparent(e.target, null);
+		if (!canWrite || !rehang) return;
+		for (const e of deleted.edges ?? [])
+			if (e.source !== CORE_ID && confirm(`Un-parent ${slugOf(e.target)}?`))
+				void reparent(e.target, null);
 	}
 
 	// ── selection, focus, camera ──
@@ -531,7 +539,14 @@
 <div class="tree">
 	<header>
 		<strong>Skill tree</strong>
-		<span class="sub">{canWrite ? 'drag a handle to re-hang a row' : 'read-only'}</span>
+		{#if canWrite}
+			<label class="chk sub"
+				><input type="checkbox" bind:checked={rehang} />
+				{rehang ? 're-hang: drag from a gem onto its new parent' : 're-hang'}</label
+			>
+		{:else}
+			<span class="sub">read-only</span>
+		{/if}
 		{#if source === 'fallback'}<Badge tone="warn">KEAP down — fallback</Badge>{/if}
 		{#if snap?.absent.length}<Badge tone="warn">ring incomplete: {snap.absent.join(', ')}</Badge
 			>{/if}
@@ -593,7 +608,7 @@
 				nodesFocusable={false}
 				connectionMode={ConnectionMode.Loose}
 				connectionRadius={24}
-				nodesConnectable={canWrite}
+				nodesConnectable={canWrite && rehang}
 				elementsSelectable={true}
 				{onconnect}
 				{ondelete}
