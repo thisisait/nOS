@@ -23,6 +23,9 @@ Realms asked (the estate, loopback only, GET only):
   • Gitea      /api/v1/admin/users          (token: gitea_api_token)
   • Woodpecker /api/users + /api/agents     (bearer: woodpecker_api_token)
   • Wing       api_tokens (sqlite, read-only) — the bearer rows themselves
+  • Authentik  /api/v3/core/applications/ + /policies/bindings/ — the tier
+               policy each application is bound to, next to the tier its
+               plugin or app manifest declares (row tofu-tier-binding-missing)
 
 STRICTLY A READER. It holds no write verb, changes nothing, and exits 0
 whatever it finds — pinned by test_the_identity_reader_only_reads.py. The
@@ -46,6 +49,7 @@ sys.path.insert(0, str(REPO / "tools"))
 from nos_identity import SYNTHETIC_FLAG, default_config, operator_file, synthetic_identities  # noqa: E402
 
 OK, MISSING, UNDECLARED, UNKNOWN = "ok", "MISSING", "UNDECLARED", "?"
+NO_BINDING, OTHER_TIER = "NO BINDING", "OTHER TIER"
 REALMS = ("authentik", "gitea", "woodpecker", "unix")
 
 
@@ -245,6 +249,92 @@ def unix_logins(merged: dict, pwd=None, grp=None) -> list[str] | None:
     return sorted(held)
 
 
+def declared_tiers(merged: dict) -> dict[str, object]:
+    """slug -> RBAC tier, from what blueprint 20-rbac-policies binds from: each plugin's and manifest app's
+    `authentik:` block, then authentik_oidc_apps. A block without a tier falls back as the loader and the
+    blueprint do: an app's nginx.rbac_tier then 2; otherwise authentik_app_tiers[slug] then 3."""
+    fallback = merged.get("authentik_app_tiers") or {}
+    out: dict[str, object] = {}
+
+    def put(slug, tier):
+        if slug:
+            out[str(slug)] = fallback.get(slug, 3) if tier is None else tier
+
+    for path in sorted((REPO / "files/anatomy/plugins").glob("*/plugin.yml")):
+        doc = _yaml(path)
+        if isinstance(block := doc.get("authentik"), dict):
+            put(block.get("slug") or str(doc.get("name") or path.parent.name).replace("-base", ""), block.get("tier"))
+    for path in sorted((REPO / "apps").glob("[!_]*.yml")):
+        doc = _yaml(path)
+        if isinstance(block := doc.get("authentik"), dict):
+            tier = block.get("tier", (doc.get("nginx") or {}).get("rbac_tier"))
+            put(block.get("slug") or (doc.get("meta") or {}).get("name"), 2 if tier is None else tier)
+    for c in merged.get("authentik_oidc_apps") or []:
+        if isinstance(c, dict):
+            put(c.get("slug"), c.get("tier"))
+    return out
+
+
+def _pages(url: str, headers: dict) -> list | None:
+    """Every row of an Authentik list endpoint; None when a page does not answer or the list never ends."""
+    out, page = [], 1
+    for _ in range(50):  # 10 000 rows: a server that always names a next page ends here, as UNKNOWN
+        data = _get(f"{url}{'&' if '?' in url else '?'}page_size=200&page={page}", headers)
+        if not isinstance(data, dict) or not isinstance(data.get("results"), list):
+            return None
+        out += data["results"]
+        page = (data.get("pagination") or {}).get("next") or 0
+        if not page:
+            return out
+    return None
+
+
+def binding_rows(apps: list, binds: list, declared: dict, merged: dict) -> list[dict]:
+    """One row per application Authentik holds: declared tier, what is bound, and the verdict. OK is exactly
+    the declared tier's policy and nothing else; an application nothing is bound to is open to every
+    signed-in user. A machine client (authentik_agent_clients) carries no tier by design."""
+    policy = {int(t["tier"]): f"nos-{t.get('name')}" for t in merged.get("authentik_rbac_tiers") or []
+              if isinstance(t, dict) and str(t.get("tier")).isdigit()}
+    machine = {str(c.get("slug")) for c in merged.get("authentik_agent_clients") or [] if isinstance(c, dict)}
+    bound: dict[str, list[str]] = {}
+    for b in binds:
+        if not isinstance(b, dict) or not b.get("enabled", True):
+            continue
+        obj = b.get("policy_obj") or b.get("group_obj") or b.get("user_obj") or {}
+        name = str(obj.get("name") or obj.get("username") or UNKNOWN)
+        bound.setdefault(str(b.get("target")), []).append(("not " if b.get("negate") else "") + name)
+    rows = []
+    for app in sorted((a for a in apps if isinstance(a, dict)), key=lambda a: str(a.get("slug"))):
+        slug, held = str(app.get("slug")), sorted(bound.get(str(app.get("pk")), []))
+        tier = declared.get(slug)
+        want = policy.get(int(tier)) if str(tier).isdigit() else None
+        if tier is None:
+            state = "machine client" if slug in machine else "no declared tier"
+        elif not held:
+            state = NO_BINDING
+        elif want is None:
+            state = UNKNOWN
+        else:
+            state = OK if held == [want] else OTHER_TIER
+        rows.append({"slug": slug, "tier": tier, "want": want, "bound": held, "state": state})
+    return rows
+
+
+def tier_bindings(merged: dict, secrets: dict) -> list[dict] | None:
+    """binding_rows() over the live Authentik, GET only; None when it cannot be asked."""
+    tok = secrets.get("authentik_bootstrap_token") or ""
+    if not tok:
+        return None
+    base = f"http://127.0.0.1:{_port(merged, 'authentik_port', 9003)}/api/v3"
+    hdr = {"Authorization": f"Bearer {tok}"}
+    # superuser_full_list: the plain list holds only what the token's user may open.
+    apps = _pages(f"{base}/core/applications/?superuser_full_list=true", hdr)
+    binds = _pages(f"{base}/policies/bindings/", hdr)
+    if apps is None or binds is None:
+        return None
+    return binding_rows(apps, binds, declared_tiers(merged), merged)
+
+
 def _declared_wing_scopes(name: str) -> str | None:
     """The manifest's wing.* scopes for an agent, sorted+joined; None = not an
     agent (door/operator tokens declare in the mint task instead)."""
@@ -355,6 +445,22 @@ def main() -> int:
         if extra:
             print(f"! {realm:<11} {UNDECLARED}: {', '.join(extra)} — "
                   "present in the realm, absent from nos_identities")
+
+    rows = tier_bindings(merged, secrets)
+    if rows is None:
+        print("? tier bindings unreadable (no token or no answer) — "
+              "which policy each application carries is UNKNOWN, not assumed bound")
+    else:
+        bad = [r for r in rows if r["state"] in (NO_BINDING, OTHER_TIER, UNKNOWN)]
+        print(f"tier bindings ({len(rows)} applications, {len(bad)} not as declared):")
+        for r in rows:
+            mark = "!" if r["state"] in (NO_BINDING, OTHER_TIER) else ("?" if r["state"] == UNKNOWN else " ")
+            print(f"{mark} {r['slug']:<24} tier={'-' if r['tier'] is None else r['tier']!s:<2}"
+                  f" bound={', '.join(r['bound']) or '(nothing)':<20} {r['state']}"
+                  + (f" (declared {r['want']})" if r["state"] == OTHER_TIER else ""))
+        if any(r["state"] == NO_BINDING for r in rows):
+            print("  note: NO BINDING = every signed-in user reaches the application; under "
+                  "authentik_engine: tofu a new application gets its binding on the next converge")
 
     agents = realms.get("_woodpecker_agents")
     if agents is None:
