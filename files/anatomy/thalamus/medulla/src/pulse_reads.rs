@@ -144,7 +144,7 @@ pub fn select(db: &Connection, sql: &str, params: &[&dyn rusqlite::ToSql]) -> ru
 }
 
 /// PHP's json_encode of an array keyed by id: `[]` when empty, else an object.
-fn keyed(m: Map<String, Value>) -> Value {
+pub fn keyed(m: Map<String, Value>) -> Value {
     if m.is_empty() { json!([]) } else { Value::Object(m) }
 }
 

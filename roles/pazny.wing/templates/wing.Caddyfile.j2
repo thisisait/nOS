@@ -103,11 +103,13 @@
     # notifications: GET of the list; Bone's insert and PHP's mark-read stay off it (test_medulla_serves_notifications.py).
     # events: GET of the list only; the callback's HMAC POST and /events/<id> stay PHP's (test_medulla_serves_events.py).
     # hub: GET of the system list and one system (public in PHP too); ?tree, ?listed, POST and /hub/health stay PHP's (test_medulla_serves_hub.py).
+    # security: GET of the advisory and gitleaks lists and one row of each; an advisory id that is not a positive int, the ingest POSTs and /resolve stay PHP's.
 {% set _medulla_reads = {'pulse': ['path_regexp ^/api/v1/(pulse_jobs|pulse_runs|pulse_runs/summary|pulse_runs/[^/]+)$', 'not query since=*', 'not query until=*'],
                          'admin': ['path /api/v1/admin/state'], 'audit': ['path /api/v1/audit/verify'],
                          'inbox': ['path_regexp ^/api/v1/inbox/questions(/[^/]+)?$'],
                          'notifications': ['path /api/v1/notifications'], 'events': ['path /api/v1/events'],
-                         'hub': ['path_regexp ^/api/v1/hub/systems(/[^/]+)?$', 'not query tree=*', 'not query listed=*']} %}
+                         'hub': ['path_regexp ^/api/v1/hub/systems(/[^/]+)?$', 'not query tree=*', 'not query listed=*'],
+                         'security': ['path_regexp ^/api/v1/(advisories(/[1-9][0-9]{0,17})?|gitleaks_findings(/[^/]+)?)$', 'not path_regexp /resolve$']} %}
 {% for name in medulla_read_routes | default([]) %}
     @medulla_read_{{ name }} {
         method GET

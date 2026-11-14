@@ -12,6 +12,7 @@ mod metrics;
 mod notification_reads;
 mod pulse;
 mod pulse_reads;
+mod security_reads;
 
 fn main() -> ExitCode {
     let mut argv = std::env::args();
