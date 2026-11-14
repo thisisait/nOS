@@ -65,6 +65,7 @@ final class AgentSessionRepository
 			'model_uri'     => $row['model_uri'],
 			'outcome_id'    => $row['outcome_id'] ?? null,
 			'parent_ref'    => $row['parent_ref'] ?? null,
+			'limits_json'   => $row['limits_json'] ?? null,
 			'started_at'    => gmdate('c'),
 		];
 		$this->db->table('agent_sessions')->insert($insert);

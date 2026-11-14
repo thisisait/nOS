@@ -573,6 +573,9 @@ CREATE TABLE IF NOT EXISTS agent_sessions (
     -- re-ask. Silent repair is a success marker written by the thing that
     -- failed. Swept in by bin/init-db.php for pre-existing DBs.
     output_repaired INTEGER NOT NULL DEFAULT 0,
+    -- per-run bounds the starter asked for ({max_calls, wall_clock_s, token_ceiling}, each <= the
+    -- estate ceiling); NULL = the estate's. Swept in by bin/init-db.php for pre-existing DBs.
+    limits_json     TEXT,
     started_at      TEXT NOT NULL,
     ended_at        TEXT,
     stop_reason     TEXT,                             -- end_turn | max_tokens | tool_use | error | interrupted

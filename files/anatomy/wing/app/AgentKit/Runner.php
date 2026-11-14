@@ -182,6 +182,9 @@ final class Runner
 		return $uri !== null && (bool) preg_match('#^(anthropic|claude|openai|openclaw)-#', $uri);
 	}
 
+	/** @var array<string, int> per-run limits (validateLimits), [] = the estate's ceilings */
+	private array $runLimits = [];
+
 	/** Session ceilings, reset per run(). Null deadline = no session open. */
 	private ?float $sessionDeadline = null;
 	/** The open session, whose row assertSessionCeiling() reads for a stop. */
@@ -243,8 +246,11 @@ final class Runner
 		?string $sessionUuid = null,
 		?string $imagePath = null,
 		?string $parentRef = null,
+		?array $limits = null,
 	): RunResult {
 		$agent = $this->loader->load($agentName);
+		// Re-checked here: the CLI is callable without the presenter. Never above the estate ceiling.
+		$this->runLimits = self::validateLimits($limits)['limits'];
 		$tools = $this->tools->forAgent($agent);
 
 		// Bind vault for credential resolution
@@ -272,7 +278,8 @@ final class Runner
 		$this->sessionTokensOut = 0;
 		$this->sessionLargestCall = 0;
 		$this->sessionDeadline = microtime(true)
-			+ (float) self::envInt('NOS_AGENT_SESSION_WALL_CLOCK_S', self::SESSION_WALL_CLOCK_S);
+			+ (float) ($this->runLimits['wall_clock_s']
+				?? self::envInt('NOS_AGENT_SESSION_WALL_CLOCK_S', self::SESSION_WALL_CLOCK_S));
 		$this->sessionUuid = $sessionUuid;
 		$this->fallbackContext = [
 			'session_uuid' => $sessionUuid,
@@ -292,6 +299,7 @@ final class Runner
 			'model_uri' => $llm->identifier(),
 			'outcome_id' => $agent->hasOutcome() ? 'outcome_' . substr($sessionUuid, 0, 8) : null,
 			'parent_ref' => $parentRef,
+			'limits_json' => $this->runLimits === [] ? null : json_encode($this->runLimits),
 		]);
 
 		$rootSpan = new Span(
@@ -613,7 +621,8 @@ final class Runner
 		$finalText = '';
 		$synthesisAnnounced = false;
 
-		for ($call = 0; $call < self::MAX_LLM_CALLS_PER_ITERATION; $call++) {
+		$callCap = $this->runLimits['max_calls'] ?? self::MAX_LLM_CALLS_PER_ITERATION;
+		for ($call = 0; $call < $callCap; $call++) {
 			// THE SYNTHESIS TURN (2026-08-18). Measured across all 14 bound
 			// sessions: zero reached `run_end`, and the shape was identical
 			// every time — the model walks the estate, calls a tool, reads the
@@ -633,7 +642,7 @@ final class Runner
 			// this code died on the SESSION TOKEN CEILING at call 23 of 30, so
 			// this reservation was never reached. The other half is the catch
 			// below, which turns that ceiling into the same wrap-up turn.
-			$isSynthesis = $call >= self::MAX_LLM_CALLS_PER_ITERATION - self::SYNTHESIS_CALLS_RESERVED;
+			$isSynthesis = $call >= $callCap - self::SYNTHESIS_CALLS_RESERVED;
 			if ($isSynthesis && !$synthesisAnnounced) {
 				$conversation[] = Message::userText(self::SYNTHESIS_PROMPT);
 				$synthesisAnnounced = true;
@@ -1285,6 +1294,54 @@ final class Runner
 	 * The same shape as `getenv()` returning `false` for unset, one operator
 	 * two hours earlier — falsiness standing in for absence.
 	 */
+	/**
+	 * The estate's ceilings as this process sees them (constants after their env overrides): the most
+	 * a per-run limit may ask for (row iris-subagents-finish).
+	 *
+	 * @return array{max_calls: int, wall_clock_s: int, token_ceiling: int}
+	 */
+	public static function ceilings(): array
+	{
+		return [
+			'max_calls' => self::MAX_LLM_CALLS_PER_ITERATION,
+			'wall_clock_s' => self::envInt('NOS_AGENT_SESSION_WALL_CLOCK_S', self::SESSION_WALL_CLOCK_S),
+			'token_ceiling' => self::envInt('NOS_AGENT_SESSION_TOKEN_CEILING', self::SESSION_TOKEN_CEILING),
+		];
+	}
+
+	/**
+	 * Per-run limits from an untrusted body: null/absent = none; else an object of known keys, each a
+	 * JSON integer >= 1, clamped to ceilings(). Throws \InvalidArgumentException naming the fault.
+	 *
+	 * @return array{limits: array<string, int>, clamped: list<string>}
+	 */
+	public static function validateLimits(mixed $raw): array
+	{
+		if ($raw === null) {
+			return ['limits' => [], 'clamped' => []];
+		}
+		if (!is_array($raw) || ($raw !== [] && array_is_list($raw))) {
+			throw new \InvalidArgumentException('limits must be an object {max_calls?, wall_clock_s?, token_ceiling?}');
+		}
+		$ceil = self::ceilings();
+		$limits = [];
+		$clamped = [];
+		foreach ($raw as $key => $value) {
+			if (!array_key_exists((string) $key, $ceil)) {
+				throw new \InvalidArgumentException("limits has no {$key}");
+			}
+			if (!is_int($value) || $value < 1) {
+				throw new \InvalidArgumentException("limits.{$key} must be an integer >= 1");
+			}
+			if ($value > $ceil[$key]) {
+				$value = $ceil[$key];
+				$clamped[] = (string) $key;
+			}
+			$limits[(string) $key] = $value;
+		}
+		return ['limits' => $limits, 'clamped' => $clamped];
+	}
+
 	private static function envInt(string $name, int $default): int
 	{
 		$raw = getenv($name);
@@ -1315,7 +1372,7 @@ final class Runner
 			&& ($this->sessions->findByUuid($this->sessionUuid)['status'] ?? null) === 'cancelled') {
 			throw new SessionCancelled("session cancelled before {$at}");
 		}
-		$tokenCeiling = self::envInt(
+		$tokenCeiling = $this->runLimits['token_ceiling'] ?? self::envInt(
 			'NOS_AGENT_SESSION_TOKEN_CEILING', self::SESSION_TOKEN_CEILING
 		);
 		// HEADROOM, so the run can still SAY something (2026-08-18). Measured on

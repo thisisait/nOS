@@ -8,6 +8,7 @@ use App\AgentKit\AgentLoader;
 use App\AgentKit\AgentLoadException;
 use App\AgentKit\OperatorTrigger;
 use App\AgentKit\OperatorTriggerException;
+use App\AgentKit\Runner;
 use App\Model\AgentSessionRepository;
 use Nette\Http\IResponse;
 
@@ -145,6 +146,9 @@ final class AgentsPresenter extends BaseApiPresenter
 	 *   parent?: string   — the run this one is started for: a Wing session
 	 *                       uuid the caller can see (else 404, like absent), or
 	 *                       thalamus:<uuid> (an Iris run; shape-checked only)
+	 *   limits?: object   — per-run bounds {max_calls?, wall_clock_s?, token_ceiling?}:
+	 *                       integers >= 1, unknown keys 400, each clamped to the
+	 *                       estate ceiling; the 202 says limits_applied + clamped
 	 *
 	 * actor_id is NEVER read from the body. It is always
 	 * $this->validatedToken['name'] via getActorId(). Any 'actor_id' key in
@@ -176,6 +180,13 @@ final class AgentsPresenter extends BaseApiPresenter
 		}
 		if ($this->endUser !== null && !$this->endUser->operator && ($agent->metadata['end_user'] ?? false) !== true) {
 			$this->sendError("agent '{$name}' is not open to end users (metadata.end_user)", 403);
+		}
+		// Trust boundary for per-run limits (row iris-subagents-finish): validated and clamped here,
+		// bound to the session this presenter spawns for the forwarded identity, never to a client id.
+		try {
+			$limits = Runner::validateLimits($body['limits'] ?? null);
+		} catch (\InvalidArgumentException $exc) {
+			$this->sendError($exc->getMessage(), 400);
 		}
 		$prompt = isset($body['prompt']) && is_string($body['prompt']) ? $body['prompt'] : null;
 		$vault  = isset($body['vault'])  && is_string($body['vault'])  ? $body['vault']  : null;
@@ -225,6 +236,7 @@ final class AgentsPresenter extends BaseApiPresenter
 				prompt: $prompt,
 				vault: $vault,
 				parentRef: $parent,
+				limits: $limits['limits'] === [] ? null : $limits['limits'],
 			);
 		} catch (OperatorTriggerException $exc) {
 			$code = $exc->getCode();
@@ -238,6 +250,8 @@ final class AgentsPresenter extends BaseApiPresenter
 		$this->sendSuccess([
 			'session_uuid' => $res['session_uuid'],
 			'status' => 'starting',
+			'limits_applied' => $limits['limits'] === [] ? null : $limits['limits'],
+			'clamped' => $limits['clamped'],
 			'agent_name' => $name,
 			'actor_id' => $actorId,
 			'pid' => $res['pid'],
