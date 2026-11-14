@@ -208,6 +208,60 @@ def frontier_ring(rows: list[dict]) -> dict:
             "cycles": cycles, "missing_parent": sorted(missing), "ungrown": ungrown}
 
 
+def row_view(rows: list[dict], slug: str) -> dict:
+    """One row (`--row`, row dtt-row-reader): its columns, body, children one level down, the spec verdict
+    and the frontier verdict, read off frontier() from the top of its parent chain. Reads only."""
+    by_slug = {r.get("slug"): r for r in rows if r.get("slug")}
+    r = by_slug.get(slug)
+    if r is None:
+        return {"state": "ok", "slug": slug, "found": False}
+    top, seen = r, {slug}
+    while top.get("parent") and top.get("parent") in by_slug and top.get("parent") not in seen:
+        seen.add(top.get("parent"))
+        top = by_slug[top.get("parent")]
+    ready, missing = spec_ready(r.get("body"))
+    verdict: dict = {"verdict": "not open", "status": r.get("status")}
+    if r.get("status") in OPEN and top is not r:
+        if top.get("slug") not in ring_order():
+            verdict = {"verdict": "ungrown", "top": top.get("slug")}
+        else:
+            f = frontier(rows, top.get("slug"))
+            hit = next((i for i in f.get("frontier", []) if i["slug"] == slug), None)
+            held = next((i for i in f.get("blocked", []) if i["slug"] == slug), None)
+            if hit:
+                verdict = {"verdict": "buildable", "system": top.get("slug")}
+            elif held:
+                verdict = {"verdict": "blocked", "by": held["blocked_by"], "by_status": held["blocked_by_status"]}
+    kids = sorted((c for c in rows if c.get("parent") == slug), key=order)
+    return {"state": "ok", "slug": slug, "found": True,
+            "columns": {k: v for k, v in r.items() if k != "body"}, "body": r.get("body") or "",
+            "children": [{k: c.get(k) for k in ("slug", "title", "status")} for c in kids],
+            "spec": {"ready": ready, "missing": missing}, "frontier": verdict}
+
+
+def print_row(v: dict) -> None:
+    if v["state"] != "ok":
+        print(f"UNKNOWN: row `{v['slug']}` — {v['reason']}. Not an absent row.")
+        return
+    if not v["found"]:
+        print(f"no such row: {v['slug']}")
+        return
+    for k, val in v["columns"].items():
+        if val not in (None, ""):
+            print(f"{k}: {val}")
+    print("\n" + (v["body"].rstrip() or "(no body)") + "\n")
+    print(f"children ({len(v['children'])}):")
+    for c in v["children"]:
+        print(f"  [{c['status'] or '?':6s}] {c['slug']}  {c['title'] or ''}")
+    s = v["spec"]
+    print("spec: ready" if s["ready"] else "spec: needs-spec (" + ", ".join(f"no {m}" for m in s["missing"]) + ")")
+    f = v["frontier"]
+    print({"buildable": f"frontier: buildable (under {f.get('system')})",
+           "blocked": f"frontier: blocked by {f.get('by')} ({f.get('by_status')})",
+           "ungrown": f"frontier: not on any frontier (its top `{f.get('top')}` is no organ system)"}.get(
+          f["verdict"], f"frontier: not open (status {f.get('status')})"))
+
+
 def print_frontier(f: dict) -> None:
     if f["state"] != "ok":
         print(f"UNKNOWN: frontier under `{f['root']}` — {f['reason']}. Not an empty frontier.")
@@ -243,8 +297,11 @@ def main() -> int:
     ap.add_argument("--status", help="restrict to these statuses, comma-separated (e.g. active,next)")
     ap.add_argument("--schema", action="store_true", help="declared columns vs the live table")
     ap.add_argument("--json", action="store_true", help="machine-readable")
-    ap.add_argument("--frontier", metavar="ROOT",
-                    help="open rows under ROOT whose ancestors are all shipped; the rest name their blocker")
+    mode = ap.add_mutually_exclusive_group()
+    mode.add_argument("--frontier", metavar="ROOT",
+                      help="open rows under ROOT whose ancestors are all shipped; the rest name their blocker")
+    mode.add_argument("--row", metavar="SLUG",
+                      help="one row: columns, body, children, spec verdict and frontier verdict (reads only)")
     ap.add_argument("--knowledge", action="store_true",
                     help="one markdown file of the board (bodies whole) to attach to a conversation")
     args = ap.parse_args()
@@ -253,6 +310,11 @@ def main() -> int:
         table = get(BASE)["data"]
         rows = [r.get("values", r) for r in paged(get, BASE + "/rows")["data"]["rows"]]
     except (urllib.error.URLError, OSError, KeyError, ValueError, SystemExit) as exc:
+        if args.row:  # a reader: UNKNOWN and exit 0, never "no such row"
+            v = {"state": "UNKNOWN", "slug": args.row, "reason": f"board unreadable: {exc}"}
+            json.dump(v, sys.stdout) if args.json else print_row(v)
+            print()
+            return 0
         if args.frontier:  # a reader: UNKNOWN and exit 0, never an empty frontier
             f = {"state": "UNKNOWN", "root": args.frontier, "reason": f"board unreadable: {exc}"}
             json.dump(f, sys.stdout) if args.json else print_frontier(f)
@@ -265,6 +327,12 @@ def main() -> int:
         print(f"CANNOT READ the roadmap table: {exc}", file=sys.stderr)
         print(f"  tried {BASE} — is KEAP up? (`docker ps --filter name=keap`)", file=sys.stderr)
         return 2
+
+    if args.row:
+        v = row_view(rows, args.row)
+        json.dump(v, sys.stdout, indent=1, ensure_ascii=False) if args.json else print_row(v)
+        print()
+        return 0
 
     if args.frontier:
         f = frontier_ring(rows) if args.frontier == "ring" else frontier(rows, args.frontier)

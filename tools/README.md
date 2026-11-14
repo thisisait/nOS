@@ -94,7 +94,7 @@ Each line here is a `reader:` node of the anatomy graph, a sense.
 - `managed-status.py` — Every managed dir: what a blank does to it × what the backup does with it, one table from the artifacts (`--gaps`, `--json`; the cc pane `managed`).
 - `stale-config-status.py` — Containers running config the estate has already replaced.
 - `rem-status.py` — What the security queue says, right now.
-- `roadmap-status.py` — What the roadmap says, right now.
+- `roadmap-status.py` — What the roadmap says, right now. `--row SLUG`: one row — columns, body, children, spec and frontier verdict.
 - `skill-status.py` — What is on the shelf, who should be holding it, and who actually is.
 - `snapshot-status.py` — Is there a net under the next converge, and what exactly does it hold?
 - `stuck-status.py` — What has STOPPED MOVING — which is a different question from what is broken.
