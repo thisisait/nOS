@@ -12,6 +12,7 @@ mod intents;
 mod metrics;
 mod notification_reads;
 mod patch_reads;
+mod pentest_reads;
 mod pulse;
 mod pulse_reads;
 mod remediation_reads;
