@@ -122,6 +122,7 @@ fn serve_main(args: &[String]) -> Result<(), String> {
             agents: std::env::var("NOS_IRIS_STARTABLE_AGENTS").unwrap_or_default().split(',').map(str::trim)
                 .filter(|a| !a.is_empty()).map(str::to_string).collect(),
         },
+        quiet: Default::default(),
     };
     let srv = Arc::new(srv);
     // One line tools/thalamus-status.py reads: bound iff the secret is set. A failed bind keeps the socket serving.

@@ -211,6 +211,7 @@ fn rig_cx(name: &str, b: Binding, models: Vec<String>, cortex: Option<Cortex>, e
         data: d.clone(),
         tree_max: 50,
         wing: Default::default(),
+        quiet: Default::default(),
     };
     let sock = d.join("t.sock");
     let listener = serve::bind(&sock, 0o600).unwrap();

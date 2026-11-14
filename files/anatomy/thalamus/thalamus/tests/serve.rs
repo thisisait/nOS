@@ -216,6 +216,7 @@ fn rig_deciders(name: &str, map: serde_json::Value, (keap_url, keap): (String, S
         } else { d.clone() },
         tree_max: 50,
         wing: WING.with(|w| w.take()),
+        quiet: Default::default(),
     };
     let sock = d.join("t.sock");
     let listener = serve::bind(&sock, SOCK_MODE.with(|m| m.get())).unwrap();

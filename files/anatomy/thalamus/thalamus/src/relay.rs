@@ -20,6 +20,9 @@ const HELLO: [&str; 6] = ["relay", "secret", "uid", "username", "groups", "tab"]
 /// It grants strictly less than a tab (row face-awaiting-unreachable-kinds, ruled 2026-11-13).
 const READ: &str = "read";
 const MAX_HELLO: u64 = 8 << 10;
+/// The refusals before the secret is read (a port probe, a stray line): counted, not said each time.
+const NO_HELLO: &str = "no relay hello";
+const NOT_HELLO: &str = "the first line is not a relay hello";
 /// A tab that says nothing is closed, not held.
 const HELLO_SECS: u64 = 10;
 /// How long a new tab waits for the tab it takes over to close its session (then goes on).
@@ -74,7 +77,7 @@ impl Relay {
 
     /// The person and tab a hello names, or why not; the reason never carries the secret.
     fn hello(&self, line: &str) -> Result<(serve::Person, String, String, Value, bool), String> {
-        let not = || "the first line is not a relay hello".to_string();
+        let not = || NOT_HELLO.to_string();
         let v: Value = serde_json::from_str(line).map_err(|_| not())?;
         let o = v.as_object().filter(|o| HELLO.iter().all(|k| o.contains_key(*k))).ok_or_else(not)?;
         let read = match o.len() - HELLO.len() {
@@ -117,12 +120,14 @@ impl Relay {
         let read = input.by_ref().take(MAX_HELLO).read_line(&mut line);
         let said = match read {
             Ok(_) if line.ends_with('\n') => self.hello(&line),
-            _ => Err("no relay hello".into()),
+            _ => Err(NO_HELLO.into()),
         };
         let (who, id, tab, groups, read) = match said {
             Ok(x) => x,
             Err(why) => {
-                self.srv.say(format!("refused a relay hello: {why}"));
+                // A wrong secret or a person the map cannot name is said every time.
+                let line = format!("refused a relay hello: {why}");
+                if why == NO_HELLO || why == NOT_HELLO { self.srv.quiet(line) } else { self.srv.say(line) }
                 refuse(&mut out, &why);
                 // Closing over unread bytes is a TCP reset that can beat the refusal: drain, never parse.
                 let _ = out.shutdown(Shutdown::Write);
