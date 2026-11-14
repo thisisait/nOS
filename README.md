@@ -79,6 +79,12 @@ Bootstrap creates two gitignored files, `config.yml` and `credentials.yml`. `con
 holds your choices: which services to install (`install_<service>: true|false`), your
 domain (`tenant_domain`), and where data lives.
 
+Every setting has a committed default, and `config.yml` overrides it. The defaults are one
+set of layers: `config.d/*.yml` by domain (for example `wing_port` is declared in
+`config.d/25-host-organs.yml`), then the remainder, which holds the `install_*` switches
+and the version pins. To see the value your estate actually resolves, ask
+`tools/estate-status.py --config wing_port`.
+
 The profile builder writes a `config.yml` for you from a few questions and a choice of
 profiles. It is published with each release; until then, build it locally with
 `tools/profile-builder-build.py --out /tmp/pb` and open `/tmp/pb/index.html`. Committed

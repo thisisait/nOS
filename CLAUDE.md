@@ -44,7 +44,7 @@ forked from geerlingguy/mac-dev-playbook. User-facing overview: [README.md](READ
 This checkout is the **source**. A deployed nOS runs from elsewhere on the host
 (`~/stacks`, `~/wing`, `~/keap/src`, `~/face/src`, launchd/systemd organs); only a
 converge moves source into runtime. So a git ref answers "what is in the repo", never
-"what is running", and `default.config.yml` is not the value the estate uses —
+"what is running", and a committed default is not the value the estate uses —
 `config.yml` (gitignored) overrides it. Do not hand-derive any of this; ask a reader:
 
 ```bash
@@ -83,7 +83,7 @@ without `--confirm` is always a dry run. Cloud sessions: [docs/cloud-e2e.md](doc
 
 ## Configuration layering (later wins)
 
-1. `config.d/*.yml` (lexical order) then `default.config.yml` — every variable with a default,
+1. `config.d/*.yml` (lexical order) then the remainder, `default.config.yml` — every variable with a default,
    each in exactly one file (committed; the set is `tools/nos_identity.default_layers()`)
 2. `default.credentials.yml` — the secret declarations (committed). Most derive one-way from
    `nos_derived_secrets` (HKDF); a shrinking minority still use the legacy
@@ -93,8 +93,9 @@ without `--confirm` is always a dry run. Cloud sessions: [docs/cloud-e2e.md](doc
 4. `credentials.yml` — your secret overrides (gitignored)
 
 `vars_files` outrank role `defaults/main.yml`, so a version pin lives only in
-the default layers, and a Docker image pin in `default.config.yml` itself (the one
-file the upgrade path writes). Feature toggles are `install_*` / `configure_*` booleans.
+the default layers. A setting (a port, a domain, a path) lives in its `config.d/` domain
+layer; every `install_*` / `configure_*` switch and every pin live in the remainder,
+`default.config.yml` (the one file the upgrade path writes).
 
 ## Architecture in brief
 

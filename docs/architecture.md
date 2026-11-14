@@ -37,6 +37,17 @@ Each role renders `templates/compose.yml.j2` into
   iiab_terminal, backup, state_manager, dotfiles, `mac.*`) are wired via `import_role` in
   `main.yml` and install on the host.
 
+## Where a default is declared
+
+The committed defaults are one layer set, loaded in this order: `config.d/*.yml` in lexical order
+(`05-filesystem`, `10-host-desktop`, `20-host-software`, `25-host-organs`, `30-edge`, `35-identity`, `40-data`,
+`50-observability`, `60-agents`, `70-geo`, `80-apps`), then the remainder. Every variable is declared in
+exactly one of them (`tools/nos_identity.default_layers()` is the list). A setting lives in its domain layer:
+`wing_port` is in `config.d/25-host-organs.yml`. The remainder, `default.config.yml`, keeps the `install_*` /
+`configure_*` switches and the version and image pins, because the upgrade path writes only that file.
+`config.yml` overrides all of them, so the declared default is not what a host uses:
+`tools/estate-status.py --config wing_port` prints the resolved value.
+
 ## Playbook execution flow (`main.yml`)
 
 1. Password-prefix prompt — only on a confirmed removal (`remove=data|deep|all` + `confirm=true`).
@@ -62,7 +73,8 @@ tasks may assume MariaDB, PostgreSQL, Authentik, Infisical, Grafana, Loki and Te
 Bring-up is non-blocking `docker compose up -d`; `tasks/stacks/wait-stacks-healthy.yml` →
 `files/anatomy/scripts/stack-health-probe.py` then prints a per-stack readiness line every
 tick (`iiab: 17/18 ready (waiting: jellyfin[starting])`). The wait is **strict** — every
-container must reach healthy. Tuning vars in `default.config.yml`:
+container must reach healthy. Tuning vars (declared in the remainder of the default layers; read a resolved
+value with `tools/estate-status.py --config stack_up_wait_timeout`):
 
 | var | default | meaning |
 |---|---|---|
