@@ -85,10 +85,14 @@ def main(argv: list[str] | None = None) -> int:
             if digest == pinned:
                 print(f"  ok     {key}: pin current")
                 continue
-            att = gh("attestation", "verify", str(path), "-R", UPSTREAM, "--signer-workflow", SIGNER)
+            # the signer alone is not enough: upstream's nightly re-uploads main-HEAD builds onto the release,
+            # signed by the same workflow (2026-11-14). Only a build from the version's own tag is that version.
+            att = gh("attestation", "verify", str(path), "-R", UPSTREAM, "--signer-workflow", SIGNER,
+                     "--source-ref", f"refs/tags/v{version}")
             if att.returncode != 0:
                 refused.append(key)
-                print(f"  REFUSE {key}: {digest[:12]} is not signed by {SIGNER}: {att.stderr.strip()[:200]}")
+                print(f"  REFUSE {key}: {digest[:12]} is not signed by {SIGNER} from refs/tags/v{version}: "
+                      f"{att.stderr.strip()[:200]}")
                 continue
             changed[key] = digest
             print(f"  stale  {key}: {pinned[:12]} -> {digest[:12]} (attested by {SIGNER})")
