@@ -1196,11 +1196,15 @@
             ak apply_blueprint "/blueprints/custom/${bp}.yaml" >/dev/null 2>&1 || echo "NOS_BLUEPRINT_FAILED ${bp}"
         done
       # Output discarded: an invalid entry is logged WITH its password; only names
-      # come back. A failed 00 fails the run (no akadmin, no operator login);
-      # the rest stay best-effort, read back by tasks/verify-authentik-apps.yml.
+      # come back. A failed 00 fails the run (no akadmin, no operator login), and a failed 20
+      # (no tier gate). Under tofu 20 may run before its applications exist, so there
+      # tasks/tofu-authentik.yml re-applies it and fails. The rest: verify-authentik-apps.yml.
       register: _ak_blueprint_apply
       changed_when: false
-      failed_when: "'NOS_BLUEPRINT_FAILED 00-admin-groups' in _ak_blueprint_apply.stdout"
+      failed_when: >-
+        'NOS_BLUEPRINT_FAILED 00-admin-groups' in _ak_blueprint_apply.stdout
+        or ((authentik_engine | default('blueprint')) != 'tofu'
+            and 'NOS_BLUEPRINT_FAILED 20-rbac-policies' in _ak_blueprint_apply.stdout)
       when: install_authentik | default(false) | bool  # core-up's plugin loader notifies it on every estate
 
   roles:
@@ -2721,10 +2725,9 @@
     # (default) → plan-only drift detector. engine=tofu → tofu apply provisions
     # providers+apps+outpost attachments (the other six blueprints already
     # applied in core-up still own groups/MFA/RBAC/agents/enrollment/brand).
-    # Path-B note: tier RBAC (20-rbac-policies, applied in core-up) binds to
-    # apps by slug — under engine=tofu those apps are created HERE, after that
-    # bind ran, so tier RBAC lands on the SECOND converge. SSO itself is live
-    # on the first pass. See docs/opentofu-authentik-cutover.md.
+    # Tier RBAC (20-rbac-policies) binds to apps by slug — under engine=tofu those
+    # apps are created HERE, so the task file re-applies 20 right after its apply
+    # and fails the run if that fails. See docs/opentofu-authentik-cutover.md.
     - name: "[tofu] Authentik OpenTofu engine (plan-only unless engine=tofu)"
       ansible.builtin.import_tasks: tasks/tofu-authentik.yml
       when:

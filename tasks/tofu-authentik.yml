@@ -424,3 +424,16 @@
         - (authentik_engine | default('blueprint')) == 'tofu'
         - _tofu_destroy_split.unexplained | length == 0
         - _tofu_bad_updates | length == 0
+
+    # Blueprint 20 is the ONE owner of the tier binding under both engines (operator 2026-11-14). It ran
+    # before this apply created the applications, so a new one was open to every signed-in user until a
+    # later handler run. Same call as the handler (output discarded: an invalid entry prints attributes).
+    - name: "[tofu-authentik] Re-apply the tier bindings (20-rbac-policies) to the applications tofu holds"
+      ansible.builtin.shell: |
+        {{ docker_bin }} compose -p infra exec -T -u root authentik-worker \
+          ak apply_blueprint /blueprints/custom/20-rbac-policies.yaml >/dev/null 2>&1
+      changed_when: false
+      when:
+        - (authentik_engine | default('blueprint')) == 'tofu'
+        - _tofu_destroy_split.unexplained | length == 0
+        - _tofu_bad_updates | length == 0

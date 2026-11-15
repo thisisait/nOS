@@ -28,7 +28,10 @@
         ak apply_blueprint "/blueprints/custom/${bp}.yaml" >/dev/null 2>&1 || echo "NOS_BLUEPRINT_FAILED ${bp}"
     done
   # Mirror of the main.yml handler: names only (an invalid entry is logged
-  # WITH its password); a failed 00 fails, the rest stay best-effort.
+  # WITH its password); a failed 00 fails, and a failed 20 outside tofu; the rest stay best-effort.
   register: _ak_blueprint_apply
   changed_when: false
-  failed_when: "'NOS_BLUEPRINT_FAILED 00-admin-groups' in _ak_blueprint_apply.stdout"
+  failed_when: >-
+    'NOS_BLUEPRINT_FAILED 00-admin-groups' in _ak_blueprint_apply.stdout
+    or ((authentik_engine | default('blueprint')) != 'tofu'
+        and 'NOS_BLUEPRINT_FAILED 20-rbac-policies' in _ak_blueprint_apply.stdout)
