@@ -142,6 +142,7 @@
 - name: "[Verify] Every application carries its RBAC tier binding (20-rbac-policies)"
   ansible.builtin.assert:
     that:
+      - _verify_rendered | length > 0  # no rendered 20 = nothing compared, never "every one held"
       - _verify_declared | length == _verify_rendered | regex_findall('authentik_policies[.]policybinding') | length
       - (_verify_ak_bindings.json.pagination.next | default(0) | int) == 0
       - _verify_unbound | length == 0
