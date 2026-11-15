@@ -135,8 +135,7 @@ def test_php_and_the_medulla_answer_every_scan_read_the_same(tmp_path, monkeypat
             seen = lambda url: json.loads(got[read[URLS.index(url)]][2])  # noqa: E731
             _shape(name, seen)
     finally:
-        proc.kill()
-        proc.wait()
+        m._stop(proc)
 
 
 def _shape(name: str, seen) -> None:

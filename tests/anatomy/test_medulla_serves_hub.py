@@ -90,8 +90,7 @@ def test_php_and_the_medulla_answer_every_hub_read_the_same(tmp_path, monkeypatc
         got = [p._medulla_get(port, c["url"], c["headers"]) for c in cases]
         handed_back = [p._medulla_get(port, f"{LIST}?{q}", {})[0] for q in ("tree=1", "listed=1")]
     finally:
-        proc.kill()
-        proc.wait()
+        m._stop(proc)
     assert hashlib.sha256(db.read_bytes()).hexdigest() == before, "a medulla read changed wing.db"
     assert handed_back == [404, 404], f"the medulla answered a ?tree or ?listed list: {handed_back}"
     r = subprocess.run(["php", "-d", "error_reporting=E_ALL", "-r", _PHP, str(m.AUTOLOAD), str(db), json.dumps(cases)],
