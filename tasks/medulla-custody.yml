@@ -35,7 +35,7 @@
     wing_intents_token: "{{ _held.WING_INTENTS_TOKEN if (_held.WING_INTENTS_TOKEN | default('') | length) >= 32 else lookup('pipe', 'openssl rand -hex 32') }}"
     _medulla_custody_had: "{{ _held }}"
   vars:
-    _env_lines: "{{ ((_medulla_env_file.content | default('') | b64decode) if (_medulla_env_file.content is defined) else '').splitlines() }}"
+    _env_lines: "{{ ((_medulla_env_file.content | default('', true) | b64decode) if (_medulla_env_file.content is defined) else '').splitlines() }}"
     _from_env: >-
       {%- set d = {} -%}
       {%- for l in _env_lines if '=' in l and not l.startswith('#') -%}
