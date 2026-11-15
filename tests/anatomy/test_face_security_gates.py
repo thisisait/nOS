@@ -81,11 +81,12 @@ def test_bff_never_reads_uid_from_client():
 
 
 def test_upstream_tokens_are_server_only():
-    """The Bone/KEAP tokens (via $env/dynamic/private) must never reach client code."""
+    """The Bone/KEAP tokens (via $app/env/private, Kit 2's $env/dynamic/private) must never reach client code."""
     offenders = []
     for p in _shell_files():
         rel = p.relative_to(FACE_SRC).as_posix()
-        if "$env/dynamic/private" not in p.read_text(encoding="utf-8"):
+        text = p.read_text(encoding="utf-8")
+        if "$app/env/private" not in text and "$env/dynamic/private" not in text:
             continue
         if not (rel == "hooks.server.ts" or rel.startswith("lib/server/") or rel.endswith("+server.ts")):
             offenders.append(str(p.relative_to(REPO)))

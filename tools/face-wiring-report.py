@@ -19,7 +19,7 @@ Checks:
   6. uid discipline: BFF endpoints never read uid from the client (query/body) —
      it is pinned from locals.identity only.
   7. Edge-trust: hooks.server.ts enforces FACE_EDGE_TOKEN (403 on mismatch).
-  8. Token isolation: `$env/dynamic/private` is imported only server-side.
+  8. Token isolation: `$app/env/private` (Kit 2: `$env/dynamic/private`) is imported only server-side.
 
 Usage:
   python3 tools/face-wiring-report.py            # print report, exit 0
@@ -158,15 +158,16 @@ def check_edge_trust() -> list[str]:
 
 
 def check_token_isolation() -> list[str]:
-    """`$env/dynamic/private` (tokens) must be imported only server-side."""
+    """`$app/env/private` (Kit 2: `$env/dynamic/private`, tokens) must be imported only server-side."""
     fails = []
     for p in _iter_src(".ts", ".svelte"):
         rel = p.relative_to(SRC).as_posix()
-        if "$env/dynamic/private" not in p.read_text(encoding="utf-8"):
+        text = p.read_text(encoding="utf-8")
+        if "$app/env/private" not in text and "$env/dynamic/private" not in text:
             continue
         server_ok = rel == "hooks.server.ts" or rel.startswith("lib/server/") or rel.endswith("+server.ts")
         if not server_ok:
-            fails.append(f"$env/dynamic/private imported in client file {p.relative_to(REPO)}")
+            fails.append(f"private env imported in client file {p.relative_to(REPO)}")
     return fails
 
 
