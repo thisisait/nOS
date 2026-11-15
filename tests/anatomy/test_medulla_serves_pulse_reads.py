@@ -94,7 +94,7 @@ def test_caddy_sends_only_the_reads_to_the_medulla(tmp_path, reads):
         medulla_routes=[], medulla_read_routes=reads, medulla_http_port=stub.server_address[1])
     (tmp_path / "Caddyfile").write_text(conf.replace(":9000 {", f":{port} {{"))  # never the live Wing's :9000
     p = subprocess.Popen([m._frankenphp(), "run", "--config", str(tmp_path / "Caddyfile")],
-                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, start_new_session=True)
     try:
         m._wait(p, port, "frankenphp served the rendered Caddyfile", php_log=tmp_path / "access.log")
         for method, path, who in ROUTING:
@@ -115,8 +115,7 @@ def test_caddy_sends_only_the_reads_to_the_medulla(tmp_path, reads):
                 urllib.request.urlopen(req, timeout=10)
             assert e.value.code == 415, "a multipart body reached the medulla before Wing's 415"
     finally:
-        p.kill()
-        p.wait()
+        m._stop(p)
         stub.shutdown()
 
 
@@ -263,8 +262,7 @@ def test_php_and_the_medulla_answer_every_read_the_same(tmp_path, monkeypatch):
     try:
         got = [_medulla_get(port, c["url"], c["headers"]) for c in cases]
     finally:
-        proc.kill()
-        proc.wait()
+        m._stop(proc)
     paths = m.yaml.safe_load(m.OPENAPI.read_text(encoding="utf-8"))["paths"]
     codes: dict[tuple[str, int], int] = {}
     for c, want, (code, ctype, body) in zip(cases, php, got):

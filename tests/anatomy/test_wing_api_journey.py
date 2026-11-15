@@ -65,7 +65,8 @@ def _serve(tmp_path: Path, index_php: str):
     (tmp_path / "Caddyfile").write_text(conf.replace("admin off", "admin off\n    persist_config off", 1))
     proc = subprocess.Popen([str(_frankenphp()), "run", "--config", str(tmp_path / "Caddyfile")],
                             cwd=tmp_path, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                            env={**os.environ, "XDG_DATA_HOME": str(tmp_path), "XDG_CONFIG_HOME": str(tmp_path)})
+                            env={**os.environ, "XDG_DATA_HOME": str(tmp_path), "XDG_CONFIG_HOME": str(tmp_path)},
+                            start_new_session=True)
     _metrics._wait(proc, port, "frankenphp served the rendered Caddyfile", php_log=tmp_path / "access.log")
     return proc, port
 
@@ -112,8 +113,7 @@ def test_a_logged_api_call_carries_no_credential(tmp_path):
                 break
             time.sleep(0.1)
     finally:
-        proc.terminate()
-        proc.wait(timeout=10)
+        _metrics._stop(proc)
     text = log.read_text() if log.exists() else ""
     assert SECRET not in text, "a credential reached the api access log"
     rows = [json.loads(line) for line in text.splitlines()]
@@ -152,8 +152,7 @@ def test_a_multipart_post_never_reaches_php(tmp_path):
             assert not (tmp_path / "hit").exists(), f"PHP ran for {ctype}"
         assert post("application/json", b"{}") == 200, "a JSON POST no longer reaches PHP"
     finally:
-        proc.terminate()
-        proc.wait(timeout=10)
+        _metrics._stop(proc)
 
 
 # ── test_wing_upload_progress_off ───────────────────────────────────────────

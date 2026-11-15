@@ -88,8 +88,7 @@ def test_php_and_the_medulla_answer_every_events_read_the_same(tmp_path, monkeyp
     try:
         got = [p._medulla_get(port, c["url"], c["headers"]) for c in cases]
     finally:
-        proc.kill()
-        proc.wait()
+        m._stop(proc)
     assert hashlib.sha256(db.read_bytes()).hexdigest() == before, "a medulla read changed wing.db"
     r = subprocess.run(["php", "-d", "error_reporting=E_ALL", "-r", _PHP, str(m.AUTOLOAD), str(db), json.dumps(cases)],
                        capture_output=True, text=True, timeout=300, check=False, cwd=m.WING)

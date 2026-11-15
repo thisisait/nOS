@@ -103,8 +103,7 @@ def test_php_and_the_medulla_answer_every_remediation_read_the_same(tmp_path, mo
         got = [p._medulla_get(port, c["url"], c["headers"]) for c in cases + neg]
         handed_back = [p._medulla_get(port, u, p.AUTH["wing.read"])[0] for u in HANDED_BACK]
     finally:
-        proc.kill()
-        proc.wait()
+        m._stop(proc)
     assert hashlib.sha256(db.read_bytes()).hexdigest() == before, "a medulla read changed wing.db"
     assert handed_back == [404] * len(HANDED_BACK), f"the medulla answered a path PHP keeps: {handed_back}"
     r = subprocess.run(["php", "-d", "error_reporting=E_ALL", "-r", _PHP, str(m.AUTOLOAD), str(db), json.dumps(cases + neg)],

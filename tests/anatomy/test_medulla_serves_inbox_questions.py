@@ -76,8 +76,7 @@ def _medulla_answers(exe, db, cases):
     try:
         return [p._medulla_get(port, c["url"], c["headers"]) for c in cases]
     finally:
-        proc.kill()
-        proc.wait()
+        m._stop(proc)
 
 
 @m.needs_cargo

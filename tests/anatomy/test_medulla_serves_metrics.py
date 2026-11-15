@@ -14,6 +14,7 @@ import os
 import pathlib
 import re
 import shutil
+import signal
 import socket
 import subprocess
 import time
@@ -117,7 +118,7 @@ def _free_port() -> int:
 def _serve(exe: pathlib.Path, db: pathlib.Path):
     port = _free_port()
     p = subprocess.Popen([str(exe), "wing", "serve", "--db", str(db), "--port", str(port)],
-                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, start_new_session=True)
     _wait(p, port, "the medulla answered /api/v1/metrics")
     return p, port
 
@@ -137,6 +138,21 @@ def _wait(p: subprocess.Popen, port: int, what: str, php_log: pathlib.Path | Non
     p.kill()
     out, _ = p.communicate()
     pytest.fail(f"{what}: no (exit {p.returncode}) {out}")
+
+
+def _stop(p: subprocess.Popen, grace: float = 5.0) -> None:
+    # frankenphp can ignore SIGTERM (a request caught in its startup gap) and 21 servers outlived their tests
+    # (2026-11-15): SIGTERM, `grace` s, then SIGKILL to the group this pid leads. The pid we spawned, never a name.
+    if p.poll() is None:
+        p.terminate()
+        try:
+            p.wait(timeout=grace)
+        except subprocess.TimeoutExpired:
+            try:
+                os.killpg(p.pid, signal.SIGKILL)  # start_new_session made it the leader: its children go too
+            except (ProcessLookupError, PermissionError):
+                p.kill()  # started without its own session
+    p.wait()
 
 
 def _get(port: int, path: str) -> tuple[int, str, str]:
@@ -213,20 +229,18 @@ def test_php_and_the_medulla_answer_metrics_the_same(tmp_path):
     env = {**os.environ, "H_WING": str(WING), "H_AUTOLOAD": str(AUTOLOAD), "H_DB": str(db)}
     php_port = _free_port()
     srv = subprocess.Popen(["php", "-S", f"127.0.0.1:{php_port}", str(router)], cwd=tmp_path, env=env,
-                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, start_new_session=True)
     try:
         _wait(srv, php_port, "php -S answered")
         php_code, php_type, php_body = _get(php_port, "/api/v1/metrics")
     finally:
-        srv.kill()
-        srv.wait()
+        _stop(srv)
     exe = _medulla(tmp_path)
     proc, port = _serve(exe, db)
     try:
         code, ctype, body = _get(port, "/api/v1/metrics")
     finally:
-        proc.kill()
-        proc.wait()
+        _stop(proc)
     declared = _declared_codes()
     assert php_code in declared and code in declared, (php_code, code, declared, php_body)
     assert code == php_code == 200, php_body
@@ -254,8 +268,7 @@ def test_the_medulla_listens_on_loopback_only_and_answers_nothing_else(tmp_path)
             s.sendall(b"GET /" + b"a" * 9 * 1024 + b" HTTP/1.1\r\nHost: x\r\n\r\n")
             assert s.recv(64).startswith(b"HTTP/1.1 413"), "a 9 KiB request line was not refused"
     finally:
-        proc.kill()
-        proc.wait()
+        _stop(proc)
 
 
 # ── the host env ────────────────────────────────────────────────────────────

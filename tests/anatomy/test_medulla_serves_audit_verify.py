@@ -84,8 +84,7 @@ def test_php_and_the_medulla_answer_every_verdict_the_same(tmp_path, monkeypatch
         try:
             got = [p._medulla_get(port, c["url"], c["headers"]) for c in cases]
         finally:
-            proc.kill()
-            proc.wait()
+            m._stop(proc)
         for c, want, (code, ctype, body) in zip(cases, php, got):
             where = f"{state} as {c['auth']}"
             assert str(code) in responses, f"{where}: {code} is not in wing.openapi.yml"
@@ -112,7 +111,6 @@ def test_an_unrendered_flag_is_a_503_the_contract_names(tmp_path, monkeypatch):
     try:
         code, _, body = p._medulla_get(port, URL, p.AUTH["wing.read"])
     finally:
-        proc.kill()
-        proc.wait()
+        m._stop(proc)
     assert code == 503 and "UNKNOWN" in json.loads(body)["error"], (code, body)
     assert "503" in m.yaml.safe_load(m.OPENAPI.read_text(encoding="utf-8"))["paths"][URL]["get"]["responses"]
