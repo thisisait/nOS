@@ -21,7 +21,6 @@
         "mode": s.mode,
         "name": s.name,
         "external_host": s.external_host,
-        "tier": s.tier | default(2),
         "client_id": s.client_id | default("nos-" ~ s.slug),
         "client_secret": s.client_secret | default(""),
         "redirect_uris": s.redirect_uris | default([]),

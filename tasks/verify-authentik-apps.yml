@@ -7,9 +7,9 @@
 # playbook while the embedded outpost answered its own 404 on all seven
 # forward-auth routes. Success markers are written by a READER — this is it.
 #
-# Blueprint engine only: under engine=tofu the apply path owns its own
-# verification (plan/destroy-guard). The applier stays best-effort by design;
-# this reader is where the truth lands.
+# The route assert is blueprint engine only: under engine=tofu the apply path owns
+# its own verification (plan/destroy-guard). The read runs under both engines: the
+# tier-binding read-back below joins on it.
 
 - name: "[Verify] Read the Applications Authentik actually holds"
   no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
@@ -17,7 +17,8 @@
     # Loopback, not the domain: a CI runner has no DNS for the tenant TLD
     # (the smoke's loopback retry is what makes its authentik row green), and
     # this reader must not fail on transport while measuring content.
-    url: "http://127.0.0.1:{{ authentik_port | default(9003) }}/api/v3/core/applications/?page_size=300"
+    # superuser_full_list: the plain list holds only what the token's user may open.
+    url: "http://127.0.0.1:{{ authentik_port | default(9003) }}/api/v3/core/applications/?superuser_full_list=true&page_size=300"
     headers:
       Authorization: "Bearer {{ authentik_bootstrap_token | default('') }}"
     validate_certs: false
@@ -25,8 +26,6 @@
   register: _verify_ak_apps
   when:
     - install_authentik | default(false) | bool
-    - install_traefik | default(true) | bool
-    - (authentik_engine | default('blueprint')) != 'tofu'
     - nos_docker_ready | default(true)
   tags: ['always', 'verify']
 
@@ -118,6 +117,71 @@
     - nos_docker_ready | default(true)
     - (authentik_rbac_tiers | default([]) | length) > 0
     - _verify_ak_policies.json is defined
+  tags: ['always', 'verify']
+
+# ── Verify: the tier BINDINGS, under both engines (row tofu-tier-binding-missing).
+# The policy assert above proves blueprint 20 imported once; an application created
+# after it (tofu), or a binding removed by hand, left the application open to every
+# signed-in user with nothing red. Expected = the rendered blueprint, held = the API.
+
+- name: "[Verify] Read the policy bindings Authentik holds"
+  no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ authentik_port | default(9003) }}/api/v3/policies/bindings/?order=0&page_size=1000"
+    headers:
+      Authorization: "Bearer {{ authentik_bootstrap_token | default('') }}"
+    validate_certs: false
+    status_code: [200]
+  register: _verify_ak_bindings
+  when:
+    - install_authentik | default(false) | bool
+    - nos_docker_ready | default(true)
+    - (authentik_rbac_tiers | default([]) | length) > 0
+  tags: ['always', 'verify']
+
+- name: "[Verify] Every application carries its RBAC tier binding (20-rbac-policies)"
+  ansible.builtin.assert:
+    that:
+      - _verify_declared | length == _verify_rendered | regex_findall('authentik_policies[.]policybinding') | length
+      - (_verify_ak_bindings.json.pagination.next | default(0) | int) == 0
+      - _verify_unbound | length == 0
+    fail_msg: |
+      {{ _verify_unbound | length }} application(s) do NOT carry the tier policy blueprint 20 declares
+      (application, policy) — until bound, every signed-in user reaches them:
+        {{ _verify_unbound | join(', ') }}
+      (Or the check could not read its inputs: {{ _verify_declared | length }} bindings parsed from the
+      rendered blueprint, next page of held bindings: {{ _verify_ak_bindings.json.pagination.next | default(0) }}.)
+      Re-run and read the output (it may print entry attributes; do not paste it anywhere):
+        {{ docker_bin | default('docker') }} compose -p infra exec -u root authentik-worker \
+          ak apply_blueprint /blueprints/custom/20-rbac-policies.yaml
+    success_msg: >-
+      {{ _verify_declared | length }} declared tier binding(s), every one held.
+      No declared tier (machine clients, device gateway):
+      {{ _verify_slug_of.values() | difference(_verify_declared | map('split', ' ') | map('first')) | sort | join(', ') | default('none', true) }}.
+  vars:
+    _verify_rendered: "{{ lookup('ansible.builtin.file', stacks_dir ~ '/infra/authentik/blueprints/20-rbac-policies.yaml', errors='ignore') | default('', true) }}"
+    # "slug policy" per binding entry of the rendered file ([[] = a literal bracket, no backslashes to escape).
+    _verify_declared: >-
+      {{ _verify_rendered
+         | regex_findall('[[]slug, "([^"]+)"[]][]][\n ]+order: 0[\n ]+attrs:[\n ]+policy: !Find [[][a-z_.]+, [[]name, "([^"]+)"[]][]]')
+         | map('join', ' ') | list }}
+    _verify_slug_of: >-
+      {{ dict((_verify_ak_apps.json.results | default([])) | map(attribute='pk')
+              | zip((_verify_ak_apps.json.results | default([])) | map(attribute='slug'))) }}
+    _verify_app_binds: >-
+      {{ (_verify_ak_bindings.json.results | default([]))
+         | selectattr('enabled') | rejectattr('negate') | rejectattr('policy_obj', 'none')
+         | selectattr('target', 'in', _verify_slug_of.keys() | list) | list }}
+    _verify_held: >-
+      {{ _verify_app_binds | map(attribute='target') | map('extract', _verify_slug_of)
+         | zip(_verify_app_binds | map(attribute='policy_obj.name')) | map('join', ' ') | list }}
+    _verify_unbound: "{{ _verify_declared | difference(_verify_held) }}"
+  when:
+    - install_authentik | default(false) | bool
+    - nos_docker_ready | default(true)
+    - (authentik_rbac_tiers | default([]) | length) > 0
+    - _verify_ak_bindings.json is defined
+    - _verify_ak_apps.json is defined
   tags: ['always', 'verify']
 
 - name: "[Verify] Read the agent OAuth2 providers Authentik holds"

@@ -88,7 +88,6 @@ def main() -> int:
             "slug": slug,
             "name": c.get("name") or slug,
             "mode": mode,                       # native_oidc | forward_auth | header_oidc
-            "tier": c.get("tier", 2),
             # Enable expression VERBATIM (raw Jinja, e.g.
             # "{{ install_erpnext | default(false) }}") — the generator runs
             # WITHOUT template_vars, so it must never render this. The tfvars
@@ -117,6 +116,7 @@ def main() -> int:
     prior = (yaml.safe_load(OUT.read_text()) or {}).get("tofu_authentik_services", []) if OUT.is_file() else []
     for old in prior:
         if old.get("slug") not in seen_slugs:
+            old = {k: v for k, v in old.items() if k != "tier"}  # left the registry 2026-11-15: blueprint 20 owns the tier
             services.append({**old, "enabled": False, "retired": True})
 
     services.sort(key=lambda e: e["slug"])

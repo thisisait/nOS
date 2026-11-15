@@ -16,7 +16,6 @@ variable "authentik_services" {
     mode          = string
     name          = string
     external_host = string
-    tier          = optional(number, 2)
     client_id     = optional(string, "")
     client_secret = optional(string, "")
     redirect_uris = optional(list(string), [])

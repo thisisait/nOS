@@ -20,6 +20,12 @@ Ownership split under `engine=tofu`: **OpenTofu owns providers + applications
 groups / MFA / RBAC policies / agent clients / enrollment / brand — **still
 apply imperatively** and that is by design, not a gap.
 
+The tier binding has one owner under both engines: blueprint `20-rbac-policies`. Under
+`engine=tofu` the task file re-applies it right after a successful `tofu apply` (the
+applications it binds to exist only then) and the run fails if that fails;
+`tasks/verify-authentik-apps.yml` reads the bindings back under both engines. The registry
+carries no `tier`.
+
 ## The safety rail: the destroy guard
 
 `tasks/tofu-authentik.yml` parses `tofu show -json tfplan` and **refuses to
