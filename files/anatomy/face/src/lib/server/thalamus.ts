@@ -6,7 +6,7 @@
  */
 import { randomUUID } from 'node:crypto';
 import { connect, type Socket } from 'node:net';
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 import type { Identity } from '$lib/contracts';
 import type { Link } from '$lib/iris/wire';
 

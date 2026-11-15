@@ -93,6 +93,7 @@ def test_php_and_the_medulla_answer_every_verdict_the_same(tmp_path, monkeypatch
             assert (code, ctype) == (want["code"], "application/json; charset=utf-8"), f"{where}: medulla {code} {ctype} {body} / php {want}"
             assert json.loads(body) == json.loads(want["body"]), f"{where}:\nmedulla {body}\nphp     {want['body']}"
             codes.add(code)
+        p._intents_refused(cases, got)
         seen = json.loads(got[list(p.AUTH).index("wing.read")][2])
         assert {k: seen.get(k) for k in verdict} == verdict, (state, seen)
     # The seed reaches every outcome; a fixture gone blind would pass the comparison vacuously.

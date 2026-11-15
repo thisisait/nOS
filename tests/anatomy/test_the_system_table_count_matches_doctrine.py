@@ -29,7 +29,7 @@ ROADMAP = TABLES / "roadmap.table.yml"
 
 #: Tenant-demo furniture. Party is the shared EN 16931 spine (accounting
 #: rowRefs it) — SYSTEM, not a fixture prefix.
-FIXTURE_PREFIXES = ("print-", "kolben-", "halyard-")
+FIXTURE_PREFIXES = ("print-", "kolben-", "halyard-", "apiary-")
 
 
 def _slugs() -> list[str]:

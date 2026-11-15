@@ -8,13 +8,19 @@ gates:
   - tests/anatomy/test_estate_status_symbionts_apart.py
   - tests/anatomy/test_medulla_is_one_static_binary.py
   - tests/anatomy/test_medulla_role.py
+  - tests/anatomy/test_medulla_serves_agent_sessions.py
   - tests/anatomy/test_medulla_serves_audit_verify.py
   - tests/anatomy/test_medulla_serves_events.py
   - tests/anatomy/test_medulla_serves_hub.py
   - tests/anatomy/test_medulla_serves_inbox_questions.py
   - tests/anatomy/test_medulla_serves_metrics.py
   - tests/anatomy/test_medulla_serves_notifications.py
+  - tests/anatomy/test_medulla_serves_patches.py
+  - tests/anatomy/test_medulla_serves_pentest.py
   - tests/anatomy/test_medulla_serves_pulse_reads.py
+  - tests/anatomy/test_medulla_serves_remediation.py
+  - tests/anatomy/test_medulla_serves_scan.py
+  - tests/anatomy/test_medulla_serves_security.py
   - tests/anatomy/test_medulla_unit_runs_as_nos.py
 ---
 # Medulla — one binary runs the estate under its own identity

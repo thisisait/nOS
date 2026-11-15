@@ -24,6 +24,9 @@
 - slug: agent-action-catalog
   parent: wits-cell-roster
   track: agents
+- slug: agent-capture-env-allowlist
+  parent: agent-output-observed-not-kept
+  track: agents
 - slug: agent-fallback-dead
   parent: ''
   track: platform
@@ -120,6 +123,9 @@
 - slug: appendage-lexicon
   parent: body-plan
   track: platform
+- slug: apple-container-runtime
+  parent: habitat-docker-runtime
+  track: platform
 - slug: archive
   parent: ''
   track: body
@@ -171,6 +177,9 @@
 - slug: backup-staging-mode
   parent: pulse-redact-gaps
   track: security
+- slug: backup-staging-modes-and-trailing-garbage
+  parent: restic-prune-runs
+  track: filesystem
 - slug: backup-unbacked-attachments
   parent: backup-restic-store
   track: platform
@@ -336,7 +345,22 @@
 - slug: compose-hardening
   parent: sec
   track: security
+- slug: config-d-filesystem
+  parent: default-config-split
+  track: platform
+- slug: config-d-host-organs
+  parent: default-config-split
+  track: platform
 - slug: config-d-host-software
+  parent: default-config-split
+  track: platform
+- slug: config-d-mail-social
+  parent: default-config-split
+  track: platform
+- slug: config-layering-docs
+  parent: default-config-split
+  track: platform
+- slug: config-layering-docs-rest
   parent: default-config-split
   track: platform
 - slug: config-readers-and-habitat-ruling
@@ -355,6 +379,9 @@
   parent: default-config-split-domains
   track: platform
 - slug: config-split-identity
+  parent: default-config-split-domains
+  track: platform
+- slug: config-split-readers-to-layers
   parent: default-config-split-domains
   track: platform
 - slug: constitution-llm-legible
@@ -494,6 +521,9 @@
   track: cortex
 - slug: cortex-zod-4
   parent: security-review-1103
+  track: security
+- slug: credential-doubles-apps
+  parent: repo-body-plan
   track: security
 - slug: credential-doubles-collapse
   parent: repo-body-plan
@@ -723,6 +753,9 @@
 - slug: dtt-capture
   parent: dtt
   track: platform
+- slug: dtt-capture-spec-shape
+  parent: dtt
+  track: platform
 - slug: dtt-constitution
   parent: dtt
   track: platform
@@ -736,6 +769,9 @@
   parent: keel
   track: platform
 - slug: dtt-routing-address
+  parent: dtt
+  track: platform
+- slug: dtt-row-reader
   parent: dtt
   track: platform
 - slug: dtt-seed-per-row-file
@@ -828,6 +864,9 @@
 - slug: egress-containment
   parent: digest
   track: digest
+- slug: elephc-host-scripts
+  parent: medulla
+  track: platform
 - slug: empty-is-not-a-failure-ares
   parent: ''
   track: platform
@@ -879,6 +918,9 @@
 - slug: event-type-gate-dot-blind
   parent: wing-organ-without-face
   track: platform
+- slug: events-gate-contract-codes
+  parent: wing-openapi-tier-403
+  track: security
 - slug: evolve-imprint
   parent: body-cell
   track: agents
@@ -930,6 +972,9 @@
 - slug: face-document-viewer
   parent: ''
   track: face
+- slug: face-edge-trust-built-probe
+  parent: face-sveltekit-3
+  track: security
 - slug: face-files-explorer
   parent: ''
   track: face
@@ -954,6 +999,9 @@
 - slug: face-inbox-visual-polish
   parent: face
   track: face
+- slug: face-lib-subpath-imports
+  parent: face-sveltekit-3
+  track: face
 - slug: face-licence-split
   parent: body-organ
   track: face
@@ -975,6 +1023,9 @@
 - slug: face-mobile-shell
   parent: ''
   track: face
+- slug: face-operator-apps-artifact-gate
+  parent: face-operator-apps-build-flag
+  track: security
 - slug: face-operator-apps-build-flag
   parent: wing-organ-without-face
   track: face
@@ -1019,6 +1070,12 @@
   track: face
 - slug: face-tree
   parent: face
+  track: face
+- slug: face-upgrades-read-gates
+  parent: face-upgrades-read-view
+  track: security
+- slug: face-upgrades-read-view
+  parent: wing-organ-without-face
   track: face
 - slug: face-widgets-movable-removable
   parent: face
@@ -1470,6 +1527,9 @@
 - slug: iris-subagent-journey-gaps
   parent: wits-thalamus
   track: agents
+- slug: iris-subagent-limits-card
+  parent: iris-subagents-finish
+  track: agents
 - slug: iris-subagents-finish
   parent: wits-thalamus
   track: agents
@@ -1737,11 +1797,17 @@
 - slug: loop-grafana-check
   parent: loop-definition-model
   track: agents
+- slug: loop-graph-only-steps
+  parent: loop-definition-model
+  track: agents
 - slug: loop-news-scout
   parent: loop-definition-model
   track: agents
 - slug: loop-operator-model
   parent: sere
+  track: agents
+- slug: loop-ops-digest
+  parent: loop-definition-model
   track: agents
 - slug: loop-overlay-joins-selected
   parent: face-loop-view
@@ -1809,9 +1875,15 @@
 - slug: medulla-admin-halt
   parent: medulla
   track: platform
+- slug: medulla-advisories-gitleaks-reads
+  parent: medulla-long-tail-tables
+  track: platform
 - slug: medulla-agent-runner
   parent: medulla
   track: agents
+- slug: medulla-agent-sessions-list-read
+  parent: wing-to-medulla-waves
+  track: platform
 - slug: medulla-app-1101-leftovers
   parent: medulla
   track: platform
@@ -1827,8 +1899,14 @@
 - slug: medulla-events-chain
   parent: medulla
   track: security
+- slug: medulla-events-reads
+  parent: wing-to-medulla-waves
+  track: platform
 - slug: medulla-first-route-metrics
   parent: medulla
+  track: platform
+- slug: medulla-hub-systems-reads
+  parent: wing-to-medulla-waves
   track: platform
 - slug: medulla-image-ci-e2e
   parent: medulla
@@ -1848,9 +1926,21 @@
 - slug: medulla-organ-identity-reader
   parent: medulla
   track: platform
+- slug: medulla-patches-reads
+  parent: medulla-long-tail-tables
+  track: platform
+- slug: medulla-pentest-reads
+  parent: medulla-long-tail-tables
+  track: platform
 - slug: medulla-pulse-env-no-binaries
   parent: agents-run-away-from-the-secrets
   track: security
+- slug: medulla-remediation-reads
+  parent: medulla-long-tail-tables
+  track: platform
+- slug: medulla-scan-reads
+  parent: medulla-long-tail-tables
+  track: platform
 - slug: medulla-scheduler
   parent: medulla
   track: platform
@@ -1869,6 +1959,12 @@
 - slug: memory-organ-gaps
   parent: memory-direction
   track: cortex
+- slug: model-catalog-badges-in-picker
+  parent: model-catalog-with-quality
+  track: agents
+- slug: model-catalog-processor-records
+  parent: model-catalog-with-quality
+  track: agents
 - slug: model-catalog-with-quality
   parent: wits-habitat
   track: agents
@@ -2424,6 +2520,9 @@
 - slug: red-status-reboot-required
   parent: watch
   track: security
+- slug: red-status-red-ids
+  parent: loop-ops-digest
+  track: platform
 - slug: rel-011
   parent: ''
   track: release
@@ -2661,6 +2760,9 @@
 - slug: sere-hosts
   parent: sere
   track: platform
+- slug: session-trace-reader
+  parent: operator-session-threat-model
+  track: security
 - slug: set-point-stray-file
   parent: ''
   track: platform
@@ -2799,6 +2901,12 @@
 - slug: symbiont-census
   parent: watch
   track: platform
+- slug: symbiont-census-kind
+  parent: symbiont-census
+  track: platform
+- slug: symbiont-census-reader
+  parent: symbiont-census
+  track: platform
 - slug: symbiont-claude
   parent: self-symbiont-host
   track: platform
@@ -2823,6 +2931,9 @@
 - slug: tag-gate-reads-blocking-jobs
   parent: forge
   track: release
+- slug: test-servers-never-leak
+  parent: spine-converge
+  track: platform
 - slug: test-suite-diet
   parent: gate-diet
   track: release
@@ -3129,6 +3240,12 @@
 - slug: wing-neon-getenv-false-crashes-cli
   parent: consulting-firm-deployment
   track: platform
+- slug: wing-openapi-hub-get-is-public
+  parent: wing-openapi-tier-403
+  track: security
+- slug: wing-openapi-tier-403
+  parent: wing-to-medulla-waves
+  track: platform
 - slug: wing-organ-without-face
   parent: face-the-endpoint
   track: face
@@ -3188,6 +3305,9 @@
   track: security
 - slug: worktree-and-build-cache-pruner
   parent: ''
+  track: platform
+- slug: worktree-prune-only-door
+  parent: spine-converge
   track: platform
 - slug: zod4-serde-yaml-debt
   parent: watch

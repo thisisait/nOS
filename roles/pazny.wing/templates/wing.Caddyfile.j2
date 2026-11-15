@@ -103,12 +103,12 @@
     # notifications: GET of the list; Bone's insert and PHP's mark-read stay off it (test_medulla_serves_notifications.py).
     # events: GET of the list only; the callback's HMAC POST and /events/<id> stay PHP's (test_medulla_serves_events.py).
     # hub: GET of the system list and one system (public in PHP too); ?tree, ?listed, POST and /hub/health stay PHP's (test_medulla_serves_hub.py).
-    # security: GET of the advisory and gitleaks lists and one row of each; an advisory id that is not a positive int, the ingest POSTs and /resolve stay PHP's.
-    # agent-sessions: GET of one agent's session list (own rows below Tier 1); the POST that starts one, the detail and the catalogue stay PHP's.
-    # remediation: GET of the queue and one item; the scanner's POST and PUT, bulk-status and next-id stay PHP's.
-    # patches: GET of the patch list, one patch and the applied history; POST, PUT, plan, apply and /<id>/events stay PHP's.
-    # pentest: GET of the target list and one target with its areas and findings; every pentest write and /pentest/patches stay PHP's.
-    # scan: GET of the scan state and the recent cycles; starting a cycle and every scan PUT stay PHP's.
+    # security: GET of the advisory and gitleaks lists and one row each; a non-positive-int advisory id, the ingest POSTs and /resolve stay PHP's (test_medulla_serves_security.py).
+    # agent-sessions: GET of one agent's sessions (own rows below Tier 1); the POST starting one, the detail, the catalogue stay PHP's (test_medulla_serves_agent_sessions.py).
+    # remediation: GET of the queue and one item; the scanner's POST and PUT, bulk-status and next-id stay PHP's (test_medulla_serves_remediation.py).
+    # patches: GET of the patch list, one patch and the applied history; POST, PUT, plan, apply and /<id>/events stay PHP's (test_medulla_serves_patches.py).
+    # pentest: GET of the target list and one target with its areas and findings; every pentest write and /pentest/patches stay PHP's (test_medulla_serves_pentest.py).
+    # scan: GET of the scan state and the recent cycles; starting a cycle and every scan PUT stay PHP's (test_medulla_serves_scan.py).
 {% set _medulla_reads = {'pulse': ['path_regexp ^/api/v1/(pulse_jobs|pulse_runs|pulse_runs/summary|pulse_runs/[^/]+)$', 'not query since=*', 'not query until=*'],
                          'admin': ['path /api/v1/admin/state'], 'audit': ['path /api/v1/audit/verify'],
                          'inbox': ['path_regexp ^/api/v1/inbox/questions(/[^/]+)?$'],

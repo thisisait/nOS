@@ -51,7 +51,9 @@ READERS = (
 def ask(argv: tuple[str, ...], tools: Path = REPO / "tools", timeout: int = TIMEOUT_S) -> dict:
     """One reader's reply: {"state": "OK", "exit_code", "doc"} or {"state": "UNKNOWN", "error"}."""
     try:
-        r = subprocess.run([sys.executable, str(tools / argv[0]), *argv[1:]], capture_output=True, text=True, timeout=timeout)
+        env = {k: v for k, v in os.environ.items() if k != "WING_EVENTS_HMAC_SECRET"}  # readers never need it (review 11-14)
+        r = subprocess.run([sys.executable, str(tools / argv[0]), *argv[1:]], capture_output=True, text=True,
+                           timeout=timeout, env=env)
     except subprocess.TimeoutExpired:
         return {"state": "UNKNOWN", "error": f"no answer in {timeout} s"}
     except OSError as exc:

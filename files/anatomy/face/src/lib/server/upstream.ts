@@ -6,11 +6,11 @@
  * (having pinned `uid` from the edge-trusted identity) call these helpers. Bone
  * binds loopback; the container reaches it via host.docker.internal.
  *
- * This module MUST NOT be imported from client code — `$env/dynamic/private`
+ * This module MUST NOT be imported from client code — `$app/env/private`
  * and the tokens would leak. SvelteKit enforces that for `$lib/server/*`.
  */
 import { createHash } from 'node:crypto';
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 import type { Identity } from '$lib/contracts';
 
 const VFS_BASE = () => env.NOS_VFS_API_URL ?? 'http://host.docker.internal:8099/api/v1/vfs';

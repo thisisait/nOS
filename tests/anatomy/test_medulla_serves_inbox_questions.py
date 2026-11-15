@@ -111,6 +111,7 @@ def test_php_and_the_medulla_answer_every_inbox_read_the_same(tmp_path, monkeypa
         codes.add(code)
     # The seed reaches every outcome; a fixture gone blind would pass the comparison vacuously.
     assert codes == {200, 401, 403, 404}, codes
+    p._intents_refused(cases, got)
     read = list(p.AUTH).index("wing.read")
     seen = lambda url: json.loads(got[URLS.index(url) * len(p.AUTH) + read][2])  # noqa: E731
     assert [q["uuid"] for q in seen("/api/v1/inbox/questions")["questions"]] == ["q-open", "q-open-later", "q-blank", "q-odd-word"]

@@ -106,6 +106,7 @@ def test_php_and_the_medulla_answer_every_notifications_read_the_same(tmp_path, 
         codes.add(code)
     # The seed reaches every outcome; a fixture gone blind would pass the comparison vacuously.
     assert codes == {200, 401, 403}, codes
+    p._intents_refused(cases, got)
     read = list(p.AUTH).index("wing.read")
     seen = lambda url: json.loads(got[URLS.index(url) * len(p.AUTH) + read][2])  # noqa: E731
     everything = seen("/api/v1/notifications")
