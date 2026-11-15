@@ -15,8 +15,11 @@ gates:
   - tests/anatomy/test_medulla_serves_inbox_questions.py
   - tests/anatomy/test_medulla_serves_metrics.py
   - tests/anatomy/test_medulla_serves_notifications.py
+  - tests/anatomy/test_medulla_serves_patches.py
+  - tests/anatomy/test_medulla_serves_pentest.py
   - tests/anatomy/test_medulla_serves_pulse_reads.py
   - tests/anatomy/test_medulla_serves_remediation.py
+  - tests/anatomy/test_medulla_serves_scan.py
   - tests/anatomy/test_medulla_serves_security.py
   - tests/anatomy/test_medulla_unit_runs_as_nos.py
 ---
