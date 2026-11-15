@@ -1079,7 +1079,7 @@ openwebui_admin_email: "{{ default_admin_email }}"
 # Requires: install_gitea: true + manual OAuth2 application in Gitea
 # ==============================================================================
 # (the rest of this section is a config.d layer)
-woodpecker_version: "v3.17.0"           # REM-105: pin the floating v3 tag — CVE-2026-50141 auth-bypass-by-spoofing (agent_id gRPC metadata forge) fixed v3.14.1 [swept v3.14.1 2026-08-06]
+woodpecker_version: "v3.19.0"           # GHSA-6frq-4g8m-8xw9 (fixed 3.19.0), -xwpq-2mq8-p55x, -v6jr-fc8m-whr3 (3.18.0), high [advisory-status 2026-11-15]. Prior REM-105.
 
 # ==============================================================================
 # IIAB – PORTAINER CE (Docker management UI)
@@ -1336,7 +1336,7 @@ coexistence_secondary_ttl_days: 7
 # Backward compatibility – old monolithic compose dir (will be removed after migration)
 
 # ── Traefik ────────────────────────────────────────────────────────────────────
-traefik_image_version: "v3.7.17"        # GHSA-xv5x-242w-7hf7 Negotiate/NTLM transport leak (high, v3.7.14..16) fixed v3.7.17 [advisory-status 2026-11-03]. GHSA-hrpp-p4fc-wwf8, -p8wx-ph99-xgcr, -fh26-gfpp-7xxx, -qvj7-gq9c-hp7q, -53qr-784g-cj35, -rv2h-qh7j-xrjw (high, <=v3.7.13..15) fixed v3.7.16 [advisory-status 2026-10-23]. REM-251 GHSA-rf44-j88r-hh8c (aliasHeadersStrategy, floor v3.7.12) + GHSA-v67p-phpq-fc8x trailer bypass (patched v3.7.13). Prior REM-145 CONNECT poisoning. [swept v3.7.10 2026-09-16]
+traefik_image_version: "v3.7.18"  # GHSA-p956-6gvv-mxqp, -x5pf-cqh3-2gv8, -ccgh-9g52-6vwg, -cp28-5662-543f (high) fixed v3.7.18 [2026-11-15]. Prior v3.7.17, REM-251.
 
 # ── Tier-1 service ports lifted from role defaults ────────────────────────────
 # These are referenced via lookup('vars', '<svc>_port') in the Traefik file
