@@ -9,11 +9,13 @@ Versioning is by git tag `v<semver>` cut from `master`. The latest tag is `v0.18
 ## v0.19-beta (2026-11-03 … ) — DRAFT
 
 > **The face becomes the endpoint, and the night writes down what it saw.**
-> Not tagged yet. 318 commits on dev since `v0.18-beta` at `de47b3f1`
-> (733 files, +28.1k/−23.6k), measured with `git log v0.18-beta..de47b3f1`. Still `-beta`.
-> **Why now:** upstream re-uploads the FrankenPHP 1.13.5 assets every night, so the checksum pins
-> go stale nightly; the `frankenphp-digest` workflow that re-pins them can only be dispatched from
-> `master`. Until this cut, every night needs a hand re-pin.
+> Not tagged yet. 508 commits on dev since `v0.18-beta`, at `582d1dbd` (935 files, +47.2k/−27.4k),
+> measured with `git log v0.18-beta..origin/dev` and `git diff --shortstat`. Still `-beta`.
+> **Blank 2026-11-15** — PENDING: runs tonight; filled in from `~/.nos/blank-runs.jsonl` after it
+> ends. The previous blank was 2026-11-03 at the v0.18 cut, `nos-smoke --strict` 32/32.
+> **Why now:** master still fetches FrankenPHP from upstream, whose assets are re-uploaded nightly,
+> so its scheduled CI stays red until the cut moves it to the attested mirror (`ba8fcca0`); the
+> roadmap loop is paused until the tag (docs/active-work.md §Now).
 
 Exit criteria, proposed (roadmap row `rel-019`; the operator rules them):
 
@@ -24,34 +26,144 @@ Exit criteria, proposed (roadmap row `rel-019`; the operator rules them):
 - [ ] one face approval journey run on the estate (`tools/e2e-plan.py --journeys`, row
   `iris-approvals-e2e-plan`)
 
+Evidence at release-prep, 2026-11-15: CI on dev green at `249d05d2`, `bf54aaa1`, `582d1dbd`;
+`advisory-status` 0 unjudged HIGH/CRITICAL/KEV after the 11-15 pins; full offline suite on
+`582d1dbd` 9498 passed, cargo 506/0, face vitest 1031/0. The blank and the journey have not run.
+
 ### The face is the endpoint
-- Face apps declare `minTier`; the BFF routes carry a tier. The Agents, Inbox and Awaiting-you
-  apps moved in from Wing; `?app=<slug>` opens one face app.
-- Iris lives in the face: it answers agents' questions in place and holds a morning board of
-  reader widgets (contract v18). nOS.app holds the face Iris; the pupil is retired.
-- Widgets move by a grip and hide; a styled table can drop back to the grid.
+- **SvelteKit 3 on adapter-node 6** (`391c1a74`, `8523c7d4`). Kit 3 hands the server only what
+  `src/env.ts` declares; undeclared, `FACE_EDGE_TOKEN` read as unset and the hook trusted every caller
+  (measured 11-14 with a forged `X-Authentik-Username`). Gate `test_face_env_declared` (`940b6efb`);
+  the token-isolation gate follows the `$app/env/private` rename (`96692b2e`, GATE CHANGE).
+- **Apps declare `minTier`; BFF routes carry a tier** (`c4102ec6`). Agents, Inbox and Awaiting-you
+  moved in from Wing as projected reads, never a reply token (`714c6c7f`, `71382eaa`, `6ea4606d`);
+  `?app=<slug>` opens one app (`e3e9aa47`). Build flag `face_operator_apps` drops the five tier-1
+  apps from a client build: 47 → 30 js files, 1122 → 650 KB (`8ea52cb4`).
+- **Anatomy Upgrades tab**, read-only: `GET /bff/upgrades` at Tier 1, a fixed projection, every verb
+  stays in Wing (`e729067a`). **Iris lives in the face**: she answers agents' questions in place
+  (`30d726dd`) and holds a morning board of reader widgets, contract v18 (`6190d101`, `5df869ec`);
+  the pupil is retired (`01badaac`).
+- **Planner skill tree v2** (`a8d479da` … `92209b1d`): radial, the lit frontier mirrors
+  `roadmap-status --frontier ring`; one keypress never un-parents a subtree (`049cc55d`). Widgets
+  move by a grip and hide (`9dcf96ee`). The face Node image is `tag@digest` (`44a442cf`; gate
+  `test_build_images_are_digest_pinned`).
+
+### The medulla answers Wing's reads
+- **Thirteen read sets** — pulse, admin, audit, inbox, notifications, events, hub, security,
+  agent-sessions, remediation, patches, pentest, scan — each a GET matcher in `wing.Caddyfile.j2`;
+  every write stays PHP's. `medulla_read_routes: []` by default (`config.d/25-host-organs.yml`).
+- **Parity gates** `tests/anatomy/test_medulla_serves_*.py` (13 files) replay URLs × bearers against
+  the real PHP presenter, list order included (security 61 × 17, `7b7c8002`; `538b922b`, `b6dc8ba4`,
+  `870636d3`). Fee 65 names the four edges no caller sends that were left different.
+- **`wing.intents` is refused at every read door** (`6d787786`): PHP answered 403, the medulla 200;
+  gate `718d24cc` (GATE CHANGE, ruling 11-14). Repeated headers join as FrankenPHP's do (`0b53e1cb`).
+- **Intents, dry-run slice**: a Wing apply files an intent, 202 (`50af96fb`); the medulla's tick picks
+  it and reports, off unless `MEDULLA_EXECUTES_INTENTS=1`, held by the halt (`b70ae5f4`); a Pulse job
+  under `install_medulla_intents`, default false (`7270190b`); pick/outcome NOT_DECISIONS (`196e8da7`).
+- **Its own credentials**: a `nos-medulla` Authentik client (`nos:upgrades:read`) and the wing-intents
+  bearer in custody — `/etc/nos/medulla.env` on Linux, the login Keychain on macOS, never
+  `secrets.yml` (`ea48739a`). Custody fails closed: only an absent file or Keychain rc 44 means not
+  held (`e087c840`); a null slurp no longer aborts the play (`f69b530a`, gate
+  `test_json_default_is_null_safe`). The Rust scrub mirrors Python's (`51634854`, `3840b400`).
+
+### Identity
+- **Tofu tier binding**: blueprint 20 re-applied right after `tofu apply`, fatal; verify reads the
+  bindings back under both engines (`2946b90d`) and refuses an absent blueprint 20, which had read
+  "0 declared, every one held" (`01c3a91c`); the graph drops the dead tier (`582d1dbd`).
+  `identity-status.py` "tier bindings": one row per application, ok | NO BINDING | OTHER TIER,
+  UNKNOWN when Authentik does not answer (`e84cb7d9`).
+- **Linux group `nos`**: every active tier-1 login joins it (`313b9db3`); a demoted or locked login
+  leaves it, the converging operator never removed (`e087c840`, `14689018`; gate
+  `test_unix_realm_is_the_roster`).
+- `--tags authentik` renders its blueprints and runs the whole loader chain (`e534df06`, `8b68028b`):
+  the 11-10 converge failures 9359 offline tests missed. A refused login names its fix (`794e586b`);
+  tofu state lives in `~/.nos/tofu`, not the checkout (`0fed5789`).
 
 ### The night writes down what it saw
-- `morning-verdict`: each morning, at 07:10 UTC, a Pulse job writes what each of six readers said
-  (OK / RED / UNKNOWN, why, counts) into its own DataTable. The readers run without the write token.
-- `keap-tables-export`: every DataTable exported each night, the last seven kept.
-- The efferent queue: the commands handed to the operator are rows that close only when a reader
-  sees the effect.
+- **`morning-verdict`**: 07:10 UTC, `tools/morning-verdict.py` copies six readers' verdict and why
+  into a DataTable; UNKNOWN on no key, no JSON or 60 s (`e39473a1`, `e0631aa4`); each reader says one
+  verdict word (`b31e2862` … `4237d5d1`) and runs without the write token (`de47b3f1`).
+- **`keap-tables-export`**: 00:30 UTC, every DataTable into backup staging, seven kept;
+  `estate-status` reads the newest bundle's age (`67c51c84`, `c45ba226`).
+- **`ops-digest` loop**: every 4 h, five readers' `--json` to `~/.nos/loops/ops-digest/`, 0600; one note
+  when the red set moved (`69f5d701`). A loop step may be `graph_only`, drawn dashed (`74a4f08e`).
+  **`ci-circadian`**: GitHub fires schedules only on master, so a Pulse job dispatches dev's nightly
+  CI at 02:30 UTC, off by default (`d74c81ee`); a nightly `--check --tags` lane per tag (`1de3966a`).
+- **The efferent queue**: commands handed to the operator are rows, text never run, closed only when
+  a reader sees the effect (`eecb8740`, `0d644582`); loop ticks are rows too (`1df87a23`).
 
-### Safer removal and backup
-- `remove=data` refuses the backup repo and Docker's own data, compares each path's realpath with the
-  roots nOS owns (a symlink out of a root is refused), and wipes the directories of disabled services. The backup drill replays every database of the dump.
-- A wedged Docker fails in 30 s, not 50 minutes. The keychain prompt appears only when a run signs.
+### Backup, removal, spore
+- **The restore drill counts extension-owned tables right**: PostGIS `spatial_ref_sys` comes from
+  `CREATE EXTENSION`, so geo read 6 of 5 and the drill was red every night (`43056f23`). It replays
+  the whole dumpall into a scratch Postgres, per database (`03aab75b`, `cc643b38`). Staged dumps are
+  `zstd --rsyncable`, 0600; restore reads both forms (`8763f276`).
+- **`remove=data` refuses** a path nOS does not own (`state/genome/owned-paths.yml`, `56a0c388`), the
+  backup repo and Docker (`2a7270b5`), a realpath outside its roots (`113a7e38`), re-checked right
+  before the `rm` (`e7384a05`); gate `test_remove_data_stays_in_owned_roots`. The wipe of disabled
+  services' directories is reverted, on hold (`285af92c`, row `nos-owned-paths`).
+- **Spore**: `nos-spore.sh` carries an estate across a factory reset — an AES-256 image on an
+  external disk: secret master, config, tofu state, identities, DataTables, every repo's off-remote
+  work; re-sealed after every blank (`3aeaf05f`, `94f17897`). Experimental, per its commit.
+- A wedged Docker fails in 30 s (`f79e84f5`); the keychain asks only when the run signs (`9fe8e92b`).
 
-### Supply chain
-- nos-cc shows reader text as text: a `[link=…]` or `[@click=…]` in a row no longer styles the pane or
-  plants an action.
-- The face Node image and the scanner images are pinned by digest; the SBOM scanner containers run read-only.
-- The immune drill plants a known secret and asks gitleaks to find it.
+### Supply chain and security
+- **FrankenPHP from an attested mirror.** Upstream re-uploads v1.13.x nightly from `main`;
+  `frankenphp-repin.py` also verifies `--source-ref refs/tags/v<version>` and refused them
+  (`5651f27e`). Ruling 11-14: `--mirror` copies the attested assets into release
+  `mirror-frankenphp-v1.13.5` of this repo and pins that copy; Wing fetches the mirror; workflow
+  `frankenphp-digest` retired (`ba8fcca0`, `37e287bb`; gate `test_frankenphp_repin_follows_provenance`).
+- **Pins, 11-15**: PostgreSQL 16.16 (CVE-2026-6460 + four), n8n 2.47.7 (GHSA-q8rc), Traefik v3.7.18
+  (four high), Woodpecker v3.19.0 (`49800a68`, `bf54aaa1`); two n8n judgements (`1e65c572`); earlier
+  FrankenPHP 1.13.5, ERPNext v15.124.5, ansible-core 2.20.9 / 2.21.6 (`2b9f5462`, `78272a60`).
+- **Every running image's packages** scanned nightly: `docker save` → syft → grype in a jail, no
+  network, read-only, scanner images `tag@digest` (`8637b6cf`, `b6e22e57`). The immune drill plants a
+  secret for gitleaks (`86218396`); ClamAV judges EICAR under `install_clamav` (`9eb11d17`); a crawler
+  walks git history hourly, 0 findings over 6438 commits (`26efa8d1`).
+- Traefik `middlewares.yml` 0600, `conf.d` and `~/backups` 0700 (`7dc38932`, `4578873a`); RustFS
+  console behind forward-auth (`36254d91`); nos-cc renders reader text as text (`ecd7dc63`); the
+  advisory reader closes an open range by its own patch (`d402225b`, the v0.18 "wrong both ways" row).
 
-### Known open
-- The `frankenphp-digest` workflow, the reason for this cut (see above).
-- `estate-status` looks for DataTable bundles in the default dir, not a moved `backup_staging_dir`.
+### Config layers, CLI, suite
+- **The defaults are a layer set**: `config.d/05-filesystem … 80-apps.yml` (11 layers) then
+  `default.config.yml`; every reader and gate walks `default_layers()` (`d0a9166a`); 27 app secrets
+  declared once (`2008a78a`). `nos stacks|cc|ci|smoke|push|worktrees` as verbs (`5aa7050b`,
+  `716f0922`, `1d643bb2`); an unknown `--tags` is refused (`d30a2c85`, the v0.18 open row).
+- **The suite split by lane**: 98 cold gate files leave the push path (`d8a3800e`); 29 toolchain and
+  playbook files run at night under `NOS_LANE=all` (`858b1039`, `tests/_lanes.yml`, gate
+  `test_lanes_hold`); the ratchet is held against the same cut (`53951f47`); one `tools/regenerate.py`
+  (`f531431a`). Doctrine: a new gate only where a defect leaks or loses data (`eb79e5d7`).
+- **A test's server never outlives it**: frankenphp ignored SIGTERM and 21 were left; one `_stop`
+  (SIGTERM, 5 s, SIGKILL to its own session) at all 19 stop sites (`43c37ec0`).
+
+### The roadmap loop
+- Skills `roadmap-loop`, `roadmap-watch`, `roadmap-integrate` (`47bf5681`): one row per firing on its
+  own branch, touched lanes only; integrate batches and runs the full suite once; watch reads. The
+  loop builds only rows with a spec from the frontier ring (`8f224df0`, `78d92929`).
+- `nos dtt seed --sync` lists a parent drift (a skill-tree move) and writes it only on `--parents`;
+  `--adopt-parents` goes the other way (`a8897244`); `--sync` carries `release` (`81c32f33`).
+- **`nos worktrees` is the only cleanup door**: dry run by default, removes landed and clean trees,
+  keeps dirty, racing, live and the parents of a kept nested tree (`cbb82d7a`, `c3791e36`; gate
+  `test_worktree_pruner_lists_only_merged_clean`). 65 GB of worktrees at 98 % disk was the trigger.
+
+### Known open / unverified
+- **The blank** (criterion 1) runs tonight. The 11-15 pins are already converged on the operator host
+  (full `nos`, 11-15, failed=0).
+  `morning-verdict` has no rows yet (criterion 3); the face approval journey has not run (criterion 4).
+- **Bonus CI lanes** (per-stack converges, non-blocking): `tools/ci-tier-status.py` on 11-15 reads
+  18 of 23 RED, no green run since 2026-11-08 — b2b, data, devops, engineering, infra, voip and
+  twelve `iiab-*` lanes; green: iiab-homeautomation, iiab-monitoring, iiab-rss, iiab-storage,
+  observability. Unverified, as in v0.18.
+- **Backup staging files 0644** (row `backup-staging-modes-and-trailing-garbage`): fix accepted,
+  lands after the blank.
+- The medulla read sets are proven by parity gates; which are live is each host's
+  `medulla_read_routes`. On the operator host all thirteen are live since 11-15 (answered with
+  `Via: Caddy`, no `X-Powered-By: Nette`); same-content parity live is the gates', not measured there.
+  `install_medulla_intents` is on there: the tick runs every minute, nothing due yet; the slice is a
+  dry run, default off. The spore's
+  `germinate.sh` is not exercised in this range's record.
+- Named by the commits: 17 docs still say `default.config.yml` where a layer is meant (`d5830307`);
+  `superset_secret_key` is declared twice (`2008a78a`). On the operator host, unchanged from v0.18:
+  sshd passwords from the LAN, macOS firewall off, MFA not enforced — the operator's decisions.
 
 ---
 
