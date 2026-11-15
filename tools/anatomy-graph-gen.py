@@ -609,8 +609,8 @@ def _describe(nid: str, n: dict) -> str:
         svc = (f"gates service:{n['service']}" if n.get("service")
                else "no manifest service (Tier-2 app or excluded install)")
         return (f"Authentik {n.get('mode')} client '{n.get('client_id')}' "
-                f"(RBAC tier {n.get('tier')}) — {svc}; provider+application "
-                f"managed by OpenTofu from the committed registry")
+                f"— {svc}; provider+application managed by OpenTofu from the "
+                f"committed registry (its RBAC tier: blueprint 20, from the plugin)")
     if kind == "faceapp":
         # Two axes in one line, named as two, because the field they replaced
         # was one boolean pretending to be both. Neither can be missing here:
@@ -889,7 +889,6 @@ def harvest_authentik(nodes: dict) -> None:
             "kind": "authentik",
             "source": "state/tofu-authentik-services.yml",
             "mode": row.get("mode"),
-            "tier": row.get("tier"),
             "client_id": row.get("client_id"),
             "service": service,
             "managed_by": "tofu:authentik-state",

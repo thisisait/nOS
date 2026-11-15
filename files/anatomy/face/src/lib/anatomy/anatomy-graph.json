@@ -505,342 +505,311 @@
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "forward_auth",
-      "tier": null,
       "client_id": null,
       "service": "backrest",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik forward_auth client 'None' (RBAC tier None) — gates service:backrest; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik forward_auth client 'None' — gates service:backrest; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:bookstack": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "native_oidc",
-      "tier": null,
       "client_id": "nos-bookstack",
       "service": "bookstack",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik native_oidc client 'nos-bookstack' (RBAC tier None) — gates service:bookstack; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik native_oidc client 'nos-bookstack' — gates service:bookstack; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:calibre-web": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "forward_auth",
-      "tier": null,
       "client_id": null,
       "service": "calibre_web",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik forward_auth client 'None' (RBAC tier None) — gates service:calibre_web; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik forward_auth client 'None' — gates service:calibre_web; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:code-server": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "forward_auth",
-      "tier": null,
       "client_id": null,
       "service": "code_server",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik forward_auth client 'None' (RBAC tier None) — gates service:code_server; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik forward_auth client 'None' — gates service:code_server; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:documenso": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "forward_auth",
-      "tier": null,
       "client_id": null,
       "service": null,
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik forward_auth client 'None' (RBAC tier None) — no manifest service (Tier-2 app or excluded install); provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik forward_auth client 'None' — no manifest service (Tier-2 app or excluded install); provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:dolibarr": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "native_oidc",
-      "tier": null,
       "client_id": "nos-dolibarr",
       "service": "dolibarr",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik native_oidc client 'nos-dolibarr' (RBAC tier None) — gates service:dolibarr; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik native_oidc client 'nos-dolibarr' — gates service:dolibarr; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:erpnext": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "native_oidc",
-      "tier": null,
       "client_id": "nos-erpnext",
       "service": "erpnext",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik native_oidc client 'nos-erpnext' (RBAC tier None) — gates service:erpnext; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik native_oidc client 'nos-erpnext' — gates service:erpnext; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:espocrm": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "native_oidc",
-      "tier": null,
       "client_id": "nos-espocrm",
       "service": null,
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik native_oidc client 'nos-espocrm' (RBAC tier None) — no manifest service (Tier-2 app or excluded install); provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik native_oidc client 'nos-espocrm' — no manifest service (Tier-2 app or excluded install); provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:face": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "forward_auth",
-      "tier": null,
       "client_id": null,
       "service": "face",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik forward_auth client 'None' (RBAC tier None) — gates service:face; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik forward_auth client 'None' — gates service:face; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:firefly": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "header_oidc",
-      "tier": null,
       "client_id": null,
       "service": "firefly",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik header_oidc client 'None' (RBAC tier None) — gates service:firefly; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik header_oidc client 'None' — gates service:firefly; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:freescout": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "forward_auth",
-      "tier": null,
       "client_id": null,
       "service": "freescout",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik forward_auth client 'None' (RBAC tier None) — gates service:freescout; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik forward_auth client 'None' — gates service:freescout; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:geolibre": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "forward_auth",
-      "tier": null,
       "client_id": null,
       "service": "geolibre",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik forward_auth client 'None' (RBAC tier None) — gates service:geolibre; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik forward_auth client 'None' — gates service:geolibre; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:gitea": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "native_oidc",
-      "tier": null,
       "client_id": "nos-gitea",
       "service": "gitea",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik native_oidc client 'nos-gitea' (RBAC tier None) — gates service:gitea; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik native_oidc client 'nos-gitea' — gates service:gitea; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:gitlab": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "native_oidc",
-      "tier": null,
       "client_id": "nos-gitlab",
       "service": "gitlab",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik native_oidc client 'nos-gitlab' (RBAC tier None) — gates service:gitlab; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik native_oidc client 'nos-gitlab' — gates service:gitlab; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:grafana": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "native_oidc",
-      "tier": null,
       "client_id": "nos-grafana",
       "service": "grafana",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik native_oidc client 'nos-grafana' (RBAC tier None) — gates service:grafana; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik native_oidc client 'nos-grafana' — gates service:grafana; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:hedgedoc": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "native_oidc",
-      "tier": null,
       "client_id": "nos-hedgedoc",
       "service": "hedgedoc",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik native_oidc client 'nos-hedgedoc' (RBAC tier None) — gates service:hedgedoc; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik native_oidc client 'nos-hedgedoc' — gates service:hedgedoc; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:hermes": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "forward_auth",
-      "tier": null,
       "client_id": null,
       "service": "hermes",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik forward_auth client 'None' (RBAC tier None) — gates service:hermes; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik forward_auth client 'None' — gates service:hermes; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:homeassistant": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "native_oidc",
-      "tier": null,
       "client_id": "nos-homeassistant",
       "service": "homeassistant",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik native_oidc client 'nos-homeassistant' (RBAC tier None) — gates service:homeassistant; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik native_oidc client 'nos-homeassistant' — gates service:homeassistant; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:infisical": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "forward_auth",
-      "tier": null,
       "client_id": null,
       "service": "infisical",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik forward_auth client 'None' (RBAC tier None) — gates service:infisical; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik forward_auth client 'None' — gates service:infisical; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:influxdb": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "forward_auth",
-      "tier": null,
       "client_id": null,
       "service": "influxdb",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik forward_auth client 'None' (RBAC tier None) — gates service:influxdb; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik forward_auth client 'None' — gates service:influxdb; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:jellyfin": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "native_oidc",
-      "tier": null,
       "client_id": "nos-jellyfin",
       "service": "jellyfin",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik native_oidc client 'nos-jellyfin' (RBAC tier None) — gates service:jellyfin; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik native_oidc client 'nos-jellyfin' — gates service:jellyfin; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:jupyterhub": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "native_oidc",
-      "tier": null,
       "client_id": "nos-jupyterhub",
       "service": "jupyterhub",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik native_oidc client 'nos-jupyterhub' (RBAC tier None) — gates service:jupyterhub; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik native_oidc client 'nos-jupyterhub' — gates service:jupyterhub; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:keap": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "header_oidc",
-      "tier": null,
       "client_id": null,
       "service": "keap",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik header_oidc client 'None' (RBAC tier None) — gates service:keap; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik header_oidc client 'None' — gates service:keap; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:kiwix": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "forward_auth",
-      "tier": null,
       "client_id": null,
       "service": "kiwix",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik forward_auth client 'None' (RBAC tier None) — gates service:kiwix; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik forward_auth client 'None' — gates service:kiwix; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:mailpit": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "forward_auth",
-      "tier": null,
       "client_id": null,
       "service": "mailpit",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik forward_auth client 'None' (RBAC tier None) — gates service:mailpit; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik forward_auth client 'None' — gates service:mailpit; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:metabase": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "forward_auth",
-      "tier": null,
       "client_id": null,
       "service": "metabase",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik forward_auth client 'None' (RBAC tier None) — gates service:metabase; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik forward_auth client 'None' — gates service:metabase; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:mikopbx": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "forward_auth",
-      "tier": null,
       "client_id": null,
       "service": "mikopbx",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik forward_auth client 'None' (RBAC tier None) — gates service:mikopbx; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik forward_auth client 'None' — gates service:mikopbx; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:miniflux": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "native_oidc",
-      "tier": null,
       "client_id": "nos-miniflux",
       "service": "miniflux",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik native_oidc client 'nos-miniflux' (RBAC tier None) — gates service:miniflux; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik native_oidc client 'nos-miniflux' — gates service:miniflux; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:n8n": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "forward_auth",
-      "tier": null,
       "client_id": null,
       "service": "n8n",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik forward_auth client 'None' (RBAC tier None) — gates service:n8n; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik forward_auth client 'None' — gates service:n8n; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:nextcloud": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "native_oidc",
-      "tier": null,
       "client_id": "nos-nextcloud",
       "service": "nextcloud",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik native_oidc client 'nos-nextcloud' (RBAC tier None) — gates service:nextcloud; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik native_oidc client 'nos-nextcloud' — gates service:nextcloud; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:nodered": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "native_oidc",
-      "tier": null,
       "client_id": "nos-nodered",
       "service": "nodered",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik native_oidc client 'nos-nodered' (RBAC tier None) — gates service:nodered; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik native_oidc client 'nos-nodered' — gates service:nodered; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:nos-conductor": {
       "kind": "authentik",
@@ -887,12 +856,11 @@
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "native_oidc",
-      "tier": null,
       "client_id": "nos-forum",
       "service": "nos_forum",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik native_oidc client 'nos-forum' (RBAC tier None) — gates service:nos_forum; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik native_oidc client 'nos-forum' — gates service:nos_forum; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:nos-inspektor": {
       "kind": "authentik",
@@ -1049,210 +1017,191 @@
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "forward_auth",
-      "tier": null,
       "client_id": null,
       "service": "ntfy",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik forward_auth client 'None' (RBAC tier None) — gates service:ntfy; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik forward_auth client 'None' — gates service:ntfy; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:onlyoffice": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "forward_auth",
-      "tier": null,
       "client_id": null,
       "service": "onlyoffice",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik forward_auth client 'None' (RBAC tier None) — gates service:onlyoffice; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik forward_auth client 'None' — gates service:onlyoffice; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:open-webui": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "native_oidc",
-      "tier": null,
       "client_id": "nos-openwebui",
       "service": "open_webui",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik native_oidc client 'nos-openwebui' (RBAC tier None) — gates service:open_webui; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik native_oidc client 'nos-openwebui' — gates service:open_webui; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:openclaw": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "forward_auth",
-      "tier": null,
       "client_id": null,
       "service": "openclaw",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik forward_auth client 'None' (RBAC tier None) — gates service:openclaw; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik forward_auth client 'None' — gates service:openclaw; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:outline": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "native_oidc",
-      "tier": null,
       "client_id": "nos-outline",
       "service": "outline",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik native_oidc client 'nos-outline' (RBAC tier None) — gates service:outline; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik native_oidc client 'nos-outline' — gates service:outline; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:paperclip": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "forward_auth",
-      "tier": null,
       "client_id": null,
       "service": "paperclip",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik forward_auth client 'None' (RBAC tier None) — gates service:paperclip; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik forward_auth client 'None' — gates service:paperclip; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:portainer": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "native_oidc",
-      "tier": null,
       "client_id": "nos-portainer",
       "service": "portainer",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik native_oidc client 'nos-portainer' (RBAC tier None) — gates service:portainer; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik native_oidc client 'nos-portainer' — gates service:portainer; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:qdrant": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "forward_auth",
-      "tier": null,
       "client_id": null,
       "service": null,
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik forward_auth client 'None' (RBAC tier None) — no manifest service (Tier-2 app or excluded install); provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik forward_auth client 'None' — no manifest service (Tier-2 app or excluded install); provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:roundcube": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "forward_auth",
-      "tier": null,
       "client_id": null,
       "service": null,
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik forward_auth client 'None' (RBAC tier None) — no manifest service (Tier-2 app or excluded install); provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik forward_auth client 'None' — no manifest service (Tier-2 app or excluded install); provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:rustfs": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "forward_auth",
-      "tier": null,
       "client_id": null,
       "service": "rustfs",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik forward_auth client 'None' (RBAC tier None) — gates service:rustfs; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik forward_auth client 'None' — gates service:rustfs; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:snappymail": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "forward_auth",
-      "tier": null,
       "client_id": null,
       "service": "snappymail",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik forward_auth client 'None' (RBAC tier None) — gates service:snappymail; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik forward_auth client 'None' — gates service:snappymail; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:spacetimedb": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "forward_auth",
-      "tier": null,
       "client_id": null,
       "service": "spacetimedb",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik forward_auth client 'None' (RBAC tier None) — gates service:spacetimedb; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik forward_auth client 'None' — gates service:spacetimedb; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:superset": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "native_oidc",
-      "tier": null,
       "client_id": "nos-superset",
       "service": "superset",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik native_oidc client 'nos-superset' (RBAC tier None) — gates service:superset; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik native_oidc client 'nos-superset' — gates service:superset; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:twofauth": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "forward_auth",
-      "tier": null,
       "client_id": null,
       "service": null,
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik forward_auth client 'None' (RBAC tier None) — no manifest service (Tier-2 app or excluded install); provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik forward_auth client 'None' — no manifest service (Tier-2 app or excluded install); provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:uptime-kuma": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "forward_auth",
-      "tier": null,
       "client_id": null,
       "service": "uptime_kuma",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik forward_auth client 'None' (RBAC tier None) — gates service:uptime_kuma; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik forward_auth client 'None' — gates service:uptime_kuma; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:vaultwarden": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "native_oidc",
-      "tier": null,
       "client_id": "nos-vaultwarden",
       "service": "vaultwarden",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik native_oidc client 'nos-vaultwarden' (RBAC tier None) — gates service:vaultwarden; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik native_oidc client 'nos-vaultwarden' — gates service:vaultwarden; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:wing": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "forward_auth",
-      "tier": null,
       "client_id": null,
       "service": "wing",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik forward_auth client 'None' (RBAC tier None) — gates service:wing; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik forward_auth client 'None' — gates service:wing; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:woodpecker": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "forward_auth",
-      "tier": null,
       "client_id": null,
       "service": "woodpecker",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik forward_auth client 'None' (RBAC tier None) — gates service:woodpecker; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik forward_auth client 'None' — gates service:woodpecker; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "authentik:wordpress": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
       "mode": "native_oidc",
-      "tier": null,
       "client_id": "nos-wordpress",
       "service": "wordpress",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik native_oidc client 'nos-wordpress' (RBAC tier None) — gates service:wordpress; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik native_oidc client 'nos-wordpress' — gates service:wordpress; provider+application managed by OpenTofu from the committed registry (its RBAC tier: blueprint 20, from the plugin)"
     },
     "backend:anthropic": {
       "kind": "backend",
@@ -8285,7 +8234,7 @@
       "from": "effector:anatomy-graph-gen",
       "to": "doctrine:ssot/doctrine/layers.md#3",
       "kind": "governed_by",
-      "via": "cited at tools/anatomy-graph-gen.py:1901",
+      "via": "cited at tools/anatomy-graph-gen.py:1900",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"
@@ -8294,7 +8243,7 @@
       "from": "effector:anatomy-graph-gen",
       "to": "doctrine:ssot/doctrine/loop-contract.md#DECISION-2e",
       "kind": "governed_by",
-      "via": "cited at tools/anatomy-graph-gen.py:1569",
+      "via": "cited at tools/anatomy-graph-gen.py:1568",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"
