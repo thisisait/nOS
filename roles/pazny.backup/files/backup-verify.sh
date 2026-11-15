@@ -53,7 +53,7 @@ RESULT_FILE="{{ backup_verify_result | default(ansible_facts['env']['HOME'] + '/
 
 # Every per-db dump backup.sh writes (its PG_DBS filter) as "db owner table,table".
 # The owner defaults to the db's name, the role each app creates its database with.
-PG_DRILL_IMAGE="{{ ('nos/postgis:' ~ postgresql_version ~ '-' ~ postgis_version) if install_postgis | default(false) | bool else ('postgres:' ~ postgresql_version | default('16.15-alpine')) }}"
+PG_DRILL_IMAGE="{{ ('nos/postgis:' ~ postgresql_version ~ '-' ~ postgis_version) if install_postgis | default(false) | bool else ('postgres:' ~ postgresql_version | default('16.16-alpine')) }}"
 PG_DRILL=(
 {% if backup_databases_postgresql | default(false) | bool %}
 {% for d in backup_postgres_dbs | default([]) if lookup('vars', d.flag, default=false) | bool %}
@@ -328,7 +328,8 @@ verify_postgres_all() {
     # No ON_ERROR_STOP: the dumpall re-creates roles that exist in a fresh cluster (postgres).
     gunzip -c "${WORKDIR}/${stem}" | qa >/dev/null 2>>"${LOG_FILE}"
     while read -r db want; do
-        got="$(qa -d "${db}" -c "select count(*) from pg_tables where schemaname not in ('pg_catalog', 'information_schema')" </dev/null 2>>"${LOG_FILE}")"
+        # an extension's own tables (PostGIS spatial_ref_sys) come from CREATE EXTENSION, not CREATE TABLE
+        got="$(qa -d "${db}" -c "select count(*) from pg_tables t where schemaname not in ('pg_catalog', 'information_schema') and not exists (select 1 from pg_depend d where d.classid = 'pg_class'::regclass and d.objid = format('%I.%I', t.schemaname, t.tablename)::regclass and d.deptype = 'e')" </dev/null 2>>"${LOG_FILE}")"
         if [[ "${got}" == "${want}" ]]; then
             record "postgres-all-${db}" 1 "replayed from the dumpall, ${got} tables" "$((SECONDS - t0))" "tables=${got}"
         else

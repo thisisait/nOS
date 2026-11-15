@@ -3,7 +3,7 @@
 # `postgresql_version`; prebuilt multi-arch images lagged it (imresamu amd64 = 16.11).
 # Same musl base as postgres:*-alpine, so an existing data dir keeps its collation.
 # gdal-tools: the geo loaders run ogr2ogr here over the local socket (no new role).
-ARG BASE=postgres:16.15-alpine
+ARG BASE=postgres:16.16-alpine
 FROM ${BASE}
 
 # No defaults: postgis_version + postgis_sha256 live in default.config.yml only.
