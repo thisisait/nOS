@@ -7,7 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
  * tests/anatomy/test_end_user_services_hold_no_estate_token.py (face half).
  */
 const ENV = vi.hoisted(() => ({}) as Record<string, string>);
-vi.mock('$env/dynamic/private', () => ({ env: ENV }));
+// `import * as env`: an unset name reads undefined, as on the real module (vitest's mock throws on a missing key).
+vi.mock('$app/env/private', () => new Proxy(ENV, { has: () => true }));
 
 import {
 	keapTableRows,

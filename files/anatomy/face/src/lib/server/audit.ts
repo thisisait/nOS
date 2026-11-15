@@ -14,7 +14,7 @@
  * a network. `postTableAudit` does the actual best-effort POST.
  */
 import { createHmac } from 'node:crypto';
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 
 export interface SignedEvent {
 	body: string;

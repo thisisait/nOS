@@ -7,7 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
  * non-JSON POST is refused (SvelteKit's CSRF check covers form content-types only).
  */
 const ENV = vi.hoisted(() => ({}) as Record<string, string>);
-vi.mock('$env/dynamic/private', () => ({ env: ENV }));
+// `import * as env`: an unset name reads undefined, as on the real module (vitest's mock throws on a missing key).
+vi.mock('$app/env/private', () => new Proxy(ENV, { has: () => true }));
 
 import { ANON, type Identity } from '$lib/contracts';
 import { GET } from '../../routes/bff/iris/stream/+server';
