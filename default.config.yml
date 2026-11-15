@@ -836,7 +836,7 @@ mariadb_version: "11.8.9"               # REM-246 patch; carries CVE-2026-49261 
 # ==============================================================================
 
 install_postgresql: false
-postgresql_version: "16.15-alpine"      # REM-215: 16.14 is NOT clean — the previous batch told the next reader to ignore the signal that would have found it. Was 16.14 (CVE-2026-6479 SSL/GSS DoS) + 16.13 (CVE-2026-2004/2005/2006/2007). Minor within 16.x, no pg_upgrade.
+postgresql_version: "16.16-alpine"      # CVE-2026-6460 + CVE-2026-116304/6/7/9 fixed in 16.16. Minor within 16.x, no pg_upgrade. Was 16.15 (REM-215).
 # PostGIS: the same pinned postgres with PostGIS compiled in (files/postgis/Dockerfile),
 # built per host so the PG minor never lags the CVE pin. Adds the `geo` database.
 install_postgis: false
@@ -977,7 +977,7 @@ openhuman_skills: [nos-datatables, nos-for-openhuman]  # copied into ~/.openhuma
 # 2.32.7 is the queue's number and sits above that floor, with six days of soak;
 # 2.34.2 shipped today and buys nothing — no advisory has been published since
 # 2026-07-22. Same-major, migrate-on-start. arm64 tag confirmed on the registry.
-n8n_version: "2.45.7"  # Sep30-Oct28 GHSAs (unauth webhook/OAuth); 2.x floor 2.45.5, 2.46 is beta. One-way DB migrations: back up ~/n8n. Prior 2.37.10.
+n8n_version: "2.47.7"  # GHSA-q8rc-7m84-mfvj fixed in 2.47.6 (stable; 2.48.x is beta). One-way DB migrations: back up ~/n8n. Prior 2.45.7.
 n8n_data_dir: "{{ ansible_facts['env']['HOME'] }}/n8n"
 
 # ==============================================================================

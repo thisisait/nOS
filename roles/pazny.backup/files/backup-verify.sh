@@ -53,7 +53,7 @@ RESULT_FILE="{{ backup_verify_result | default(ansible_facts['env']['HOME'] + '/
 
 # Every per-db dump backup.sh writes (its PG_DBS filter) as "db owner table,table".
 # The owner defaults to the db's name, the role each app creates its database with.
-PG_DRILL_IMAGE="{{ ('nos/postgis:' ~ postgresql_version ~ '-' ~ postgis_version) if install_postgis | default(false) | bool else ('postgres:' ~ postgresql_version | default('16.15-alpine')) }}"
+PG_DRILL_IMAGE="{{ ('nos/postgis:' ~ postgresql_version ~ '-' ~ postgis_version) if install_postgis | default(false) | bool else ('postgres:' ~ postgresql_version | default('16.16-alpine')) }}"
 PG_DRILL=(
 {% if backup_databases_postgresql | default(false) | bool %}
 {% for d in backup_postgres_dbs | default([]) if lookup('vars', d.flag, default=false) | bool %}
