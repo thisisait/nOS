@@ -72,7 +72,27 @@ filter built on the access grade the row forbade, a macOS lane still allowed to 
 - A test's server never outlives the test; worktrees are removed only through the
   shipped pruner, after an ad-hoc cleanup deleted nested ones.
 
-## The blank on 2026-11-15
+## Three blanks and a restore that went backwards
 
-PENDING — written from `~/.nos/blank-runs.jsonl` after tonight's
-`nos --remove=data --confirm`.
+The first blank, on the evening of 11-15, took its three pre-wipe guards in
+order — every DataTable exported, a fresh full backup, a restic snapshot — and
+then stopped at the iiab stack: calibre-web's first boot installs the calibre
+binaries, which took four minutes, and its healthcheck gave it three. The fix is
+one number (`start_period` 600 s). The second attempt, on the half-installed
+estate, refused to wipe at all: the thalamus did not exist yet, so its backup
+failed, and a removal without a survivor stops. That refusal mattered more than
+it looked: the first blank had died before KEAP re-imported the roadmap, so the
+table the next export would have carried across was empty.
+
+Then the restore went backwards. Run twice with the same date, it found its own
+earlier snapshot, kept the live database in place, failed to replay into it and
+rolled Wing back to the stale snapshot of the empty estate — twice in twelve
+hours. Nothing was lost, because the real data had been set aside before any of
+it; the restore now names each run's snapshot apart (`6f21f317`).
+
+The third blank, on the morning of 11-16, ran clean in thirty minutes:
+failed=false, the roadmap exported and imported, `nos-smoke --strict` 32/33 —
+the one red is an Anthropic key the blank faithfully rebuilt from an older
+`credentials.yml`. The same morning, the verdict job was found never to have
+written a row (KEAP wanted epoch seconds) and Gitea had nine new advisories;
+both were fixed before the third blank started.

@@ -11,8 +11,10 @@ Versioning is by git tag `v<semver>` cut from `master`. The latest tag is `v0.18
 > **The face becomes the endpoint, and the night writes down what it saw.**
 > Not tagged yet. 508 commits on dev since `v0.18-beta`, at `582d1dbd` (935 files, +47.2k/−27.4k),
 > measured with `git log v0.18-beta..origin/dev` and `git diff --shortstat`. Still `-beta`.
-> **Blank 2026-11-15** — PENDING: runs tonight; filled in from `~/.nos/blank-runs.jsonl` after it
-> ends. The previous blank was 2026-11-03 at the v0.18 cut, `nos-smoke --strict` 32/32.
+> **Blank 2026-11-16** (`nos --remove=data --confirm` at `6936cb2d`, 08:42–09:12 UTC): failed=false,
+> the DataTables exported before the wipe and imported after it; **`nos-smoke --strict` 32/33** in the
+> run's own record — `llm-anthropic-api` 401 (the key, see Known open). Two blanks before it, on 11-15,
+> found what is written under "The blanks" below.
 > **Why now:** master still fetches FrankenPHP from upstream, whose assets are re-uploaded nightly,
 > so its scheduled CI stays red until the cut moves it to the attested mirror (`ba8fcca0`); the
 > roadmap loop is paused until the tag (docs/active-work.md §Now).
@@ -145,10 +147,27 @@ Evidence at release-prep, 2026-11-15: CI on dev green at `249d05d2`, `bf54aaa1`,
   keeps dirty, racing, live and the parents of a kept nested tree (`cbb82d7a`, `c3791e36`; gate
   `test_worktree_pruner_lists_only_merged_clean`). 65 GB of worktrees at 98 % disk was the trigger.
 
+### The blanks (11-15 … 11-16)
+- **calibre-web's first boot** (the universal-calibre mod install) took 4m09s; 90 s `start_period` + 3×30 s
+  marked it unhealthy and the strict health wait stopped the first blank (iiab 17/18). `start_period`
+  600 s; a pass inside it is healthy at once (`2fdc9ac0`).
+- **The guards held.** The next attempt, on the half-installed estate, refused to wipe: its pre-wipe backup
+  could not dump the thalamus (`A removal without a survivor stops here`). The first blank had stopped
+  before KEAP re-imported its DataTables; the roadmap came back from the pre-blank `keap-db`.
+- **A restore re-run with the same `restore_date` rolled Wing back to a stale snapshot**, twice: the
+  snapshot was named by date, `mv -n` kept the live db, the replay failed into it, the rollback put the
+  first run's snapshot back. One snapshot name per run, WAL/SHM moved with the db, a failed move fails the
+  task (`6f21f317`; GATE CHANGE `7f8a5793`, ruling 11-16). Every byte came back from the held copies.
+- **`morning-verdict` never wrote a row**: KEAP took a date cell only as epoch seconds and refused all six,
+  11-15 and 11-16 (`8f1087a9`).
+- **Nine high Gitea advisories** published overnight, all fixed in 28.4.0 (`6936cb2d`); the blank installed it.
+
 ### Known open / unverified
-- **The blank** (criterion 1) runs tonight. The 11-15 pins are already converged on the operator host
-  (full `nos`, 11-15, failed=0).
-  `morning-verdict` has no rows yet (criterion 3); the face approval journey has not run (criterion 4).
+- **`llm-anthropic-api` 401**: the blank rebuilt `~/.nos/secrets.yml` from `credentials.yml`, whose key is the
+  one Anthropic now refuses (it answered 200 on 11-15 before the blank). The operator pastes the current key
+  into `credentials.yml`; then `nos --tags verify` and `nos smoke --strict` re-record the blank's smoke.
+  `morning-verdict` writes its first rows at the next 07:10 UTC (criterion 3); the face approval journey
+  has not run (criterion 4).
 - **Bonus CI lanes** (per-stack converges, non-blocking): `tools/ci-tier-status.py` on 11-15 reads
   18 of 23 RED, no green run since 2026-11-08 — b2b, data, devops, engineering, infra, voip and
   twelve `iiab-*` lanes; green: iiab-homeautomation, iiab-monitoring, iiab-rss, iiab-storage,
