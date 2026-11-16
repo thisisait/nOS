@@ -6,7 +6,7 @@ namespace: nos-core
 summary: "508 commits after v0.18-beta. The face moves to SvelteKit 3 and takes over Wing's apps; the medulla serves thirteen of Wing's read sets; a new Authentik application gets its tier in one converge; the night writes down what it saw. Before the cut, six Fable reviewers read 223 rows marked review against the code: 158 shipped, 19 short of their promise, 18 superseded, none unsafe."
 tags: [release, face, sveltekit, medulla, authentik, tofu, roadmap, review, supply-chain, backup]
 release: v0.19-beta
-status: draft
+status: published
 actors: [pazny, claude]
 related: [RELEASE.md, files/anatomy/face, files/anatomy/thalamus/medulla, tasks/tofu-authentik.yml, tasks/verify-authentik-apps.yml, roles/pazny.backup/files/backup-verify.sh, docs/hidden_fees/65-the-medulla-answers-the-edges-in-its-own-words.md]
 ---
@@ -96,3 +96,9 @@ the one red is an Anthropic key the blank faithfully rebuilt from an older
 `credentials.yml`. The same morning, the verdict job was found never to have
 written a row (KEAP wanted epoch seconds) and Gitea had nine new advisories;
 both were fixed before the third blank started.
+
+The last exit was a journey: Iris proposes moving a file, the person approves
+on the card, Files shows it moved. The card rendered, and approve never
+unlocked — its end marker had to be wholly visible, and the Iris panel ran past
+the window edge. One CSS rule later (`f6e98346`) the journey passed in 59
+seconds, and `v0.19-beta` was tagged at `258fa01b`.

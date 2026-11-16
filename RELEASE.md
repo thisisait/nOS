@@ -2,15 +2,18 @@
 
 `nOS` is the open-source Ansible engine behind [**This is AIT — Agentic IT**](https://thisisait.eu): one command turns an Apple Silicon Mac or Ubuntu 24.04 host into a reproducible, self-hosted, self-managing cloud of 79 FOSS services behind one SSO.
 
-Versioning is by git tag `v<semver>` cut from `master`. The latest tag is `v0.18-beta`.
+Versioning is by git tag `v<semver>` cut from `master`. The latest tag is `v0.19-beta`.
 
 ---
 
-## v0.19-beta (2026-11-03 … ) — DRAFT
+## v0.19-beta (2026-11-03 … 2026-11-16)
 
 > **The face becomes the endpoint, and the night writes down what it saw.**
-> Not tagged yet. 508 commits on dev since `v0.18-beta`, at `582d1dbd` (935 files, +47.2k/−27.4k),
-> measured with `git log v0.18-beta..origin/dev` and `git diff --shortstat`. Still `-beta`.
+> Tagged `v0.19-beta` at `258fa01b` (2026-11-16), the commit the operator host runs at the cut; the
+> blank below converged its ancestor `6936cb2d`, the later commits (the restore re-run fix, the approval
+> card, notes) were checked by the full suite, the journey and the readers named below.
+> 520 commits since `v0.18-beta` (939 files, +47.6k/−27.4k), measured with `git log 3abf3982..258fa01b`
+> and `git diff --shortstat`. Still `-beta`.
 > **Blank 2026-11-16** (`nos --remove=data --confirm` at `6936cb2d`, 08:42–09:12 UTC): failed=false,
 > the DataTables exported before the wipe and imported after it; **`nos-smoke --strict` 33/33** in the
 > run's own record (`estate-status`: release gate met), re-recorded at 10:39 UTC after the Anthropic key
@@ -20,21 +23,27 @@ Versioning is by git tag `v<semver>` cut from `master`. The latest tag is `v0.18
 > so its scheduled CI stays red until the cut moves it to the attested mirror (`ba8fcca0`); the
 > roadmap loop is paused until the tag (docs/active-work.md §Now).
 
-Exit criteria, proposed (roadmap row `rel-019`; the operator rules them):
+Exit criteria, from roadmap row `rel-019`, as read at the cut, 2026-11-16:
 
 - [x] a blank converge of the operator host (`nos --remove=data --confirm`) with
   `nos-smoke --strict` green in the run's own record (`~/.nos/blank-runs.jsonl`) — blank 2026-11-16 at
   `6936cb2d`, smoke --strict 33/33 at 10:39 UTC, `estate-status`: release gate met
-- [ ] CI green on every blocking lane at the release PR
-- [ ] the first `morning-verdict` rows written by Pulse (six readers, one morning)
-- [ ] one face approval journey run on the estate (`tools/e2e-plan.py --journeys`, row
-  `iris-approvals-e2e-plan`)
+- [x] CI green on every blocking lane at the release PR — dev green at `f6e98346`, the last code commit
+  (`*.md` commits skip CI by `paths-ignore`); Bonus lanes red since 11-08, non-blocking, unverified (below)
+- [x] the first `morning-verdict` rows written by Pulse (six readers, one morning) — run 2026-11-16
+  10:16 UTC, rc 10 (verdict RED, all six rows written, stderr empty), after the epoch fix `8f1087a9`
+- [x] one face approval journey run on the estate (`tools/e2e-plan.py --journeys`, row
+  `iris-approvals-e2e-plan`) — `iris-face` "move report.pdf to archive": the card, approve, Files shows it
+  in archive, passed 2026-11-16 12:49 UTC (59 s) after `f6e98346`; the journey file's other tests below
 
 Evidence at release-prep, 2026-11-15: CI on dev green at `249d05d2`, `bf54aaa1`, `582d1dbd`;
 `advisory-status` 0 unjudged HIGH/CRITICAL/KEV after the 11-15 pins; full offline suite on
 `582d1dbd` 9498 passed, cargo 506/0, face vitest 1031/0. The blank and the journey have not run.
 
 ### The face is the endpoint
+- **An approval card clipped on the right still unlocks** (`f6e98346`): the card's end marker had to be
+  wholly visible, and at 1280 px the Iris panel runs past the window edge, so approve never unlocked; the
+  marker is 1×1 at the card's left edge, the server's `shown_whole` check unchanged. Found by the journey.
 - **SvelteKit 3 on adapter-node 6** (`391c1a74`, `8523c7d4`). Kit 3 hands the server only what
   `src/env.ts` declares; undeclared, `FACE_EDGE_TOKEN` read as unset and the hook trusted every caller
   (measured 11-14 with a forged `X-Authentik-Username`). Gate `test_face_env_declared` (`940b6efb`);
@@ -168,8 +177,12 @@ Evidence at release-prep, 2026-11-15: CI on dev green at `249d05d2`, `bf54aaa1`,
   `credentials.yml` is the one source, `secrets.yml` its runtime copy.
 
 ### Known open / unverified
-- `morning-verdict` writes its first rows at the next 07:10 UTC (criterion 3); the face approval journey
-  has not run (criterion 4).
+- **The `iris-face` journey file**, 3 of 6 on 11-16: `/branch` now makes a workspace and the test still
+  counts tabs (row `iris-face-journey-workspaces`); Iris on the local `qwen3.5:9b` answered "opened your
+  roadmap table" without the act (`iris-claims-unperformed-action`); Stop printed "Stopped." while the turn
+  ran on (`iris-stop-ends-the-turn`); the panel overflows a 1280 px window (`iris-panel-overflows-window`).
+- `tofu-drift-plan`'s 11-16 10:08 UTC run failed on a 502 while Authentik restarted (the previous run: no
+  drift); its next nightly run is the reading.
 - **Bonus CI lanes** (per-stack converges, non-blocking): `tools/ci-tier-status.py` on 11-15 reads
   18 of 23 RED, no green run since 2026-11-08 — b2b, data, devops, engineering, infra, voip and
   twelve `iiab-*` lanes; green: iiab-homeautomation, iiab-monitoring, iiab-rss, iiab-storage,
