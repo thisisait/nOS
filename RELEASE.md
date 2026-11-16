@@ -12,8 +12,9 @@ Versioning is by git tag `v<semver>` cut from `master`. The latest tag is `v0.18
 > Not tagged yet. 508 commits on dev since `v0.18-beta`, at `582d1dbd` (935 files, +47.2k/−27.4k),
 > measured with `git log v0.18-beta..origin/dev` and `git diff --shortstat`. Still `-beta`.
 > **Blank 2026-11-16** (`nos --remove=data --confirm` at `6936cb2d`, 08:42–09:12 UTC): failed=false,
-> the DataTables exported before the wipe and imported after it; **`nos-smoke --strict` 32/33** in the
-> run's own record — `llm-anthropic-api` 401 (the key, see Known open). Two blanks before it, on 11-15,
+> the DataTables exported before the wipe and imported after it; **`nos-smoke --strict` 33/33** in the
+> run's own record (`estate-status`: release gate met), re-recorded at 10:39 UTC after the Anthropic key
+> was replaced; the blank's own run read 32/33 (`llm-anthropic-api` 401). Two blanks before it, on 11-15,
 > found what is written under "The blanks" below.
 > **Why now:** master still fetches FrankenPHP from upstream, whose assets are re-uploaded nightly,
 > so its scheduled CI stays red until the cut moves it to the attested mirror (`ba8fcca0`); the
@@ -21,8 +22,9 @@ Versioning is by git tag `v<semver>` cut from `master`. The latest tag is `v0.18
 
 Exit criteria, proposed (roadmap row `rel-019`; the operator rules them):
 
-- [ ] a blank converge of the operator host (`nos --remove=data --confirm`) with
-  `nos-smoke --strict` green in the run's own record (`~/.nos/blank-runs.jsonl`)
+- [x] a blank converge of the operator host (`nos --remove=data --confirm`) with
+  `nos-smoke --strict` green in the run's own record (`~/.nos/blank-runs.jsonl`) — blank 2026-11-16 at
+  `6936cb2d`, smoke --strict 33/33 at 10:39 UTC, `estate-status`: release gate met
 - [ ] CI green on every blocking lane at the release PR
 - [ ] the first `morning-verdict` rows written by Pulse (six readers, one morning)
 - [ ] one face approval journey run on the estate (`tools/e2e-plan.py --journeys`, row
@@ -161,12 +163,12 @@ Evidence at release-prep, 2026-11-15: CI on dev green at `249d05d2`, `bf54aaa1`,
 - **`morning-verdict` never wrote a row**: KEAP took a date cell only as epoch seconds and refused all six,
   11-15 and 11-16 (`8f1087a9`).
 - **Nine high Gitea advisories** published overnight, all fixed in 28.4.0 (`6936cb2d`); the blank installed it.
+- **The Anthropic key**: the blank rebuilt `~/.nos/secrets.yml` from `credentials.yml`, whose key Anthropic
+  refused (401; 200 on 11-15 before the blank). The operator pasted the current key into `credentials.yml`:
+  `credentials.yml` is the one source, `secrets.yml` its runtime copy.
 
 ### Known open / unverified
-- **`llm-anthropic-api` 401**: the blank rebuilt `~/.nos/secrets.yml` from `credentials.yml`, whose key is the
-  one Anthropic now refuses (it answered 200 on 11-15 before the blank). The operator pastes the current key
-  into `credentials.yml`; then `nos --tags verify` and `nos smoke --strict` re-record the blank's smoke.
-  `morning-verdict` writes its first rows at the next 07:10 UTC (criterion 3); the face approval journey
+- `morning-verdict` writes its first rows at the next 07:10 UTC (criterion 3); the face approval journey
   has not run (criterion 4).
 - **Bonus CI lanes** (per-stack converges, non-blocking): `tools/ci-tier-status.py` on 11-15 reads
   18 of 23 RED, no green run since 2026-11-08 — b2b, data, devops, engineering, infra, voip and
