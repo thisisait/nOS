@@ -100,7 +100,10 @@
 		font-size: 11px;
 		color: var(--muted);
 	}
+	/* 1×1 at the left edge: "seen" means scrolled down to it. Full width, a card clipped on the right
+	   (the Iris panel past a 1280 px window edge, journey 11-16) never reached threshold 1: approve stayed locked. */
 	.end {
+		width: 1px;
 		height: 1px;
 	}
 	.ask {
