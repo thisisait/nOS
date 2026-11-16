@@ -101,4 +101,4 @@ The last exit was a journey: Iris proposes moving a file, the person approves
 on the card, Files shows it moved. The card rendered, and approve never
 unlocked — its end marker had to be wholly visible, and the Iris panel ran past
 the window edge. One CSS rule later (`f6e98346`) the journey passed in 59
-seconds, and `v0.19-beta` was tagged at `258fa01b`.
+seconds, and `v0.19-beta` was tagged at `f6e98346`.

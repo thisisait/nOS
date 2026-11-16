@@ -10,7 +10,7 @@
 
 ## Now (current track)
 
-1. **v0.19-beta is tagged** (`258fa01b`, row `rel-019`; all four exits met 11-16, RELEASE.md).
+1. **v0.19-beta is tagged** (`f6e98346`, row `rel-019`; all four exits met 11-16, RELEASE.md).
    Open from the cut: the `iris-face` journey file's three other tests and the panel overflow
    (rows `iris-face-journey-workspaces`, `iris-claims-unperformed-action`,
    `iris-stop-ends-the-turn`, `iris-panel-overflows-window`); 28 rows still wait for a live

@@ -9,10 +9,11 @@ Versioning is by git tag `v<semver>` cut from `master`. The latest tag is `v0.19
 ## v0.19-beta (2026-11-03 … 2026-11-16)
 
 > **The face becomes the endpoint, and the night writes down what it saw.**
-> Tagged `v0.19-beta` at `258fa01b` (2026-11-16), the commit the operator host runs at the cut; the
-> blank below converged its ancestor `6936cb2d`, the later commits (the restore re-run fix, the approval
-> card, notes) were checked by the full suite, the journey and the readers named below.
-> 520 commits since `v0.18-beta` (939 files, +47.6k/−27.4k), measured with `git log 3abf3982..258fa01b`
+> Tagged `v0.19-beta` at `f6e98346` (2026-11-16), the last commit with its own CI run (green); the
+> operator host runs `258fa01b`, which adds release notes only (CI skips `*.md`, and a tag needs a run).
+> The blank below converged its ancestor `6936cb2d`; the later commits (the restore re-run fix, the
+> approval card) were checked by the full suite, the journey and the readers named below.
+> 519 commits since `v0.18-beta` (939 files, +47.6k/−27.4k), measured with `git log 3abf3982..f6e98346`
 > and `git diff --shortstat`. Still `-beta`.
 > **Blank 2026-11-16** (`nos --remove=data --confirm` at `6936cb2d`, 08:42–09:12 UTC): failed=false,
 > the DataTables exported before the wipe and imported after it; **`nos-smoke --strict` 33/33** in the
