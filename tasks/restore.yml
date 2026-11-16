@@ -58,6 +58,13 @@
     msg: "restore_date='{{ restore_date }}' — expected ISO date YYYY-MM-DD"
   when: restore_date is not match('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
 
+# One snapshot name per RUN, not per restore_date: a second run with the same date found the first
+# run's snapshot, `mv -n` kept the live db in place, the replay failed into it and the rollback put
+# the FIRST run's snapshot back (wing.db emptied twice, 2026-11-15/16; row restore-rerun-same-date).
+- name: "[Restore] Name this run's pre-restore snapshots"
+  ansible.builtin.set_fact:
+    restore_snap: "pre-restore-{{ restore_date }}-{{ lookup('pipe', 'date -u +%Y%m%dT%H%M%SZ') }}"
+
 - name: "[Restore] Verify aws CLI is installed"
   ansible.builtin.command: which aws
   register: aws_which
@@ -255,7 +262,7 @@
       ║ This will (only for the sources present above):
       ║   * Drop-and-replace MariaDB / PostgreSQL databases from dumps
       ║   * Stop containers using targeted Docker volumes / host-bind dirs and rewrite them
-      ║   * Rebuild wing.db (stops Wing; live db snapshotted to .pre-restore-<date>)
+      ║   * Rebuild wing.db (stops Wing; live db snapshotted to .pre-restore-<date>-<run>)
       ║   * Rebuild Iris ledger.db (stops the thalamus; same snapshot rule)
       ║   * ~/.nos state: ONLY if -e restore_state=true (else skipped)
       ║   * Authentik: restored via the postgres dump (blueprint JSON staged, not re-POSTed)
@@ -625,15 +632,15 @@
       changed_when: true
       failed_when: false
 
-    - name: "[Restore][wing-db] Snapshot current wing.db (non-clobbering)"
-      # `mv -n` so a RE-RUN (where wing.db is now the already-restored copy)
-      # cannot overwrite the genuine first-run pre-restore snapshot.
-      ansible.builtin.command: >-
-        mv -n "{{ wing_db_target }}" "{{ wing_db_target }}.pre-restore-{{ restore_date }}"
-      args:
-        removes: "{{ wing_db_target }}"
+    - name: "[Restore][wing-db] Snapshot current wing.db and its WAL (this run's name)"
+      # The replay starts from an absent file: a db left in place takes the dump as duplicates.
+      ansible.builtin.shell: |
+        set -e
+        for s in "" -wal -shm; do
+          [ -e "{{ wing_db_target }}$s" ] || continue
+          mv "{{ wing_db_target }}$s" "{{ wing_db_target }}.{{ restore_snap }}$s"
+        done
       changed_when: true
-      failed_when: false
 
     - name: "[Restore][wing-db] Rebuild wing.db from the dump"
       ansible.builtin.shell: |
@@ -654,11 +661,14 @@
                           | map(attribute='stat.size') | list | first | default(0))
         }] }}"
   rescue:
-    - name: "[Restore][wing-db] FAILED — roll the pre-restore snapshot back"
-      ansible.builtin.command: >-
-        mv -f "{{ wing_db_target }}.pre-restore-{{ restore_date }}" "{{ wing_db_target }}"
-      args:
-        removes: "{{ wing_db_target }}.pre-restore-{{ restore_date }}"
+    - name: "[Restore][wing-db] FAILED — roll this run's snapshot back"
+      ansible.builtin.shell: |
+        [ -e "{{ wing_db_target }}.{{ restore_snap }}" ] || exit 0
+        rm -f "{{ wing_db_target }}" "{{ wing_db_target }}-wal" "{{ wing_db_target }}-shm"
+        for s in "" -wal -shm; do
+          [ -e "{{ wing_db_target }}.{{ restore_snap }}$s" ] || continue
+          mv -f "{{ wing_db_target }}.{{ restore_snap }}$s" "{{ wing_db_target }}$s"
+        done
       changed_when: true
       failed_when: false
 
@@ -709,16 +719,13 @@
       changed_when: true
       failed_when: false
 
-    - name: "[Restore][thalamus-ledger] Snapshot ledger.db + its WAL (non-clobbering)"
-      # `mv -n` so a RE-RUN cannot overwrite the genuine first-run snapshot.
+    - name: "[Restore][thalamus-ledger] Snapshot ledger.db + its WAL (this run's name)"
       ansible.builtin.shell: |
         for s in "" -wal -shm; do
           [ -e "{{ ledger_target }}$s" ] || continue
-          mv -n "{{ ledger_target }}$s" "{{ ledger_target }}.pre-restore-{{ restore_date }}$s"
-          rm -f "{{ ledger_target }}$s"
+          mv "{{ ledger_target }}$s" "{{ ledger_target }}.{{ restore_snap }}$s" || exit 1
         done
       changed_when: true
-      failed_when: false
 
     - name: "[Restore][thalamus-ledger] Rebuild ledger.db from the dump"
       ansible.builtin.shell: |
@@ -744,8 +751,8 @@
       ansible.builtin.shell: |
         rm -f "{{ ledger_target }}-journal"
         for s in "" -wal -shm; do
-          [ -e "{{ ledger_target }}.pre-restore-{{ restore_date }}$s" ] || continue
-          mv -f "{{ ledger_target }}.pre-restore-{{ restore_date }}$s" "{{ ledger_target }}$s"
+          [ -e "{{ ledger_target }}.{{ restore_snap }}$s" ] || continue
+          mv -f "{{ ledger_target }}.{{ restore_snap }}$s" "{{ ledger_target }}$s"
         done
       changed_when: true
       failed_when: false
@@ -798,12 +805,11 @@
 
     # The WAL and SHM go with the DB: left beside the restored file, KEAP replays
     # the old WAL into it and dies on SQLITE_CORRUPT (2026-10-10).
-    - name: "[Restore][keap-db] Snapshot current keap.db and its WAL (non-clobbering)"
+    - name: "[Restore][keap-db] Snapshot current keap.db and its WAL (this run's name)"
       ansible.builtin.shell: |
         for s in "" -wal -shm; do
           [ -e "{{ keap_db_target }}$s" ] || continue
-          mv -n "{{ keap_db_target }}$s" "{{ keap_db_target }}.pre-restore-{{ restore_date }}$s"
-          rm -f "{{ keap_db_target }}$s"
+          mv "{{ keap_db_target }}$s" "{{ keap_db_target }}.{{ restore_snap }}$s" || exit 1
         done
       changed_when: true
       failed_when: false
@@ -830,8 +836,8 @@
     - name: "[Restore][keap-db] FAILED — roll the pre-restore snapshot back"
       ansible.builtin.shell: |
         for s in "" -wal -shm; do
-          [ -e "{{ keap_db_target }}.pre-restore-{{ restore_date }}$s" ] || continue
-          mv -f "{{ keap_db_target }}.pre-restore-{{ restore_date }}$s" "{{ keap_db_target }}$s"
+          [ -e "{{ keap_db_target }}.{{ restore_snap }}$s" ] || continue
+          mv -f "{{ keap_db_target }}.{{ restore_snap }}$s" "{{ keap_db_target }}$s"
         done
       changed_when: true
       failed_when: false
