@@ -924,7 +924,7 @@ prometheus_version: "v3.13.2"   # synced to role default (cleared version-pin sh
 loki_version: "3.7.6"           # synced to role default (cleared version-pin shadow) [swept 3.7.2 2026-08-06]
 
 # Gitea Docker
-gitea_version: "28.3.0"                 # 2026-11-01: 7 high (GHSA-32h8, -9v6p, -6h2f, -jh8p, -37xv, -8g99, -8p3x) + 15 medium fixed in 28.3.0; prior 28.2.0
+gitea_version: "28.4.0"                 # 2026-11-16: 9 high (GHSA-frjx, -6m4f, -wmr3, -wgx7, -4p89, -w87g, -q3q9, -9vh6, -5mx6) fixed in 28.4.0; prior 28.3.0
 
 postgres_exporter_version: "v0.20.1"  # [swept 2026-08-06]
 mysqld_exporter_version: "v0.19.0"  # [swept 2026-08-06]
