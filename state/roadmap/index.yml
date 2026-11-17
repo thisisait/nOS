@@ -114,6 +114,12 @@
 - slug: app-edge-token
   parent: ''
   track: security
+- slug: app-ingest-door
+  parent: manifest-app-hosting-gaps
+  track: platform
+- slug: app-same-origin-tiles
+  parent: manifest-app-hosting-gaps
+  track: platform
 - slug: app-standards-are-parsed
   parent: face-app-builder
   track: security
@@ -1146,6 +1152,9 @@
 - slug: forum-token-in-access-log
   parent: nos-forum
   track: security
+- slug: forward-auth-sign-out-route
+  parent: ''
+  track: security
 - slug: foss-crm-and-wordpress-cms
   parent: consulting-firm-deployment
   track: platform
@@ -1256,6 +1265,9 @@
   track: platform
 - slug: geolibre-atlas-serve
   parent: nos-atlas
+  track: platform
+- slug: geolibre-bump-3-9
+  parent: ''
   track: platform
 - slug: gis-property
   parent: commons
