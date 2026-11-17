@@ -372,6 +372,10 @@ def standards_violations(record: Dict[str, Any]) -> List[str]:
         if any(str(k).lower().startswith("traefik.") for k in keys):
             v.append("standard traefik-label: services.%s sets traefik.* labels; the runner derives "
                      "routing from meta.name + meta.ports[0], delete them" % svc)
+        for key in ("extends", "env_file", "label_file", "build"):
+            if key in d:
+                v.append("standard host-file: services.%s uses %s, which reads a host file the "
+                         "parser never sees; a manifest ships no files, inline it" % (svc, key))
         for ref in sorted(set(r for t in _strings(d) for r in _interpolations(t))):
             if _PLATFORM_SECRET_RE.search(re.split(r"[:?+-]", ref.strip("${}"), maxsplit=1)[0]):
                 v.append("standard platform-secret: services.%s references %s, a platform "

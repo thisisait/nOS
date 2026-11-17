@@ -107,6 +107,7 @@
             skip: "{{ apps_skip | default([]) }}"
             origin_pull: "{{ traefik_origin_pull_enabled | default(false) | bool }}"
           register: _apps_render
+          no_log: true  # the result holds every app password and edge token; violations print below
 
         # ── Defensive 0-app warning ──────────────────────────────────────────
         # Catches a class of silent failure: manifest dir non-empty but render

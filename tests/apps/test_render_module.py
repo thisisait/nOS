@@ -334,6 +334,9 @@ class TestAuthModes(object):
         assert chain.index("authentik@file") < chain.index("demo-edge@docker")
         again, _, _ = render._process_one(path, secret_seed=secrets, **kw)
         assert again["traefik_labels"] == app["traefik_labels"]
+        blank, _, _ = render._process_one(path, secret_seed={"demo": {"EDGE_TOKEN": ""}}, **kw)
+        edge = [lbl for lbl in blank["traefik_labels"] if "X-Nos-Edge-Token=" in lbl][0]
+        assert len(edge.split("X-Nos-Edge-Token=")[1]) == 32
         oidc = _write_app(tmp_path, "demo", _record(nginx_overrides={"auth": "oidc"}))
         app, _, _ = render._process_one(oidc, secret_seed={}, **kw)
         assert not any("X-Nos-Edge-Token" in lbl for lbl in app["traefik_labels"])

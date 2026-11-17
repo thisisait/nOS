@@ -476,7 +476,9 @@ def _process_one(path, tenant_domain, apps_subdomain, secret_seed,
         return None, {}, violations
 
     # Per-app secret seed (operator's previous-run secrets, if any)
-    seed_for_app = (secret_seed or {}).get(name, {}) or {}
+    seed_for_app = dict((secret_seed or {}).get(name, {}) or {})
+    if not seed_for_app.get("EDGE_TOKEN"):  # empty: Traefik would delete the header
+        seed_for_app.pop("EDGE_TOKEN", None)
 
     fqdn = _fqdn_for(name, tenant_domain, host_alias=host_alias,
                      subdomain=apps_subdomain)
