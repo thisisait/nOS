@@ -4,14 +4,14 @@
 # public news RSS by local LLM agents (impact scoring, NER, embeddings).
 #
 # One image, built locally from this repo (see deploy/nos/HANDOFF.md):
-#   docker build -t chronos-timeline:0.3.0 .
+#   docker build -t chronos-timeline:0.5.1 .
 # Frontend + API on 8787, libSQL database in the chronos_data volume.
 # LLM: Ollama on the host only; nothing leaves the machine.
 # ============================================================================
 
 meta:
   name: "chronos"
-  version: "0.3.0"
+  version: "0.5.1"
   summary: "Časová osa událostí z českých zpravodajských RSS, analyzovaná lokálními LLM agenty."
   homepage: "https://github.com/PaznerA/chronos-timeline"
   category: "knowledge"
@@ -78,15 +78,19 @@ authentik:
 compose:
   services:
     chronos:
-      image: "chronos-timeline:0.3.0"
+      image: "chronos-timeline:0.5.1"
       container_name: chronos
       restart: unless-stopped
       # Traefik is the only edge; no host port.
       expose:
         - "8787"
       environment:
-        - "LLM_BASE_URL=http://host.docker.internal:11434/v1"
+        # Ollama's native API (only it honours keep_alive). The GPU is shared with nOS:
+        # short keep_alive, one request at a time, at most AGENT_BATCH_SIZE events per agent per run.
+        - "LLM_BASE_URL=http://host.docker.internal:11434"
         - "LLM_MODEL=qwen3.5:9b"
+        - "LLM_KEEP_ALIVE=2m"
+        - "AGENT_BATCH_SIZE=10"
         - "EMBEDDING_MODEL=nomic-embed-text"
         - "EMBEDDING_DIM=768"
         - "PIPELINE_INTERVAL_MIN=60"
@@ -99,6 +103,15 @@ compose:
         - "host.docker.internal:host-gateway"
       volumes:
         - chronos_data:/data
+      # Hardening: the process needs no privileges and writes only to /data.
+      user: "1000:1000"            # the image's node user
+      read_only: true
+      tmpfs:
+        - /tmp
+      cap_drop:
+        - ALL
+      security_opt:
+        - "no-new-privileges:true"
       mem_limit: 512m
       cpus: 1.0
 
