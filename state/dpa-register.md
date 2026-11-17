@@ -674,7 +674,11 @@ feeds. The feeds are not filtered to politics, so ordinary news naming
 private individuals (crime, accidents, local stories) is stored too; the
 operator accepted that scope. Agents store article titles and summaries,
 the names and roles of persons, organisations and places mentioned in
-them, a local LLM impact score and text embeddings. Operators leave their
+them, a local LLM impact score and text embeddings. Since 0.6.0 it also
+stores orange and red disaster alerts (GDACS) and weather warnings
+(MeteoAlarm); those carry no personal data and are scored from a table,
+without a model. Exports leave out anything whose licence does not
+clearly allow redistribution (news, MeteoAlarm). Operators leave their
 Authentik username on agent runs and erasures they trigger (audit).
 Events are a historical archive and are kept without an erasure horizon
 (retention -1). On request an admin erases an event or a named entity

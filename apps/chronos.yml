@@ -4,14 +4,14 @@
 # public news RSS by local LLM agents (impact scoring, NER, embeddings).
 #
 # One image, built locally from this repo (see deploy/nos/HANDOFF.md):
-#   docker build -t chronos-timeline:0.5.1 .
+#   docker build -t chronos-timeline:0.6.2 .
 # Frontend + API on 8787, libSQL database in the chronos_data volume.
 # LLM: Ollama on the host only; nothing leaves the machine.
 # ============================================================================
 
 meta:
   name: "chronos"
-  version: "0.5.1"
+  version: "0.6.2"
   summary: "Časová osa událostí z českých zpravodajských RSS, analyzovaná lokálními LLM agenty."
   homepage: "https://github.com/PaznerA/chronos-timeline"
   category: "knowledge"
@@ -34,7 +34,11 @@ gdpr:
     private individuals (crime, accidents, local stories) is stored too; the
     operator accepted that scope. Agents store article titles and summaries,
     the names and roles of persons, organisations and places mentioned in
-    them, a local LLM impact score and text embeddings. Operators leave their
+    them, a local LLM impact score and text embeddings. Since 0.6.0 it also
+    stores orange and red disaster alerts (GDACS) and weather warnings
+    (MeteoAlarm); those carry no personal data and are scored from a table,
+    without a model. Exports leave out anything whose licence does not
+    clearly allow redistribution (news, MeteoAlarm). Operators leave their
     Authentik username on agent runs and erasures they trigger (audit).
     Events are a historical archive and are kept without an erasure horizon
     (retention -1). On request an admin erases an event or a named entity
@@ -78,7 +82,7 @@ authentik:
 compose:
   services:
     chronos:
-      image: "chronos-timeline:0.5.1"
+      image: "chronos-timeline:0.6.2"
       container_name: chronos
       restart: unless-stopped
       # Traefik is the only edge; no host port.
@@ -96,6 +100,9 @@ compose:
         - "PIPELINE_INTERVAL_MIN=60"
         - "CHRONOS_ADMIN_GROUPS=nos-providers,nos-admins"
         - "CHRONOS_EDITOR_GROUPS=nos-managers"
+        # Operator decision: a contact (URL or address) the crawler sends in its User-Agent, so a feed
+        # owner can reach whoever runs this. Unset = "Chronos-Crawler/0.6" with no contact.
+        #   - "CRAWLER_CONTACT=<contact>"
         # Traefik sends this as X-Nos-Edge-Token behind Authentik; the app believes the
         # X-authentik-* headers only with it and refuses to start without it.
         - "EDGE_TOKEN=$SERVICE_EDGE_TOKEN"
