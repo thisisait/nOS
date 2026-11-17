@@ -196,7 +196,7 @@ def _auth_mode(record):
 
 
 def _traefik_labels(app_name, fqdn, port, auth_mode, traefik_network,
-                    origin_pull=False):
+                    origin_pull=False, edge_token=""):
     """Standard Traefik Docker-provider labels for a Tier-2 app."""
     name_safe = app_name.replace("_", "-")
     labels = [
@@ -208,10 +208,15 @@ def _traefik_labels(app_name, fqdn, port, auth_mode, traefik_network,
         "traefik.http.services.{}.loadbalancer.server.port={}".format(name_safe, port),
     ]
     if auth_mode == "proxy":
-        labels.append(
-            "traefik.http.routers.{}.middlewares=authentik@file,security-headers@file,compress@file"
-            .format(name_safe)
-        )
+        # Any peer on apps_net/shared_net can send X-authentik-* straight to the app; only
+        # Traefik holds the edge token, and it overwrites a client-sent one. After authentik
+        # so the token never reaches the outpost.
+        labels += [
+            "traefik.http.middlewares.{}-edge.headers.customrequestheaders.X-Nos-Edge-Token={}"
+            .format(name_safe, edge_token),
+            "traefik.http.routers.{0}.middlewares=authentik@file,{0}-edge@docker,security-headers@file,compress@file"
+            .format(name_safe),
+        ]
     else:
         labels.append(
             "traefik.http.routers.{}.middlewares=security-headers@file,compress@file"
@@ -489,6 +494,12 @@ def _process_one(path, tenant_domain, apps_subdomain, secret_seed,
     except AppParseError as exc:
         return None, {}, ["[{}] {}".format(exc.app_name, v) for v in exc.violations]
 
+    # The edge token is persisted like any secret, used or not, so labels stay stable.
+    edge_token, edge_secret = resolve_tokens(
+        "$SERVICE_EDGE_TOKEN", app_name=name, tenant_domain=tenant_domain,
+        secret_seed=dict(seed_for_app, **generated_secrets))
+    generated_secrets.update(edge_secret)
+
     # Authentik entry (if applicable) + RBAC tier for the runtime
     # extension of authentik_app_tiers in apps_runner post.yml.
     authentik = _authentik_entry(name, record, fqdn, auth_mode, generated_secrets)
@@ -505,7 +516,7 @@ def _process_one(path, tenant_domain, apps_subdomain, secret_seed,
         "traefik_labels": _traefik_labels(
             name, fqdn, port, auth_mode,
             _app_traefik_network(record, traefik_network, name),
-            origin_pull=origin_pull),
+            origin_pull=origin_pull, edge_token=edge_token),
         "registry_entry": _registry_entry(name, record, fqdn),
         "wing_system": _wing_system(name, record, fqdn, auth_mode, rbac_tier),
         "authentik_entry": authentik,

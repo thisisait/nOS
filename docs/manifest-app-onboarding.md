@@ -147,6 +147,7 @@ suffix → same value):
 | `$SERVICE_PASSWORD_<SUFFIX>`       | 32-char random; same SUFFIX = same value            |
 | `$SERVICE_BASE64_32_<NAME>`        | 32-byte base64                                      |
 | `$SERVICE_BASE64_64_<NAME>`        | 64-byte base64                                      |
+| `$SERVICE_EDGE_TOKEN`             | 32-char random; Traefik sends it as `X-Nos-Edge-Token` (`auth: proxy`) |
 
 Generated secrets persist to `credentials.yml` under the
 `app_secrets:` key (idempotent — re-running with the same prefix
@@ -165,6 +166,15 @@ nginx:
 in. `oidc` skips the gate and instead pushes the app's OAuth client
 config into Authentik (`authentik_oidc_apps` is extended at run
 time).
+
+An app that reads identity from the `X-authentik-*` headers must also
+check `X-Nos-Edge-Token`: any container on `apps_net`/`shared_net` can
+reach the app directly and forge those headers. Traefik sets the edge
+token on every proxied request (overwriting a client-sent one), so pass
+it in with `- "EDGE_TOKEN=$SERVICE_EDGE_TOKEN"` and reject a request
+whose header does not match (constant-time compare). Authentik cannot
+sign a JWT for a proxy provider (it forces `signing_key = None`), so a
+signature check is not an alternative.
 
 ---
 
