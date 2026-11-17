@@ -1194,6 +1194,9 @@
 - slug: gate-diet-role-journeys
   parent: gate-diet
   track: platform
+- slug: gated-net-is-not-traefik-only
+  parent: ''
+  track: security
 - slug: gatehouse
   parent: ''
   track: body
