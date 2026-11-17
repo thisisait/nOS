@@ -20,8 +20,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 123 (98 core services, 3 manifest apps)
-- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (111)
+- **Processing activities:** 124 (98 core services, 4 manifest apps)
+- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (111), public_task (1)
 - **Transfers outside the EU:** 12 activities
 - **Activities engaging a third-party processor:** 18
 
@@ -667,6 +667,29 @@ interests basis).
 - **Security measures:** platform baseline (see above)
 
 ### apps stack
+
+#### Chronos — `app_chronos`
+- **Purpose:** Build a searchable causal timeline of events from general Czech news RSS
+feeds. The feeds are not filtered to politics, so ordinary news naming
+private individuals (crime, accidents, local stories) is stored too; the
+operator accepted that scope. Agents store article titles and summaries,
+the names and roles of persons, organisations and places mentioned in
+them, a local LLM impact score and text embeddings. Operators leave their
+Authentik username on agent runs and erasures they trigger (audit).
+Events are a historical archive and are kept without an erasure horizon
+(retention -1). On request an admin erases an event or a named entity
+(with every event that names it) in the app; the erasure is audited by id
+and leaves a SHA-256 tombstone of the source URL or name so the crawler
+cannot re-add it. Processing stays on this host (local Ollama); nothing
+is shared, no profiling, no automated decisions about the people named.
+- **Legal basis (Art. 6):** `public_task`
+- **Data subjects:** `public_figures`; `private_individuals`; `operators`
+- **Data categories:** `name`; `public_role`; `political_opinions`; `news_content`; `username`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
+- **Storage:** 'apps' compose stack on host (Docker volumes)
+- **Security measures:** platform baseline (see above)
 
 #### Documenso — `app_documenso`
 - **Purpose:** Allow the operator to send PDFs for legally-binding e-signature and

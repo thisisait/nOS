@@ -17,7 +17,7 @@
     "law": 57,
     "reflex": 54,
     "heartbeat": 1,
-    "internal": 81,
+    "internal": 82,
     "edges": 464
   },
   "nodes": {
@@ -210,6 +210,10 @@
       "kind": "authentik"
     },
     "authentik:calibre-web": {
+      "level": "internal",
+      "kind": "authentik"
+    },
+    "authentik:chronos": {
       "level": "internal",
       "kind": "authentik"
     },
