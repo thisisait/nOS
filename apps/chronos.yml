@@ -4,14 +4,14 @@
 # public news RSS by local LLM agents (impact scoring, NER, embeddings).
 #
 # One image, built locally from this repo (see deploy/nos/HANDOFF.md):
-#   docker build -t chronos-timeline:0.9.1 .
+#   docker build -t chronos-timeline:0.14.0 .
 # Frontend + API on 8787, libSQL database in the chronos_data volume.
 # LLM: Ollama on the host only; nothing leaves the machine.
 # ============================================================================
 
 meta:
   name: "chronos"
-  version: "0.9.1"
+  version: "0.14.0"
   summary: "Časová osa událostí z českých zpravodajských RSS, analyzovaná lokálními LLM agenty."
   homepage: "https://github.com/PaznerA/chronos-timeline"
   category: "knowledge"
@@ -48,14 +48,29 @@ gdpr:
     data) and flags unusual days in them by arithmetic, again only as
     proposals. Since 0.9.0 it stores security news from NÚKIB and CESNET
     (titles and summaries; no names are extracted from them) and ENISA's
-    list of exploited vulnerabilities. Operators leave their Authentik username on agent runs,
-    erasures and the decisions they make on proposals (audit).
+    list of exploited vulnerabilities. Since 0.10.0 articles about the same
+    story are grouped by their embeddings and the local model sorts each
+    news story into one topic from a fixed list (the lanes of the
+    timeline) and says which word in the text tells when the reported
+    thing happened; the date is then computed in code. Since 0.12.0 it
+    also stores official press releases and statistics (European
+    Commission, ČSÚ, ČNB, CERT-EU) and USGS earthquake records; these are
+    scored from a table and no names are extracted from them. Since 0.13.0
+    the same holds for press releases of Czech ministries, the EU Council,
+    the ECB, UN News, WHO outbreak news, NASA, NOAA and Hacker News
+    stories (titles and links; authors are not kept). Since 0.14.0
+    operators can mark turning points and file stories under them; when an
+    operator looks a historical event up, the name they type is sent to
+    wikidata.org (Wikimedia Foundation, USA) and nothing else is; the
+    typed text may name a person, so this is declared as a transfer
+    outside the EU (operator 2026-11-18). WIKIDATA_LOOKUP=0 turns it off.
+    Operators leave their Authentik username on agent runs, erasures and the decisions they make on proposals (audit).
     Events are a historical archive and are kept without an erasure horizon
     (retention -1). On request an admin erases an event or a named entity
     (with every event that names it) in the app; the erasure is audited by id
     and leaves a SHA-256 tombstone of the source URL or name so the crawler
-    cannot re-add it. Processing stays on this host (local Ollama); nothing
-    is shared, no profiling, no automated decisions about the people named.
+    cannot re-add it. Processing stays on this host (local Ollama); apart
+    from the Wikidata lookup nothing is shared, no profiling, no automated decisions about the people named.
   legal_basis: "public_task"
   data_source: not_from_subject          # Art. 14: collected from news, not from the people named
   special_categories: ["political_opinions"]   # Art. 9, not checked by the parser (see HANDOFF)
@@ -71,7 +86,7 @@ gdpr:
     - "operators"            # estate users of the app
   retention_days: -1
   processors: []             # Ollama on this host; RSS sources are read, not processors
-  transfers_outside_eu: false
+  transfers_outside_eu: true   # Wikidata lookup: the typed event name goes to wikidata.org (US)
 
 # ── SSO: Authentik forward-auth in front ───────────────────────────────────
 # The app has no login. It reads X-authentik-username/-email/-groups that
@@ -92,7 +107,7 @@ authentik:
 compose:
   services:
     chronos:
-      image: "chronos-timeline:0.9.1"
+      image: "chronos-timeline:0.14.0"
       container_name: chronos
       restart: unless-stopped
       # Traefik is the only edge; no host port.

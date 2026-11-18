@@ -22,13 +22,14 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 - **Processing activities:** 124 (98 core services, 4 manifest apps)
 - **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (111), public_task (1)
-- **Transfers outside the EU:** 12 activities
+- **Transfers outside the EU:** 13 activities
 - **Activities engaging a third-party processor:** 18
 
 ## Transfers & processors (audit-sensitive subset)
 
 | Service | Outside EU? | Processors |
 |---|---|---|
+| Chronos (`app_chronos`) | **Yes** | — |
 | conductor (`agent_conductor`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this ceremony. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support.; **Anthropic, PBC** (US) — LLM inference when this ceremony is driven on the claude-CLI path rather than the bound backend (--print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.; **on-device (operator's own hardware)** (CZ — this host) — FALLBACK LLM inference on this host via ollama's OpenAI-compatible surface on loopback (model.fallback_backend), served only when the primary fails. No third party sees the prompt. · safeguard: Not applicable. No transfer occurs. |
 | curator (`agent_curator`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this ceremony. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support.; **Anthropic, PBC** (US) — LLM inference when this ceremony is driven on the claude-CLI path rather than the bound backend (--print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.; **on-device (operator's own hardware)** (CZ — this host) — FALLBACK LLM inference on this host via ollama's OpenAI-compatible surface on loopback (model.fallback_backend), served only when the primary fails. No third party sees the prompt. · safeguard: Not applicable. No transfer occurs. |
 | invoice-extract (`agent_invoice-extract`) | No | **on-device (operator's own hardware)** (CZ — this host) — LLM inference on this host via ollama's OpenAI-compatible surface on loopback, constrained to the ISDOC record schema. No third party. · safeguard: Not applicable. No transfer occurs. |
@@ -688,19 +689,34 @@ series (ČNB exchange rates, Eurostat inflation, GFZ Kp index; no personal
 data) and flags unusual days in them by arithmetic, again only as
 proposals. Since 0.9.0 it stores security news from NÚKIB and CESNET
 (titles and summaries; no names are extracted from them) and ENISA's
-list of exploited vulnerabilities. Operators leave their Authentik username on agent runs,
-erasures and the decisions they make on proposals (audit).
+list of exploited vulnerabilities. Since 0.10.0 articles about the same
+story are grouped by their embeddings and the local model sorts each
+news story into one topic from a fixed list (the lanes of the
+timeline) and says which word in the text tells when the reported
+thing happened; the date is then computed in code. Since 0.12.0 it
+also stores official press releases and statistics (European
+Commission, ČSÚ, ČNB, CERT-EU) and USGS earthquake records; these are
+scored from a table and no names are extracted from them. Since 0.13.0
+the same holds for press releases of Czech ministries, the EU Council,
+the ECB, UN News, WHO outbreak news, NASA, NOAA and Hacker News
+stories (titles and links; authors are not kept). Since 0.14.0
+operators can mark turning points and file stories under them; when an
+operator looks a historical event up, the name they type is sent to
+wikidata.org (Wikimedia Foundation, USA) and nothing else is; the
+typed text may name a person, so this is declared as a transfer
+outside the EU (operator 2026-11-18). WIKIDATA_LOOKUP=0 turns it off.
+Operators leave their Authentik username on agent runs, erasures and the decisions they make on proposals (audit).
 Events are a historical archive and are kept without an erasure horizon
 (retention -1). On request an admin erases an event or a named entity
 (with every event that names it) in the app; the erasure is audited by id
 and leaves a SHA-256 tombstone of the source URL or name so the crawler
-cannot re-add it. Processing stays on this host (local Ollama); nothing
-is shared, no profiling, no automated decisions about the people named.
+cannot re-add it. Processing stays on this host (local Ollama); apart
+from the Wikidata lookup nothing is shared, no profiling, no automated decisions about the people named.
 - **Legal basis (Art. 6):** `public_task`
 - **Data subjects:** `public_figures`; `private_individuals`; `operators`
 - **Data categories:** `name`; `public_role`; `political_opinions`; `news_content`; `username`
 - **Recipients / processors:** —
-- **Transfers outside EU:** No
+- **Transfers outside EU:** **Yes**
 - **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
 - **Storage:** 'apps' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
