@@ -677,9 +677,19 @@ the names and roles of persons, organisations and places mentioned in
 them, a local LLM impact score and text embeddings. Since 0.6.0 it also
 stores orange and red disaster alerts (GDACS) and weather warnings
 (MeteoAlarm); those carry no personal data and are scored from a table,
-without a model. Exports leave out anything whose licence does not
-clearly allow redistribution (news, MeteoAlarm). Operators leave their
-Authentik username on agent runs and erasures they trigger (audit).
+without a model. MeteoAlarm warnings are kept as an archive record, not
+as operational redistribution, and say so where they are shown. Exports
+leave out anything whose licence does not clearly allow redistribution
+(news, MeteoAlarm). Since 0.7.0 the local model also proposes
+cause-and-effect links between stored events; a proposal is shown
+labelled as the model's proposal and counts as a link only after an
+operator approves it. Since 0.8.0 it also keeps three public number
+series (ČNB exchange rates, Eurostat inflation, GFZ Kp index; no personal
+data) and flags unusual days in them by arithmetic, again only as
+proposals. Since 0.9.0 it stores security news from NÚKIB and CESNET
+(titles and summaries; no names are extracted from them) and ENISA's
+list of exploited vulnerabilities. Operators leave their Authentik username on agent runs,
+erasures and the decisions they make on proposals (audit).
 Events are a historical archive and are kept without an erasure horizon
 (retention -1). On request an admin erases an event or a named entity
 (with every event that names it) in the app; the erasure is audited by id
