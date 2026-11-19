@@ -35,13 +35,16 @@ see the whole wire and are judged with the last turn. A result carries turns, de
 run can be filed in nos-assay as evidence: a model name can be re-pointed upstream, a digest not.
 
 --plan cortex|tools|hybrid says which Iris path the estate runs (iris_plan); it is recorded, not set.
-With hybrid, each case's route is read from the ledger's /tool:route rows (cortex if any turn
-planned) and the plan checks below apply only to a cortex-routed case; the run tallies route by kind.
-With cortex, each case is also judged on the pipeline the thalamus planned, read from --ledger
-(read-only) by the session uuid on the wire: pipeline_valid and pipeline_equals_expected go
+With cortex or hybrid the connection opens with hello {bench: true} and, after the case's last turn,
+asks plan_evidence on the same connection (contract v20): the thalamus answers with that session's own
+last cortex plan, never the ledger file, which the bench no longer opens (row
+cortex-plan-evidence-without-ledger). With hybrid a case is cortex-routed when its session planned at
+all, and the plan checks below apply only to such a case; the run tallies route by kind.
+With cortex, each case is also judged on that pipeline: pipeline_valid and pipeline_equals_expected go
 through POST <--validate-url>/agent/v1/validate (CORTEX_TOKEN_RO), op by op, never as text;
 a single-prompt case without expect_pipeline must fall back (pipeline_fell_back); a plan check the
-judge cannot answer (validator, ledger) makes the case NO-DATA. --validate-url is loopback only.
+judge cannot answer (validator, evidence) makes the case NO-DATA. --validate-url is loopback only.
+--as goes through the face, which never sends a bench hello: it takes --plan tools only.
 Two plans are equal when the thalamus runs the same query for them (meaning()), not when they read alike.
 
 `--rescore run.json ...` re-judges pipeline_equals_expected on saved runs offline (the cases come from
@@ -66,7 +69,6 @@ import math
 import os
 import re
 import socket
-import sqlite3
 import subprocess
 import sys
 import time
@@ -148,6 +150,35 @@ class SockConn:
 
     def close(self) -> None:
         self.s.close()
+
+
+class BenchConn(SockConn):
+    """--plan cortex|hybrid (contract v20): opens with hello {bench: true}; before it closes, asks the
+    session this connection opened for its plan_evidence, filed in `said` by session. The thalamus
+    answers only that session, so the ask rides the same connection."""
+
+    def __init__(self, sock: str, said: dict, timeout: float):
+        super().__init__(sock, timeout)
+        self.said, self.session = said, None
+        self.send({"t": "hello", "bench": True})
+
+    def readline(self) -> str:
+        line = super().readline()
+        m = json.loads(line) if line.strip() else {}
+        if m.get("t") == "session":
+            self.session = m.get("session")
+        return line
+
+    def close(self) -> None:
+        if self.session:
+            try:
+                self.send({"t": "plan_evidence"})
+                while (m := json.loads(super().readline() or "null")) is not None and m.get("t") not in ("plan_evidence", "refused"):
+                    pass
+                self.said[self.session] = m
+            except (OSError, ValueError):
+                pass  # no line filed: plan_of names it, never a verdict
+        super().close()
 
 
 def run_case(case: dict, sock, timeout: float) -> dict:
@@ -250,10 +281,10 @@ def _answers_in(text: str, lang: str) -> bool:
     return mine >= 1 and mine > other
 
 
-# ── the cortex plan path: the pipeline the ledger holds, judged by the validator ──
+# ── the cortex plan path: the pipeline the thalamus says it planned, judged by the validator ──
 
 class Unjudged(RuntimeError):
-    """The judge could not answer (validator, ledger): the failure is named, never a wrong plan."""
+    """The judge could not answer (validator, evidence): the failure is named, never a wrong plan."""
 
 
 def validate_report(url: str, token: str, source: str) -> dict:
@@ -391,57 +422,25 @@ def same_pipeline(a: dict, b: dict, table: dict | None = None) -> bool:
     return meaning(*_ast_stages(a), table) == meaning(*_ast_stages(b), table)
 
 
-def _ledger_open():
-    import importlib.util
-    spec = importlib.util.spec_from_file_location("_ledger_open", Path(__file__).with_name("_ledger_open.py"))
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+def plan_of(ev):
+    """The session's last plan from its plan_evidence line; None = it never planned; {"error"} = not answered."""
+    if not ev:
+        return {"error": "no plan_evidence line on the wire"}
+    if ev.get("t") == "refused":
+        return {"error": f"plan evidence refused: {ev.get('reason')}"}
+    if all(ev.get(k) is None for k in ("valid", "registry_hash", "pipeline", "fallback")):
+        return None
+    asked = ev.get("asked") or {}
+    return {k: asked.get(k) for k in ("engine", "constrained", "grammar_sha256", "primer_sha256", "catalogue",
+                                      "catalogue_digest")} | {
+        "source": ev.get("pipeline"), "valid": ev.get("valid"), "registry_hash": ev.get("registry_hash"),
+        "fell_back": ev.get("fallback") is not None, "fallback": ev.get("fallback"), "fallback_kind": ev.get("fallback"),
+        "table": ev.get("table"), **{k: ev.get(k) for k in ("plan_run", "model_calls", "tokens")}}
 
 
-def read_plan(ledger: str, session):
-    """The session's last cortex_plan rows (mode=ro); None = it never planned; {"error"} = unreadable."""
-    if not session:
-        return {"error": "no session on the wire"}
-    conn, how = _ledger_open().open_ledger_ro(Path(ledger))
-    if conn is None:
-        return {"error": f"ledger unreadable: {how}"}
-    try:
-        rows = conn.execute("SELECT type, result_json FROM events WHERE run_id = ? AND task LIKE '%/tool:cortex_plan' "
-                            "ORDER BY id", (session,)).fetchall()
-    except sqlite3.Error as e:
-        return {"error": f"ledger unreadable: {e}"}
-    finally:
-        conn.close()
-    last = lambda kind: next((json.loads(r[1] or "{}") for r in reversed(rows) if r[0] == kind), None)  # noqa: E731
-    use, res = last("agent_tool_use"), last("agent_tool_result")
-    if use is None and res is None:
-        return None
-    # serve's refused() may write a result with no tool_use: the estate failed before a plan existed
-    use, res = use or {}, res or {}
-    return {k: use.get(k) for k in ("source", "engine", "constrained", "grammar_sha256", "primer_sha256", "catalogue",
-                                    "catalogue_digest", "catalogue_tables")} | {
-        "valid": res.get("valid"), "errors": res.get("errors"), "registry_hash": res.get("registry_hash"),
-        "fell_back": "plan" not in res, "fallback": res.get("fallback"), "fallback_kind": res.get("fallback_kind"),
-        "table": res.get("table")}
-
-
-def read_route(ledger: str, session):
-    """hybrid: "cortex" when any turn of the session routed to the plan, "tools" when none did, None = no route row."""
-    if not session:
-        return None
-    conn, _ = _ledger_open().open_ledger_ro(Path(ledger))
-    if conn is None:
-        return None
-    try:
-        rows = conn.execute("SELECT result_json FROM events WHERE run_id = ? AND task LIKE '%/tool:route' ORDER BY id",
-                            (session,)).fetchall()
-    except sqlite3.Error:
-        return None
-    finally:
-        conn.close()
-    routes = [json.loads(r[0] or "{}").get("route") for r in rows]
-    return None if not routes else "cortex" if "cortex" in routes else "tools"
+def route_of(plan) -> str | None:
+    """hybrid: "cortex" when the session planned, "tools" when it never did, None when the evidence was not answered."""
+    return None if isinstance(plan, dict) and "error" in plan else "cortex" if plan else "tools"
 
 
 def _plan(got: dict):
@@ -462,7 +461,7 @@ def plan_checks(case: dict, plan: str) -> dict:
         return {}
     if case.get("expect_pipeline"):
         return {"pipeline_valid": True, "pipeline_equals_expected": case["expect_pipeline"], "pipeline_fell_back": False}
-    # ponytail: the ledger is not sliced per turn, so a multi-turn case without a plan goes unjudged
+    # ponytail: the evidence is the session's last plan, not per turn, so a multi-turn case without a plan goes unjudged
     return {} if "turns" in case else {"pipeline_fell_back": True}
 
 
@@ -970,7 +969,7 @@ def rescore(path: Path) -> Path:
               "no_data": bool(failed) and (r["no_data"] or unjudged(failed))}
     head = subprocess.run(["git", "-C", str(REPO), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
     run["rescored"] = {"nos_commit": head or None, "from": path.name, "rejudged": list(REJUDGED),
-                       "kept": "every other check: its saved verdict (it needs the wire, the validator or the ledger)"}
+                       "kept": "every other check: its saved verdict (it needs the wire or the validator)"}
     out = path.with_suffix(".rescored.json")
     out.write_text(json.dumps(run, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     after, tot = _tally(run["cases"]), lambda t: (sum(v[0] for v in t.values()), sum(v[1] for v in t.values()))
@@ -1323,7 +1322,6 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--plan", choices=("tools", "cortex", "hybrid"), default="tools",
                     help="the Iris path the estate runs (iris_plan); cortex also judges the planned pipeline, "
                          "hybrid only on cortex-routed cases")
-    ap.add_argument("--ledger", help="with --plan cortex|hybrid: the thalamus ledger.db, opened read-only (never defaulted)")
     ap.add_argument("--validate-url", default="http://127.0.0.1:8098", help="the cortex organ; needs CORTEX_TOKEN_RO")
     ap.add_argument("--seed", action="store_true",
                     help="create the iris-bench-2 tables, or with --domain the domain's tables, once (writes KEAP; NOS_LIVE=1)")
@@ -1359,19 +1357,20 @@ def main(argv: list[str] | None = None) -> int:
         if not a.persona or a.sock or a.offline:
             print("--as runs a persona through the face: no --sock or --offline; --dry needs --as.", file=sys.stderr)
             return 2
+        if a.plan != "tools":
+            print(f"--plan {a.plan} reads the plan over the socket's bench hello; the face never sends one: --as takes --plan tools.",
+                  file=sys.stderr)
+            return 2
         who, why = persona(a.persona)
         if not who:
             print(f"iris-bench: {why}", file=sys.stderr)
             return 2
     if not (os.environ.get("NOS_LIVE") == "1" or (a.offline and a.sock)):
-        print("iris-bench talks to the live thalamus (a model, KEAP, the ledger); set NOS_LIVE=1, "
+        print("iris-bench talks to the live thalamus (a model, KEAP); set NOS_LIVE=1, "
               "or pass --offline with an explicit --sock for a fake.", file=sys.stderr)
         return 2
     validate = None
     if a.plan in ("cortex", "hybrid"):
-        if not (a.ledger and Path(a.ledger).is_file()):
-            print(f"--plan {a.plan} reads the pipeline from the thalamus ledger: pass --ledger <ledger.db>.", file=sys.stderr)
-            return 2
         if urllib.parse.urlsplit(a.validate_url).hostname not in ("127.0.0.1", "localhost", "::1"):
             print("--validate-url must be loopback: the RO token never leaves the host.", file=sys.stderr)
             return 2
@@ -1408,6 +1407,9 @@ def cases_of(a) -> list[dict]:
 
 def bench(a, cases: list[dict], where: str, validate, opener=None, who: dict | None = None) -> int:
     argv, sock = a.argv, opener or where
+    said: dict = {}  # session -> its plan_evidence line (BenchConn)
+    if a.plan != "tools" and not opener:
+        sock = functools.partial(BenchConn, where, said)
     results, actors = [], set()
     n = max(1, a.repeat)
     for case in cases:
@@ -1417,10 +1419,10 @@ def bench(a, cases: list[dict], where: str, validate, opener=None, who: dict | N
             got = run_case(case, sock, float(case.get("timeout", a.timeout)))
             actors.add(got.get("actor"))
             if validate:
-                got |= {"plan": read_plan(a.ledger, got["session"]), "validate": validate}
+                got |= {"plan": plan_of(said.get(got["session"])), "validate": validate}
             judged = case
             if a.plan == "hybrid":  # plan checks only where the thalamus routed to the plan
-                got["route"] = read_route(a.ledger, got["session"])
+                got["route"] = route_of(got["plan"])
                 judged = dict(case, checks=case["checks"] | plan_checks(case, got["route"] or "tools"))
             failed, turns = judge(judged, got, time.time())
             runs.append((got, failed, round(time.monotonic() - t0, 2), bool(failed) and (no_data(judged, got) or unjudged(failed)), turns))
@@ -1453,7 +1455,7 @@ def bench(a, cases: list[dict], where: str, validate, opener=None, who: dict | N
             k[r["route"] or "-"] = k.get(r["route"] or "-", 0) + 1
     for k in ("engine", "grammar_sha256", "primer_sha256", "registry_hash", "catalogue", "catalogue_digest"):
         seen = sorted({p[k] for p in plans if p.get(k)})
-        run[k] = seen[0] if len(seen) == 1 else seen or None  # read from the ledger, never guessed
+        run[k] = seen[0] if len(seen) == 1 else seen or None  # as the thalamus said them, never guessed
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(run, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
