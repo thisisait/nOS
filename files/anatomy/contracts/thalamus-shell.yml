@@ -2,7 +2,7 @@
 # Protocol: ssot/doctrine/cross-repo-contracts.md §1 (spec + fixture + gates
 # over the same bytes). Both sides link one Rust crate (nos-contract), so the
 # gate is the crate decoding the fixture; one copy only, both sides cite this.
-contract_version: 19   # 19: the relay's read hello (read: true, one approvals_open); 18: widget spec reader, a widget answers red_status, table, timeline; 17: approvals_open (both ways); 16: questions (both ways), answer, answer_result; 15: setting, state settings; 14: halt, lift_halt, state act; 13: state (both ways); 12: callout, steps, sources, follow_up; 11: dendrogram; 10: knowledge_tree, widget spec knowledge; 9: resume workspace, clear, branch, stop, model_state; 8: catalogue (both ways), limbs, act, acted, action_approval; 7: resume, workspace_load, workspace_save, workspace, said, replay; 6: dashboard, kpi, working_for, model_options, model_pick; 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice, delta, sequence; 5: row_diff_approval op/title/read_from
+contract_version: 20   # 20: hello {bench}, plan_evidence (both ways), program_approval; 19: the relay's read hello (read: true, one approvals_open); 18: widget spec reader, a widget answers red_status, table, timeline; 17: approvals_open (both ways); 16: questions (both ways), answer, answer_result; 15: setting, state settings; 14: halt, lift_halt, state act; 13: state (both ways); 12: callout, steps, sources, follow_up; 11: dendrogram; 10: knowledge_tree, widget spec knowledge; 9: resume workspace, clear, branch, stop, model_state; 8: catalogue (both ways), limbs, act, acted, action_approval; 7: resume, workspace_load, workspace_save, workspace, said, replay; 6: dashboard, kpi, working_for, model_options, model_pick; 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice, delta, sequence; 5: row_diff_approval op/title/read_from
 fixture: files/anatomy/contracts/thalamus-shell.fixture.json
 
 producer:
@@ -23,8 +23,8 @@ gates:
 wire:
   framing: "newline-delimited JSON, one message per line, UTF-8"
   tag: "every message is an object whose `t` names its variant (snake_case)"
-  to_thalamus: [turn, approval_decision, control, widget, form_submit, choice_reply, working_for, model_options, model_pick, resume, workspace_load, workspace_save, catalogue, limbs, acted, clear, branch, stop, state, halt, lift_halt, setting, questions, answer, approvals_open]
-  to_shell: [session, text, render, approval_request, refused, activity, widget, form_result, table_changed, working_for, model_options, said, replay, workspace, catalogue, act, model_state, state, questions, answer_result, approvals_open]
+  to_thalamus: [turn, approval_decision, control, widget, form_submit, choice_reply, working_for, model_options, model_pick, resume, workspace_load, workspace_save, catalogue, limbs, acted, clear, branch, stop, state, halt, lift_halt, setting, questions, answer, approvals_open, hello, plan_evidence]
+  to_shell: [session, text, render, approval_request, refused, activity, widget, form_result, table_changed, working_for, model_options, said, replay, workspace, catalogue, act, model_state, state, questions, answer_result, approvals_open, plan_evidence]
   widget: >-
     A widget is a spec the person placed; the face Iris re-runs it over `widget {widget, spec, trigger}`
     and the thalamus answers as that person, without the model, with `widget {session, widget,
@@ -209,6 +209,24 @@ wire:
     cards are never in it; a ledger that does not read is `refused`, never an empty list. Deciding stays in the card's
     session (approval_decision). nOS.app polls it to badge the menu bar and post one notification per new card.
     Gate files/anatomy/thalamus/thalamus/tests/serve.rs a_person_sees_only_their_own_open_cards.
+  plan_evidence: >-
+    v20 (rows cortex-plan-evidence-without-ledger, cortex-plan-evidence-contract, ruled (b)): the bench
+    (tools/iris-bench.py) asks the organ for its own session's cortex plan, never the ledger file. `hello
+    {bench}` is a socket connection's first line and is never answered; bench defaults to false, a later
+    hello is refused, and bench: true through the relay is refused (the face never sets it; the browser
+    writes through the relay). A session ensure() opens fresh on that connection is a bench session; a
+    resumed, switched-to, cleared or branched one is not. `plan_evidence` (no field: a session id is refused
+    at decode) asks for the open session's last cortex_plan tool_use and tool_result (ledger.rs plan_rows, by
+    its own run_id only). A bench session gets `plan_evidence {session, valid?, registry_hash?, pipeline?,
+    fallback? infra|model, table? {said, id, title?}, asked? {engine, constrained, primer_sha256,
+    grammar_sha256?, catalogue, catalogue_digest}, plan_run? model|thalamus, model_calls?, tokens?}`, every
+    field but session absent when it never planned, or `refused` when the ledger does not read (UNKNOWN,
+    never "never planned"). pipeline is the cortex-lang source only once the organ validated it (the result
+    carries registry_hash; a line with pipeline and no registry_hash is refused); fallback is its kind,
+    never its words. No prompt text, cell text or table rows cross. Any other asker (no bench hello, or no
+    session open) gets nothing on the wire: a plan_evidence refusal row in the ledger, or a log line when no
+    session is open. plan_run, model_calls and tokens are row iris-code-mode-bench's, absent until it is
+    built. Gate files/anatomy/thalamus/thalamus/tests/serve.rs plan_evidence_is_a_bench_sessions_own.
   phase: [thinking, tool, writing, idle]   # activity.phase; tool is {tool: {name}}
   decision: [approve, reject]
   control_view: [inbox, approvals, red_status]
@@ -324,6 +342,15 @@ components:
       and ended are dates (ended not before started). Serve builds it from Wing's agent_sessions, threads, iterations
       and events by actor_action_id; the model never writes it. Never in an approval. The face Iris draws it as the graph's
       layered columns, status as tone (ok ok, running info, waiting warn, bad bad); the terminal says one indented line a node
+    program_approval: >-
+      a cortex program's writes under ONE approval (v20, row iris-code-mode-write-card, ruled (a)): {source 1-4000,
+      writes[row_diff_approval props] 1-20, read_from[]?}; source is render() of the validated AST, never the model's
+      own text, and both shells draw it as text; each write is an insert, update or delete as row_diff_approval
+      checks it (never insert_many, never its own read_from: the program's says it). Asked only as an approval,
+      never a render or a widget. Both shells draw the source, then every write with the row diff view; the face Iris
+      keeps approve disabled until the last write was in view (ApprovalCard's `whole` sentinel). Approve writes
+      exactly the card, in order, or nothing past the first failure. v20 is the contract and the face only: no
+      thalamus route emits one yet (route write-rows, mapper, decide preflight, ASKING entry are the row's next slice)
     # Crosses the wire only inside a `widget` message: a render or approval_request carrying one is
     # refused (wire.rs not_a_form).
     form: >-

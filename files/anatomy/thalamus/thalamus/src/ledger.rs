@@ -349,6 +349,15 @@ impl Ledger {
         rows.collect()
     }
 
+    /// `session`'s own last cortex_plan tool_use and tool_result (v20 plan_evidence); never another run's.
+    pub fn plan_rows(&self, session: &str) -> rusqlite::Result<(Option<Value>, Option<Value>)> {
+        let last = |kind: Kind| self.db.query_row(
+            "SELECT result_json FROM events WHERE run_id = ?1 AND type = ?2 AND task LIKE '%/tool:cortex_plan' ORDER BY id DESC LIMIT 1",
+            params![session, kind.as_str()], |r| r.get::<_, String>(0),
+        ).optional().map(|s| s.and_then(|s| serde_json::from_str(&s).ok()));
+        Ok((last(Kind::ToolUse)?, last(Kind::ToolResult)?))
+    }
+
     /// The choices of `session` the person answered (choice_reply's result names the choice).
     pub fn answered_choices(&self, session: &str) -> rusqlite::Result<Vec<String>> {
         let mut q = self.db.prepare(

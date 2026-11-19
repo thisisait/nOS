@@ -242,6 +242,17 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
                 out.push(Line::from(format!("  {}: {pts}", s.name)));
             }
         }
+        // A program's writes under one card (v20): its source as text, then every write as its own diff.
+        Component::ProgramApproval(p) => {
+            out.push(head(format!("a program writes {} row(s) — nothing is written unless you approve", p.writes.len())));
+            if !p.read_from.is_empty() {
+                out.push(warn(format!("  contains text from {}", p.read_from.join(", "))));
+            }
+            out.extend(p.source.lines().map(|l| Line::styled(format!("  | {l}"), Style::new().fg(Color::DarkGray))));
+            for w in &p.writes {
+                out.extend(component_lines(&Component::RowDiffApproval(w.clone())));
+            }
+        }
         // A limb that writes on the face's screen: the limb, its own line, every param.
         Component::ActionApproval(a) => {
             out.push(head(format!("{}.{} on the face — nothing is done unless you approve", a.app, a.action)));
@@ -514,11 +525,13 @@ impl App {
                 }
             }
             // The workspace is the pupil's, and so are the marks a catalogue draws.
-            ToShell::Workspace { .. } | ToShell::Catalogue { .. } | ToShell::ModelState { .. } => {}
+            // A plan_evidence answers only a bench's hello (v20), which this shell never sends.
+            ToShell::Workspace { .. } | ToShell::Catalogue { .. } | ToShell::ModelState { .. } | ToShell::PlanEvidence { .. } => {}
             ToShell::State(s) => self.lines.extend(crate::state::lines(&s).into_iter().map(Line::from)),
             m @ (ToShell::Questions { .. } | ToShell::AnswerResult { .. }) => self.lines.extend(crate::inbox::lines(&m).into_iter().map(Line::from)),
             // The terminal shows each card in its own session; the count is for nOS.app's badge.
             ToShell::ApprovalsOpen { items } => self.lines.push(Line::from(format!("{} card(s) wait for you", items.len()))),
+
             // The terminal declares no limbs, so serve sends it no act: one that arrives is said, never done.
             ToShell::Act { app, action, .. } => self.lines.push(warn(format!("refused: an act {app}.{action}, but this shell has no limbs"))),
         }

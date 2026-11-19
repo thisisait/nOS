@@ -15,6 +15,7 @@
 	import Sequence from './Sequence.svelte';
 	import Markdown from './Markdown.svelte';
 	import Timeline from './Timeline.svelte';
+	import Self from './Component.svelte';
 	import { inherit, MARK, shownIn, tally, treeDeltas, VIEWS, type Delta, type View } from './delta';
 	import { isMoney, number, shownValue, signed } from './fmt';
 	import {
@@ -181,6 +182,17 @@
 				</ul>
 			{/each}
 		{/if}
+	{:else if component.kind === 'program_approval'}
+		{@const p = component.props}
+		<h3>a program writes {p.writes.length} row(s) — nothing is written unless you approve</h3>
+		{#if p.read_from?.length}<p>
+				<Badge tone="warn">contains text from {p.read_from.join(', ')}</Badge>
+			</p>{/if}
+		<!-- The program as text: render() of the validated AST, never HTML. -->
+		<pre>{p.source}</pre>
+		{#each p.writes as w}
+			<Self component={{ kind: 'row_diff_approval', props: w }} />
+		{/each}
 	{:else if component.kind === 'table_schema_approval'}
 		{@const t = component.props}
 		<h3>create table {t.title}, {t.visibility} to you — nothing is created unless you approve</h3>

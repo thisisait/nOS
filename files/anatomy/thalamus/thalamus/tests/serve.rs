@@ -1963,7 +1963,7 @@ fn show_kinds_agree_everywhere() {
     assert_eq!(consts, kinds, "show_schema oneOf kind consts");
     let spec = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../contracts/thalamus-shell.yml")).unwrap();
     let spec: serde_yaml_ng::Value = serde_yaml_ng::from_str(&spec).unwrap();
-    let tool_chosen = ["table_results", "row_diff_approval", "table_schema_approval", "column_add_approval", "inbox_list", "approvals_list", "red_status", "markdown", "form", "dashboard", "action_approval", "knowledge_tree", "dendrogram"];
+    let tool_chosen = ["table_results", "row_diff_approval", "table_schema_approval", "column_add_approval", "inbox_list", "approvals_list", "red_status", "markdown", "form", "dashboard", "action_approval", "program_approval", "knowledge_tree", "dendrogram"];
     let mut vocab: Vec<String> = spec["components"]["vocabulary"].as_mapping().unwrap().keys()
         .map(|k| k.as_str().unwrap().to_string()).filter(|k| !tool_chosen.contains(&k.as_str())).collect();
     let mut want: Vec<String> = kinds.iter().map(|k| k.to_string()).collect();
@@ -7876,4 +7876,67 @@ fn a_read_hello_answers_approvals_only_and_leaves_the_live_tab() {
     (&live).write_all(encode(&ToThalamus::ApprovalsOpen).as_bytes()).unwrap();
     assert!(matches!(next(&mut live_r), Some(ToShell::ApprovalsOpen { .. })), "the live tab was taken over by a read hello");
     assert_eq!(session_count(&rig.ledger), 0, "a read hello opened a session");
+}
+
+/// v20 plan_evidence is a privacy boundary (rows cortex-plan-evidence-without-ledger, -contract):
+/// a session with no bench hello gets nothing on the wire, only a refusal in the ledger; a bench
+/// session gets its own last cortex plan and never another session's, and an unvalidated source never crosses.
+#[test]
+fn plan_evidence_is_a_bench_sessions_own() {
+    let rig = rig_n("planevidence", mapped(), vec![ROWS.into()], vec![answer("hi")]);
+    let open = |bench: bool| {
+        let s = connect(&rig.sock);
+        let mut r = BufReader::new(s.try_clone().unwrap());
+        if bench {
+            (&s).write_all(encode(&ToThalamus::Hello { bench: true }).as_bytes()).unwrap();
+        }
+        let session = session_of(&turn(&s, &mut r, None, "the person's own words"));
+        (s, r, session)
+    };
+    let (sa, mut ra, a) = open(true);
+    let (sb, mut rb, b) = open(true);
+    let (sc, mut rc, c) = open(false);
+    let db = rusqlite::Connection::open(&rig.ledger).unwrap();
+    let plan = |run: &str, kind: &str, body: serde_json::Value| {
+        db.execute("INSERT INTO events (ts, run_id, type, task, result_json, source) VALUES ('t', ?1, ?2, 'agent:iris/tool:cortex_plan', ?3, 'thalamus')",
+                   rusqlite::params![run, kind, body.to_string()]).unwrap();
+    };
+    let asked = |src: &str| serde_json::json!({"source": src, "engine": "llamacpp-gbnf", "constrained": true, "primer_sha256": "p",
+                                               "grammar_sha256": "g", "catalogue": "lean", "catalogue_digest": "d"});
+    plan(&a, "agent_tool_use", asked("get(db:a-table)"));
+    plan(&a, "agent_tool_result", serde_json::json!({"valid": true, "registry_hash": "cx1:a", "plan": [["query_rows", {}]],
+                                                    "table": {"said": "a-table", "id": "a-id", "title": "A"}}));
+    // B's model wrote a plan the organ refused twice: model text, which never crosses.
+    plan(&b, "agent_tool_use", asked("UNVALIDATED model text"));
+    plan(&b, "agent_tool_result", serde_json::json!({"valid": false, "errors": ["x"], "fallback": "refused twice", "fallback_kind": "model"}));
+    plan(&c, "agent_tool_use", asked("get(db:c-table)"));
+    plan(&c, "agent_tool_result", serde_json::json!({"valid": true, "registry_hash": "cx1:c", "plan": [["query_rows", {}]]}));
+    let ask = |s: &UnixStream| {
+        (&*s).write_all(encode(&ToThalamus::PlanEvidence {}).as_bytes()).unwrap();
+        (&*s).write_all(encode(&ToThalamus::ApprovalsOpen).as_bytes()).unwrap();
+    };
+    ask(&sa);
+    match next(&mut ra) {
+        Some(ToShell::PlanEvidence { session, pipeline, registry_hash, table, fallback, .. }) => {
+            assert_eq!((session.as_str(), pipeline.as_deref(), registry_hash.as_deref()), (a.as_str(), Some("get(db:a-table)"), Some("cx1:a")));
+            assert_eq!((table.map(|t| t.id), fallback), (Some("a-id".to_string()), None));
+        }
+        other => panic!("a bench session's own plan, got {other:?}"),
+    }
+    ask(&sb);
+    match next(&mut rb) {
+        Some(ToShell::PlanEvidence { session, pipeline, registry_hash, valid, fallback, .. }) => {
+            assert_eq!(session, b);
+            assert_eq!((pipeline, registry_hash, valid), (None, None, Some(false)), "B got another session's plan or model text");
+            assert_eq!(fallback, Some(nos_contract::wire::FallbackKind::Model));
+        }
+        other => panic!("a bench session's own plan, got {other:?}"),
+    }
+    // C opened without a bench hello: the next line is the sentinel's answer, nothing before it.
+    ask(&sc);
+    assert!(matches!(next(&mut rc), Some(ToShell::ApprovalsOpen { .. })), "a session without bench: true got a line");
+    let refused: i64 = db.query_row("SELECT count(*) FROM events WHERE run_id = ?1 AND task LIKE '%/tool:plan_evidence'
+                                     AND json_extract(result_json, '$.refused') IS NOT NULL", [&c], |r| r.get(0)).unwrap();
+    assert_eq!(refused, 1, "the refusal is not in the ledger");
+    drop((sa, sb, sc));
 }

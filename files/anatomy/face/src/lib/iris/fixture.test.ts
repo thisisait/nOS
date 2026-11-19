@@ -19,6 +19,7 @@ const fx = JSON.parse(readFileSync(FIXTURE, 'utf8')) as {
 // Each kind's props, as wire.ts types them: a prop the fixture renames is named here, not drawn as nothing.
 const PROPS: Record<string, string[]> = {
 	action_approval: ['action', 'app', 'params', 'says'],
+	program_approval: ['read_from', 'source', 'writes'],
 	table_results: ['columns', 'matched', 'name', 'projected', 'query', 'rows', 'table', 'total'],
 	row_diff_approval: ['cells', 'lines', 'op', 'read_from', 'row_id', 'table', 'title', 'warning'],
 	table_schema_approval: ['columns', 'description', 'title', 'visibility'],
@@ -50,6 +51,7 @@ const KINDS = Object.keys(PROPS);
 // Props a sample may leave out (an insert names no row); any other missing or extra prop is a rename.
 const OPTIONAL: Record<string, string[]> = {
 	row_diff_approval: ['lines', 'read_from', 'row_id', 'warning'],
+	program_approval: ['read_from'],
 	table_schema_approval: ['description'],
 	form: ['prefill'],
 	knowledge_tree: ['title'],
@@ -321,6 +323,42 @@ describe('the pupil renders the contract fixture', () => {
 			props: { waiting, of: 1, whole: true, onseen: () => {}, ondecide: () => {} }
 		}).body;
 		expect(text(card)).toContain('approve adding these columns?');
+	});
+
+	it('a program card shows its source as text, every write, and approves only once the last was in view', () => {
+		const msg = structuredClone(
+			fx.to_shell.find((c) => c.case === "a program's writes await one approval")!.msg
+		) as Extract<ToShell, { t: 'approval_request' }>;
+		const p = msg.component.props as { source: string };
+		p.source = `${p.source} <b>not markup</b>`;
+		const html = render(Message, { props: { msg } }).body;
+		expect(html).not.toContain('<b>not markup</b>');
+		const page = text(html);
+		expect(page).toContain('a program writes 3 row(s) — nothing is written unless you approve');
+		expect(page).toContain('<b>not markup</b>');
+		for (const want of [
+			'update Invoices (invoices) / inv-3',
+			'update Invoices (invoices) / inv-7',
+			'delete Invoices (invoices) / inv-9'
+		])
+			expect(page).toContain(want);
+		const card = (whole: boolean) =>
+			render(ApprovalCard, {
+				props: {
+					waiting: { approval: msg.approval, component: msg.component },
+					of: 1,
+					whole,
+					onseen: () => {},
+					ondecide: () => {}
+				}
+			}).body;
+		// The end sentinel sits after the last write: Approve waits for it, Reject never does.
+		expect(card(false).lastIndexOf('inv-9')).toBeLessThan(card(false).indexOf('class="end'));
+		expect(card(false)).toMatch(/<button[^>]*disabled[^>]*>approve<\/button>/);
+		expect(card(false)).not.toMatch(/<button[^>]*disabled[^>]*>reject<\/button>/);
+		expect(text(card(false))).toContain('scroll to the last write to approve this program');
+		expect(card(true)).not.toMatch(/<button[^>]*disabled[^>]*>approve<\/button>/);
+		expect(text(card(true))).toContain('approve these 3 writes?');
 	});
 
 	it('an empty diff side reads (empty), not blank', () => {

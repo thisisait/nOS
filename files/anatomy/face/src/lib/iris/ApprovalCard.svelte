@@ -53,6 +53,12 @@
 					? 'approve deleting this row?'
 					: 'scroll to the end to approve deleting this row, or reject it'}</span
 			>
+		{:else if waiting.component.kind === 'program_approval'}
+			<span
+				>{whole
+					? `approve these ${waiting.component.props.writes.length} writes?`
+					: 'scroll to the last write to approve this program, or reject it'}</span
+			>
 		{:else if waiting.component.kind === 'action_approval'}
 			<span
 				>{whole

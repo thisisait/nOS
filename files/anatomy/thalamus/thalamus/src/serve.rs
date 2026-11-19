@@ -11,7 +11,7 @@ use nos_contract::renderers::{is_date, ActionApproval, ApprovalsList, Axis, Cell
                                Dropped, FieldKind, Form, FormField, InboxItem, InboxList, KnowledgeNode, KnowledgeTree, need_node_id, Lens, LensOp, Lines, List, ListItem, Omitted, Parent, RedStatus,
                                Row, RowDiffApproval, SchemaColumn, ColumnAddApproval, ColumnKind, ExistingColumn, Series, Table, TableResults, TableSchemaApproval, Timeline, TimelineItem, Visibility};
 use nos_contract::wire::{check_params, check_spec, decode_to_thalamus, encode, CatalogueColumn, CatalogueTable, ChartSpec, EstateState, ControlView, Decision, FormSpec,
-                         KnowledgeSpec, KpiSpec, Limb, ReaderName, Op, ParamKind, Phase, Scope, ModelOption, OpenApproval, ToShell, ToThalamus, Trigger, WidgetChart, WidgetSpec, MAX_REPLAY};
+                         FallbackKind, KnowledgeSpec, KpiSpec, Limb, ReaderName, Op, ParamKind, Phase, PlanAsked, PlanTable, Scope, ModelOption, OpenApproval, ToShell, ToThalamus, Trigger, WidgetChart, WidgetSpec, MAX_REPLAY};
 use nos_contract::uid;
 use crate::store;
 use serde_json::{json, Map, Value};
@@ -358,6 +358,9 @@ struct Open {
     /// The runs start_agent opened this turn; converse() moves them to the connection's watch, which
     /// outlives a switch, a clear or a branch and is kept per person when the connection closes.
     watching: Vec<Watch>,
+    /// Opened fresh on a bench connection (hello bench: true): only it may ask plan_evidence.
+    /// A resumed, switched-to, cleared or branched session never is.
+    bench: bool,
 }
 
 /// One run Iris started: (agent, Wing session uuid), when it started (unix seconds), the next time it is asked after,
@@ -382,6 +385,8 @@ struct Face {
     held: RefCell<VecDeque<String>>,
     limbs: Vec<Limb>,
     catalogue: bool,
+    /// The connection's first line was hello {bench: true} (v20): the sessions ensure() opens are a bench's.
+    bench: bool,
 }
 
 impl Face {
@@ -400,7 +405,7 @@ impl Face {
                 }
             }
         });
-        Face { rx, held: RefCell::default(), limbs: vec![], catalogue: false }
+        Face { rx, held: RefCell::default(), limbs: vec![], catalogue: false, bench: false }
     }
 
     /// The next line, or a Tick when none came for `tick` (the model-state poll), or the End.
@@ -1179,6 +1184,7 @@ impl Server {
         let mut state: Option<(String, bool)> = None;
         // The runs Iris started for this person: the connection's, whichever session is open; kept on close.
         let mut watching = self.watches_taken(&who);
+        let mut first = true;
         loop {
             // Asked after between any two lines, so lines queued by a person typing never hold a run's end back.
             if let Some(o) = open.as_mut() {
@@ -1205,6 +1211,7 @@ impl Server {
             }
             let peer = peer();
             let decoded = decode_to_thalamus(&line);
+            let was_first = std::mem::take(&mut first);
             // A turn's end may have loaded or unloaded the model; a new session has not heard its state yet.
             let boundary = matches!(decoded, Ok(ToThalamus::Turn { .. } | ToThalamus::ChoiceReply { .. } | ToThalamus::ApprovalDecision { .. }));
             match decoded {
@@ -1215,7 +1222,7 @@ impl Server {
                         refuse(&mut out, "session is not this connection's open session");
                         continue;
                     }
-                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open) {
+                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open, face.bench) {
                         keep(&ToShell::Said { session: o.session.clone(), text: text.clone() });
                         self.turn(&who, &mut out, o, &text, &face);
                         // However the turn ended (text, cap, refusal), it is over.
@@ -1223,29 +1230,29 @@ impl Server {
                     }
                 }
                 Ok(ToThalamus::Control { view }) => {
-                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open) {
+                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open, face.bench) {
                         self.control(&who, &mut out, o, view);
                     }
                 }
                 Ok(ToThalamus::WorkingFor { scope }) => {
-                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open) {
+                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open, face.bench) {
                         if self.working_for(&mut who, &mut out, o, &scope, &peer) && face.catalogue {
                             self.catalogue_to(&who, &mut out, o);
                         }
                     }
                 }
                 Ok(ToThalamus::ModelOptions) => {
-                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open) {
+                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open, face.bench) {
                         self.model_options(&mut out, o);
                     }
                 }
                 Ok(ToThalamus::ModelPick { backend, model }) => {
-                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open) {
+                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open, face.bench) {
                         self.model_pick(&mut out, o, &backend, &model, &peer);
                     }
                 }
                 Ok(ToThalamus::Widget { widget, spec, trigger }) => {
-                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open) {
+                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open, face.bench) {
                         self.widget(&who, &mut out, o, &widget, &spec, trigger);
                     }
                 }
@@ -1299,7 +1306,7 @@ impl Server {
                     send(&mut out, &ToShell::Workspace { doc });
                 }
                 Ok(ToThalamus::Catalogue) => {
-                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open) {
+                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open, face.bench) {
                         face.catalogue = true;
                         self.catalogue_to(&who, &mut out, o);
                     }
@@ -1315,6 +1322,14 @@ impl Server {
                 Ok(ToThalamus::Answer { uuid, answer }) => self.answer(&who, &mut out, &peer, &uuid, &answer),
                 Ok(ToThalamus::ApprovalsOpen) => self.approvals_open(&who, &mut out),
                 Ok(ToThalamus::Acted { act, .. }) => refuse(&mut out, &format!("no act {act} waits for an answer")),
+                Ok(ToThalamus::Hello { .. }) if !was_first => refuse(&mut out, "a hello is a connection's first line"),
+                // The face never sends one, and the browser writes through the relay: a bench is the socket's.
+                Ok(ToThalamus::Hello { bench: true }) if peer.get("via").is_some() => {
+                    self.say(format!("refused a bench hello of {} through the relay", who.username));
+                    refuse(&mut out, "a bench hello is the socket's, never the relay's");
+                }
+                Ok(ToThalamus::Hello { bench }) => face.bench = bench,
+                Ok(ToThalamus::PlanEvidence {}) => self.plan_evidence(&who, &mut out, open.as_ref()),
                 Ok(ToThalamus::WorkspaceSave { doc }) => {
                     // The layout contract's refusals, checked at its one writer since the pupil retired.
                     if let Err(why) = nos_contract::workspace::decode(&doc.to_string()) {
@@ -1338,9 +1353,33 @@ impl Server {
         self.watches_kept(&who, watching);
     }
 
-    /// The connection's session, opened on its first Turn or Control; None was refused.
-    fn ensure<'a>(&self, who: &mut Person, out: &mut dyn Write, open: &'a mut Option<Open>) -> Option<&'a mut Open> {
-        self.begin(who, out, open, How::Fresh, None)
+    /// The connection's session, opened on its first Turn or Control; None was refused. One it opens
+    /// on a bench connection is a bench session.
+    fn ensure<'a>(&self, who: &mut Person, out: &mut dyn Write, open: &'a mut Option<Open>, bench: bool) -> Option<&'a mut Open> {
+        let fresh = open.is_none();
+        let o = self.begin(who, out, open, How::Fresh, None)?;
+        o.bench |= fresh && bench;
+        Some(o)
+    }
+
+    /// v20 plan_evidence: the open session's own last cortex plan, and only for a bench session (rows
+    /// cortex-plan-evidence-without-ledger, -contract, ruled (b)). Anyone else gets a refusal in the
+    /// ledger and nothing on the wire; with no session open there is no ledger row to hold it, so the log does.
+    fn plan_evidence(&self, who: &Person, out: &mut dyn Write, open: Option<&Open>) {
+        let Some(o) = open else {
+            return self.say(format!("refused plan_evidence of {}: no session is open on the connection", who.username));
+        };
+        if !o.bench {
+            let _ = self.record(o, Kind::ToolResult, Some("plan_evidence"), json!({"refused": "the session was not opened by a bench hello"}));
+            return;
+        }
+        let rows = self.ledger.lock().map_err(|_| "ledger poisoned".to_string())
+            .and_then(|l| l.plan_rows(&o.session).map_err(|e| e.to_string()));
+        match rows {
+            Ok((asked, res)) => send(out, &plan_evidence(&o.session, asked.as_ref(), res.as_ref())),
+            // The bench is owed an answer it can tell from "never planned": UNKNOWN, never empty.
+            Err(why) => refuse(out, &format!("plan evidence unreadable: the ledger said {why}")),
+        }
     }
 
     /// Opens the connection's session if none is, for workspace `tab` (None: the legacy one chat); a
@@ -1567,7 +1606,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             Err(why) => (Err(why), iris.clone()),
         };
         Ok((Open { session, model, iris, messages: vec![json!({"role": "system", "content": system})], moved: None, tokens,
-                  pending: HashMap::new(), shown: HashMap::new(), tables_seen: HashMap::new(), dates: HashMap::new(), names: HashMap::new(), read_free: vec![], forms: HashMap::new(), choices: HashMap::new(), last_group: None, trace: None, again: HashMap::new(), acting: HashMap::new(), tab: None, watching: vec![] },
+                  pending: HashMap::new(), shown: HashMap::new(), tables_seen: HashMap::new(), dates: HashMap::new(), names: HashMap::new(), read_free: vec![], forms: HashMap::new(), choices: HashMap::new(), last_group: None, trace: None, again: HashMap::new(), acting: HashMap::new(), tab: None, watching: vec![], bench: false },
             resumed.is_some()))
     }
 
@@ -5142,6 +5181,31 @@ to {draft}; nothing is scheduled by that.\n\n```yaml\n{yaml}```");
 /// A card column as KEAP's columnDefSchema takes it (camelCase refs; zod fills role and onDelete).
 /// The read-back of an approved schema: each column KEAP holds carries every field sent, as sent
 /// (KEAP adds its defaults, role and onDelete, so extra fields are fine); same count, same order.
+/// The wire's plan evidence from a session's last cortex_plan tool_use and tool_result. The source
+/// crosses only once the organ validated it (the result names its registry_hash): an unvalidated one
+/// is model text. A fallback crosses as its kind, never its words, which may quote the model.
+pub fn plan_evidence(session: &str, asked: Option<&Value>, res: Option<&Value>) -> ToShell {
+    let s = |v: Option<&Value>, k: &str| v.and_then(|v| v.get(k)).and_then(Value::as_str).map(str::to_string);
+    let registry_hash = s(res, "registry_hash");
+    let fallback = res.filter(|r| r.get("plan").is_none()).map(|r| match r.get("fallback_kind").and_then(Value::as_str) {
+        Some("infra") => FallbackKind::Infra,
+        _ => FallbackKind::Model,
+    });
+    let table = res.and_then(|r| r.get("table")).and_then(|t| Some(PlanTable {
+        said: t.get("said")?.as_str()?.to_string(), id: t.get("id")?.as_str()?.to_string(),
+        title: t.get("title").and_then(Value::as_str).map(str::to_string) }));
+    let asked_as = asked.and_then(|a| Some(PlanAsked {
+        engine: s(Some(a), "engine")?, constrained: a.get("constrained")?.as_bool()?, primer_sha256: s(Some(a), "primer_sha256")?,
+        grammar_sha256: s(Some(a), "grammar_sha256"), catalogue: s(Some(a), "catalogue")?, catalogue_digest: s(Some(a), "catalogue_digest")? }));
+    ToShell::PlanEvidence {
+        session: session.to_string(),
+        valid: res.and_then(|r| r.get("valid")).and_then(Value::as_bool),
+        pipeline: registry_hash.as_ref().and(s(asked, "source")),
+        registry_hash, fallback, table, asked: asked_as,
+        plan_run: None, model_calls: None, tokens: None,
+    }
+}
+
 fn held_as_sent(held: &[Value], sent: &[Value]) -> bool {
     held.len() == sent.len() && held.iter().zip(sent).all(|(h, s)| s.as_object().is_some_and(|o| o.iter().all(|(k, v)| h.get(k) == Some(v))))
 }

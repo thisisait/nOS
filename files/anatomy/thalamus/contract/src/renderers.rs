@@ -36,6 +36,7 @@ pub enum Component {
     Dashboard(Dashboard),
     Kpi(Kpi),
     ActionApproval(ActionApproval),
+    ProgramApproval(ProgramApproval),
 }
 
 /// Model text as markdown; every consumer draws it as text nodes, never as HTML.
@@ -574,6 +575,25 @@ impl Component {
                 k.delta_label.as_deref().map_or(Ok(()), |l| cap("a kpi delta label", l, 60))?;
                 k.source.as_deref().map_or(Ok(()), |s| cap("a kpi source", s, 200))
             }
+            Component::ProgramApproval(p) => {
+                if p.source.trim().is_empty() {
+                    return Err("a program card shows its source".into());
+                }
+                cap("a program's source", &p.source, 4000)?;
+                if !(1..=PROGRAM_WRITES_MAX).contains(&p.writes.len()) {
+                    return Err(format!("a program writes 1 to {PROGRAM_WRITES_MAX} rows, not {}", p.writes.len()));
+                }
+                p.writes.iter().enumerate().try_for_each(|(i, w)| {
+                    let at = |e: String| format!("write {}: {e}", i + 1);
+                    if w.op == RowOp::InsertMany {
+                        return Err(at("a program writes insert, update or delete rows, never insert_many".into()));
+                    }
+                    if !w.read_from.is_empty() {
+                        return Err(at("read_from is the program's, not a write's".into()));
+                    }
+                    Component::RowDiffApproval(w.clone()).check().map_err(at)
+                })
+            }
             Component::RowDiffApproval(d) => {
                 if d.cells.is_empty() {
                     return Err("an approval changes at least one cell".into());
@@ -1042,6 +1062,22 @@ pub struct ActionApproval {
     pub params: serde_json::Map<String, Value>,
     pub says: String,
 }
+
+/// A cortex program's writes under ONE approval (v20, row iris-code-mode-write-card): the program as
+/// text, then every write as its own row diff. Approve writes exactly these, in order, or nothing.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ProgramApproval {
+    /// render() of the validated AST, never the model's own text; drawn as text.
+    pub source: String,
+    pub writes: Vec<RowDiffApproval>,
+    /// Tools whose free text the model read this turn; the card head says so.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub read_from: Vec<String>,
+}
+
+/// The most writes one program card holds (ruling 2026-11-18): more is refused, never "and N more".
+pub const PROGRAM_WRITES_MAX: usize = 20;
 
 /// One number serve computed from a table (show kpi with a source, or a kpi widget); never the model's.
 /// `source` says what was totalled over which rows; `delta` is a change the pupil says as an arrow and a sign.
