@@ -167,11 +167,15 @@ class BenchConn(SockConn):
         m = json.loads(line) if line.strip() else {}
         if m.get("t") == "session":
             self.session = m.get("session")
+        # A hello is answerless: a refusal before any session means the far side did not take it.
+        elif m.get("t") == "refused" and not self.session:
+            raise ConnectionError(f"the bench hello was not taken: {m.get('reason')}")
         return line
 
     def close(self) -> None:
         if self.session:
             try:
+                self.s.settimeout(min(self.s.gettimeout() or 30.0, 30.0))  # a ledger read, not a model turn
                 self.send({"t": "plan_evidence"})
                 while (m := json.loads(super().readline() or "null")) is not None and m.get("t") not in ("plan_evidence", "refused"):
                     pass

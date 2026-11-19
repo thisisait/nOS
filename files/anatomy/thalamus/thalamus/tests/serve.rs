@@ -7938,5 +7938,14 @@ fn plan_evidence_is_a_bench_sessions_own() {
     let refused: i64 = db.query_row("SELECT count(*) FROM events WHERE run_id = ?1 AND task LIKE '%/tool:plan_evidence'
                                      AND json_extract(result_json, '$.refused') IS NOT NULL", [&c], |r| r.get(0)).unwrap();
     assert_eq!(refused, 1, "the refusal is not in the ledger");
-    drop((sa, sb, sc));
+    // The browser writes through the relay, so a bench hello there is refused and its session is no bench's.
+    let (t, mut rt) = tab(relay(&rig), &hello("alice-smith", "Alice Smith", "tab-b1"));
+    (&t).write_all(encode(&ToThalamus::Hello { bench: true }).as_bytes()).unwrap();
+    assert!(matches!(next(&mut rt), Some(ToShell::Refused { reason, .. }) if reason.contains("socket's")));
+    (&t).write_all(encode(&ToThalamus::Turn { session: None, text: "x".into() }).as_bytes()).unwrap();
+    while !next(&mut rt).as_ref().is_some_and(ends) {}
+    (&t).write_all(encode(&ToThalamus::PlanEvidence {}).as_bytes()).unwrap();
+    (&t).write_all(encode(&ToThalamus::ApprovalsOpen).as_bytes()).unwrap();
+    assert!(matches!(next(&mut rt), Some(ToShell::ApprovalsOpen { .. })), "a relay tab got plan evidence");
+    drop((sa, sb, sc, t));
 }
