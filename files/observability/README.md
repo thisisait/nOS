@@ -79,7 +79,7 @@ ship under `docker compose -p observability`.
 | `postgres-exporter` | `prometheuscommunity/postgres-exporter:v0.15.0` | `observability_net`, `stacks_shared_network` | `postgresql` (infra stack) |
 | `mysqld-exporter` | `prom/mysqld-exporter:v0.15.1` | `observability_net`, `stacks_shared_network` | `mariadb` (infra stack) + `mysqld_exporter` MariaDB user |
 | `redis-exporter` | `oliver006/redis_exporter:v1.58.0` | `observability_net`, `stacks_shared_network` | `redis` (infra stack, Dockerized only) |
-| `cadvisor` | `gcr.io/cadvisor/cadvisor:v0.49.1` | `observability_net`, `stacks_shared_network` | Docker socket (`/var/run/docker.sock`) |
+| `cadvisor` | `gcr.io/cadvisor/cadvisor:v0.49.2` | `observability_net`, `stacks_shared_network` | Docker socket (`/var/run/docker.sock`) |
 | `blackbox-exporter` | `prom/blackbox-exporter:v0.25.0` | `observability_net`, `stacks_shared_network` | `blackbox/config.yml` bind-mount |
 
 Exporters that need to reach infra databases ride the external

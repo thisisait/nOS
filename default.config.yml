@@ -920,14 +920,14 @@ grafana_version: "12.4.14"              # CVE-2026-100105, -88858, -88967 (12.4.
                                         # the five-release 2026-08-18 wave). Same minor as the
                                         # 12.4.4 CVE-2026-27876 pin it replaces, so no post-start
                                         # automation is orphaned — memory version-pins-default-config-shadow.
-prometheus_version: "v3.13.2"   # synced to role default (cleared version-pin shadow) [swept v3.11.3 2026-08-06]
-loki_version: "3.7.6"           # synced to role default (cleared version-pin shadow) [swept 3.7.2 2026-08-06]
+prometheus_version: "v3.16.0"   # Go/x-net/grpc security rebuilds since 3.13.3; no breaking notes for our flags [2026-11-21]. Prior v3.13.2.
+loki_version: "3.7.10"          # grpc 1.83.2 (high), containerd, Go 1.26.10 rebuilds (REM-285, REM-314) [2026-11-21]. Prior 3.7.6.
 
 # Gitea Docker
 gitea_version: "28.4.0"                 # 2026-11-16: 9 high (GHSA-frjx, -6m4f, -wmr3, -wgx7, -4p89, -w87g, -q3q9, -9vh6, -5mx6) fixed in 28.4.0; prior 28.3.0
 
-postgres_exporter_version: "v0.20.1"  # [swept 2026-08-06]
-mysqld_exporter_version: "v0.19.0"  # [swept 2026-08-06]
+postgres_exporter_version: "v0.21.1"  # REM-370. PG_EXPORTER_* env deprecated (removed v0.22): grafana compose still sets PG_EXPORTER_EXTEND_QUERY_PATH.
+mysqld_exporter_version: "v0.20.0"  # v0.21.0 held: BREAKING metric-type change + $$ password escaping in config files [2026-11-21].
 # -alpine, and the suffix is load-bearing. Upstream's DEFAULT image is now
 # scratch — no wget, no shell, nothing but the binary — so the compose
 # healthcheck (`CMD wget --spider`) could not EXECUTE and docker reported the
@@ -938,9 +938,9 @@ mysqld_exporter_version: "v0.19.0"  # [swept 2026-08-06]
 # One declaration, not a hardcoded suffix in the template: pin-latest-scan
 # matches candidate tags by SHAPE, so this keeps tracking the -alpine line
 # rather than drifting back onto scratch at the next sweep.
-redis_exporter_version: "v1.89.0-alpine"  # [swept v1.88.0-alpine 2026-08-11]
-cadvisor_version: "v0.49.1"
-blackbox_exporter_version: "v0.28.0"  # [swept 2026-08-06]
+redis_exporter_version: "v1.98.0-alpine"  # v1.93.0 TLS minimumVersion fix [2026-11-21]. Prior v1.89.0-alpine.
+cadvisor_version: "v0.49.2"  # last gcr.io-line patch; upstream moved to ghcr.io/google/cadvisor from v0.60 (template change, not taken).
+blackbox_exporter_version: "v0.29.1"  # Go 1.27.3 + x/net HTTP/2 + eMudhra CA distrust [2026-11-21]. Prior v0.28.0.
 
 # app_secrets is the apps_runner secret-store (its own default is `{}` in
 # roles/pazny.apps_runner/defaults). That role default only materialises during
