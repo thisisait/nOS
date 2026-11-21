@@ -12,7 +12,7 @@
 | **Stack** | `voip` |
 | **Toggle** | `install_mikopbx: false` (default OFF) |
 | **Compose** | `~/stacks/voip/docker-compose.yml` (role fragment: `~/stacks/voip/overrides/mikopbx.yml`) |
-| **Image** | `mikopbx/mikopbx:2026.3.40` (`mikopbx_version`; multi-arch, Asterisk 22.8.2 inside) |
+| **Image** | `mikopbx/mikopbx:2026.9.5` (`mikopbx_version`; multi-arch; one-way /cf migration, cold copy by tasks/one-way-upgrade-guard.yml) |
 | **DB** | none in infra — SQLite + Redis live inside the container (`/cf`) |
 | **Data** | `mikopbx_data_dir/{cf,storage}` — config+SQLite, recordings/voicemail |
 | **Admin** | login `admin`, password `nos_derived_secrets.mikopbx_admin` (`tools/nos-secret.py mikopbx_admin`) |

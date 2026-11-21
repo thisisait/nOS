@@ -199,6 +199,10 @@
       - (mikopbx_providers | default([]) | map(attribute='name') | list)
         is subset((_pbx_read.results[1].json.data.data | default(_pbx_read.results[1].json.data)) | map(attribute='description') | list)
       - (mikopbx_external_ip | default('') | length == 0) or (_pbx_read.results[2].json.data.extipaddr == mikopbx_external_ip)
+      - (mikopbx_external_ip | default('') | length == 0) or (_pbx_read.results[2].json.data.usenat | bool)
+      # the general-settings PATCH above: read back what it wrote, not its 200
+      - not (_pbx_read.results[2].json.data.AUTO_UPDATE_EXTERNAL_IP | default('1') | bool)
+      - _pbx_read.results[2].json.data.EXTERNAL_SIP_PORT | int == mikopbx_sip_port | default(5060) | int
       - _pbx_read.results[2].json.data.RTP_PORT_FROM | int == mikopbx_rtp_start | default(10000) | int
       - _pbx_read.results[2].json.data.RTP_PORT_TO | int == mikopbx_rtp_end | default(10100) | int
     fail_msg: >-

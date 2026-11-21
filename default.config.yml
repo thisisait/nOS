@@ -1532,7 +1532,7 @@ outline_version: "1.13.0"     # 1.13.0: Node 26.13.1, OAuth/MCP hardening; no br
 # need NAT pinned through the API — docs/systems/mikopbx/README.md.
 # ==============================================================================
 
-mikopbx_version: "2026.3.40"           # mikopbx/mikopbx, multi-arch (Asterisk 22.8.2 inside)
+mikopbx_version: "2026.9.5"            # 40 advisories <= 2026.3.40 (5 critical: GHSA-qhh5 fixed 2026.6.99); one-way /cf migration, cold copy (one-way-upgrade-guard)
 mikopbx_domain: "pbx{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 mikopbx_port: 8088                     # Web UI + REST API (loopback publish)
 mikopbx_sip_port: 5060                 # SIP signaling (UDP+TCP), published port
