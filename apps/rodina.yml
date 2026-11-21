@@ -14,7 +14,7 @@
 
 meta:
   name: "rodina"
-  version: "0.1.2"
+  version: "0.1.3"
   summary: "Rodokmen rodiny, jen pro rodinu: přihlášení odkazem z emailu."
   category: "knowledge"
   ports: [8080]
@@ -52,7 +52,7 @@ gdpr:
 compose:
   services:
     rodina:
-      image: "rodina-web:0.1.2"
+      image: "rodina-web:0.1.3"
       container_name: rodina
       restart: unless-stopped
       expose:
@@ -78,7 +78,7 @@ compose:
       cpus: 0.5
 
     rodina-kin:
-      image: "kin:0.1.2"
+      image: "kin:0.1.3"
       container_name: rodina-kin
       restart: unless-stopped
       expose:
