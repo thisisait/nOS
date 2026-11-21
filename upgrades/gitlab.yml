@@ -19,9 +19,24 @@ notes: |
   The post step exercises gitlab-rake db:migrate:status which, while
   not a full BG-migration check, fails loudly on schema gaps.
 
-  EVERY recipe here is severity: breaking and coexistence_supported:
-  false (Omnibus is stateful with internal Postgres+Redis; side-by-
-  side requires a second Omnibus stack which is out of scope here).
+  18.11 -> 19.6 (2026-11-21, https://docs.gitlab.com/update/upgrade_paths/):
+  required stops 18.11 -> 19.2 -> 19.5 -> 19.6, latest patch of each. One
+  rung per stop; the engine matches the installed version once per run,
+  so each `--tags upgrade -e upgrade_service=gitlab` walks ONE stop. Each
+  hop's `pre` waits for the batched background migrations of the previous
+  stop (gitlab:background_migrations:wait, 18.9+) — in `pre`, not `post`,
+  so a slow drain refuses the next hop instead of rolling this one back.
+  19.0 refuses PostgreSQL 16: 18.11 upgrades the bundled PG to 17 on boot
+  unless GITLAB_SKIP_PG_UPGRADE / disable-postgresql-upgrade (we set
+  neither); the 19.2 hop asserts PG_VERSION 17 first. A fresh 19.6 install
+  gets PG 18, an upgraded one stays on 17 (both supported).
+  A PLAIN CONVERGE ON EXISTING 18.11 DATA RENDERS THE PIN (19.6.1) AND
+  SKIPS THE STOPS: hold gitlab_version at each stop in config.yml, or
+  walk these rungs, before a converge with the default pin.
+
+  EVERY recipe here is coexistence_supported: false (Omnibus is
+  stateful with internal Postgres+Redis; side-by-side requires a second
+  Omnibus stack which is out of scope here).
 
 recipes:
   - id: "gitlab-17-to-17-11"
@@ -138,19 +153,19 @@ recipes:
         wait: true
 
   - id: "gitlab-18-to-current"
-    from_regex: "^18\\.([0-9]|[1-9][0-9])\\."
-    to: "18.11.9-ce.0"     # == installed (was 18.10.3-ce.0, BEHIND the pin)
+    # 18.11.13 itself is excluded: it is the 19.2 hop's only 18.x source, and
+    # two matching rungs would both queue in one run (this one sorts second).
+    from_regex: "^18\\.(?!11\\.13-)([0-9]|[1-9][0-9])\\."
+    to: "18.11.13-ce.0"    # the 18.11 required stop, latest patch (was 18.11.9, below the old pin)
     severity: security
     changelog_url: "https://about.gitlab.com/releases/"
     notes: |
-      Stale-target repair. The shipped `to` (18.10.3-ce.0) sits BELOW the pinned
-      18.11.9-ce.0, so the advisor was offering a downgrade across forward-only
-      background migrations — GitLab does not support that and it is not a
-      rollback either (rollback restores the data dir; this would not).
-      18.11.9 is the terminal 18.11.x build (REM-159: 18.11.8 was withdrawn
-      upstream). Patch/minor bumps inside 18.x are a single Omnibus recreate.
-      BEFORE the next MAJOR hop: `gitlab-rake db:background_migrations:status`
-      must read finished, per the 17.11→18.0 track's own rule.
+      Lands any 18.x on 18.11.13, the last 18.11 patch and the required stop
+      before 19.x. 18.11.8 was withdrawn upstream (REM-159/REM-205): never a
+      target. Patch/minor bumps inside 18.x are a single Omnibus recreate;
+      from below 18.8 the 18.2/18.5/18.8 stops still apply and this rung
+      does not walk them. The 19.2 hop then waits for the background
+      migrations this boot queues.
     coexistence_supported: false
     requires: { min_disk_free_gb: 10, service_healthy: true }
     reset:
@@ -185,11 +200,226 @@ recipes:
         expect_status: 200
         timeout_sec: 900
         interval_sec: 10
-      - id: background_migrations_drained
+      # Was `gitlab-rake db:background_migrations:status`, not a task GitLab
+      # documents (that is gitlab:background_migrations:*); a failing post rolls
+      # back. The drain wait lives in the next hop's pre; here the build is read back.
+      - id: running_version
         type: exec.shell
         command: >-
-          docker exec devops-gitlab-1 gitlab-rake
-          db:background_migrations:status
+          v="{{ recipe.to }}"; test "$(docker exec devops-gitlab-1
+          cat /opt/gitlab/embedded/service/gitlab-rails/VERSION)" = "${v%-ce.0}"
+        allow_shell: true
+    rollback:
+      - id: revert_image_tag
+        type: compose.set_image_tag
+        stack: devops
+        service: gitlab
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: true
+      - id: restore_data
+        type: backup.restore
+        dst: "{{ gitlab_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+
+  # ── 18.11 -> 19.6: one rung per required stop (see file notes) ─────────────
+  - id: "gitlab-18-11-to-19-2"
+    from_regex: "^(18\\.11\\.13-|19\\.[01]\\.)"
+    to: "19.2.10-ce.0"
+    severity: breaking
+    changelog_url: "https://docs.gitlab.com/update/versions/gitlab_19_changes/"
+    notes: |
+      First 19.x stop. 19.0 removed bundled Mattermost and Spamcheck and the
+      Gitaly bin_path / use_bundled_binaries keys; nOS sets none of them
+      (checked against omnibus deprecations.rb at 19.6.1+ce.0). Webhook
+      timestamps become ISO 8601 with milliseconds. Refuses unless the bundled
+      PostgreSQL is 17+ and the 18.11 background migrations have finished.
+    coexistence_supported: false
+    requires: { min_disk_free_gb: 20, service_healthy: true }
+    reset:
+      scope: container
+      estimated_sec: 1200
+      affected_services: [gitlab]
+      reason: >-
+        One compose.set_image_tag recreate of the self-contained Omnibus
+        container (PG+Redis bundled, no shared-DB consumer); the first boot
+        of a new major runs its schema migrations before readiness.
+    pre:
+      - id: postgresql_is_17
+        type: exec.shell
+        command: >-
+          pg="$(docker exec devops-gitlab-1 cat /var/opt/gitlab/postgresql/data/PG_VERSION)";
+          [ "$pg" -ge 17 ] || { echo "bundled PostgreSQL is $pg, 19.x needs 17:
+          docker exec devops-gitlab-1 gitlab-ctl pg-upgrade -V 17" >&2; exit 1; }
+        allow_shell: true
+      - id: background_migrations_finished
+        type: exec.shell
+        command: "docker exec devops-gitlab-1 gitlab-rake gitlab:background_migrations:wait"
+        allow_shell: true
+        timeout_sec: 7200
+      - id: backup_app
+        type: exec.shell
+        command: >-
+          docker exec devops-gitlab-1 gitlab-backup create
+          BACKUP={{ upgrade_id }} STRATEGY=copy
+        allow_shell: true
+        timeout_sec: 1800
+      - id: backup_data
+        type: backup.volume
+        src: "{{ gitlab_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+    apply:
+      - id: bump_image_tag
+        type: compose.set_image_tag
+        stack: devops
+        service: gitlab
+        tag: "{{ recipe.to }}"
+        wait: true
+    post:
+      - id: wait_healthy
+        type: http.wait
+        url: "http://127.0.0.1:{{ gitlab_http_port | default(8929) }}/-/readiness"
+        expect_status: 200
+        timeout_sec: 1200
+        interval_sec: 15
+      - id: running_version
+        type: exec.shell
+        command: >-
+          v="{{ recipe.to }}"; test "$(docker exec devops-gitlab-1
+          cat /opt/gitlab/embedded/service/gitlab-rails/VERSION)" = "${v%-ce.0}"
+        allow_shell: true
+    rollback:
+      - id: revert_image_tag
+        type: compose.set_image_tag
+        stack: devops
+        service: gitlab
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: true
+      - id: restore_data
+        type: backup.restore
+        dst: "{{ gitlab_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+
+  - id: "gitlab-19-2-to-19-5"
+    from_regex: "^19\\.[2-4]\\."
+    to: "19.5.8-ce.0"
+    severity: breaking
+    changelog_url: "https://docs.gitlab.com/update/versions/gitlab_19_changes/"
+    notes: |
+      Second 19.x stop. 19.5 queues the Duo Agent Platform checkpoint
+      migration in the background (watch disk); the next rung waits for it.
+    coexistence_supported: false
+    requires: { min_disk_free_gb: 20, service_healthy: true }
+    reset:
+      scope: container
+      estimated_sec: 1200
+      affected_services: [gitlab]
+      reason: >-
+        One compose.set_image_tag recreate of the self-contained Omnibus
+        container; the first boot of a new minor runs its schema migrations.
+    pre:
+      - id: background_migrations_finished
+        type: exec.shell
+        command: "docker exec devops-gitlab-1 gitlab-rake gitlab:background_migrations:wait"
+        allow_shell: true
+        timeout_sec: 7200
+      - id: backup_app
+        type: exec.shell
+        command: >-
+          docker exec devops-gitlab-1 gitlab-backup create
+          BACKUP={{ upgrade_id }} STRATEGY=copy
+        allow_shell: true
+        timeout_sec: 1800
+      - id: backup_data
+        type: backup.volume
+        src: "{{ gitlab_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+    apply:
+      - id: bump_image_tag
+        type: compose.set_image_tag
+        stack: devops
+        service: gitlab
+        tag: "{{ recipe.to }}"
+        wait: true
+    post:
+      - id: wait_healthy
+        type: http.wait
+        url: "http://127.0.0.1:{{ gitlab_http_port | default(8929) }}/-/readiness"
+        expect_status: 200
+        timeout_sec: 1200
+        interval_sec: 15
+      - id: running_version
+        type: exec.shell
+        command: >-
+          v="{{ recipe.to }}"; test "$(docker exec devops-gitlab-1
+          cat /opt/gitlab/embedded/service/gitlab-rails/VERSION)" = "${v%-ce.0}"
+        allow_shell: true
+    rollback:
+      - id: revert_image_tag
+        type: compose.set_image_tag
+        stack: devops
+        service: gitlab
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: true
+      - id: restore_data
+        type: backup.restore
+        dst: "{{ gitlab_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+
+  - id: "gitlab-19-current"
+    from_regex: "^19\\.[5-6]\\."
+    to: "19.6.1-ce.0"      # == the pin
+    severity: security
+    changelog_url: "https://about.gitlab.com/releases/"
+    notes: |
+      19.5 -> 19.6 and 19.6 patch bumps (latest 19.6 on Docker Hub, amd64+arm64,
+      2026-11-20). 19.6: bundled NGINX 1.31.7 (nOS adds no custom nginx
+      config), new rate/resource limits (expect 429s on heavy API use),
+      pipeline variables capped at 10 MiB.
+    coexistence_supported: false
+    requires: { min_disk_free_gb: 20, service_healthy: true }
+    reset:
+      scope: container
+      estimated_sec: 900
+      affected_services: [gitlab]
+      reason: >-
+        One compose.set_image_tag recreate of the self-contained Omnibus
+        container; backup and http.wait are none-floor.
+    pre:
+      - id: background_migrations_finished
+        type: exec.shell
+        command: "docker exec devops-gitlab-1 gitlab-rake gitlab:background_migrations:wait"
+        allow_shell: true
+        timeout_sec: 7200
+      - id: backup_app
+        type: exec.shell
+        command: >-
+          docker exec devops-gitlab-1 gitlab-backup create
+          BACKUP={{ upgrade_id }} STRATEGY=copy
+        allow_shell: true
+        timeout_sec: 1800
+      - id: backup_data
+        type: backup.volume
+        src: "{{ gitlab_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+    apply:
+      - id: bump_image_tag
+        type: compose.set_image_tag
+        stack: devops
+        service: gitlab
+        tag: "{{ recipe.to }}"
+        wait: true
+    post:
+      - id: wait_healthy
+        type: http.wait
+        url: "http://127.0.0.1:{{ gitlab_http_port | default(8929) }}/-/readiness"
+        expect_status: 200
+        timeout_sec: 1200
+        interval_sec: 15
+      - id: running_version
+        type: exec.shell
+        command: >-
+          v="{{ recipe.to }}"; test "$(docker exec devops-gitlab-1
+          cat /opt/gitlab/embedded/service/gitlab-rails/VERSION)" = "${v%-ce.0}"
         allow_shell: true
     rollback:
       - id: revert_image_tag
