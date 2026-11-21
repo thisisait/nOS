@@ -926,7 +926,7 @@ loki_version: "3.7.10"          # grpc 1.83.2 (high), containerd, Go 1.26.10 reb
 # Gitea Docker
 gitea_version: "28.4.0"                 # 2026-11-16: 9 high (GHSA-frjx, -6m4f, -wmr3, -wgx7, -4p89, -w87g, -q3q9, -9vh6, -5mx6) fixed in 28.4.0; prior 28.3.0
 
-postgres_exporter_version: "v0.21.1"  # REM-370. PG_EXPORTER_* env deprecated (removed v0.22): grafana compose still sets PG_EXPORTER_EXTEND_QUERY_PATH.
+postgres_exporter_version: "v0.20.1"  # v0.21.x held: deprecates PG_EXPORTER_* env (grafana compose sets PG_EXPORTER_EXTEND_QUERY_PATH), wraps counters [2026-11-21]
 mysqld_exporter_version: "v0.20.0"  # v0.21.0 held: BREAKING metric-type change + $$ password escaping in config files [2026-11-21].
 # -alpine, and the suffix is load-bearing. Upstream's DEFAULT image is now
 # scratch — no wget, no shell, nothing but the binary — so the compose
