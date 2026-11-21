@@ -1079,17 +1079,17 @@ openwebui_admin_email: "{{ default_admin_email }}"
 # Requires: install_gitea: true + manual OAuth2 application in Gitea
 # ==============================================================================
 # (the rest of this section is a config.d layer)
-woodpecker_version: "v3.19.0"           # GHSA-6frq-4g8m-8xw9 (fixed 3.19.0), -xwpq-2mq8-p55x, -v6jr-fc8m-whr3 (3.18.0), high [advisory-status 2026-11-15]. Prior REM-105.
+woodpecker_version: "v3.20.1"           # 3.20.0 security batch (agent token out of env, config fetch hardening); 3.20.1 reverts its envsubst break. Prior 3.19.0.
 
 # ==============================================================================
 # IIAB – PORTAINER CE (Docker management UI)
 # ==============================================================================
 # (the rest of this section is a config.d layer)
-portainer_version: "2.45.3"             # GHSA-j3mf-q9qf-5qf8 (critical, <=2.45.2) fixed 2.45.3 [advisory-status 2026-10-23]; REM-295 bind-mount bypass fixes (LTS 2.39 unpatched)
+portainer_version: "2.45.4"             # GHSA-26fg, -9xr4, -45qw, -xfw5, -m2rf (high) + 6 medium fixed 2.45.4; its breaking notes hit non-admin/k8s only (tier 1).
 # Shared Traefik/Portainer Docker-API gateway (templates/stacks/infra base
 # compose). Guards docker.sock = root-on-host — pinned, never floating
 # (2026-06-10 review; the C1 pin gate doesn't scan base-stack templates).
-docker_socket_proxy_version: "v0.4.2"  # registry tag IS v-prefixed (0.4.2 was only the OCI label — pull fails bare)
+docker_socket_proxy_version: "v0.5.0"  # registry tag IS v-prefixed. v0.5.0: HAProxy 3.4.2, ALLOW_PAUSE/UNPAUSE, BIND_CONFIG env.
 
 # ==============================================================================
 # INFRA – SPACETIMEDB (realtime DB, BSL 1.1)
@@ -1336,7 +1336,7 @@ coexistence_secondary_ttl_days: 7
 # Backward compatibility – old monolithic compose dir (will be removed after migration)
 
 # ── Traefik ────────────────────────────────────────────────────────────────────
-traefik_image_version: "v3.7.18"  # GHSA-p956-6gvv-mxqp, -x5pf-cqh3-2gv8, -ccgh-9g52-6vwg, -cp28-5662-543f (high) fixed v3.7.18 [2026-11-15]. Prior v3.7.17, REM-251.
+traefik_image_version: "v3.7.19"  # quic-go, klauspost/compress, x/crypto bumps [2026-11-21]. Prior v3.7.18 (GHSA-p956, -x5pf, -ccgh, -cp28), REM-251.
 
 # ── Tier-1 service ports lifted from role defaults ────────────────────────────
 # These are referenced via lookup('vars', '<svc>_port') in the Traefik file
