@@ -10,6 +10,16 @@
     - cf          # /cf      — config + SQLite (mikopbx.db), the whole PBX state
     - storage     # /storage — recordings, voicemail, CDR exports
 
+# A new release migrates /cf (SQLite) one way on first boot: rollback is this
+# copy. 2026.7+ also rotates the session key (everyone signs in again).
+- name: "[pazny.mikopbx] One-way upgrade guard"
+  ansible.builtin.import_tasks: ../../../tasks/one-way-upgrade-guard.yml  # relative: ansible-lint cannot evaluate playbook_dir
+  vars:
+    owg_name: mikopbx
+    owg_service: mikopbx
+    owg_pin: "{{ mikopbx_version }}"
+    owg_data_dir: "{{ mikopbx_data_dir }}/cf"
+
 - name: "[pazny.mikopbx] Render compose override fragment"
   ansible.builtin.template:
     src: compose.yml.j2

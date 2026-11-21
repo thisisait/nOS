@@ -1,0 +1,85 @@
+---
+service: mikopbx
+allow_shell: true   # the cold copy stops the container first (exec.shell)
+docs_url: "https://github.com/mikopbx/Core/releases"
+maintainers: ["pazny"]
+notes: |
+  ONE-WAY DATA. A new MikoPBX release migrates /cf (config + SQLite
+  mikopbx.db, the whole PBX state) on first boot; rollback is a cold copy
+  of /cf, not the old tag. The converge protects the bump itself
+  (tasks/one-way-upgrade-guard.yml: stop, verified tar of
+  {{ mikopbx_data_dir }}/cf to one_way_upgrade_backup_dir, then recreate);
+  this rung is the supervised path and stops the container before its own
+  backup so that copy is cold too. /storage (recordings) is not migrated.
+
+  2026.3.40 -> 2026.9.5 (release notes 2026.5.6 .. 2026.9.5): 40 advisories
+  incl. 5 critical (GHSA-qhh5 stored XSS -> root RCE fixed in 2026.6.99),
+  PHP 8.4.27/8.4.28, nginx 1.31.9 (CVE-2026-123007). Behaviour changes:
+  every user signs in once more (per-install session key, 2026.7.1);
+  module REST actions answer 422/409/503/504 instead of 200 + result:false;
+  REST bodies capped at 4 MiB (413); `{}` and numeric-key objects stay
+  objects in JSON; exthostname no longer derived from the hostname. The
+  core REST calls roles/pazny.mikopbx/tasks/post.yml makes (auth:login,
+  general-settings, network:*, custom-files, employees, sip-providers)
+  keep their fields; custom-files is WAF body-scan exempt.
+
+recipes:
+  - id: "mikopbx-2026-current"
+    from_regex: "^2026\\."
+    to: "2026.9.5"         # == the pin
+    severity: security
+    changelog_url: "https://github.com/mikopbx/Core/releases/tag/2026.9.5"
+    notes: |
+      In-line 2026.x bump. Data in /cf migrates one way: the pre phase stops
+      the PBX (calls drop) and tars /cf cold; rollback restores that tar
+      under the old tag.
+    coexistence_supported: false
+    requires: { min_disk_free_gb: 2, service_healthy: true }
+    reset:
+      scope: container
+      estimated_sec: 180
+      affected_services: [mikopbx]
+      reason: >-
+        Single self-contained container (SQLite + Redis inside, no shared
+        infra DB); stopping it for the cold copy drops live calls and SIP
+        registrations until the new tag answers system:ping.
+    pre:
+      - id: stop_for_cold_copy
+        type: exec.shell
+        command: "docker stop -t 60 voip-mikopbx-1"
+        allow_shell: true
+      - id: backup_cf
+        type: backup.volume
+        src: "{{ mikopbx_data_dir }}/cf"
+        label: "pre-{{ upgrade_id }}"
+    apply:
+      - id: bump_image_tag
+        type: compose.set_image_tag
+        stack: voip
+        service: mikopbx
+        tag: "{{ recipe.to }}"
+        wait: true
+    post:
+      - id: wait_ping
+        type: http.wait
+        url: "http://127.0.0.1:{{ mikopbx_port | default(8088) }}/pbxcore/api/v3/system:ping"
+        expect_status: 200
+        timeout_sec: 300
+        interval_sec: 5
+    # Restore under a stopped container, then boot the old tag on the old /cf:
+    # the old tag never sees the migrated database.
+    rollback:
+      - id: stop_for_restore
+        type: exec.shell
+        command: "docker stop -t 60 voip-mikopbx-1"
+        allow_shell: true
+      - id: restore_cf
+        type: backup.restore
+        dst: "{{ mikopbx_data_dir }}/cf"
+        label: "pre-{{ upgrade_id }}"
+      - id: revert_image_tag
+        type: compose.set_image_tag
+        stack: voip
+        service: mikopbx
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: true
