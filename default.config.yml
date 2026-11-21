@@ -1638,9 +1638,9 @@ landing_host_note: ""                   # one host-specific paragraph (config.ym
 landing_contact: ""                     # who to ask, as text (config.yml)
 # nginx stable-alpine. The tag says what we meant, the digest says what we get
 # (mcp_gateway precedent). Digest is the multi-arch INDEX (arm64 + amd64).
-# Asked at the source registry (Docker Hub library/nginx), 2026-10-23: 1.30.6 fixes
-# CVE-2026-15176, -93479, -95101, -97629, -97205 (nginx.org CHANGES-1.30).
-apex_version: "1.30.6-alpine@sha256:47928bf67eb62a1863cb08d9ecb52d3e704304ba614eaee17884204677702951"
+# Asked at the source registry (Docker Hub library/nginx), 2026-11-21: 1.30.7 fixes the six HIGH
+# advisories against 1.30.6 (CVE-2026-113425, -118899, -121810, -123007, -123633, -123634; advisory-status).
+apex_version: "1.30.7-alpine@sha256:caf4e1e032a20f9c3c5e28fc7f25ffd768ad8677b4975c54193075997b3a97e3"
 
 # ==============================================================================
 # KEAP – Knowledge Explorer and Preserver (where nOS keeps its memory)
