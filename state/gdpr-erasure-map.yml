@@ -201,6 +201,13 @@ services:
            (admin, trash on an event or entity; leaves a SHA-256 tombstone).
            Unverified live — method:manual."
 
+  - id: app_rodina
+    flag: apps_runner_enabled
+    method: manual
+    note: "A relative asks to be removed: the operator deletes their entry in the genealogy
+           project (data/) and rebuilds the image, and drops their email from
+           app_secrets.rodina.PASSWORD_ALLOW + nos --tags apps. The kin gate keeps no address,
+           only spent link ids and a mail counter keyed by a hash. Unverified live — method:manual."
   - id: app_twofauth
     flag: apps_runner_enabled
     method: manual

@@ -47,7 +47,7 @@ gdpr:
   retention_days: -1         # a family archive; a relative's entry is removed on request
   processors:
     - "Google (Gmail SMTP): sends the login links"
-  transfers_outside_eu: true # Gmail is a US service
+  transfers_outside_eu: true  # Gmail is a US service
 
 compose:
   services:
