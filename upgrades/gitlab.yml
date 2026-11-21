@@ -23,9 +23,12 @@ notes: |
   required stops 18.11 -> 19.2 -> 19.5 -> 19.6, latest patch of each. One
   rung per stop; the engine matches the installed version once per run,
   so each `--tags upgrade -e upgrade_service=gitlab` walks ONE stop. Each
-  hop's `pre` waits for the batched background migrations of the previous
-  stop (gitlab:background_migrations:wait, 18.9+) — in `pre`, not `post`,
-  so a slow drain refuses the next hop instead of rolling this one back.
+  hop's `pre` refuses while batched background migrations of the previous
+  stop are unfinished (zero rows with status NOT IN (3, 6), the check the
+  docs give; the rake `wait` task first ships in 19.5, `list` not in CE
+  18.11/19.2) — in `pre`, not `post`, so a slow drain refuses the next hop
+  instead of rolling this one back. Rollback stops GitLab, restores the
+  data dir, then boots the old tag: the old tag never sees the new schema.
   19.0 refuses PostgreSQL 16: 18.11 upgrades the bundled PG to 17 on boot
   unless GITLAB_SKIP_PG_UPGRADE / disable-postgresql-upgrade (we set
   neither); the 19.2 hop asserts PG_VERSION 17 first. A fresh 19.6 install
@@ -210,16 +213,20 @@ recipes:
           cat /opt/gitlab/embedded/service/gitlab-rails/VERSION)" = "${v%-ce.0}"
         allow_shell: true
     rollback:
+      - id: stop_for_restore
+        type: exec.shell
+        command: "docker stop -t 120 devops-gitlab-1"
+        allow_shell: true
+      - id: restore_data
+        type: backup.restore
+        dst: "{{ gitlab_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
       - id: revert_image_tag
         type: compose.set_image_tag
         stack: devops
         service: gitlab
         tag: "{{ recipe.from_version_resolved }}"
         wait: true
-      - id: restore_data
-        type: backup.restore
-        dst: "{{ gitlab_data_dir }}"
-        label: "pre-{{ upgrade_id }}"
 
   # ── 18.11 -> 19.6: one rung per required stop (see file notes) ─────────────
   - id: "gitlab-18-11-to-19-2"
@@ -253,9 +260,11 @@ recipes:
         allow_shell: true
       - id: background_migrations_finished
         type: exec.shell
-        command: "docker exec devops-gitlab-1 gitlab-rake gitlab:background_migrations:wait"
+        command: >-
+          n="$(docker exec devops-gitlab-1 gitlab-psql -At -c
+          'SELECT count(*) FROM batched_background_migrations WHERE status NOT IN (3, 6)')";
+          [ "$n" = 0 ] || { echo "$n batched background migrations not finished; re-run later" >&2; exit 1; }
         allow_shell: true
-        timeout_sec: 7200
       - id: backup_app
         type: exec.shell
         command: >-
@@ -288,16 +297,20 @@ recipes:
           cat /opt/gitlab/embedded/service/gitlab-rails/VERSION)" = "${v%-ce.0}"
         allow_shell: true
     rollback:
+      - id: stop_for_restore
+        type: exec.shell
+        command: "docker stop -t 120 devops-gitlab-1"
+        allow_shell: true
+      - id: restore_data
+        type: backup.restore
+        dst: "{{ gitlab_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
       - id: revert_image_tag
         type: compose.set_image_tag
         stack: devops
         service: gitlab
         tag: "{{ recipe.from_version_resolved }}"
         wait: true
-      - id: restore_data
-        type: backup.restore
-        dst: "{{ gitlab_data_dir }}"
-        label: "pre-{{ upgrade_id }}"
 
   - id: "gitlab-19-2-to-19-5"
     from_regex: "^19\\.[2-4]\\."
@@ -319,9 +332,11 @@ recipes:
     pre:
       - id: background_migrations_finished
         type: exec.shell
-        command: "docker exec devops-gitlab-1 gitlab-rake gitlab:background_migrations:wait"
+        command: >-
+          n="$(docker exec devops-gitlab-1 gitlab-psql -At -c
+          'SELECT count(*) FROM batched_background_migrations WHERE status NOT IN (3, 6)')";
+          [ "$n" = 0 ] || { echo "$n batched background migrations not finished; re-run later" >&2; exit 1; }
         allow_shell: true
-        timeout_sec: 7200
       - id: backup_app
         type: exec.shell
         command: >-
@@ -354,16 +369,20 @@ recipes:
           cat /opt/gitlab/embedded/service/gitlab-rails/VERSION)" = "${v%-ce.0}"
         allow_shell: true
     rollback:
+      - id: stop_for_restore
+        type: exec.shell
+        command: "docker stop -t 120 devops-gitlab-1"
+        allow_shell: true
+      - id: restore_data
+        type: backup.restore
+        dst: "{{ gitlab_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
       - id: revert_image_tag
         type: compose.set_image_tag
         stack: devops
         service: gitlab
         tag: "{{ recipe.from_version_resolved }}"
         wait: true
-      - id: restore_data
-        type: backup.restore
-        dst: "{{ gitlab_data_dir }}"
-        label: "pre-{{ upgrade_id }}"
 
   - id: "gitlab-19-current"
     from_regex: "^19\\.[5-6]\\."
@@ -387,9 +406,11 @@ recipes:
     pre:
       - id: background_migrations_finished
         type: exec.shell
-        command: "docker exec devops-gitlab-1 gitlab-rake gitlab:background_migrations:wait"
+        command: >-
+          n="$(docker exec devops-gitlab-1 gitlab-psql -At -c
+          'SELECT count(*) FROM batched_background_migrations WHERE status NOT IN (3, 6)')";
+          [ "$n" = 0 ] || { echo "$n batched background migrations not finished; re-run later" >&2; exit 1; }
         allow_shell: true
-        timeout_sec: 7200
       - id: backup_app
         type: exec.shell
         command: >-
@@ -422,13 +443,17 @@ recipes:
           cat /opt/gitlab/embedded/service/gitlab-rails/VERSION)" = "${v%-ce.0}"
         allow_shell: true
     rollback:
+      - id: stop_for_restore
+        type: exec.shell
+        command: "docker stop -t 120 devops-gitlab-1"
+        allow_shell: true
+      - id: restore_data
+        type: backup.restore
+        dst: "{{ gitlab_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
       - id: revert_image_tag
         type: compose.set_image_tag
         stack: devops
         service: gitlab
         tag: "{{ recipe.from_version_resolved }}"
         wait: true
-      - id: restore_data
-        type: backup.restore
-        dst: "{{ gitlab_data_dir }}"
-        label: "pre-{{ upgrade_id }}"
