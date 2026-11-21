@@ -32,7 +32,7 @@ Two invocation modes from `tasks/stacks/stack-up.yml`:
 
 | Variable | Default | Description |
 |---|---|---|
-| `gitlab_version` | `18.10.3-ce.0` | Pinned for CVE-2026-5173 (websocket bypass), CVE-2026-1092 (DoS), CVE-2025-12664 (GraphQL DoS) |
+| `gitlab_version` | `19.6.1-ce.0` (default.config.yml) | 18.11 past backport; from 18.11 data walk the 19.2 and 19.5 stops (upgrades/gitlab.yml) |
 | `gitlab_domain` | `gitlab.dev.local` | Public nginx vhost hostname |
 | `gitlab_http_port` | `8929` | Internal HTTP port (nginx handles SSL) |
 | `gitlab_ssh_port` | `2224` | Git-over-SSH port (22=system, 2222=Gitea) |

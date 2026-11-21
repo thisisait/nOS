@@ -987,7 +987,10 @@ n8n_data_dir: "{{ ansible_facts['env']['HOME'] }}/n8n"
 #       Internal PostgreSQL, Redis, Sidekiq – all in one container.
 # ==============================================================================
 
-gitlab_version: "18.11.13-ce.0"  # 2026-10-21 critical patch (CVE-2026-110264 CVSS 10, -112212 7.5); last 18.11.x; 19.x is the next step
+# 2026-11-21: 18.11 is past backport (101 advisory matches; critical CVE-2026-105437 fixed in 19.x only).
+# EXISTING 18.11 data must walk the required stops 19.2 -> 19.5 -> 19.6 (upgrades/gitlab.yml, one
+# `--tags upgrade` run per stop); a plain converge with this pin skips them. Fresh installs: PG 18.
+gitlab_version: "19.6.1-ce.0"
 
 # ── which LOCAL forge the agent loop targets (tools/recipe-pr.sh) ─────────────
 # Gitea + Woodpecker is PRIMARY. GitLab is an optional drop-in replacement
