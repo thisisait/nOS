@@ -252,6 +252,26 @@ manually.
 
 ---
 
+## A small site for people who are not estate users: the kin gate
+
+`auth: none` plus a gate inside the app, for a household site whose readers are not estate users (first:
+`apps/rodina.yml`, row kin-recognition-gate). It is a declared exception to the SSO rule: say so in `gdpr.purpose`.
+
+The app ships two images. The kin gate (`kin:<ver>`, stdlib Python, today built from the genealogy
+project's `nos/kin/` with its tests) and the site's nginx, which sends every path through
+`auth_request /_kin/check` and proxies `/_kin/` to the gate. The contract:
+
+| | |
+|---|---|
+| `KIN_SECRET` | `$SERVICE_BASE64_64_KIN`, minted by nOS |
+| `KIN_ALLOW` | the listed emails, `$SERVICE_PASSWORD_ALLOW` seeded in `credentials.yml` → `app_secrets.<app>` |
+| `KIN_SMTP_USER` / `KIN_SMTP_PASSWORD` | seeded the same way (default host smtp.gmail.com:465) |
+| `KIN_PUBLIC_URL` | `https://$SERVICE_FQDN_<APP>` |
+| paths | `/_kin/check` (204/401), `/_kin/login`, `/_kin/send`, `/_kin/open`, `/_kin/logout`, `/_kin/healthz` |
+
+An unseeded value is minted as a random string, so the gate fails closed. A second app copies `apps/rodina.yml`
+and its nginx conf; when there are two, the gate image moves into nOS as its own cell.
+
 ## Troubleshooting
 
 ### "FAIL: App 'myapp' failed validation"

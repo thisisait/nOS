@@ -20,16 +20,17 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 124 (98 core services, 4 manifest apps)
-- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (111), public_task (1)
-- **Transfers outside the EU:** 13 activities
-- **Activities engaging a third-party processor:** 18
+- **Processing activities:** 125 (98 core services, 5 manifest apps)
+- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (112), public_task (1)
+- **Transfers outside the EU:** 14 activities
+- **Activities engaging a third-party processor:** 19
 
 ## Transfers & processors (audit-sensitive subset)
 
 | Service | Outside EU? | Processors |
 |---|---|---|
 | Chronos (`app_chronos`) | **Yes** | — |
+| Rodina (`app_rodina`) | **Yes** | `Google (Gmail SMTP): sends the login links` |
 | conductor (`agent_conductor`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this ceremony. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support.; **Anthropic, PBC** (US) — LLM inference when this ceremony is driven on the claude-CLI path rather than the bound backend (--print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.; **on-device (operator's own hardware)** (CZ — this host) — FALLBACK LLM inference on this host via ollama's OpenAI-compatible surface on loopback (model.fallback_backend), served only when the primary fails. No third party sees the prompt. · safeguard: Not applicable. No transfer occurs. |
 | curator (`agent_curator`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this ceremony. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support.; **Anthropic, PBC** (US) — LLM inference when this ceremony is driven on the claude-CLI path rather than the bound backend (--print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.; **on-device (operator's own hardware)** (CZ — this host) — FALLBACK LLM inference on this host via ollama's OpenAI-compatible surface on loopback (model.fallback_backend), served only when the primary fails. No third party sees the prompt. · safeguard: Not applicable. No transfer occurs. |
 | invoice-extract (`agent_invoice-extract`) | No | **on-device (operator's own hardware)** (CZ — this host) — LLM inference on this host via ollama's OpenAI-compatible surface on loopback, constrained to the ISDOC record schema. No third party. · safeguard: Not applicable. No transfer occurs. |
@@ -731,6 +732,24 @@ contracts with counter-parties who agree to electronic execution.
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
+- **Storage:** 'apps' compose stack on host (Docker volumes)
+- **Security measures:** platform baseline (see above)
+
+#### Rodina — `app_rodina`
+- **Purpose:** A family history (genealogy) site shared only with the family. It shows records from digitised parish
+registers and what relatives told the operator, including names, dates and places of living relatives.
+Access is limited to a list of family email addresses: a listed person asks for a one-time login link,
+which is mailed through the operator's Gmail account (Google, USA) and then holds a signed session
+for 30 days. The gate stores only spent link ids and a mail counter; its log keeps a hash of the email,
+never the address or a token. This is a purely personal, household activity (GDPR Art. 2(2)(c), operator
+2026-11-21); the manifest records it under legitimate interests because the parser takes only Art. 6
+bases. It is the declared exception to the estate's SSO rule: family members are not estate users.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `family_members`; `end_users`
+- **Data categories:** `name`; `birth_and_death_dates`; `family_relations`; `places`; `email`
+- **Recipients / processors:** `Google (Gmail SMTP): sends the login links`
+- **Transfers outside EU:** **Yes**
+- **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
 - **Storage:** 'apps' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 
