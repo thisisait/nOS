@@ -106,7 +106,7 @@ recipes:
 
   - id: "uptime-kuma-2-current"
     from_regex: "^2\\."
-    to: "2.5.0"            # == installed
+    to: "2.5.12"           # == installed (REM-361/367, 2026-11-21; was 2.5.0, behind the pin)
     severity: security
     changelog_url: "https://github.com/louislam/uptime-kuma/releases"
     notes: |
@@ -122,7 +122,7 @@ recipes:
       MONITOR COUNT via the API, not liveness. Keep that assertion in any
       future 2.x → 3.x rung.
       The role default is intentionally still on the "1"-track while
-      default.config.yml pins 2.5.0 — the one surviving deliberate shadow.
+      default.config.yml pins 2.5.12 — the one surviving deliberate shadow.
     coexistence_supported: false
     requires: { min_disk_free_gb: 2, service_healthy: true }
     reset:

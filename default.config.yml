@@ -862,7 +862,7 @@ redis_version: "8.10.3"                  # 8.10.2 MULTI-after-ACL-revoke bypass,
 # IIAB – WORDPRESS
 # ==============================================================================
 # (the rest of this section is a config.d layer)
-wordpress_version: "7.1.4"              # 7.1.3+7.1.4 security releases (unauth comment disclosure, upgrade-window RCE, stored XSS). Prior CVE-2026-87902 at 7.1.2.
+wordpress_version: "7.1.5"              # 7.1.5 security release (2026-11-18: SQLi in WP_Meta_Query + Customizer, unauth stored XSS, XML-RPC DoS). Prior 7.1.4.
 
 # ==============================================================================
 # IIAB – NEXTCLOUD
@@ -885,7 +885,7 @@ kiwix_version: "3.8.2"                             # Docker image tag (ghcr.io/k
 # GEO – image pins (the rest of geo is the 70-geo layer under config.d)
 # ==============================================================================
 
-maps_tileserver_version: "v5.6.0"                  # Docker image tag (maptiler/tileserver-gl). Pinned from floating latest (REM-117 reproducibility shadow; v5.6.0 verified on Docker Hub). tileserver-gl is CVE-clean in-window.
+maps_tileserver_version: "v5.7.0"                  # maptiler/tileserver-gl (REM-117 pinned from latest). v5.7.0: bugfixes, viewer on maplibre-gl v6 (REM-327).
 maps_planetiler_version: "0.10.2"              # ghcr.io/onthegomap/planetiler
 geolibre_image: "ghcr.io/opengeos/geolibre"
 geolibre_version: "v3.2.0@sha256:7c43f124f306d7c00c66660faf73eced043d6ddd749a06afb055ed223e79cebe"   # image label v3.2.0, rev aa28b2a; the digest nos-atlas was tested against
@@ -1123,13 +1123,13 @@ nos_forum_cloudflare_turn_key_id: ""    # Cloudflare dashboard → Realtime → 
 # IIAB – JELLYFIN (media server)
 # ==============================================================================
 # (the rest of this section is a config.d layer)
-jellyfin_version: "12.2"                # GHSA-6828 (critical traversal) + GHSA-cf3c (high) fixed only in 12; one-way DB migration, cold copy first (one-way-upgrade-guard)
+jellyfin_version: "12.4"                # REM-360: .NET 10.0.14 (12.3 bugfixes). Was 12.2 (GHSA-6828/-cf3c); one-way DB migration, cold copy first (one-way-upgrade-guard)
 
 # ==============================================================================
 # IIAB – UPTIME KUMA (monitoring dashboard)
 # ==============================================================================
 # (the rest of this section is a config.d layer)
-uptime_kuma_version: "2.5.9"        # GHSA-86ch-2247-gr56 (<=2.5.8) + GHSA-v2p3 (admin RCE) fixed [advisory-status 2026-10-31]. REM-073 2026-07-24.
+uptime_kuma_version: "2.5.12"        # REM-361 (Node 22.23.5, GHSA-437w admin RCE, 2.5.11) + REM-367 (jsonata sandbox, 2.5.12). Prior 2.5.9.
 
 # ==============================================================================
 # IIAB – CALIBRE-WEB (ebook server)
@@ -1468,7 +1468,7 @@ authentik_oidc_homeassistant_client_secret: "{{ nos_derived_secrets.oidc_homeass
 # RUSTFS – S3-compatible object storage
 # ==============================================================================
 # (the rest of this section is a config.d layer)
-rustfs_version: "1.0.3"                 # GHSA-xm99 (high) + 5 medium; skip 1.0.0/1.0.1 (GHSA-28w4); one-way metadata, cold copy first (one-way-upgrade-guard)
+rustfs_version: "1.0.6"                 # 1.0.4 CA distrust, 1.0.5 root-derived account scope fix. Skip 1.0.0/1.0.1 (GHSA-28w4); one-way metadata, cold copy (one-way-upgrade-guard)
 
 # ==============================================================================
 # B2B – ERPNEXT (CRM + ERP + HR + Accounting)
@@ -1512,7 +1512,7 @@ authentik_oidc_erpnext_client_secret: "{{ nos_derived_secrets.oidc_erpnext }}"
 #
 # Check it with `tools/app-version.py`, which asks the application. Until a
 # converge runs, the claim below is UNVERIFIED and the reader will say so.
-freescout_version: "2.2.8"               # nfrastack; CHANGELOG claims app 1.8.238 (REM-250). UNVERIFIED until `tools/app-version.py`
+freescout_version: "2.2.26"               # nfrastack; app 1.8.252 (REM-275 floor 1.8.242). Image tag only, app version unverified until `tools/app-version.py`
 authentik_oidc_freescout_client_id: "nos-freescout"
 authentik_oidc_freescout_client_secret: "{{ nos_derived_secrets.oidc_freescout }}"
 
@@ -1521,7 +1521,7 @@ authentik_oidc_freescout_client_secret: "{{ nos_derived_secrets.oidc_freescout }
 # Requires: install_postgresql: true, redis_docker: true
 # ==============================================================================
 # (the rest of this section is a config.d layer)
-outline_version: "1.12.0"     # 2026-10-25: 44 advisories <1.12 incl. GHSA-f28f-75h4-499q + GHSA-48rq-wx9j-g949 (critical); notes 1.10-1.12 list no breaking change
+outline_version: "1.13.0"     # 1.13.0: Node 26.13.1, OAuth/MCP hardening; no breaking notes for Docker. Prior 1.12.0 (44 advisories <1.12).
 
 # ==============================================================================
 # VOIP – MIKOPBX (Asterisk 22 PBX; SQLite + Redis inside, no infra DB)
@@ -1690,7 +1690,7 @@ iiab_terminal_bin_path: "{{ homebrew_prefix }}/bin/iiab-terminal"
 authentik_image: "ghcr.io/goauthentik/server"
 authentik_version: "2026.5.7"                      # REM-283: same-minor patch, five 2026-09-09 HIGH GHSAs
 infisical_version: "v0.162.19"   # synced to role default (cleared version-pin shadow) [swept v0.162.16 2026-08-11]
-vaultwarden_version: "1.37.4"            # REM-291: seven org/2FA authz fixes (REM-261 was 1.37.3)
+vaultwarden_version: "1.37.5"            # REM-338: GHSA-x9cq + GHSA-9pjj; invalid env now stops startup (none of ours affected). Prior REM-291 1.37.4.
 
 # ==============================================================================
 # BACKUP — copy #1 (pazny.backup role): nightly DB dumps + named volumes +

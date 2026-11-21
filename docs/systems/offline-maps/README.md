@@ -10,7 +10,7 @@
 | **Host port** | `127.0.0.1:8081` → container `8080` (`maps_port`, default.config wins over the role default `8070`) |
 | **Stack** | `iiab` |
 | **Toggle** | `install_offline_maps: false` (default; `requires: node`) |
-| **Image** | `maptiler/tileserver-gl:v5.6.0` (`maps_tileserver_version`) |
+| **Image** | `maptiler/tileserver-gl:v5.7.0` (`maps_tileserver_version`) |
 | **Data** | `{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/shared/maps/data` → container `/data` (default `~/nos/tenants/dev/shared/maps/data`) |
 | **Container** | `iiab-tileserver-1` (compose service `tileserver`) |
 | **Manifest node** | `nos.iiab.offline-maps` |
