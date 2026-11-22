@@ -194,6 +194,7 @@ santa_dev_toolchain_trees:
   - .pyenv/versions/
   - .nvm/versions/
   - .local/share/claude/versions/
+  - .rustup/toolchains/          # rustc/cargo; pazny.medulla builds with them when present
 
 # ── HABITAT (undeclared-status) ──────────────────────────────────────────────
 # The owner's own software beside nOS (lexicon: habitat): a launchd label or an
