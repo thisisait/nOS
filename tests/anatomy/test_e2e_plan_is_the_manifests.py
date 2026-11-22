@@ -100,11 +100,21 @@ def test_the_walk_reaches_a_gated_service_and_asks_for_html():
     assert all(a and a.startswith("text/html") for _, a in s.seen), "a hop went out without the HTML Accept"
 
 
-def test_the_permission_denied_page_is_a_denial():
+@pytest.mark.parametrize("brand", ["authentik", "This is AIT"])
+def test_the_permission_denied_page_is_a_denial(brand):
+    """The page title carries the estate brand (2026-11-22: "This is AIT"); a denial is read from
+    the title, never from the brand name, or every refusal reads STUCK."""
     s = _Sess([("https://auth.example.test/application/o/authorize/",
-                _Resp(200, text="<title>\nPermission denied - authentik\n</title>"))])
+                _Resp(200, text=f"<title>\nPermission denied - {brand}\n</title>"))])
     w = sso_walk.walk(s, "https://auth.example.test/application/o/authorize/?c=1", AUTH)
     assert w.outcome == sso_walk.DENIED
+
+
+def test_a_page_that_only_mentions_a_denial_is_not_one():
+    s = _Sess([("https://auth.example.test/application/o/authorize/",
+                _Resp(200, text="<title>Welcome</title><p>Permission denied - try again</p>"))])
+    w = sso_walk.walk(s, "https://auth.example.test/application/o/authorize/?c=1", AUTH)
+    assert w.outcome == sso_walk.STUCK
 
 
 def test_a_flow_interface_goes_through_the_executor_to_a_code():
