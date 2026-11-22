@@ -8,8 +8,8 @@ recipe-authoring path (upgrade-architect → PR) relies on.
 
 A reference is considered resolvable when its base identifier is:
   * an engine runtime token (upgrade_id / recipe / installed / ...), or
-  * a key defined in the default layers (config.d/*.yml + default.config.yml,
-    tools/nos_identity.default_layers(), the set main.yml loads as vars_files) /
+  * a key defined in the default layers (tools/nos_identity.default_layers(),
+    the set main.yml loads as vars_files) /
     default.credentials.yml / tests/config.yml / any role's defaults (these
     become play-vars the controller hands to the engine as tmpl_vars), or
   * guarded by ``| default(...)`` in the same expression (then undefined is
