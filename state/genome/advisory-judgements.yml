@@ -87,7 +87,7 @@ judgements:
   - {id: GHSA-jmr9-98g4-2phv, subject: "portainer_version", verdict: not-applicable, until: 2027-01-31,
      reason: "fixed in 2.45.2 on the 2.40+ line (the pin is 2.45.4); the unpatched range is LTS 2.39; install_portainer false [drafted by the assistant 2026-11-22]"}
   - {id: CVE-2026-119977, subject: "wordpress_version", verdict: not-applicable, until: 2026-12-31,
-     reason: "NVD: affects 4.7 through 7.1.3, fixed 7.1.4; the pin and live are 7.1.5; a PoC repo claims a 7.1.4 bypass (unverified) [drafted by the assistant 2026-11-22]"}
+     reason: "NVD: affects 4.7 through 7.1.3, fixed 7.1.4; the pin and live are 7.1.5; a PoC README (read 11-22) also says fixed 7.1.4 [drafted by the assistant 2026-11-22]"}
   - {id: CVE-2024-4439, subject: "wordpress_version", verdict: not-applicable, until: 2027-01-31,
      reason: "fixed in 6.5.2 (NVD CPE ranges end at 6.5.1); the pin is 7.1.5 [drafted by the assistant 2026-11-22]"}
   - {id: CVE-2026-93485, subject: "wordpress_version", verdict: not-applicable, until: 2027-01-31,
