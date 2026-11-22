@@ -14,9 +14,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from urllib.parse import parse_qs, urljoin, urlparse
 
+import re
+
 import requests
 
 REACHED, DENIED, STUCK, CODE = "reached", "denied", "stuck", "code"
+DENIED_TITLE = re.compile(r"<title>\s*Permission denied - ", re.I)
 
 
 @dataclass
@@ -79,9 +82,10 @@ def walk(sess: requests.Session, url: str, auth_host: str, verify: bool = True,
             continue
         if u.netloc != auth_host and r.status_code < 400:
             return Walk(REACHED, url, r.status_code, trail, r.text)
-        # A policy refusal is NOT a flow: /application/o/authorize/ answers
-        # 200 with the "Permission denied - authentik" page (measured 2026-09-30).
-        if u.netloc == auth_host and "Permission denied - authentik" in r.text:
+        # A policy refusal is NOT a flow: /application/o/authorize/ answers 200 with the
+        # "Permission denied - <brand>" page (2026-09-30 "authentik"; the estate brand
+        # made it "This is AIT" by 2026-11-22). Read the title, never the brand name.
+        if u.netloc == auth_host and DENIED_TITLE.search(r.text):
             return Walk(DENIED, url, r.status_code, trail + ["denied: Permission denied page"])
         return Walk(STUCK, url, r.status_code, trail)
     return Walk(STUCK, url, None, trail + ["too many hops"])
