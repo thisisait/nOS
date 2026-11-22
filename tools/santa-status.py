@@ -4,7 +4,8 @@
 Santa (pazny.mac.santa) runs in MONITOR mode: it allows everything and logs every
 exec to /var/db/santa/santa.log. This reader judges those EXEC lines against the
 declared trees — the Pulse runner's own allow-list (_REPO_TREES under the repo,
-_HOME_TREES under $HOME, its named binaries) plus the OS, Homebrew and /Applications —
+_HOME_TREES under $HOME, its named binaries), the host-native organ binaries
+(ESTATE_HOME_TREES), plus the OS, Homebrew and /Applications —
 and reports what ran elsewhere. Telemetry, not a verdict: on a dev Mac pyenv, node
 and cargo binaries land here, and that is the point of looking.
 
@@ -40,6 +41,9 @@ SANTACTL = os.environ.get("NOS_SANTACTL", "/usr/local/bin/santactl")
 OS_TREES = ("/System/", "/usr/bin/", "/usr/sbin/", "/usr/libexec/", "/bin/", "/sbin/",
             "/Library/Apple/", "/Library/Developer/CommandLineTools/", "/Applications/",
             "/opt/homebrew/", "/usr/local/bin/", "/usr/local/libexec/nos-agent/")
+#: Host-native organ binaries the roles install under $HOME (pazny.medulla medulla_bin_dir):
+#: self, not a Pulse command, so not in the runner's trees. 2026-11-22: medulla ×1125 in 19h, red.
+ESTATE_HOME_TREES = ("thalamus/bin/",)
 TAIL_BYTES = 16 * 1024 * 1024
 LINE_RE = re.compile(r"^\[(?P<ts>[^\]]+)\] \w santad: (?P<body>action=EXEC\|.*)$")
 
@@ -54,6 +58,7 @@ def declared_trees() -> tuple[str, ...]:
     repo = os.environ.get("NOS_REPO_ROOT", str(REPO)).rstrip("/") + "/"
     home = str(pathlib.Path.home()).rstrip("/") + "/"
     return (OS_TREES + tuple(mod._SYSTEM_BINARIES) + tuple(home + b for b in mod._HOME_BINARIES)
+            + tuple(home + t for t in ESTATE_HOME_TREES)
             + tuple(repo + t for t in mod._REPO_TREES) + tuple(home + t for t in mod._HOME_TREES))
 
 
