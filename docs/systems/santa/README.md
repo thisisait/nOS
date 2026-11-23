@@ -15,7 +15,9 @@ in `roles/pazny.santa`.
 - Four vendor launchd jobs: `com.northpolesec.santa` (LaunchAgent) and the
   `.bundleservice`, `.metricservice`, `.syncservice` LaunchDaemons. The role
   declares them (`santa_*_launchd_label`), so they are the santa row's jobs, not
-  undeclared, and `install_santa: false` on disk boots them out.
+  undeclared. `install_santa: false` on disk boots them out only where nOS
+  installed Santa (its pkg dir `/Library/Caches/nos-santa` exists); a Santa nOS
+  never installed, an MDM-managed one, is left alone.
 - Reader: `tools/santa-status.py` judges EXEC lines against the trees nOS
   declares and reports what ran elsewhere. Red: declared but absent, a mode
   other than Monitor, any DENY.
