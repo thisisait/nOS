@@ -11,7 +11,7 @@
     "nodes_gateset": 5,
     "nodes_weakness": 7,
     "nodes_daemon": 1,
-    "nodes_service": 79,
+    "nodes_service": 80,
     "nodes_lock": 1,
     "nodes_tool": 6,
     "nodes_tool_ro": 4,
@@ -42,13 +42,13 @@
     "edges_references": 35,
     "edges_part_of": 112,
     "edges_service_dependency": 50,
-    "services_survey_declared": 35,
+    "services_survey_declared": 36,
     "services_survey_not_surveyed": 40,
     "services_survey_no_manifest": 4,
     "edges_service_dependency_unenforced": 27,
     "services_layer_L0": 4,
     "services_layer_L1": 5,
-    "services_layer_L2": 26,
+    "services_layer_L2": 27,
     "services_layer_L3": 0,
     "services_layer_withheld": 44
   },
@@ -5166,6 +5166,28 @@
       "description": "Docker service 'rustfs' (storage) in the iiab compose stack, toggled by install_rustfs",
       "layer": null,
       "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
+    },
+    "service:santa": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": null,
+      "category": "security",
+      "install_flag": "install_santa",
+      "launchd_labels": [
+        "com.northpolesec.santa",
+        "com.northpolesec.santa.bundleservice",
+        "com.northpolesec.santa.metricservice",
+        "com.northpolesec.santa.syncservice"
+      ],
+      "dependency_survey": "declared",
+      "anchor": "02.02.08",
+      "description": "Host-native service 'santa' (security): host daemon (launchd com.northpolesec.santa), toggled by install_santa",
+      "layer": "L2",
+      "layer_basis": {
+        "height": 0,
+        "dependents": 0,
+        "upstreams": 0
+      }
     },
     "service:smtp_stalwart": {
       "kind": "service",

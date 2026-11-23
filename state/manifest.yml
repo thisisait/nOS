@@ -1281,6 +1281,22 @@ services:
       expect_rc: 0
       timeout_sec: 5
 
+  # Santa (northpolesec), MONITOR mode only: exec telemetry, never a block
+  # (tests/anatomy/test_santa_is_monitor_only.py). The vendor pkg writes the four
+  # launchd jobs; roles/pazny.santa declares them (santa_*_launchd_label).
+  - id: santa
+    software_owner: symbiont
+    category: security
+    stack: null
+    install_flag: install_santa
+    version_var: santa_version
+    version_source: launchd
+    launchd_label: "com.northpolesec.santa"   # santa_launchd_label, /Library/LaunchAgents
+    launchd_helpers:                          # root LaunchDaemons (santa_*_launchd_domain: system)
+      - "com.northpolesec.santa.bundleservice"
+      - "com.northpolesec.santa.metricservice"
+      - "com.northpolesec.santa.syncservice"
+
   # I-12 ruling (2026-10-07): a row, not a daemons_without_row entry. dnsmasq has
   # a flag, a version pin, a root LaunchDaemon and an authored stop (tasks/dnsmasq.yml);
   # ruling it a job of playbook-core dropped it from the graph roster the prune guard

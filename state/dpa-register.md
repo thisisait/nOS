@@ -20,8 +20,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 125 (98 core services, 5 manifest apps)
-- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (112), public_task (1)
+- **Processing activities:** 126 (99 core services, 5 manifest apps)
+- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (113), public_task (1)
 - **Transfers outside the EU:** 14 activities
 - **Activities engaging a third-party processor:** 19
 
@@ -1859,6 +1859,19 @@ login, username, request line, duration) in ~/receptor/log.
 - **Retention:** transient (not persisted)
 - **Storage:** Host only: ~/.nos/identity-map.yml (0600) and ~/receptor/log.
 - **Security measures:** `Caller identified by the kernel (SO_PEERCRED / LOCAL_PEERCRED), never by a header`; `Socket 0600 under ~/.nos (0700); a login not in the map is refused`; `Client X-Authentik-* and x-keap-proxy-secret dropped before KEAP`; `Proxy secret only in the 0600 plist / unit env`
+
+#### Santa — `svc_santa`
+- **Purpose:** Security monitoring of this host: record every program that executes so
+the operator can see what ran outside the trees nOS declares
+(tools/santa-status.py). Nothing is blocked.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`
+- **Data categories:** `exec_telemetry`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** 1 days
+- **Storage:** Host only: /var/db/santa/santa.log and its rotations (rotated by the vendor's /etc/newsyslog.d/com.northpolesec.santa.newsyslog.conf), events.db and rules.db.
+- **Security measures:** `MONITOR mode only: no configuration profile, no rules (test_santa_is_monitor_only)`; `The pkg is downloaded and verified as root into a root-only 0700 dir (santa_pkg_sha256)`; `nOS renders no profile, so no sync server is configured; nothing is sent off the host`
 
 #### Thalamus — `svc_thalamus`
 - **Purpose:** Let one person find and change rows in a DataTable they can already read

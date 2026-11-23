@@ -7,7 +7,7 @@
     "genome": 25,
     "cell": 17,
     "tissue": 1,
-    "organ": 83,
+    "organ": 84,
     "organ system": 13,
     "organism": 0,
     "habitat": 9,
@@ -2042,6 +2042,10 @@
       "kind": "service"
     },
     "service:rustfs": {
+      "level": "organ",
+      "kind": "service"
+    },
+    "service:santa": {
       "level": "organ",
       "kind": "service"
     },

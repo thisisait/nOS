@@ -138,7 +138,7 @@ SYSTEM_NAME = {
     "opencode": "OpenCode", "openhuman": "OpenHuman", "wing": "Wing", "bone": "Bone", "pulse": "Pulse",
     "cortex": "Cortex", "ears": "Ears",
     "iiab-terminal": "IIAB Terminal", "backup": "Backup", "backrest": "Backrest",
-    "tailscale": "Tailscale", "dnsmasq": "dnsmasq",
+    "tailscale": "Tailscale", "dnsmasq": "dnsmasq", "santa": "Santa",
     "spacetimedb": "SpacetimeDB",
 }
 
@@ -633,6 +633,12 @@ SYSTEM_EN = {
         "dnsmasq, the host's own DNS answer for the local TLD. A root LaunchDaemon on port 53 "
         "that resolves every *.<local tld> name to this machine so Traefik can route it; unlike "
         "Tailscale it carries no traffic, it only says where the names point."
+    ),
+    "santa": (
+        "Santa, the macOS exec monitor. An Endpoint Security client run in MONITOR mode only: "
+        "it allows every program and logs each exec on the host, so the operator can see what "
+        "ran outside the trees nOS declares. Unlike the network organs it watches processes, "
+        "not traffic, and it never blocks."
     ),
 }
 

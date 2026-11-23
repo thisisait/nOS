@@ -2791,7 +2791,7 @@
           or (nos_edge | default('cloudflare')) == 'lan_tailscale'
       tags: ['dnsmasq', 'dns', 'network']
 
-    # Root LaunchDaemons (dnsmasq): prune-disabled.yml's gui rule, system domain,
+    # Root LaunchDaemons (dnsmasq, santa helpers): prune-disabled.yml's gui rule, system domain,
     # become. Authored off only (_on_disk_flags; unread = none). dnsmasq takes the
     # resolver files tasks/dnsmasq.yml wrote ("-> dnsmasq"), or every *.<tld>
     # keeps asking a dead 127.0.0.1:53 (review 2026-10-04).
