@@ -225,7 +225,7 @@
     url: "http://127.0.0.1:{{ jellyfin_port | default(8096) }}/QuickConnect/Enabled"
     timeout: 10
   register: _jf_qc_now
-  when: _jf_sysconf.json is defined
+  when: _jf_ready.status | default(0) == 200   # anonymous: a refused admin login still gets checked
   failed_when: _jf_qc_now.json | default(none) != (jellyfin_quick_connect | default(true) | bool)
 
 # ── SSO-Auth provider via the plugin API (v4 wipes a hand-rendered XML) ──────
