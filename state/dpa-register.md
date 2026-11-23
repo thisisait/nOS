@@ -1865,7 +1865,7 @@ login, username, request line, duration) in ~/receptor/log.
 the operator can see what ran outside the trees nOS declares
 (tools/santa-status.py). Nothing is blocked.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`
+- **Data subjects:** `operators`; `local_accounts`
 - **Data categories:** `exec_telemetry`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No

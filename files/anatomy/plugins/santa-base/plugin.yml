@@ -39,14 +39,15 @@ gdpr:
     (tools/santa-status.py). Nothing is blocked.
   legal_basis: legitimate_interests   # Art. 6(1)(f) — securing the estate by its operator
   balancing_test: >-
-    The log names the local user, uid, path and arguments of each exec on the
-    operator's own host. It stays on the host and rotates by size within about
+    The log names the local user, uid, path and arguments of each exec by any
+    account on the operator's own host. It stays on the host and rotates by size within about
     a day; santa.log is world-readable (vendor mode 644), events.db and rules.db root-only.
   data_source: the macOS Endpoint Security framework on this host
   data_categories:
     - exec_telemetry                # path, sha256, pid, user, uid, arguments per exec
-  data_subjects:
+  data_subjects:                    # every local account: Santa logs each exec on the host, whoever runs it
     - operators
+    - local_accounts                # any other macOS user on this host (family, guests, the agent user)
   retention_days: 1                 # size-bound: vendor newsyslog keeps 10 x 25 MB (~19 h of rotations on this host, 2026-11-23)
   processors: []                    # on-device; nOS configures no sync server
   eu_residency: true
