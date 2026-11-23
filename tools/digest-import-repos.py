@@ -9,8 +9,9 @@ party table (party-resolver) — so a repo whose owner was already imported reus
 that party row instead of forking it (the cross-source dedup the CSV scaffold did
 not exercise).
 
-  tools/digest-import-repos.py state/fixtures/repos-fixture             # gate + print (no writes)
-  tools/digest-import-repos.py state/fixtures/repos-fixture --absorb    # upsert into KEAP
+  tools/digest-import-repos.py /path/to/repos                          # gate + print (no writes)
+  tools/digest-import-repos.py /path/to/repos --absorb                 # upsert into KEAP
+  tools/digest-import-repos.py state/fixtures/repos-fixture --fixture-mode   # the fixture, staged
 
 Each repo is an immediate subdirectory carrying a `nos-repo.yml` sidecar
 (owner{ico|name}, remote, head) + dependency manifests. The sidecar is the parse
@@ -23,6 +24,8 @@ tools/digest-teardown.py on the printed bundle. Exit 0 · 1 gate refused · 2 KE
 
 Manifests parsed (minimal, direct deps only): package.json (npm), requirements.txt
 (pypi), go.mod (go), composer.json (composer), Cargo.toml (cargo), *.csproj (nuget).
+Fixture manifests are committed as `<name>.fixture` so Dependabot does not alert on
+code nobody runs; stage_fixture() copies them under their real names first.
 """
 from __future__ import annotations
 
@@ -30,7 +33,9 @@ import argparse
 import json
 import pathlib
 import re
+import shutil
 import sys
+import tempfile
 import tomllib
 import urllib.error
 import xml.etree.ElementTree as ET
@@ -44,6 +49,15 @@ from digest_absorb import absorb, build_party_index  # noqa: E402
 import nos_digest  # noqa: E402
 
 TABLES_DIR = REPO / "state" / "keap-tables"
+FIXTURE_SUFFIX = ".fixture"
+
+
+def stage_fixture(src: pathlib.Path, dst: pathlib.Path) -> pathlib.Path:
+    """Copy a fixture tree to `dst`, renaming `<name>.fixture` back to `<name>`."""
+    shutil.copytree(src, dst)
+    for p in sorted(dst.rglob("*" + FIXTURE_SUFFIX)):
+        p.rename(p.with_name(p.name[:-len(FIXTURE_SUFFIX)]))
+    return dst
 
 
 def _slug(*parts: str) -> str:
@@ -244,6 +258,9 @@ def main() -> int:
     root = pathlib.Path(args.root)
     if not root.is_absolute():
         root = REPO / root
+    if args.fixture_mode:
+        staging = tempfile.TemporaryDirectory(prefix="nos-repos-fixture-")
+        root = stage_fixture(root, pathlib.Path(staging.name) / root.name)
     try:
         index = build_party_index()
     except (urllib.error.URLError, OSError) as exc:
