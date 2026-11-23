@@ -8,6 +8,9 @@ santa_pkg_dir: /Library/Caches/nos-santa
 santa_pkg_cache: "{{ santa_pkg_dir }}/santa-{{ santa_version }}.pkg"
 # The pkg's own launchd jobs, declared so the roster (anatomy graph, undeclared-status)
 # and the authored stop (install_santa: false) know them; nothing here renders a plist.
+# The stop fires only where nOS installed Santa: our root-only pkg dir is the marker,
+# so an MDM-managed Santa nOS never installed is never booted out.
+santa_launchd_marker: "/Library/Caches/nos-santa"                      # = santa_pkg_dir
 santa_launchd_label: "com.northpolesec.santa"                           # /Library/LaunchAgents
 santa_bundleservice_launchd_label: "com.northpolesec.santa.bundleservice"
 santa_bundleservice_launchd_domain: "system"

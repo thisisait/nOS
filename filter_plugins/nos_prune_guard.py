@@ -231,7 +231,8 @@ def launchd_declarations(repo=None):
     shape (an `eu.thisisait.nos.*` .app bundle id is not a job, 2026-10-05).
     Flag: the role (`pazny.backrest` -> install_backrest), else the longest
     declared `install_<prefix of x>` (dnsmasq_tailnet -> install_dnsmasq).
-    Domain: `<x>_launchd_domain`, default gui. Shared with
+    Domain: `<x>_launchd_domain`, default gui. Marker: `<prefix of x>_launchd_marker`,
+    a path only nOS's own install leaves (vendor jobs nOS may not own). Shared with
     tools/anatomy-graph-gen.py harvest_daemons, so roster and plan agree."""
     repo = Path(repo) if repo else Path(__file__).resolve().parents[1]
     # Every committed default layer, not default.config.yml alone: config-split-edge moved the
@@ -247,6 +248,7 @@ def launchd_declarations(repo=None):
     for path, role_flag in sources:
         text = path.read_text(encoding="utf-8")
         domains = dict(re.findall(r'^(\w+)_launchd_domain:\s*"(\w+)"', text, re.M))
+        markers = dict(re.findall(r'^(\w+)_launchd_marker:\s*"([^"]+)"', text, re.M))
         for line in text.splitlines():
             m = _LAUNCHD_VAR.match(line.strip())
             if not m or "legacy" in m.group(1):
@@ -256,8 +258,12 @@ def launchd_declarations(repo=None):
             owner = next((f for f in (f"install_{'_'.join(parts[:i])}" for i in range(len(parts), 0, -1))
                           if f in flags), None)
             flag = role_flag or owner
-            rows.setdefault(label, {"label": label, "install_flag": flag,
-                                    "domain": domains.get(x, "gui")})
+            row = rows.setdefault(label, {"label": label, "install_flag": flag,
+                                          "domain": domains.get(x, "gui")})
+            marker = next((markers[k] for k in sorted(markers, key=len, reverse=True)
+                           if x == k or x.startswith(k + "_")), None)
+            if marker:
+                row.setdefault("marker", marker)
     return list(rows.values())
 
 
@@ -285,9 +291,13 @@ def nos_host_daemon_plan(graph, domain=None):
     """
     nodes = (graph or {}).get("nodes") or {}
     graph_labels = graph_launchd_labels(nodes)
+    # A row with a marker is stopped only when the marker exists: a vendor job nOS
+    # did not install (an MDM-managed Santa) is someone else's software. The play
+    # is local (inventory), so the controller's filesystem is the host's.
     return [r for r in launchd_declarations()
             if r["install_flag"] and r["label"] in graph_labels
-            and domain in (None, r["domain"])]
+            and domain in (None, r["domain"])
+            and (not r.get("marker") or os.path.exists(r["marker"]))]
 
 
 # ── Orphan compose extensions (2026-10-03) ─────────────────────────────────
