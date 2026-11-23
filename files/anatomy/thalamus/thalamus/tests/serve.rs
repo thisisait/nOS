@@ -165,6 +165,11 @@ thread_local! {
 }
 
 thread_local! {
+    /// The next rig's turn token ceiling (iris_turn_token_ceiling); 0 is off.
+    static TURN_TOKENS: std::cell::Cell<i64> = const { std::cell::Cell::new(0) };
+}
+
+thread_local! {
     /// The next rig's Wing door for start_agent; the default is none configured.
     static WING: std::cell::RefCell<serve::WingDoor> = Default::default();
 }
@@ -215,6 +220,7 @@ fn rig_deciders(name: &str, map: serde_json::Value, (keap_url, keap): (String, S
             p
         } else { d.clone() },
         tree_max: 50,
+        turn_tokens: TURN_TOKENS.with(|c| c.take()),
         wing: WING.with(|w| w.take()),
         quiet: Default::default(),
     };
@@ -7948,4 +7954,91 @@ fn plan_evidence_is_a_bench_sessions_own() {
     (&t).write_all(encode(&ToThalamus::ApprovalsOpen).as_bytes()).unwrap();
     assert!(matches!(next(&mut rt), Some(ToShell::ApprovalsOpen { .. })), "a relay tab got plan evidence");
     drop((sa, sb, sc, t));
+}
+
+// ---- iris_turn_token_ceiling (row iris-turn-token-ceiling) ----
+
+/// `body` as the model answers it, reporting `n` prompt tokens (None: no usage at all).
+fn spending(body: String, n: Option<i64>) -> String {
+    let mut v: serde_json::Value = serde_json::from_str(&body).unwrap();
+    match n {
+        Some(n) => v["usage"] = serde_json::json!({"prompt_tokens": n, "completion_tokens": 0}),
+        None => { v.as_object_mut().unwrap().remove("usage"); }
+    }
+    v.to_string()
+}
+
+fn budget_rows(ledger: &std::path::Path, session: &str) -> Vec<serde_json::Value> {
+    let db = rusqlite::Connection::open(ledger).unwrap();
+    let mut q = db.prepare("SELECT result_json FROM events WHERE run_id = ?1 AND task LIKE '%/tool:turn_budget'").unwrap();
+    q.query_map([session], |r| r.get::<_, String>(0)).unwrap().map(|j| serde_json::from_str(&j.unwrap()).unwrap()).collect()
+}
+
+/// Journeys 1 and 3: 30 000 tokens a call under a 50 000 ceiling: the third request is never sent, the person
+/// hears the Stopped line, the card asked in the stopped turn stays open, and approving it writes.
+#[test]
+fn a_turn_over_its_token_ceiling_stops_and_its_card_still_writes() {
+    TURN_TOKENS.with(|c| c.set(50_000));
+    let model = edit_turn().into_iter().map(|b| spending(b, Some(30_000))).collect();
+    let rig = rig_n("ceiling", mapped(), shown_then(&[ROWS, ROWS, POSTED]), model);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    (&s).write_all(encode(&ToThalamus::Turn { session: None, text: "close alpha".into() }).as_bytes()).unwrap();
+    let Some(ToShell::Session { session, .. }) = next(&mut r) else { panic!("no session") };
+    assert!(matches!(next(&mut r), Some(ToShell::Render { .. })));
+    let Some(ToShell::ApprovalRequest { approval, .. }) = next(&mut r) else { panic!("the card is asked before the ceiling") };
+    match next(&mut r) {
+        Some(ToShell::Text { text, .. }) => assert_eq!(text, "Stopped: this turn used 60000 tokens (ceiling 50000)."),
+        other => panic!("the Stopped line, got {other:?}"),
+    }
+    assert_eq!(rig.model.lock().unwrap().len(), 2, "the third request is never sent");
+    assert_eq!(budget_rows(&rig.ledger, &session), vec![serde_json::json!({"spent": 60000, "ceiling": 50000, "counted": "usage"})]);
+    decide(&s, &approval, Decision::Approve);
+    assert!(matches!(next(&mut r), Some(ToShell::TableChanged { .. })), "an approved write is not a model call");
+    assert_eq!(posts(&rig).len(), 1);
+    // The next turn starts its own spend: it is answered.
+    (&s).write_all(encode(&ToThalamus::Turn { session: Some(session), text: "thanks".into() }).as_bytes()).unwrap();
+    loop {
+        match next(&mut r) {
+            Some(ToShell::Text { text, .. }) if text.starts_with("Stopped") => panic!("spend carried across turns: {text}"),
+            Some(ToShell::Text { .. }) => break,
+            Some(_) => {}
+            None => panic!("the next turn was not answered"),
+        }
+    }
+}
+
+/// Journey 2: a model that reports no usage still stops, counted by bytes, and the ledger says so.
+#[test]
+fn a_model_without_usage_is_counted_by_bytes_and_still_stops() {
+    TURN_TOKENS.with(|c| c.set(100));
+    let model = edit_turn().into_iter().map(|b| spending(b, None)).collect();
+    let rig = rig_n("ceiling-bytes", mapped(), shown_then(&[ROWS, ROWS, POSTED]), model);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    (&s).write_all(encode(&ToThalamus::Turn { session: None, text: "close alpha".into() }).as_bytes()).unwrap();
+    let Some(ToShell::Session { session, .. }) = next(&mut r) else { panic!("no session") };
+    let mut said = vec![];
+    while let Some(m) = next(&mut r) {
+        let end = matches!(m, ToShell::Text { .. } | ToShell::Refused { .. });
+        said.push(m);
+        if end {
+            break;
+        }
+    }
+    assert!(matches!(said.last(), Some(ToShell::Text { text, .. }) if text.starts_with("Stopped: this turn used ")), "{said:?}");
+    assert_eq!(rig.model.lock().unwrap().len(), 1, "one request's bytes are past 100 tokens");
+    let rows = budget_rows(&rig.ledger, &session);
+    assert_eq!(rows[0]["counted"], "bytes", "{rows:?}");
+    assert!(rows[0]["spent"].as_i64().unwrap() >= 100, "{rows:?}");
+}
+
+/// Journey 4: no client sets the ceiling: a turn carrying one is undecodable.
+#[test]
+fn a_turn_that_carries_a_ceiling_is_refused_by_the_contract() {
+    let line = encode(&ToThalamus::Turn { session: None, text: "hi".into() });
+    let mut v: serde_json::Value = serde_json::from_str(line.trim()).unwrap();
+    assert!(nos_contract::wire::decode_to_thalamus(&v.to_string()).is_ok(), "the plain turn decodes: {v}");
+    v["turn_tokens"] = serde_json::json!(1_000_000);
+    assert!(nos_contract::wire::decode_to_thalamus(&v.to_string()).is_err(), "{v}");
 }

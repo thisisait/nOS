@@ -65,6 +65,9 @@ pub struct Server {
     pub data: PathBuf,
     /// iris_knowledge_tree_max (NOS_IRIS_KNOWLEDGE_TREE_MAX): the most nodes a knowledge tree draws.
     pub tree_max: usize,
+    /// iris_turn_token_ceiling (NOS_IRIS_TURN_TOKENS): the model tokens one turn may spend; 0 = off. Only the
+    /// server's env sets it: no client message carries it (row iris-turn-token-ceiling).
+    pub turn_tokens: i64,
     /// start_agent's way into Wing; an empty token is no door.
     pub wing: WingDoor,
     /// quiet()'s lines: when each was last written and how many came since.
@@ -363,6 +366,9 @@ struct Open {
     bench: bool,
     /// The read program running now (row iris-code-mode-reads): its id and stage, stamped on each row it records.
     program: Option<(String, usize)>,
+    /// o.tokens when this turn began, and how its spend was counted (provider usage, bytes / 4, or both).
+    turn_from: (i64, i64),
+    counted: (bool, bool),
 }
 
 /// One run Iris started: (agent, Wing session uuid), when it started (unix seconds), the next time it is asked after,
@@ -489,6 +495,8 @@ enum Next {
 const MODEL_STATE_EVERY: Duration = Duration::from_secs(30);
 /// What a call the person stopped is answered with, and the Err a stopped model request returns.
 const STOPPED: &str = "stopped by the person";
+/// chat()'s refusal once the turn spent its ceiling (iris_turn_token_ceiling); think_from ends the turn on it.
+const OVER_CEILING: &str = "the turn's token ceiling is spent";
 /// What the model hears with an identical call that failed already in this turn (it is not run again).
 const REPEATED: &str = "this exact call failed already in this turn and was not run again: change its arguments, try another way, or answer in text";
 
@@ -1668,7 +1676,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             Err(why) => (Err(why), iris.clone()),
         };
         Ok((Open { session, model, iris, messages: vec![json!({"role": "system", "content": system})], moved: None, tokens,
-                  pending: HashMap::new(), shown: HashMap::new(), tables_seen: HashMap::new(), dates: HashMap::new(), names: HashMap::new(), read_free: vec![], forms: HashMap::new(), choices: HashMap::new(), last_group: None, trace: None, again: HashMap::new(), acting: HashMap::new(), tab: None, watching: vec![], bench: false, program: None },
+                  pending: HashMap::new(), shown: HashMap::new(), tables_seen: HashMap::new(), dates: HashMap::new(), names: HashMap::new(), read_free: vec![], forms: HashMap::new(), choices: HashMap::new(), last_group: None, trace: None, again: HashMap::new(), acting: HashMap::new(), tab: None, watching: vec![], bench: false, program: None, turn_from: tokens, counted: (false, false) },
             resumed.is_some()))
     }
 
@@ -2507,6 +2515,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
 
     /// One turn, wrapped in its spans: every return of turn_steps ends the trace here.
     fn turn(&self, who: &Person, out: &mut dyn Write, o: &mut Open, text: &str, face: &Face) {
+        (o.turn_from, o.counted) = (o.tokens, (false, false));
         o.trace = crate::otel::Trace::start(&o.session, o.tokens);
         self.turn_steps(who, out, o, text, face);
         if let Some(t) = o.trace.take() {
@@ -3028,6 +3037,13 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
             let msg = match first.take().map(Ok).unwrap_or_else(|| self.complete(&model, o, &tools, face.said(), face)) {
                 Ok(m) => m,
                 Err(why) if why == STOPPED => return self.end_turn(out, o, &[], STOPPED, "Stopped.".into()),
+                Err(why) if why == OVER_CEILING => {
+                    let (spent, ceiling) = (self.spent(o), self.turn_tokens);
+                    let counted = match o.counted { (true, true) => "usage+bytes", (false, true) => "bytes", _ => "usage" };
+                    let _ = self.record(o, Kind::ToolResult, Some("turn_budget"), json!({"spent": spent, "ceiling": ceiling, "counted": counted}));
+                    return self.end_turn(out, o, &[], "stopped: turn token ceiling",
+                                         format!("Stopped: this turn used {spent} tokens (ceiling {ceiling})."));
+                }
                 Err(why) => return refuse(out, &why),
             };
             o.messages.push(msg.clone());
@@ -3487,6 +3503,10 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
     /// One chat-completions request as `body` says, the binding's sampling added; the message it answered.
     /// With `face`, a Stop the person sends meanwhile returns Err(STOPPED) within 200 ms.
     fn chat(&self, model: &Binding, o: &mut Open, body: Value, face: Option<&Face>) -> Result<Value, String> {
+        if self.turn_tokens > 0 && self.spent(o) >= self.turn_tokens {
+            return Err(OVER_CEILING.into());
+        }
+        let sent = body.to_string().len() as i64;
         let v = match face {
             None => post_chat(model, body)?,
             // ponytail: ureq cannot abort, so the request finishes alone on its thread (its 300 s timeout bounds
@@ -3505,9 +3525,25 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                 }
             }
         };
-        o.tokens.0 += v.pointer("/usage/prompt_tokens").and_then(Value::as_i64).unwrap_or(0);
-        o.tokens.1 += v.pointer("/usage/completion_tokens").and_then(Value::as_i64).unwrap_or(0);
+        // A backend that reports no usage is counted, never read as zero: request and answer bytes / 4.
+        match (v.pointer("/usage/prompt_tokens").and_then(Value::as_i64), v.pointer("/usage/completion_tokens").and_then(Value::as_i64)) {
+            (Some(p), c) => {
+                o.tokens.0 += p;
+                o.tokens.1 += c.unwrap_or(0);
+                o.counted.0 = true;
+            }
+            _ => {
+                o.tokens.0 += sent / 4;
+                o.tokens.1 += v.pointer("/choices/0/message").map_or(0, |m| m.to_string().len() as i64) / 4;
+                o.counted.1 = true;
+            }
+        }
         v.pointer("/choices/0/message").cloned().ok_or_else(|| "model answered without a message".into())
+    }
+
+    /// The model tokens this turn spent so far (prompt + completion).
+    fn spent(&self, o: &Open) -> i64 {
+        (o.tokens.0 - o.turn_from.0) + (o.tokens.1 - o.turn_from.1)
     }
 }
 

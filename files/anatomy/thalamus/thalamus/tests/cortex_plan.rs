@@ -214,6 +214,7 @@ fn rig_cx(name: &str, b: Binding, models: Vec<String>, cortex: Option<Cortex>, e
         cortex,
         data: d.clone(),
         tree_max: 50,
+        turn_tokens: 0,
         wing: Default::default(),
         quiet: Default::default(),
     };

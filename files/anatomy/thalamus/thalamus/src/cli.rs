@@ -116,6 +116,8 @@ fn serve_main(args: &[String]) -> Result<(), String> {
         // iris_knowledge_tree_max; the contract carries at most KNOWLEDGE_MAX.
         tree_max: std::env::var("NOS_IRIS_KNOWLEDGE_TREE_MAX").ok().and_then(|v| v.trim().parse().ok())
             .unwrap_or(50usize).clamp(1, nos_contract::renderers::KNOWLEDGE_MAX),
+        // iris_turn_token_ceiling: 0 (unset, unreadable, negative) is off.
+        turn_tokens: std::env::var("NOS_IRIS_TURN_TOKENS").ok().and_then(|v| v.trim().parse::<i64>().ok()).unwrap_or(0).max(0),
         // start_agent's door: the role renders all three with thalamus_wing_api_token, or none.
         wing: serve::WingDoor {
             url: std::env::var("NOS_WING_URL").unwrap_or_default(),
