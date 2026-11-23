@@ -31,11 +31,15 @@ fn secret_key(k: &str) -> bool {
     SECRET_PARTS.iter().any(|p| up.contains(p)) || up.ends_with("_KEY") || up.ends_with("_KEY\n")
 }
 
+/// A listed key passes, unless it names a binary: a job env never repoints one (ruling 2026-11-23).
+fn job_key_allowed(listed: &[&str], k: &str) -> bool {
+    (listed.contains(&k) || DAEMON_ENV_KEYS.contains(&k)) && !k.to_ascii_uppercase().ends_with("_BIN")
+}
+
 /// Pure: the caller passes std::env::vars(). A job key overrides an inherited one in place (dict order).
 pub fn safe_env(inherited: &[(String, String)], job_env: &[(String, String)]) -> Vec<(String, String)> {
     let mut env: Vec<(String, String)> = inherited.iter().filter(|(k, _)| !secret_key(k)).cloned().collect();
-    let allowed = |k: &str| JOB_ENV_KEYS.contains(&k) || DAEMON_ENV_KEYS.contains(&k);
-    for (k, v) in job_env.iter().filter(|(k, _)| allowed(k)) {
+    for (k, v) in job_env.iter().filter(|(k, _)| job_key_allowed(JOB_ENV_KEYS, k)) {
         match env.iter_mut().find(|(e, _)| e == k) {
             Some(slot) => slot.1 = v.clone(),
             None => env.push((k.clone(), v.clone())),

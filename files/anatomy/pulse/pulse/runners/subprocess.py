@@ -114,7 +114,8 @@ def _safe_env(job_env: dict[str, str] | None) -> dict[str, str]:
     """Inherited env minus secrets + the job env's allow-listed keys."""
     base = {k: v for k, v in os.environ.items() if not _SECRET_KEY_RE.search(k)}
     allowed = _JOB_ENV_KEYS | _DAEMON_ENV_KEYS
-    base.update({k: v for k, v in (job_env or {}).items() if k in allowed})
+    # A job env never repoints a binary, even a listed key (ruling 2026-11-23); data *_PATH stays.
+    base.update({k: v for k, v in (job_env or {}).items() if k in allowed and not k.upper().endswith("_BIN")})
     return base
 
 
