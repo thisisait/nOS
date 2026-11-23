@@ -13,7 +13,7 @@
     "habitat": 9,
     "sense": 90,
     "limb": 136,
-    "memory": 52,
+    "memory": 53,
     "law": 57,
     "reflex": 54,
     "heartbeat": 1,
@@ -2254,6 +2254,10 @@
       "kind": "table"
     },
     "table:halyard-task": {
+      "level": "memory",
+      "kind": "table"
+    },
+    "table:immune-verdicts": {
       "level": "memory",
       "kind": "table"
     },
