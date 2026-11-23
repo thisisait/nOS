@@ -50,6 +50,13 @@ pub fn safe_env(inherited: &[(String, String)], job_env: &[(String, String)]) ->
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_listed_bin_key_is_still_dropped() {
+        assert!(!super::job_key_allowed(&["CLAUDE_BIN", "x_bin"], "CLAUDE_BIN"));
+        assert!(!super::job_key_allowed(&["CLAUDE_BIN", "x_bin"], "x_bin"));
+        assert!(super::job_key_allowed(&["WING_DB_PATH"], "WING_DB_PATH"));
+    }
+
     /// The cases test_pulse_command_allowlist runs through the Python _safe_env, from one file.
     #[test]
     fn the_shared_cases() {

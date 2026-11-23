@@ -424,6 +424,18 @@ def test_the_env_allow_list_is_exactly_what_jobs_declare():
 	assert not loader, f"a job declares a loader/shell key: {loader}"
 
 
+def test_a_job_env_never_repoints_a_binary(monkeypatch):
+	"""SECURITY (operator ruling 2026-11-23): no job declares a *_BIN key, and the runner drops one
+	even when listed. *_PATH data keys stay. Rust copy: env.rs::a_listed_bin_key_is_still_dropped."""
+	declared = set().union(*(set(j["job"].get("env") or {}) for j in _declared_jobs("")))
+	assert not [k for k in declared if k.upper().endswith("_BIN")], "a job declares a *_BIN key"
+	run = _runner()
+	monkeypatch.setattr(run, "_JOB_ENV_KEYS", run._JOB_ENV_KEYS | {"CLAUDE_BIN", "x_bin"})
+	env = run._safe_env({"CLAUDE_BIN": "/tmp/x", "x_bin": "/tmp/x", "WING_DB_PATH": "/tmp/w.db"})
+	assert "/tmp/x" not in env.values(), "a listed *_BIN key reached the child"
+	assert env["WING_DB_PATH"] == "/tmp/w.db", "a data *_PATH key was dropped"
+
+
 @pytest.mark.parametrize("key", ["NODE_OPTIONS", "PHP_INI_SCAN_DIR", "SHELLOPTS", "PS4", "BASH_ENV",
                                  "DYLD_INSERT_LIBRARIES", "PERL5OPT", "RUBYOPT", "PYTHONSTARTUP", "PATH"])
 def test_a_loader_or_shell_key_never_reaches_the_child(key):
