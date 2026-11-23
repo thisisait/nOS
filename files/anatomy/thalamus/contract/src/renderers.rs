@@ -206,6 +206,8 @@ impl Component {
                     }
                     ChartKind::HorizontalBar if c.x == Axis::Time => return Err("a horizontal bar's x is category or number".into()),
                     ChartKind::Radial if c.series.len() != 1 => return Err(format!("a radial is exactly 1 series, not {}", c.series.len())),
+                    // two spokes draw a line, not a shape
+                    ChartKind::Radar if xs.len() < 3 => return Err(format!("a radar has at least 3 x labels, not {}", xs.len())),
                     ChartKind::Radar | ChartKind::Radial if xs.len() > 12 => {
                         return Err(format!("a radar or radial has at most 12 x labels, not {}", xs.len()))
                     }

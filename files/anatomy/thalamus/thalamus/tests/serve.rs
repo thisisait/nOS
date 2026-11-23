@@ -1767,7 +1767,9 @@ fn show_offers_every_chart_kind_and_axis() {
         assert!(shape.contains(word), "SHOW_SHAPE chart lacks {word:?}: {shape}");
     }
     for k in kinds {
-        let c = serde_json::json!({"kind": "chart", "props": {"chart": k, "x": "number", "series": [{"name": "a", "points": [["3", 5]]}]}});
+        // a radar needs three spokes; every other kind draws one point
+        let points = if k == "radar" { serde_json::json!([["1", 5], ["2", 5], ["3", 5]]) } else { serde_json::json!([["3", 5]]) };
+        let c = serde_json::json!({"kind": "chart", "props": {"chart": k, "x": "number", "series": [{"name": "a", "points": points}]}});
         let c: nos_contract::renderers::Component = serde_json::from_value(c).unwrap_or_else(|e| panic!("{k}: {e}"));
         assert_eq!(c.check(), Ok(()), "{k}");
     }

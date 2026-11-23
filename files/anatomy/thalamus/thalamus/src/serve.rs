@@ -912,7 +912,7 @@ pub const SHOW_SHAPE: &[(&str, &str)] = &[
     ("chart", "{title?, chart bar|stacked_bar|line|area|scatter|pie|horizontal_bar|radar|radial, x category|number|time, series[{name, points[[x, number]] <=60}] <=6}; \
 x is a string even for number (\"3\") or time (\"2026-10-13\" or \"2026-10-13T08:00:00Z\"); line, area, stacked_bar and radar \
 series share the same x in order; scatter needs number or time x; horizontal_bar needs category or number x; pie and radial are 1 series; \
-radar and radial have <=12 x, values >= 0; pie values >= 0"),
+radar has 3-12 x, radial <=12, values >= 0; pie values >= 0"),
     ("tree", "{title?, nodes[{label, note?, delta? added|removed|changed, children[]}]}, depth <=4, nodes <=100; \
 a child of an added or removed node is that too: leave its delta out"),
     ("timeline", "{title?, items[{when, title, note?, hi?, until?, lane?}] <=30}; when and until as dates \
