@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """What Santa saw execute outside the trees nOS declares.
 
-Santa (pazny.mac.santa) runs in MONITOR mode: it allows everything and logs every
+Santa (pazny.santa) runs in MONITOR mode: it allows everything and logs every
 exec to /var/db/santa/santa.log. This reader judges those EXEC lines against the
 declared trees — the Pulse runner's own allow-list (_REPO_TREES under the repo,
 _HOME_TREES under $HOME, its named binaries), the host-native organ binaries

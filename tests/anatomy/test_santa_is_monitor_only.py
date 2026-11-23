@@ -2,7 +2,7 @@
 
 Row santa-monitor (epic workload-allowlist; the 2026-10-03 Fable review): a lockdown
 generated from declared state either blocks the operator's interpreted tools and
-weekly brew upgrades or allows everything that matters. So pazny.mac.santa renders
+weekly brew upgrades or allows everything that matters. So pazny.santa renders
 NO configuration (ClientMode defaults to 1 = Monitor), stops if anything else set a
 mode, and tools/santa-status.py judges EXEC lines against the Pulse runner's trees.
 """
@@ -18,7 +18,7 @@ import pytest
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
-ROLE = REPO / "roles" / "pazny.mac.santa"
+ROLE = REPO / "roles" / "pazny.santa"
 NOW = datetime(2026, 10, 4, 12, 0, tzinfo=timezone.utc)
 
 

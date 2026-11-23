@@ -1249,7 +1249,7 @@
       tags: ['dock']
 
     # Epic workload-allowlist (2026-10-04): both default-off, macOS-only.
-    - role: pazny.mac.santa
+    - role: pazny.santa
       when:
         - not (nos_dry_removal | default(false) | bool)
         - ansible_os_family == 'Darwin'
