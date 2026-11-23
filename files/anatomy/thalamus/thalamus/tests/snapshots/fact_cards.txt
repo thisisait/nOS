@@ -1,0 +1,10 @@
+pupil-i4 at a glance
+  [ok] status: active
+  owner: face
+  [warn] due: 2026-12-01
+
+
+
+
+
+

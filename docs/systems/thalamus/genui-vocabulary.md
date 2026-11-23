@@ -33,8 +33,8 @@ subset, and one sentence per kind saying when to use it, is `SHOW_KINDS` /
 | Form, FormControl, Input, TextArea, Select, DatePicker, SwitchGroup | `form` | serve builds it from the table's live schema; the model never does |
 | Slider | missing | a `form` number field with min/max covers the need |
 | Tag, TagBlock | `list` tone / Badge | not a kind of its own |
-| OverviewCardBlock, SnippetCardBlock | `dashboard` of `kpi` | roadmap `genui-fact-cards` |
-| CompositeCardBlock, ContextCardBlock | missing | roadmap `genui-fact-cards` |
+| OverviewCardBlock, SnippetCardBlock | `fact_cards` (v21) | the model's short facts; a serve-computed number stays `kpi` |
+| CompositeCardBlock, ContextCardBlock | `fact_cards` (v21) | text only: no image, no action |
 | EditableTable | out of scope | a write is a `row_diff_approval` card, one diff the person approves |
 | Button, Buttons, IconButton, Action | out of scope | an action is code (`VIEW_ACTIONS`, face limbs), never data |
 | Image, ImageBlock, ImageGallery, ImageText, ImageTextLarge, VisualCardBlock | out of scope | each needs a URL from the model; roadmap `genui-held-images` |

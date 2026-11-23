@@ -163,7 +163,14 @@ export type Component =
 			kind: 'action_approval';
 			props: { app: string; action: string; params: Record<string, Value>; says: string };
 	  }
-	| { kind: 'program_approval'; props: ProgramProps };
+	| { kind: 'program_approval'; props: ProgramProps }
+	| { kind: 'fact_cards'; props: FactCardsProps };
+
+/** Short facts side by side (renderers.rs FactCards, v21): the model's text, no link, no action. */
+export type FactCardsProps = {
+	title?: string;
+	items: { label: string; value: string; tone?: 'ok' | 'info' | 'warn' | 'bad' }[];
+};
 
 /** A cortex program's writes under one approval (renderers.rs ProgramApproval, v20): its source as text, 1-20 writes. */
 export type ProgramProps = { source: string; writes: RowDiffProps[]; read_from?: string[] };

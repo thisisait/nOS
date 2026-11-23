@@ -432,6 +432,20 @@
 				</li>
 			{/each}
 		</ul>
+	{:else if component.kind === 'fact_cards'}
+		<!-- Text only: no link, no click, no action; a tone is a word, the colour only on top. -->
+		{@const f = component.props}
+		{#if f.title}<h3>{f.title}</h3>{/if}
+		<dl class="facts">
+			{#each f.items as x}
+				<div class="fact" style:--ink={x.tone ? toneVars(x.tone).ink : undefined}>
+					<dt class="muted">{x.label}</dt>
+					<dd>
+						{#if x.tone}<Badge tone={x.tone}>{x.tone}</Badge>{' '}{/if}{x.value}
+					</dd>
+				</div>
+			{/each}
+		</dl>
 	{:else if component.kind === 'follow_up'}
 		<p class="muted">you could ask:</p>
 		<div class="follow-up">
@@ -460,6 +474,23 @@
 	}
 	.callout .says {
 		font-size: 11px;
+	}
+	.facts {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+		gap: 6px;
+		margin: 0;
+	}
+	.fact {
+		border-left: 3px solid var(--ink, var(--glass-brd));
+		padding: 4px 8px;
+	}
+	.fact dt {
+		font-size: 11px;
+	}
+	.fact dd {
+		margin: 0;
+		white-space: pre-wrap;
 	}
 	.steps li {
 		margin: 3px 0;

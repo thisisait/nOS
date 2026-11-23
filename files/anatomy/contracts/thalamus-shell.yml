@@ -328,6 +328,10 @@ components:
     follow_up: >-
       next prompts the person may send (show tool): {prompts[] 1-4, each 1-200 chars, unique case aside}; the face Iris puts a
       clicked prompt in the composer and the person sends it as their own turn; the terminal lists them. Never an action
+    fact_cards: >-
+      short facts side by side (show tool, v21, after OpenUI's Overview/Snippet cards): {title?, items[{label 1-60,
+      value 1-200, tone? ok|info|warn|bad}] 1-12}; text only, no link, no click, no action; refused in an approval and
+      in a widget. The face draws a grid, the terminal one fact a line; both say the tone as a word, warn and bad as warnings
     knowledge_tree: >-
       the ontology around one node of our knowledge (read_node, or a knowledge widget; v10): {title?, focus, nodes[{id,
       name, parent?, child_count?, text?}], hidden}; ids [A-Za-z0-9._-]{1,128}, unique; focus names a node; a parent
@@ -420,8 +424,8 @@ invariants:
 open:
   - >-
     Since v4 the model chooses a renderer through the `show` tool, for table,
-    list, record, chart, tree, timeline, graph, sequence, choice, kpi and (v12) callout, steps, sources and
-    follow_up (plain text already draws as markdown); table_results,
+    list, record, chart, tree, timeline, graph, sequence, choice, kpi, (v12) callout, steps, sources and
+    follow_up, and (v21) fact_cards (plain text already draws as markdown); table_results,
     row_diff_approval and the
     control views stay chosen by their tool or control, and an approval is
     minted by propose_row_edit (insert, delete, propose_table_create for a new table, propose_column_add for new columns), or by a widget form the person submits

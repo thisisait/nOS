@@ -901,8 +901,8 @@ to chart its findings, propose_table_create from the report first (the person ap
 
 /// The kinds the model may choose; the rest are drawn by a tool or a control, never by show.
 /// No markdown: plain text already draws as markdown, and a markdown show was then said again as text.
-pub const SHOW_KINDS: [&str; 14] = ["table", "list", "record", "chart", "tree", "timeline", "graph", "sequence", "choice", "kpi",
-    "callout", "steps", "sources", "follow_up"];
+pub const SHOW_KINDS: [&str; 15] = ["table", "list", "record", "chart", "tree", "timeline", "graph", "sequence", "choice", "kpi",
+    "callout", "steps", "sources", "follow_up", "fact_cards"];
 
 /// The props a kind accepts, so a refusal can show the shape to retry.
 pub const SHOW_SHAPE: &[(&str, &str)] = &[
@@ -928,6 +928,7 @@ suggested[] (option labels: exactly 1, or 1 or more when multi), multi}; never a
     ("steps", "{title?, items[{title (<=120), status pending|active, detail? (<=2000)}] 1-20}; at most one active; never done or failed"),
     ("sources", "{title?, items[{table, row, note? (<=200)}] 1-20}; table and row are a row query_rows showed this session (its __id); no url"),
     ("follow_up", "{prompts[] 1-4, each <=200 chars, unique}; words the person may send next, never an action"),
+    ("fact_cards", "{title?, items[{label (<=60), value (<=200), tone? ok|info|warn|bad}] 1-12}; short facts as text, no link, no action"),
 ];
 
 /// When to reach for each kind: one sentence the model reads beside its shape (Ollama keeps descriptions only).
@@ -946,6 +947,7 @@ pub const SHOW_ABOUT: &[(&str, &str)] = &[
     ("steps", "A plan's steps in order, each pending or active; done and failed are the thalamus's to say, not yours."),
     ("sources", "Which rows a claim or an extraction came from, so the person can check it against them."),
     ("follow_up", "Up to four next questions the person might ask, put at the end of an answer."),
+    ("fact_cards", "A few short facts side by side, such as the headline values of a row or a report, each a label and its value."),
 ];
 
 fn expected_shape(kind: &str) -> String {
@@ -1052,7 +1054,11 @@ multi}; suggested names your pick among the options, exactly 1 unless multi; nev
                 "note": {"type": "string", "maxLength": 200}}))}}))),
         branch("follow_up", "next questions the person may send: {prompts[] 1-4}",
             closed(&["prompts"], json!({"prompts": {"type": "array", "minItems": 1, "maxItems": 4, "uniqueItems": true,
-                "items": {"type": "string", "minLength": 1, "maxLength": 200}}})))]}}})
+                "items": {"type": "string", "minLength": 1, "maxLength": 200}}}))),
+        branch("fact_cards", "short facts side by side: {title?, items[{label, value, tone?}] 1-12}, text only",
+            closed(&["items"], json!({"title": title, "items": {"type": "array", "minItems": 1, "maxItems": 12, "items": closed(&["label", "value"], json!({
+                "label": {"type": "string", "minLength": 1, "maxLength": 60}, "value": {"type": "string", "minLength": 1, "maxLength": 200},
+                "tone": {"enum": ["ok", "info", "warn", "bad"]}}))}})))]}}})
 }
 
 const QUERY_KEYS: [&str; 9] = ["table", "q", "where", "columns", "order_by", "limit", "group_by", "op", "y"];

@@ -44,6 +44,7 @@ const PROPS: Record<string, string[]> = {
 	steps: ['items', 'title'],
 	sources: ['items', 'title'],
 	follow_up: ['prompts'],
+	fact_cards: ['items', 'title'],
 	dashboard: ['dropped', 'lens', 'name', 'widgets'],
 	kpi: ['delta', 'delta_label', 'source', 'title', 'unit', 'value']
 };
@@ -995,5 +996,18 @@ describe('a kpi is one big number, its delta said as text', () => {
 		const h = html(kpi({ title: '<img onerror=1>', value: 1, source: '<script>x</script>' }));
 		expect(h).not.toMatch(/<(a|script|img)[\s>]/);
 		expect(h).toContain('&lt;img');
+	});
+});
+
+// v21: row genui-fact-cards.
+describe("fact cards are a grid of the model's text", () => {
+	it('fact cards are text: a label and value per fact, the tone a word, no link or button', () => {
+		const h = html(
+			fx.to_shell.find((c) => 'component' in c.msg && c.msg.component.kind === 'fact_cards')!.msg
+		);
+		expect(h.match(/<div class="fact[^"]*"/g)?.length).toBe(3);
+		expect(text(h)).toContain('status ok active');
+		expect(text(h)).toContain('due warn 2026-12-01');
+		expect(h).not.toMatch(/<(a|button|script|img)[\s>]/);
 	});
 });

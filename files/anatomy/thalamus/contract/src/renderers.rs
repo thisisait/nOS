@@ -37,6 +37,7 @@ pub enum Component {
     Kpi(Kpi),
     ActionApproval(ActionApproval),
     ProgramApproval(ProgramApproval),
+    FactCards(FactCards),
 }
 
 /// Model text as markdown; every consumer draws it as text nodes, never as HTML.
@@ -569,6 +570,19 @@ impl Component {
                 }
                 cap("an action's line", &a.says, 200)?;
                 crate::wire::check_flat(&a.params)
+            }
+            Component::FactCards(f) => {
+                title(&f.title)?;
+                if !(1..=FACTS_MAX).contains(&f.items.len()) {
+                    return Err(format!("fact cards hold 1 to {FACTS_MAX} facts, not {}", f.items.len()));
+                }
+                f.items.iter().try_for_each(|x| {
+                    if x.label.trim().is_empty() || x.value.trim().is_empty() {
+                        return Err("a fact has a label and a value".to_string());
+                    }
+                    cap("a fact label", &x.label, 60)?;
+                    cap("a fact value", &x.value, 200)
+                })
             }
             Component::Kpi(k) => {
                 if k.title.trim().is_empty() {
@@ -1357,6 +1371,27 @@ pub enum Tone {
     Info,
     Warn,
     Bad,
+}
+
+/// v21: a grid of short facts the model fills (OpenUI's Overview/Snippet cards): text only, no
+/// click, no action, never in an approval or a widget.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FactCards {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    pub items: Vec<Fact>,
+}
+
+pub const FACTS_MAX: usize = 12;
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Fact {
+    pub label: String,
+    pub value: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tone: Option<Tone>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

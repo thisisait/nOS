@@ -740,6 +740,7 @@ fn check_shell(m: &ToShell) -> Result<(), String> {
                 Component::Callout(_) | Component::Steps(_) | Component::Sources(_) | Component::FollowUp(_) => {
                     Err("a callout, steps, sources or follow_up is drawn in a render, never in an approval".into())
                 }
+                Component::FactCards(_) => Err("fact cards are drawn in a render, never in an approval".into()),
                 _ => Ok(()),
             }
         }

@@ -518,3 +518,21 @@
     - you could ask
     - "> Chart this by month"
     - "> Which are unmatched?"
+# v21: fact_cards (after OpenUI's Overview/Snippet cards): text only, tone as a word.
+- id: fact-cards-row
+  kind: fact_cards
+  component:
+    kind: fact_cards
+    props:
+      title: pupil-i4 at a glance
+      items:
+        - label: status
+          value: active
+          tone: ok
+        - label: due
+          value: "2026-12-01"
+          tone: warn
+  expect:
+    - pupil-i4 at a glance
+    - "[ok] status: active"
+    - "[warn] due: 2026-12-01"

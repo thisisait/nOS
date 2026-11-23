@@ -406,6 +406,15 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
             out.push(if matches!(c.tone, Tone::Warn | Tone::Bad) { warn(line) } else { head(line) });
             out.extend(c.text.lines().map(|l| Line::from(format!("  {l}"))));
         }
+        // A grid in the face; here one fact a line, its tone a word, warn and bad drawn as warnings.
+        Component::FactCards(f) => {
+            out.extend(f.title.clone().map(head));
+            for x in &f.items {
+                let tone = x.tone.map(|t| format!("[{}] ", cell(&serde_json::to_value(t).unwrap_or_default()))).unwrap_or_default();
+                let line = format!("  {tone}{}: {}", x.label, x.value);
+                out.push(if matches!(x.tone, Some(Tone::Warn | Tone::Bad)) { warn(line) } else { Line::from(line) });
+            }
+        }
         // Each step's status as Iris says it (pending or active), a word, numbered in order.
         Component::Steps(p) => {
             out.extend(p.title.clone().map(head));
