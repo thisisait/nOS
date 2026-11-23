@@ -7998,7 +7998,8 @@ fn a_turn_over_its_token_ceiling_stops_and_its_card_still_writes() {
     decide(&s, &approval, Decision::Approve);
     assert!(matches!(next(&mut r), Some(ToShell::TableChanged { .. })), "an approved write is not a model call");
     assert_eq!(posts(&rig).len(), 1);
-    // The next turn starts its own spend: it is answered.
+    assert!(matches!(next(&mut r), Some(ToShell::Text { .. })), "the person hears the write landed");
+    // The next turn starts its own spend: its model request is sent and answered.
     (&s).write_all(encode(&ToThalamus::Turn { session: Some(session), text: "thanks".into() }).as_bytes()).unwrap();
     loop {
         match next(&mut r) {
@@ -8008,6 +8009,7 @@ fn a_turn_over_its_token_ceiling_stops_and_its_card_still_writes() {
             None => panic!("the next turn was not answered"),
         }
     }
+    assert_eq!(rig.model.lock().unwrap().len(), 3, "the next turn's request was sent");
 }
 
 /// Journey 2: a model that reports no usage still stops, counted by bytes, and the ledger says so.

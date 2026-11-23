@@ -3018,6 +3018,8 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
 
     /// The model's turn over the conversation so far, tool calls and all, until it says text.
     fn think(&self, who: &Person, out: &mut dyn Write, o: &mut Open, face: &Face) {
+        // a choice reply, a decided report or an ended run starts its own turn: its own token spend
+        (o.turn_from, o.counted) = (o.tokens, (false, false));
         self.think_from(who, out, o, None, face);
     }
 
