@@ -1103,7 +1103,10 @@ MEASURED_WORK = {
     # no operator (vendor) reading taken, so this is the lower of the two. min_work 9064-120.
     # 2026-11-13 judge-env run (no vendor), the lane cut applied as the judge runs it: 8505 passed +
     # 1 failed (this ratchet, red on growth) = 8506 executed; 690 deselected by tests/_lanes.yml.
-    "pytest-anatomy": 8506,
+    # RE-DERIVED 2026-11-23 — fired at 8962 collected vs 8506 (dev had grown past 5% before the session
+    # branch). Operator-env run on session/2026-11-23 (lane cut applied): 8592 passed + 1 failed (this
+    # ratchet) = 8593 executed, 369 skipped, 693 deselected. min_work 8593-120.
+    "pytest-anatomy": 8593,
     "cortex-corpus-diff": 1,
 }
 
