@@ -361,6 +361,8 @@ struct Open {
     /// Opened fresh on a bench connection (hello bench: true): only it may ask plan_evidence.
     /// A resumed, switched-to, cleared or branched session never is.
     bench: bool,
+    /// The read program running now (row iris-code-mode-reads): its id and stage, stamped on each row it records.
+    program: Option<(String, usize)>,
 }
 
 /// One run Iris started: (agent, Wing session uuid), when it started (unix seconds), the next time it is asked after,
@@ -682,6 +684,66 @@ fn mint_uuid() -> std::io::Result<String> {
     b[8] = (b[8] & 0x3f) | 0x80;
     let h: String = b.iter().map(|x| format!("{x:02x}")).collect();
     Ok(format!("{}-{}-{}-{}-{}", &h[..8], &h[8..12], &h[12..16], &h[16..20], &h[20..]))
+}
+
+/// The calls a program the thalamus runs may hold (row iris-code-mode-reads); any other keeps the model's loop.
+const PROGRAM_TOOLS: [&str; 2] = ["query_rows", "show"];
+/// A program's wall clock, checked between its calls beside face.stopped().
+const PROGRAM_WALL: Duration = Duration::from_secs(60);
+
+/// A cortex plan mapped to tool calls (plan()); `program` is minted only for reads the thalamus runs.
+struct Planned {
+    msg: Value,
+    source: String,
+    program: Option<String>,
+    title: Option<String>,
+}
+
+/// What the model hears of one program call: counts, kinds and numbers serve computed. An allow-list:
+/// never a cell, a row id or a group label (a `top` pair or a `groups` value is one).
+fn receipt_of(name: &str, v: &Value) -> Value {
+    let mut r = json!({"call": name});
+    if name == "query_rows" {
+        r["rendered"] = json!("table_results");
+        for k in ["matched", "total"] {
+            r[k] = v.get(k).filter(|n| n.is_number()).cloned().unwrap_or(Value::Null);
+        }
+        r["shown"] = json!(v["rows"].as_array().or(v["groups"].as_array()).map(Vec::len));
+        return r;
+    }
+    r["rendered"] = json!(v["shown"].as_str().filter(|k| k.chars().all(|c| c.is_ascii_lowercase() || c == '_')));
+    for k in ["points_drawn", "value"] {
+        if let Some(n) = v.get(k).filter(|n| n.is_number()) {
+            r[k] = n.clone();
+        }
+    }
+    r
+}
+
+/// The thalamus's closing line of a program, from its receipt: it reaches the model, so it holds no cell text.
+fn program_line(title: Option<&str>, receipt: &[Value], failed: Option<(usize, &str)>, stopped: Option<&str>) -> String {
+    let of = title.map(|t| format!(" of {t}")).unwrap_or_default();
+    let done: Vec<String> = receipt.iter().map(|r| match (r["call"].as_str(), r["rendered"].as_str()) {
+        (Some("query_rows"), _) => match r["shown"].as_u64() {
+            Some(n) => format!("showed {n} of the {} matched rows{of} ({} in the table)", r["matched"], r["total"]),
+            None => format!("{} of the {} rows{of} match", r["matched"], r["total"]),
+        },
+        (_, kind) => {
+            let kind = kind.unwrap_or("view");
+            match (r.get("value"), r.get("points_drawn")) {
+                (Some(v), _) => format!("drew a {kind}{of}: {v}"),
+                (None, Some(p)) => format!("drew a {kind}{of} of {p} points"),
+                _ => format!("drew a {kind}{of}"),
+            }
+        }
+    }).collect();
+    let ran = if done.is_empty() { String::new() } else { format!("The thalamus ran the plan: {}.", done.join("; ")) };
+    let end = match (failed, stopped) {
+        (Some((i, name)), _) => format!("The plan stopped at stage {} ({name}); nothing after it ran.", i + 1),
+        (None, Some(s)) => s.to_string(),
+        (None, None) => String::new(),
+    };
+    [ran, end].into_iter().filter(|s| !s.is_empty()).collect::<Vec<_>>().join(" ")
 }
 
 const QUERY_ROWS: &str = "Read, count or filter the rows of one DataTable, as the person. Every parameter but \
@@ -1606,7 +1668,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             Err(why) => (Err(why), iris.clone()),
         };
         Ok((Open { session, model, iris, messages: vec![json!({"role": "system", "content": system})], moved: None, tokens,
-                  pending: HashMap::new(), shown: HashMap::new(), tables_seen: HashMap::new(), dates: HashMap::new(), names: HashMap::new(), read_free: vec![], forms: HashMap::new(), choices: HashMap::new(), last_group: None, trace: None, again: HashMap::new(), acting: HashMap::new(), tab: None, watching: vec![], bench: false },
+                  pending: HashMap::new(), shown: HashMap::new(), tables_seen: HashMap::new(), dates: HashMap::new(), names: HashMap::new(), read_free: vec![], forms: HashMap::new(), choices: HashMap::new(), last_group: None, trace: None, again: HashMap::new(), acting: HashMap::new(), tab: None, watching: vec![], bench: false, program: None },
             resumed.is_some()))
     }
 
@@ -1890,7 +1952,11 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
     }
 
     /// One ledger event; the row id, or the reason it was refused (also logged).
-    fn record(&self, o: &Open, kind: Kind, tool: Option<&str>, v: Value) -> Result<i64, String> {
+    fn record(&self, o: &Open, kind: Kind, tool: Option<&str>, mut v: Value) -> Result<i64, String> {
+        if let (Some((program, index)), Some(m)) = (&o.program, v.as_object_mut()) {
+            m.insert("program".into(), json!(program));
+            m.insert("index".into(), json!(index));
+        }
         let r = self.ledger.lock().map_err(|_| "ledger poisoned".to_string())
             .and_then(|l| l.record(&o.session, kind, tool, &v).map_err(|e| e.to_string()));
         if let Err(e) = &r {
@@ -2477,6 +2543,13 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
             }
             _ => None,
         };
+        // iris_plan_run: thalamus: a plan of reads runs here and ends the turn (plan() mints its id only then).
+        let planned = match planned {
+            Some(Planned { msg, source, program: Some(program), title }) => {
+                return self.run_program(who, out, o, face, &msg, source, program, title);
+            }
+            p => p.map(|p| p.msg),
+        };
         // A turn that names our knowledge searches it first, so the answer is grounded or said absent.
         let named = cortex_plan::names_knowledge(text);
         let planned = planned.or_else(|| (!named.is_empty()).then(|| {
@@ -2488,7 +2561,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
     }
 
     /// The cortex plan as one assistant message of mapped tool calls; None after the model heard why not.
-    fn plan(&self, who: &Person, o: &mut Open, model: &Binding, c: &Cortex, text: &str) -> Option<Value> {
+    fn plan(&self, who: &Person, o: &mut Open, model: &Binding, c: &Cortex, text: &str) -> Option<Planned> {
         let tool = Some("cortex_plan");
         // kind: "infra" (the estate failed: no verdict on the model) or "model" (its plan does not run)
         let refused = |o: &mut Open, why: String, kind: &str, rec: Value| {
@@ -2520,7 +2593,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                     "json_schema": {"name": "cortex_plan", "schema": cortex_plan::ast_schema()}}),
                 Engine::Free => {}
             }
-            let answer = match self.chat(model, o, body, None) {
+            let answer = match self.plan_chat(model, o, body) {
                 Ok(m) => m,
                 // Ollama MLX answers 501 to any format: the same request, unconstrained.
                 Err(why) if engine == Engine::JsonSchema => {
@@ -2528,7 +2601,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                     downgrade = Some(why);
                     engine = Engine::Free;
                     msgs[0] = json!({"role": "system", "content": cortex_plan::primer(engine, &catalogue)});
-                    match self.chat(model, o, json!({"model": model.model_id, "messages": msgs}), None) {
+                    match self.plan_chat(model, o, json!({"model": model.model_id, "messages": msgs})) {
                         Ok(m) => m,
                         Err(why) => return refused(o, why, "infra", json!({})),
                     }
@@ -2565,6 +2638,10 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                     let why = format!("the validator refused it twice: {}", errors.join("; "));
                     return refused(o, why, "model", json!({"errors": errors}));
                 }
+                Ok(Ok((stages, _, hash))) if stages.len() > cortex_plan::MAX_STAGES => {
+                    let why = format!("the plan has {} stages, at most {} run", stages.len(), cortex_plan::MAX_STAGES);
+                    return refused(o, why, "model", json!({"errors": [], "registry_hash": hash}));
+                }
                 Ok(Ok((stages, src, hash))) => {
                     let mapped = cortex_plan::plan(src.as_deref(), &stages).and_then(|p| cortex_plan::calls(&p,
                         |t| self.table_info(who, t),
@@ -2584,11 +2661,18 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                             // which table the mapper read, by every name (tools/iris-bench.py same_pipeline)
                             let table = self.table_info(who, &said_table).map(|(id, i)| json!({"said": said_table, "id": id,
                                 "title": i.pointer("/data/title").cloned().unwrap_or(Value::Null)})).unwrap_or(Value::Null);
-                            let _ = self.record(o, Kind::ToolResult, tool, json!({"valid": true, "errors": [], "registry_hash": hash, "plan": plan,
-                                                                                 "table": table}));
+                            // reads only, and the thalamus runs them: the program's id is on its plan row too
+                            let reads = c.run_program && calls.iter().all(|(n, _)| PROGRAM_TOOLS.contains(&n.as_str()));
+                            let program = reads.then(mint_uuid).and_then(Result::ok).map(|u| format!("cx-{}", &u.replace('-', "")[..20]));
+                            let mut res = json!({"valid": true, "errors": [], "registry_hash": hash, "plan": plan, "table": table});
+                            if let Some(p) = &program {
+                                res["program"] = json!(p);
+                            }
+                            let _ = self.record(o, Kind::ToolResult, tool, res);
                             let tool_calls: Vec<Value> = calls.iter().enumerate().map(|(i, (n, a))| json!({"id": format!("cortex-{}", i + 1),
                                 "type": "function", "function": {"name": n, "arguments": a.to_string()}})).collect();
-                            Some(json!({"role": "assistant", "content": null, "tool_calls": tool_calls}))
+                            Some(Planned { msg: json!({"role": "assistant", "content": null, "tool_calls": tool_calls}), source, program,
+                                           title: table["title"].as_str().map(str::to_string) })
                         }
                     };
                 }
@@ -3067,6 +3151,62 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
         }
     }
 
+    /// iris_plan_run: thalamus. A plan of reads runs here as the person, each call through run_tool, and ends the
+    /// turn: the model hears one `cortex_program` call and its receipt, never a row (row iris-code-mode-reads).
+    #[allow(clippy::too_many_arguments)]
+    fn run_program(&self, who: &Person, out: &mut dyn Write, o: &mut Open, face: &Face, msg: &Value, source: String,
+                   program: String, title: Option<String>) {
+        let started = Instant::now();
+        o.messages.push(json!({"role": "assistant", "content": null, "tool_calls": [{"id": program, "type": "function",
+            "function": {"name": "cortex_program", "arguments": json!({"source": source}).to_string()}}]}));
+        let (mut receipt, mut failed, mut stopped) = (vec![], None::<(usize, String, String)>, None::<&str>);
+        for (i, call) in msg["tool_calls"].as_array().into_iter().flatten().enumerate() {
+            if face.stopped(&o.session) {
+                stopped = Some("Stopped.");
+                break;
+            }
+            if started.elapsed() > PROGRAM_WALL {
+                stopped = Some("Stopped: the plan ran longer than 60 s.");
+                break;
+            }
+            let name = call.pointer("/function/name").and_then(Value::as_str).unwrap_or("").to_string();
+            let args: Value = call.pointer("/function/arguments").and_then(Value::as_str)
+                .and_then(|a| serde_json::from_str(a).ok()).unwrap_or(Value::Null);
+            o.program = Some((program.clone(), i));
+            let shown = (name == "show").then(|| normalized(&args, o.last_group.as_ref().map(|g| &g.0)));
+            let _ = self.record(o, Kind::ToolUse, Some(&name), json!({"args": args}));
+            activity(out, o, Phase::Tool { name: name.clone() });
+            let span = o.trace.as_mut().map(|t| t.begin("iris.tool"));
+            let result = self.run_tool(who, out, o, face, &name, &args, &shown);
+            if let (Some(s), Some(t)) = (span, o.trace.as_mut()) {
+                t.end(s, result.is_ok(), vec![("gen_ai.tool.name", json!(crate::otel::tool_name(&name)))]);
+            }
+            match result {
+                Ok(v) => receipt.push(receipt_of(&name, &v)),
+                Err(why) => {
+                    let _ = self.record(o, Kind::ToolResult, Some(&name), json!({"error": why}));
+                    failed = Some((i, name, why));
+                    break;
+                }
+            }
+        }
+        o.program = None;
+        let title = title.map(|t| t.chars().take(80).collect::<String>());
+        let rec = json!({"program": program, "ran": receipt.len(), "failed_at": failed.as_ref().map(|f| f.0),
+                         "wall_ms": started.elapsed().as_millis() as u64, "table": title, "receipt": receipt});
+        let _ = self.record(o, Kind::ToolResult, Some("cortex_program"), rec.clone());
+        o.messages.push(json!({"role": "tool", "tool_call_id": program, "content": rec.to_string()}));
+        let line = program_line(title.as_deref(), &receipt, failed.as_ref().map(|f| (f.0, f.1.as_str())), stopped);
+        let _ = self.record(o, Kind::Message, None, json!({"role": "thalamus", "text": line, "program": program}));
+        o.messages.push(json!({"role": "assistant", "content": line}));
+        // the person also hears why a stage failed; the model and a resume hear the line only
+        let said = match &failed {
+            Some((_, _, why)) => format!("{line} ({why})"),
+            None => line,
+        };
+        send(out, &ToShell::Text { session: o.session.clone(), text: said });
+    }
+
     /// One tool call of `name`, run as the person: the tools path and the program runner share it,
     /// so tier, septum, ledger and Render stay one code path.
     #[allow(clippy::too_many_arguments)]
@@ -3304,6 +3444,18 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
         }
         let _ = self.record(o, Kind::Message, None, json!({"role": "thalamus", "text": text}));
         send(out, &ToShell::Text { session: o.session.clone(), text });
+    }
+
+    /// The plan's model request, an iris.complete span like every other (a thalamus-run turn has only this one).
+    fn plan_chat(&self, model: &Binding, o: &mut Open, body: Value) -> Result<Value, String> {
+        let (span, before) = (o.trace.as_mut().map(|t| t.begin("iris.complete")), o.tokens);
+        let msg = self.chat(model, o, body, None);
+        if let (Some(i), Some(t)) = (span, o.trace.as_mut()) {
+            t.end(i, msg.is_ok(), vec![("gen_ai.request.model", json!(model.model_id)),
+                                       ("gen_ai.usage.input_tokens", json!(o.tokens.0 - before.0)),
+                                       ("gen_ai.usage.output_tokens", json!(o.tokens.1 - before.1))]);
+        }
+        msg
     }
 
     /// One chat-completions call; the model gets the conversation, never a KEAP header.

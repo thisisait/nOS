@@ -25,7 +25,13 @@ pub struct Cortex {
     pub rich_catalogue: bool,
     /// iris_plan: hybrid plans only a turn whose route() intent is listed (NOS_IRIS_INTENTS); None = every turn.
     pub intents: Option<Vec<String>>,
+    /// iris_plan_run: thalamus (NOS_IRIS_PLAN_RUN): a plan of reads only is run here and ends the turn,
+    /// the rows never reach the model; false (model) hands the mapped calls to the model's loop as before.
+    pub run_program: bool,
 }
+
+/// At most this many stages in one plan, whatever the engine (the JSON schema says it to a constrained one).
+pub const MAX_STAGES: usize = 8;
 
 /// Folded word stems (a trailing * is a prefix): a turn with any of HOLD stays on tools whatever else it
 /// says (a write other than insert, a choice, a dashboard); else the first intent whose stems it has.
@@ -207,7 +213,7 @@ pub fn ast_schema() -> Value {
         branch("delete", Some(true), json!({}), &[]),
     ]);
     json!({"type": "object", "additionalProperties": false, "required": ["stages"], "properties": {
-        "stages": {"type": "array", "minItems": 1, "maxItems": 8, "items": {"type": "object", "additionalProperties": false,
+        "stages": {"type": "array", "minItems": 1, "maxItems": MAX_STAGES, "items": {"type": "object", "additionalProperties": false,
             // a closed param set and a shaped operand: an open one let an 8B model write get(db="t")
             "required": ["op", "operand", "params"], "anyOf": per_op, "properties": {
                 "op": {"enum": MAPPED},

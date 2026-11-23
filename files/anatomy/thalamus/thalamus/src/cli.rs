@@ -83,10 +83,11 @@ fn serve_main(args: &[String]) -> Result<(), String> {
         .map(|url| crate::cortex_plan::Cortex { url, token: lookup("nos:cortex_ro_token").unwrap_or_default(),
             rich_catalogue: std::env::var("NOS_CORTEX_CATALOGUE").as_deref() == Ok("rich"),
             intents: (plan == "hybrid").then(|| std::env::var("NOS_IRIS_INTENTS").unwrap_or_default().split(',')
-                .map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect()) });
+                .map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect()),
+            run_program: std::env::var("NOS_IRIS_PLAN_RUN").as_deref() == Ok("thalamus") });
     match &cortex {
-        Some(c) => eprintln!("thalamus: iris plans in cortex-lang via {}, catalogue {}, {}", c.url,
-            if c.rich_catalogue { "rich" } else { "lean" },
+        Some(c) => eprintln!("thalamus: iris plans in cortex-lang via {}, catalogue {}, run by {}, {}", c.url,
+            if c.rich_catalogue { "rich" } else { "lean" }, if c.run_program { "thalamus" } else { "model" },
             c.intents.as_ref().map_or("every turn".into(), |i| format!("hybrid: {}", i.join(",")))),
         None if planned => eprintln!("thalamus: WARNING iris_plan is {plan} but \
             NOS_CORTEX_URL is unset (install_cortex off?): iris plans with tools"),

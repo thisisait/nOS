@@ -339,11 +339,13 @@ impl Ledger {
         rows.collect()
     }
 
-    /// The last `n` things the person and Iris said in `session` (agent_message person|iris), oldest first.
+    /// The last `n` things the person and Iris said in `session` (agent_message person|iris), oldest first,
+    /// and the thalamus's line closing a program it ran (it answered that turn: a resume must not ask again).
     pub fn messages(&self, session: &str, n: usize) -> rusqlite::Result<Vec<(String, String)>> {
         let mut q = self.db.prepare(
             "SELECT role, text FROM (SELECT id, json_extract(result_json, '$.role') AS role, json_extract(result_json, '$.text') AS text
-               FROM events WHERE run_id = ?1 AND type = ?2 AND json_extract(result_json, '$.role') IN ('person', 'iris')
+               FROM events WHERE run_id = ?1 AND type = ?2 AND (json_extract(result_json, '$.role') IN ('person', 'iris')
+                 OR (json_extract(result_json, '$.role') = 'thalamus' AND json_extract(result_json, '$.program') IS NOT NULL))
                AND json_extract(result_json, '$.text') IS NOT NULL ORDER BY id DESC LIMIT ?3) ORDER BY id")?;
         let rows = q.query_map(params![session, Kind::Message.as_str(), n as i64], |r| Ok((r.get(0)?, r.get(1)?)))?;
         rows.collect()
