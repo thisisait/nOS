@@ -276,10 +276,12 @@ components:
     list: "items the model shows (show tool): {title?, ordered, items[{text, detail?, tone? ok|info|warn|bad, delta?}]}; at most 50 items, text 500, detail 2000"
     record: "one thing's fields (show tool): {title?, fields[{key, value, delta?, was?}]}; at most 40 fields, a value (and was) 4000 chars as text; was only on a changed field; titles and names 120"
     chart: >-
-      values plotted (show tool): {title?, chart bar|stacked_bar|line|area|scatter|pie, x category|number|time,
-      series[{name, points[[x, number]]}]}; x is a string on every axis (a number parses as one, a time is
-      YYYY-MM-DD[THH:MM:SS(Z|+HH:MM)]); at most 6 series, 60 points each, 60 x labels; line, area and stacked_bar
-      series share the same x; scatter is number or time x; pie is 1 series of values >= 0
+      values plotted (show tool): {title?, chart bar|stacked_bar|line|area|scatter|pie|horizontal_bar|radar|radial,
+      x category|number|time, series[{name, points[[x, number]]}]}; x is a string on every axis (a number parses as
+      one, a time is YYYY-MM-DD[THH:MM:SS(Z|+HH:MM)]); at most 6 series, 60 points each, 60 x labels; line, area,
+      stacked_bar and radar series share the same x; scatter is number or time x; pie is 1 series of values >= 0.
+      v21 (after OpenUI): horizontal_bar is category or number x, its labels down the side; radar is one closed
+      shape per series over at most 12 spokes, values >= 0; radial is 1 series of at most 12 rings, values >= 0
     # delta added|removed|changed marks what an action would change (iris-genui-change-markers). A child of an
     # added or removed node is that too: check() refuses a child that says otherwise. Both shells say the mark
     # as text (+ - ~), never as colour only; the face Iris adds a "+N −M ~K" row and a Před / Změny / Po switch.

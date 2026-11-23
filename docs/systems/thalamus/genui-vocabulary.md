@@ -27,7 +27,7 @@ subset, and one sentence per kind saying when to use it, is `SHOW_KINDS` /
 | EntityList | `record` | |
 | Table | `table`, `table_results` | |
 | Charts (bar, line, area, pie, scatter, single stacked bar) | `chart` | |
-| Charts (horizontal bar, radar, radial) | missing | roadmap `genui-chart-shapes` |
+| Charts (horizontal bar, radar, radial) | `chart` `horizontal_bar`, `radar`, `radial` (v21) | radar and radial: at most 12 x, values >= 0 |
 | MetricIndicator | `kpi` | the number is serve's, never the model's |
 | RadioGroup, CheckBoxGroup, Chips, OptionCards | `choice` | a question; the answer goes back to the model as data |
 | Form, FormControl, Input, TextArea, Select, DatePicker, SwitchGroup | `form` | serve builds it from the table's live schema; the model never does |

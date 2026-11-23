@@ -843,6 +843,67 @@ describe('a chart is SVG marks and text labels, inside its box', () => {
 		for (const c of cases) inside(html(chart({ title: 'every axis', ...c })), `${c.chart}/${c.x}`);
 	});
 
+	// v21: OpenUI's horizontal bar, radar and radial (row genui-chart-shapes).
+	it('a horizontal bar is a bar per value, a radar a shape per series, a radial a ring per value', () => {
+		const shown = (kind: string) =>
+			fx.to_shell.find(
+				(c) =>
+					'component' in c.msg &&
+					c.msg.component.kind === 'chart' &&
+					c.msg.component.props.chart === kind
+			)!.msg;
+		const props = (m: ToShell) =>
+			((m as Extract<ToShell, { t: 'render' }>).component as Chart).props;
+		const hbar = html(shown('horizontal_bar'));
+		expect(hbar.match(/<rect[^>]*class="bar/g)?.length).toBe(3);
+		expect(
+			labels(hbar)
+				.filter((l) => l.anchor === 'end')
+				.map((l) => l.t)
+		).toContain('the platform team');
+		const radar = html(shown('radar'));
+		expect(radar.match(/<path[^>]*class="area/g)?.length).toBe(2);
+		expect(radar.match(/<circle/g)?.length).toBe(8);
+		for (const x of ['uptime', 'speed', 'docs', 'tests'])
+			expect(labels(radar).map((l) => l.t)).toContain(x);
+		const radial = html(shown('radial'));
+		expect(radial.match(/<path[^>]*class="slice[^>]*>\s*<title>/g)?.length).toBe(3);
+		for (const k of ['horizontal_bar', 'radar', 'radial']) tips(html(shown(k)), props(shown(k)));
+		const long = (i: number) => `a rather long label number ${i}`;
+		const cases: Chart['props'][] = [
+			{
+				chart: 'horizontal_bar',
+				x: 'category',
+				series: [0, 1].map((k) => ({
+					name: `s${k}`,
+					points: Array.from(
+						{ length: 60 },
+						(_, i) => [long(i), (i - 30) * 1e5] as [string, number]
+					)
+				}))
+			},
+			{
+				chart: 'radar',
+				x: 'category',
+				series: [0, 1, 2].map((k) => ({
+					name: `s${k}`,
+					points: Array.from({ length: 12 }, (_, i) => [long(i), i * k * 1e6] as [string, number])
+				}))
+			},
+			{
+				chart: 'radial',
+				x: 'category',
+				series: [
+					{
+						name: 'rows',
+						points: Array.from({ length: 12 }, (_, i) => [long(i), i] as [string, number])
+					}
+				]
+			}
+		];
+		for (const c of cases) inside(html(chart({ title: 'v21', ...c })), `${c.chart}/${c.x}`);
+	});
+
 	it('a chart draws no link, no foreign markup, no script', () => {
 		const h = html(
 			chart({

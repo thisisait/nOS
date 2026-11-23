@@ -1758,7 +1758,7 @@ fn show_offers_every_chart_kind_and_axis() {
     let schema = serve::show_schema();
     let chart = schema["properties"]["component"]["oneOf"].as_array().unwrap().iter()
         .find(|b| b["properties"]["kind"]["const"] == "chart").unwrap()["properties"]["props"].clone();
-    let kinds = ["bar", "stacked_bar", "line", "area", "scatter", "pie"];
+    let kinds = ["bar", "stacked_bar", "line", "area", "scatter", "pie", "horizontal_bar", "radar", "radial"];
     assert_eq!(chart["properties"]["chart"]["enum"], serde_json::json!(kinds));
     assert_eq!(chart["properties"]["x"]["enum"], serde_json::json!(["category", "number", "time"]));
     assert!(chart["required"].as_array().unwrap().contains(&serde_json::json!("x")), "{chart}");

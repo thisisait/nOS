@@ -203,8 +203,16 @@ impl Component {
                             return Err(format!("a pie value is below 0: {x} {y}"));
                         }
                     }
-                    // A line, an area or a stack joins the same x in every series; a bar or a scatter may leave one out.
-                    ChartKind::Line | ChartKind::Area | ChartKind::StackedBar => {
+                    ChartKind::HorizontalBar if c.x == Axis::Time => return Err("a horizontal bar's x is category or number".into()),
+                    ChartKind::Radial if c.series.len() != 1 => return Err(format!("a radial is exactly 1 series, not {}", c.series.len())),
+                    ChartKind::Radar | ChartKind::Radial if xs.len() > 12 => {
+                        return Err(format!("a radar or radial has at most 12 x labels, not {}", xs.len()))
+                    }
+                    ChartKind::Radar | ChartKind::Radial if c.series.iter().any(|s| s.points.iter().any(|p| p.1 < 0.0)) => {
+                        return Err("a radar or radial value is below 0".into())
+                    }
+                    // A line, an area, a stack or a radar joins the same x in every series; a bar or a scatter may leave one out.
+                    ChartKind::Line | ChartKind::Area | ChartKind::StackedBar | ChartKind::Radar => {
                         let first: Vec<&String> = c.series[0].points.iter().map(|p| &p.0).collect();
                         if c.series.iter().any(|s| s.points.iter().map(|p| &p.0).ne(first.iter().copied())) {
                             let kind = serde_json::to_value(c.chart).ok().and_then(|v| v.as_str().map(str::to_string)).unwrap_or_default();
@@ -753,6 +761,12 @@ pub enum ChartKind {
     Area,
     Scatter,
     Pie,
+    /// v21: bars along x, the labels down the side; category or number x.
+    HorizontalBar,
+    /// v21: one closed shape per series over 1-12 spokes, values >= 0.
+    Radar,
+    /// v21: one series as 1-12 concentric rings, values >= 0.
+    Radial,
 }
 
 /// category: labels in order; number: each x parses as a finite f64; time: each x is_date().

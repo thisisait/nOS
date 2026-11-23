@@ -87,7 +87,16 @@ export type Component =
 			kind: 'chart';
 			props: {
 				title?: string;
-				chart: 'bar' | 'stacked_bar' | 'line' | 'area' | 'scatter' | 'pie';
+				chart:
+					| 'bar'
+					| 'stacked_bar'
+					| 'line'
+					| 'area'
+					| 'scatter'
+					| 'pie'
+					| 'horizontal_bar'
+					| 'radar'
+					| 'radial';
 				x: 'category' | 'number' | 'time';
 				series: { name: string; points: [string, number][] }[];
 			};

@@ -2,7 +2,8 @@
   A chart the model shows (renderers.rs Chart) as inline SVG, no library: the marks and labels
   come from chart/geometry.ts. Every value is a focusable mark with a <title> (series · x: value);
   every label is a text node inside the viewBox, which follows the container's width at a fixed
-  aspect (gate: fixture.test.ts "a chart is SVG marks"). Lines, areas and scatters zoom along x.
+  aspect (gate: fixture.test.ts "a chart is SVG marks"). Lines, areas and scatters zoom along x;
+  a radar and a radial draw their own labels and grid (v21).
 -->
 <script lang="ts">
 	import type { Component } from './wire';
@@ -113,7 +114,11 @@
 					></defs
 				>
 			{/if}
-			{#if chart.chart !== 'pie'}
+			{#if g.grid}<path class="axis grid" d={g.grid} />{/if}
+			{#each g.labels as l}<text x={l.x} y={l.y} text-anchor={l.anchor} font-size={g.FONT}
+					>{l.t}</text
+				>{/each}
+			{#if !['pie', 'radar', 'radial'].includes(chart.chart)}
 				<line class="axis" x1={g.L} y1={g.base} x2={g.W - g.R} y2={g.base} />
 				{#each g.yLabels as l}<text x={g.L - 3} y={l.y} text-anchor="end" font-size={g.FONT}
 						>{l.t}</text
@@ -218,6 +223,9 @@
 	}
 	.axis {
 		stroke: var(--glass-brd);
+	}
+	.grid {
+		fill: none;
 	}
 	polyline {
 		fill: none;

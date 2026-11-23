@@ -1,7 +1,7 @@
 // A chart's props -> every mark and label in a W x W/2 box. Pure, so node tests reach it.
 import type { Component } from '../wire';
 import { band, linear, ticks, timeTicks, type Tick } from './scale';
-import { arcPath, areaPath, pieAngles, stack, type Pt } from './shape';
+import { arcPath, areaPath, linePath, pieAngles, ringPath, stack, type Pt } from './shape';
 import { day, LOCALE } from '../fmt';
 import { tip } from './tooltip';
 import type { Zoom } from './zoom';
@@ -35,6 +35,10 @@ export type Layout = {
 	base: number;
 	xLabels: { t: string; x: number }[];
 	yLabels: { t: string; y: number }[];
+	/** a radar's and a radial's own labels, placed where they belong */
+	labels: { t: string; x: number; y: number; anchor: 'start' | 'middle' | 'end' }[];
+	/** a radar's rings and spokes */
+	grid?: string;
 	series: Drawn[];
 	legend: { name: string; colour: string }[];
 	zoomable: boolean;
@@ -68,7 +72,7 @@ export function layout(chart: Chart, W: number, zoom: Zoom, locale = LOCALE): La
 	const empty = pts.length === 0;
 	const colourOf = (k: number) => COLOURS[k % COLOURS.length];
 	const legend =
-		chart.chart === 'pie'
+		chart.chart === 'pie' || chart.chart === 'radial'
 			? (chart.series[0]?.points ?? []).map(([x], i) => ({ name: x, colour: colourOf(i) }))
 			: chart.series.map((s, k) => ({ name: s.name, colour: colourOf(k) }));
 	const out = {
@@ -82,6 +86,7 @@ export function layout(chart: Chart, W: number, zoom: Zoom, locale = LOCALE): La
 		empty,
 		xLabels: [],
 		yLabels: [],
+		labels: [],
 		series: [],
 		base: H - B,
 		L: GAP,
@@ -103,6 +108,11 @@ export function layout(chart: Chart, W: number, zoom: Zoom, locale = LOCALE): La
 		}));
 		return { ...out, series: [{ name: s.name, colour: colourOf(0), marks }] };
 	}
+
+	if (chart.chart === 'radar') return { ...out, ...radar(chart, W, H, colourOf, locale) };
+	if (chart.chart === 'radial') return { ...out, ...radial(chart, W, H, colourOf, locale) };
+	if (chart.chart === 'horizontal_bar')
+		return { ...out, ...horizontal(chart, W, H, colourOf, locale) };
 
 	// x: a number or a time is placed by its value; a category (and every bar) by its order.
 	const value = chart.x === 'time' ? (x: string) => Date.parse(x) : (x: string) => Number(x);
@@ -208,4 +218,120 @@ export function layout(chart: Chart, W: number, zoom: Zoom, locale = LOCALE): La
 		return drawn;
 	});
 	return { ...out, L, R, base: yr(0), xLabels, yLabels, series };
+}
+
+type Colour = (k: number) => string;
+
+/** One closed shape per series over spokes (every series has the same x, renderers.rs), 3 rings of the scale. */
+function radar(chart: Chart, W: number, H: number, colourOf: Colour, locale: string) {
+	const xs = chart.series[0].points.map(([x]) => x);
+	const cx = W / 2,
+		cy = H / 2,
+		R = (H - 2 * T) / 2 - FONT / 2;
+	const hi = Math.max(0, ...chart.series.flatMap((s) => s.points.map(([, v]) => v))) || 1;
+	const ang = (i: number) => (i / xs.length) * 2 * Math.PI;
+	const pt = (i: number, r: number): Pt => [
+		r1(cx + r * Math.sin(ang(i))),
+		r1(cy - r * Math.cos(ang(i)))
+	];
+	const ring = (r: number) => linePath(xs.map((_, i) => pt(i, r))) + 'Z';
+	const grid =
+		[1 / 3, 2 / 3, 1].map((f) => ring(R * f)).join('') +
+		xs.map((_, i) => `M${r1(cx)},${r1(cy)}L${pt(i, R).join(',')}`).join('');
+	const labels: Layout['labels'] = xs.map((x, i) => {
+		const sin = Math.sin(ang(i));
+		const anchor = sin > 0.1 ? 'start' : sin < -0.1 ? 'end' : 'middle';
+		const [lx, ly] = pt(i, R + 4);
+		const room = anchor === 'start' ? W - lx : anchor === 'end' ? lx : 2 * Math.min(lx, W - lx);
+		return {
+			t: clip(day(x, locale) ?? x, Math.floor(room / GLYPH)),
+			x: lx,
+			y: r1(ly + FONT / 3),
+			anchor
+		};
+	});
+	labels.push({ t: fmt(hi, locale), x: r1(cx + 2), y: r1(cy - R + FONT), anchor: 'start' });
+	const series: Drawn[] = chart.series.map((s, k) => {
+		const colour = colourOf(k);
+		const at = s.points.map(([, v], i) => pt(i, (R * v) / hi));
+		const marks = s.points.map(([x, v], i) => ({
+			id: `${k}:${i}`,
+			tip: tip(s.name, x, v, locale),
+			colour,
+			cx: at[i][0],
+			cy: at[i][1]
+		}));
+		return { name: s.name, colour, marks, area: linePath(at) + 'Z' };
+	});
+	return { labels, grid, series };
+}
+
+/** One series as concentric rings, outermost first; the largest value spans three quarters of a turn. */
+function radial(chart: Chart, W: number, H: number, colourOf: Colour, locale: string) {
+	const s = chart.series[0];
+	const cx = W / 2,
+		cy = H / 2,
+		R = (H - 2 * T) / 2,
+		w = (R * 0.75) / s.points.length;
+	const hi = Math.max(0, ...s.points.map(([, v]) => v)) || 1;
+	const marks = s.points.map(([x, v], i) => ({
+		id: `0:${i}`,
+		tip: tip(s.name, x, v, locale),
+		colour: colourOf(i),
+		d: ringPath(r1(cx), r1(cy), r1(R - i * w - w * 0.8), r1(R - i * w), 0, (v / hi) * 1.5 * Math.PI)
+	}));
+	// The empty quarter left of 12 o'clock holds each ring's name, when a ring is tall enough for a line.
+	const labels: Layout['labels'] =
+		w < FONT
+			? []
+			: s.points.map(([x], i) => ({
+					t: clip(day(x, locale) ?? x, Math.floor((cx - 3) / GLYPH)),
+					x: r1(cx - 3),
+					y: r1(cy - (R - i * w - w * 0.4) + FONT / 3),
+					anchor: 'end' as const
+				}));
+	return { labels, series: [{ name: s.name, colour: colourOf(0), marks }] };
+}
+
+/** Bars along x from 0, one band per label down the side; a number x is placed in its order. */
+function horizontal(chart: Chart, W: number, H: number, colourOf: Colour, locale: string) {
+	const pts = chart.series.flatMap((s) => s.points);
+	const xs = [...new Set(pts.map(([x]) => x))];
+	if (chart.x === 'number') xs.sort((a, b) => Number(a) - Number(b));
+	const vals = pts.map(([, v]) => v);
+	const lo = Math.min(0, ...vals);
+	const hi = Math.max(0, ...vals) === lo ? lo + 1 : Math.max(0, ...vals);
+	const name = (x: string) => day(x, locale) ?? x;
+	const L = r1(Math.min(Math.max(...xs.map((x) => name(x).length)), 24) * GLYPH + 2 * GAP);
+	const R = GAP;
+	const x = linear(lo, hi, L, W - R);
+	const bnd = band(xs.length, T, H - B);
+	const step = Math.ceil((xs.length * FONT * 1.2) / (H - B - T));
+	const room = Math.max(Math.floor((L - 2 * GAP) / GLYPH), 1);
+	const yLabels = xs.flatMap((t, j) =>
+		j % step ? [] : [{ t: clip(name(t), room), y: r1(bnd.mid(j) + FONT / 3) }]
+	);
+	const xLabels = [...new Set([lo, 0, hi])].map((v) => {
+		const t = fmt(v, locale),
+			half = (t.length * GLYPH) / 2;
+		return { t, x: r1(Math.min(Math.max(x(v), half), W - half)) };
+	});
+	const h = (bnd.step * 0.8) / chart.series.length;
+	const series: Drawn[] = chart.series.map((s, k) => {
+		const colour = colourOf(k);
+		const marks = s.points.map(([t, v], i) => {
+			const [a, b] = [x(Math.min(v, 0)), x(Math.max(v, 0))];
+			return {
+				id: `${k}:${i}`,
+				tip: tip(s.name, t, v, locale),
+				colour,
+				rx: r1(a),
+				ry: r1(bnd.at(xs.indexOf(t)) + bnd.step * 0.1 + k * h),
+				rw: r1(Math.max(b - a, 0.5)),
+				rh: r1(h)
+			};
+		});
+		return { name: s.name, colour, marks };
+	});
+	return { L, R, base: H - B, xLabels, yLabels, series };
 }

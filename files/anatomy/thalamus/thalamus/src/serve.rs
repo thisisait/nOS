@@ -909,9 +909,10 @@ pub const SHOW_SHAPE: &[(&str, &str)] = &[
     ("table", "{title?, columns[] <=12, rows[][] <=50, each row as long as columns}"),
     ("list", "{title?, ordered, items[{text, detail?, tone? ok|info|warn|bad, delta? added|removed|changed}] <=50}"),
     ("record", "{title?, fields[{key, value, delta? added|removed|changed, was?}] <=40}; was is the old value, only when changed"),
-    ("chart", "{title?, chart bar|stacked_bar|line|area|scatter|pie, x category|number|time, series[{name, points[[x, number]] <=60}] <=6}; \
-x is a string even for number (\"3\") or time (\"2026-10-13\" or \"2026-10-13T08:00:00Z\"); line, area and stacked_bar \
-series share the same x in order; scatter needs number or time x; pie is 1 series, values >= 0"),
+    ("chart", "{title?, chart bar|stacked_bar|line|area|scatter|pie|horizontal_bar|radar|radial, x category|number|time, series[{name, points[[x, number]] <=60}] <=6}; \
+x is a string even for number (\"3\") or time (\"2026-10-13\" or \"2026-10-13T08:00:00Z\"); line, area, stacked_bar and radar \
+series share the same x in order; scatter needs number or time x; horizontal_bar needs category or number x; pie and radial are 1 series; \
+radar and radial have <=12 x, values >= 0; pie values >= 0"),
     ("tree", "{title?, nodes[{label, note?, delta? added|removed|changed, children[]}]}, depth <=4, nodes <=100; \
 a child of an added or removed node is that too: leave its delta out"),
     ("timeline", "{title?, items[{when, title, note?, hi?, until?, lane?}] <=30}; when and until as dates \
@@ -934,7 +935,7 @@ pub const SHOW_ABOUT: &[(&str, &str)] = &[
     ("table", "Rows you already hold, when the person compares several things across the same fields."),
     ("list", "A short set of points, findings or options, one line each with an optional detail and tone."),
     ("record", "One thing's fields side by side, or what an action would change in it."),
-    ("chart", "Numbers compared across categories or over time; with source the thalamus draws a table's own totals."),
+    ("chart", "Numbers compared across categories or over time (horizontal_bar for long labels, radar for a profile, radial for shares); with source the thalamus draws a table's own totals."),
     ("tree", "A hierarchy such as an org chart, an outline or a breakdown, at most four levels deep."),
     ("timeline", "Events in time order, as dated points or spans on lanes."),
     ("graph", "Things and the links between them, when how they connect is the point."),
@@ -988,11 +989,12 @@ pub fn show_schema() -> Value {
             closed(&["fields"], json!({"title": title, "fields": {"type": "array", "maxItems": 40,
                 "items": closed(&["key", "value"], json!({"key": {"type": "string", "maxLength": 120}, "value": {}, "delta": delta,
                     "was": {"description": "the old value of a changed field; only with delta changed"}}))}}))),
-        branch("chart", "values plotted: {title?, chart bar|stacked_bar|line|area|scatter|pie, x category|number|time, \
-series[{name, points[[x, number]] <=60}] <=6}; x is always a string (\"3\", \"2026-10-13\"); line, area and stacked_bar series \
-share the same x in the same order; scatter needs number or time x; pie is one series of values >= 0",
+        branch("chart", "values plotted: {title?, chart bar|stacked_bar|line|area|scatter|pie|horizontal_bar|radar|radial, x category|number|time, \
+series[{name, points[[x, number]] <=60}] <=6}; x is always a string (\"3\", \"2026-10-13\"); line, area, stacked_bar and radar series \
+share the same x in the same order; scatter needs number or time x; horizontal_bar category or number x; pie and radial are one series; \
+radar and radial have at most 12 x and values >= 0; pie values >= 0",
             closed(&["chart", "x", "series"], json!({"title": title,
-                "chart": {"enum": ["bar", "stacked_bar", "line", "area", "scatter", "pie"]},
+                "chart": {"enum": ["bar", "stacked_bar", "line", "area", "scatter", "pie", "horizontal_bar", "radar", "radial"]},
                 "x": {"enum": ["category", "number", "time"], "description": "how to read every x string"},
                 "series": {"type": "array", "minItems": 1, "maxItems": 6, "items": closed(&["name", "points"], json!({
                     "name": {"type": "string", "maxLength": 120},
