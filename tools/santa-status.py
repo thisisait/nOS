@@ -74,9 +74,10 @@ def ni_default(name: str) -> list:
 
 
 def dev_trees() -> tuple[str, ...]:
-    """santa_dev_toolchain_trees from the config layers, under $HOME."""
+    """santa_dev_toolchain_trees + santa_habitat_trees (the owner's own apps) from the config layers, under $HOME."""
     home = str(pathlib.Path.home()).rstrip("/") + "/"
-    return tuple(home + str(t).lstrip("/") for t in ni_default("santa_dev_toolchain_trees"))
+    trees = ni_default("santa_dev_toolchain_trees") + ni_default("santa_habitat_trees")
+    return tuple(home + str(t).lstrip("/") for t in trees)
 
 
 def parse(line: str) -> dict | None:
@@ -180,7 +181,7 @@ def main() -> int:
         print(f"  {r['count']:>6}  {r['path']}  users={','.join(r['users'])} team={r['teamid'] or '-'} last={r['last']}")
     dev = report.get("dev_toolchain") or []
     if dev:
-        print(f"  dev toolchain (santa_dev_toolchain_trees, not red): "
+        print(f"  dev toolchain + habitat (santa_dev_toolchain_trees, santa_habitat_trees; not red): "
               + ", ".join(f"{d['path']} ×{d['count']}" for d in dev[:5]) + (" …" if len(dev) > 5 else ""))
     for d in report.get("denied", []):
         print(f"  DENY    {d['path']} ({d['reason']}) {d['ts']}")
