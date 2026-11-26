@@ -541,8 +541,8 @@ fi
 ARGS=(ansible-playbook main.yml)
 ARGS+=(${PASSTHRU[@]+"${PASSTHRU[@]}"})
 if [ -n "$REMOVE" ] && [ "$REMOVE" != "none" ]; then
-  ARGS+=(-e "remove=${REMOVE}")          # NEVER -e remove=none (would outrank
-fi                                       # the shim and neuter -e blank=true)
+  ARGS+=(-e "remove=${REMOVE}")          # none is the default: never emitted
+fi
 [ "$CONFIRM" -eq 1 ] && ARGS+=(-e confirm=true)
 if [ "$YES" -eq 1 ]; then
   ARGS+=(-e confirm=true -e assume_yes=true)

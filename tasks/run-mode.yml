@@ -1,67 +1,16 @@
 ---
 # ==============================================================================
-# RUN-MODE — remove/leave/confirm ladder (D1), compat shim (old→new),
-# fail-closed asserts (D2/R4), prefix D3 preflight, dry-run gate (D2).
+# RUN-MODE — remove/leave/confirm ladder (D1), fail-closed asserts (D2/R4),
+# prefix D3 preflight, dry-run gate (D2). The legacy switches are refused in
+# main.yml pre_tasks (retired 2026-11-23).
 # Imported from main.yml with tags: ['always'] at the position of the former
 # uninstall import + flush normalisation (both deleted).
 # ==============================================================================
 
-# ── 1. Compat shim (DEPRECATED vocabulary — delete after v0.10) ──────────────
-# Value-gated per switch, NEVER presence-gated: `-e blank=false` /
-# `-e flush=false` / `-e uninstall=false` match no `when:` and map to NOTHING
-# (R7 — pinned by G-2's false-valued rows).
-# Membership idiom, NOT `== 'true'`: today's read gate is `blank | bool`
-# (truthy: yes/y/1/True). A stricter shim would flip `-e blank=yes` from a
-# working blank into an unmapped var that still reaches X1's `blank | bool`
-# read and dies on the _blank_dirs assert. Same truthy set = parity.
-- name: "[Compat] blank=true → remove=data (DEPRECATED, remove after v0.10)"
-  ansible.builtin.set_fact:
-    remove: "data"
-    confirm: true
-    _nos_legacy_switch: "blank={{ blank }}"
-  when: blank | default(false) in [true, 'true', 'True', 'yes', 'y', '1', 1]
-  tags: ['always']
-
-- name: "[Compat] flush=true|deep → remove=data|deep (DEPRECATED)"
-  ansible.builtin.set_fact:
-    remove: "{{ 'deep' if flush | string | lower == 'deep' else 'data' }}"
-    confirm: true
-    _nos_legacy_switch: "flush={{ flush }}"
-  when: flush is defined and flush | string | lower in ['true', 'deep']
-  tags: ['always']
-
-# Legacy uninstall=true maps to the full ladder with leave, but with the R3
-# carve-out: today its end_play (was main.yml:1057) fired BEFORE the flush
-# import (:1169), so legacy uninstall never pruned images. _compat_uninstall
-# suppresses the deep phase for the legacy form only. confirm_uninstall passes
-# through harmlessly (nothing reads it — the mapping already sets confirm).
-# LOCKED DELTA (D2): bare uninstall=true was print-only; it now executes behind
-# the interactive gates. Old dry run: -e uninstall=true -e confirm=false
-# (an explicit extra-var outranks this set_fact).
-- name: "[Compat] uninstall=true → remove=all leave=true (no NEW image prune — R3)"
-  ansible.builtin.set_fact:
-    remove: "all"
-    leave: true
-    confirm: true
-    _compat_uninstall: true
-    _nos_legacy_switch: "uninstall=true"
-  when: uninstall | default(false) in [true, 'true', 'True', 'yes', 'y', '1', 1]
-  tags: ['always']
-
-# Extra-vars outrank set_fact. If an explicit -e remove= ALSO arrived and won,
-# the mapping above silently lost — "you asked to wipe and we didn't". FAIL.
-# (Agreeing mixes — e.g. -e blank=true -e remove=data — pass: the disjunct
-# holds either way.)
-- name: "[Compat] Refuse mixed old+new vocabulary that disagrees"
-  ansible.builtin.assert:
-    that:
-      - (_nos_legacy_switch is not defined)
-        or (remove | default('none') in ['data', 'deep', 'all'])
-    fail_msg: >-
-      Legacy switch {{ _nos_legacy_switch | default('?') }} was overridden by an
-      explicit -e remove= extra-var. Use ONE vocabulary per invocation.
-  tags: ['always']
-
+# ── 1. Retired vocabulary ────────────────────────────────────────────────────
+# blank=/flush=/uninstall= were retired 2026-11-23: main.yml's FIRST pre_task
+# refuses a truthy one before anything touches the host. What stays here is the
+# guard on the derived `blank` fact, which an explicit `-e blank=false` shadows.
 # FALSE direction (trace M4): `-e blank=false -e remove=data -e confirm=true`
 # — the extra-var blank=false outranks the DERIVED blank fact, X1's
 # `blank | bool` gate reads False, and a CONFIRMED removal completes green
@@ -70,7 +19,7 @@
 # flush/uninstall extra-vars shadow no execution gate. ansible-bridge.sh's
 # hardcoded `-e blank=false` cannot trip this: the bridge always
 # tag-restricts and never passes remove=, so remove=none (or R4) applies.
-- name: "[Compat] Refuse explicit falsy blank mixed with a removal level"
+- name: "[Run-mode] Refuse explicit falsy blank mixed with a removal level"
   ansible.builtin.assert:
     that:
       - (remove | default('none') not in ['data', 'deep', 'all'])
@@ -80,15 +29,6 @@
       -e blank={{ blank | default('?') }} together with remove={{ remove }}
       would shadow the derived execution gate (X1 reads `blank`) and skip the
       wipe. Drop the legacy -e blank= var.
-  tags: ['always']
-
-- name: "[Compat] Deprecation notice (once per play)"
-  ansible.builtin.debug:
-    msg: >-
-      {{ _nos_legacy_switch }} is deprecated — use
-      `nos --remove=... [--confirm|-y] [--leave]`.
-      Mapping applied: remove={{ remove }} leave={{ leave | default(false) }}.
-  when: _nos_legacy_switch is defined
   tags: ['always']
 
 # ── 2. UNCONDITIONAL derivation (R2) — never gated on old-switch presence ────
@@ -101,14 +41,13 @@
     nos_confirmed:     "{{ confirm | default(false) in [true, 'true', 'True', 'yes', 'y', '1', 1] }}"
     nos_assume_yes:    "{{ assume_yes | default(false) in [true, 'true', 'True', 'yes', 'y', '1', 1] }}"
     nos_leaving:       "{{ leave | default(false) in [true, 'true', 'True', 'yes', 'y', '1', 1] }}"
-    # ── legacy derivation (R2): the transition-window reads of `blank` /
+    # ── internal facts (R2): the reads of `blank` /
     # `_flush_deep` (main.yml secrets regen + banner; blank-reset.yml box;
     # roles/pazny.postgresql/tasks/post.yml;
     # tasks/stacks/docker-external-mount-preflight.yml) keep working
     # without per-site rewrites. NEVER gate this task on old-switch presence.
     blank:       "{{ remove | default('none') in ['data', 'deep', 'all'] }}"
-    _flush_deep: "{{ (remove | default('none') in ['deep', 'all'])
-                     and not (_compat_uninstall | default(false)) }}"
+    _flush_deep: "{{ remove | default('none') in ['deep', 'all'] }}"
   tags: ['always']
 
 # ── 3. Fail-closed asserts (D2 / R4) ─────────────────────────────────────────

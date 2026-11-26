@@ -22,7 +22,7 @@
       Firefly III Laravel crashes at startup if APP_KEY is not exactly 32 bytes.
 
       Oprava — zvol jeden z:
-        1. First run with -e blank=true (main.yml generates a valid key — destructive group)
+        1. First run with nos --remove=data --confirm (main.yml generates a valid key — destructive group)
         2. Set your own in credentials.yml:
              firefly_app_key: "base64:$(openssl rand -base64 32)"
         3. Manually run: openssl rand -base64 32 | sed 's|^|base64:|'

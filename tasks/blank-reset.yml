@@ -2,7 +2,7 @@
 # ==============================================================================
 # BLANK RESET - clean reinstall of all services
 #
-# Run: ansible-playbook main.yml -K -e blank=true
+# Run: nos --remove=data --confirm (reached only through tasks/run-mode.yml)
 #
 # What gets DELETED:
 #   - Docker containers, volumes, compose files

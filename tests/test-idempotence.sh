@@ -68,13 +68,13 @@ check_gitea() {
 # ── Test A: blank + prefix rotation ─────────────────────────────────────────
 info "TEST A — blank=true with prefix rotation"
 info "1/3 Run 1: blank + prefix='${PREFIX1}'"
-echo -e "${PREFIX1}\n" | ansible-playbook main.yml -K -e blank=true
+echo -e "${PREFIX1}\n" | ansible-playbook main.yml -K -e remove=data -e confirm=true
 check_grafana "${PREFIX1}_pw_grafana" 200
 check_authentik "${PREFIX1}_pw_authentik_admin" 200
 check_gitea "${PREFIX1}_pw_gitea" 200
 
 info "2/3 Run 2: blank + prefix='${PREFIX2}'"
-echo -e "${PREFIX2}\n" | ansible-playbook main.yml -K -e blank=true
+echo -e "${PREFIX2}\n" | ansible-playbook main.yml -K -e remove=data -e confirm=true
 check_grafana "${PREFIX1}_pw_grafana" 401
 check_grafana "${PREFIX2}_pw_grafana" 200
 check_authentik "${PREFIX2}_pw_authentik_admin" 200

@@ -63,7 +63,7 @@ Tier 3 (user) — `nos-users`, `nos-managers`, `nos-admins`.
 
 Miniflux CLI's `-reset-password` is interactive (`term.ReadPassword` only accepts `/dev/tty`), and the HTTP API requires an existing API key or Basic auth with the *current* password — so there's no clean idempotent reconverge path from Ansible. Behavior:
 
-- **Blank run** (`-e blank=true`): `CREATE_ADMIN=1` seeds the admin with the current `miniflux_admin_password` at first start. OK.
+- **Blank run** (`nos --remove=data --confirm`): `CREATE_ADMIN=1` seeds the admin with the current `miniflux_admin_password` at first start. OK.
 - **Non-blank run, prefix rotation**: the admin password in Postgres does NOT drift to the new prefix. OIDC login keeps working (users are independent). If you need the fallback admin password reset, either do it in the UI (Settings → Change password) or bump with blank.
 
 OIDC users are always created on first login (`OAUTH2_USER_CREATION=1`).

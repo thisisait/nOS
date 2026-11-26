@@ -9,7 +9,7 @@
   # template-visible sudo (homebrew_cask, askpass) share a single source.
   # Run:
   #   ansible-playbook main.yml                  # full install (prompts for password)
-  #   ansible-playbook main.yml -e blank=true    # clean reinstall (also prompts)
+  #   ansible-playbook main.yml -e remove=data -e confirm=true   # clean reinstall (nos --remove=data --confirm)
   # Press Enter at the prompt for read-only / dry-run checks:
   #   ansible-playbook main.yml --tags preflight --check
   # but any sudo task (dnsmasq, /etc/resolver, system-services) will then fail.
@@ -99,8 +99,25 @@
     wing_events_hmac_secret: "{{ wing_events_hmac_secret | default(bone_secret | default(global_password_prefix + '_pw_bone')) }}"
 
   pre_tasks:
+    # ── Retired removal switches (operator 2026-11-23) — FIRST, before any write ──
+    # blank=/flush=/uninstall= no longer map to remove=: a truthy one stops the run and names
+    # its replacement. Value-gated on Ansible's own truthy set, case-folded (`blank | bool` reads
+    # -e blank=on as true too), so -e blank=false still means nothing.
+    - name: "[Run-mode] Refuse the retired removal switches"
+      ansible.builtin.fail:
+        msg: "Retired, nothing was changed: {{ _nos_retired | join('; ') }}"
+      vars:
+        _nos_truthy: ['true', 'yes', 'y', 'on', 't', '1', '1.0']
+        _nos_retired: >-
+          {{ (['blank=' ~ blank ~ ' -> nos --remove=data --confirm'] if blank | default(false) | string | lower in _nos_truthy else [])
+             + (['flush=' ~ flush ~ ' -> nos --remove=' ~ ('deep' if flush | string | lower == 'deep' else 'data') ~ ' --confirm']
+                if flush is defined and flush | string | lower in ['true', 'deep'] else [])
+             + (['uninstall=' ~ uninstall ~ ' -> nos --remove=all --leave --confirm'] if uninstall | default(false) | string | lower in _nos_truthy else []) }}
+      when: _nos_retired | length > 0
+      tags: ['always']
+
     # ── Is this checkout running the code you think it is? ────────────────
-    # FIRST, because it is the cheapest check in the playbook and the one
+    # FIRST (after the retired-switch refusal), because it is the cheapest check and the one
     # whose failure is otherwise invisible: a converge from a stale checkout
     # succeeds at running the wrong code. Cost one hour on 2026-08-05.
     - import_tasks: tasks/preflight-checkout-current.yml
@@ -122,8 +139,7 @@
     - name: "[Run-mode] Is this a removal dry run? (inventory only — skip the host roles)"
       ansible.builtin.set_fact:
         nos_dry_removal: >-
-          {{ (remove | default('none') in ['data', 'deep', 'all']
-              or blank | default(false) in [true, 'true', 'True', 'yes', 'y', '1', 1])
+          {{ remove | default('none') in ['data', 'deep', 'all']
              and confirm | default(false) not in [true, 'true', 'True', 'yes', 'y', '1', 1]
              and assume_yes | default(false) not in [true, 'true', 'True', 'yes', 'y', '1', 1] }}
       tags: ['always']
@@ -139,7 +155,7 @@
       changed_when: false
       failed_when: false
       when: &nos_yes_removal
-        - remove | default('none') in ['data', 'deep', 'all'] or blank | default(false) in [true, 'true', 'True', 'yes', 'y', '1', 1]
+        - remove | default('none') in ['data', 'deep', 'all']
         - assume_yes | default(false) in [true, 'true', 'True', 'yes', 'y', '1', 1]
       tags: ['always']
     - name: "[Run-mode] Refuse non-interactive removal without a sudo path (D4)"
@@ -1454,13 +1470,12 @@
       tags: ['coexist-copy-data', 'never']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # RUN-MODE — remove=none|data|deep|all ladder + confirm dry-run gate +
-    # compat shim (blank/flush/uninstall → remove/leave/confirm; delete the
-    # shim after v0.10). Fail-closed: off-allowlist remove, tag-restricted
+    # RUN-MODE — remove=none|data|deep|all ladder + confirm dry-run gate
+    # (the legacy blank/flush/uninstall switches are refused in pre_tasks). Fail-closed: off-allowlist remove, tag-restricted
     # removal, bare leave, stale CLI, non-interactive changeme — all HARD FAIL.
     # See docs/nos-cli.md + tasks/run-mode.yml.
     # ──────────────────────────────────────────────────────────────────────────
-    - name: "[Run-mode] Shim + derivation + asserts + dry-run gate"
+    - name: "[Run-mode] Derivation + asserts + dry-run gate"
       ansible.builtin.import_tasks: tasks/run-mode.yml
       tags: ['always']
 
@@ -1813,7 +1828,7 @@
 
     # remove=all — user SOURCE + anatomy runtime removal (was uninstall.yml
     # step 2b). Only reachable confirmed (the dry-run gate ended the play
-    # otherwise). Legacy uninstall=true reaches this via the shim.
+    # otherwise).
     - import_tasks: tasks/remove-source.yml
       when: nos_remove_source
       tags: ['blank', 'reset']

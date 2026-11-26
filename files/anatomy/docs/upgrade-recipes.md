@@ -602,7 +602,7 @@ ansible-playbook main.yml -K --tags upgrade-rollback \
 
 If you have a spare Mac or a clean profile:
 
-1. `ansible-playbook main.yml -K -e blank=true` with the pre-upgrade service version
+1. `nos --remove=data --confirm` with the pre-upgrade service version
    pinned in `config.yml`.
 2. Populate the service with realistic data.
 3. Unpin the version, run the recipe.
