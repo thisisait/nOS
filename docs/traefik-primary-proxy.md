@@ -293,10 +293,10 @@ and exactly one forward (`WAN:443 → <mac>:8443`).
 - **`modern@file` on `websecure` is inert; the floor lives in `default`.** Routers
   carry `tls: {}`, and the entrypoint model applies only to a nil `tls`, so `:443`
   negotiates with the file provider's `default` option. Its `minVersion` renders
-  from `traefik_tls_min_version` (`config.d/30-edge.yml`, `VersionTLS13` since
+  from `traefik_tls_floor` (`config.d/30-edge.yml`, `VersionTLS13` since
   operator ruling 2026-11-23). `--tags traefik` or `verify` probes it with two
   handshakes on `127.0.0.1` (`roles/pazny.traefik/tasks/verify-tls.yml`). Way back
-  for an old client: `traefik_tls_min_version: "VersionTLS12"` in `config.yml`.
+  for an old client: `traefik_tls_floor: "VersionTLS12"` in `config.yml`.
 - **CA expiry:** Cloudflare's AOP CA expires on `2029-11-01`. The gate's
   `openssl -checkend 0` turns red once it has expired.
 

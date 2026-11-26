@@ -9,7 +9,7 @@
       - "{{ role_path }}/files/tls-floor-probe.sh"
       - "{{ traefik_https_port | default(443) }}"
       - "{{ authentik_domain if (install_authentik | default(false) | bool) else traefik_domain }}"
-      - "{{ traefik_tls_min_version | default('VersionTLS13') }}"
+      - "{{ 'VersionTLS12' if (traefik_tls_floor | default('')) == 'VersionTLS12' else 'VersionTLS13' }}"
   register: _traefik_tls_probe
   until: _traefik_tls_probe.rc == 0
   retries: 6

@@ -150,7 +150,7 @@ tls:
     # Every router without an option lands here (the entrypoint's modern@file
     # never reaches a router that has a tls block). The cipher list is TLS 1.2's.
     default:
-      minVersion: "{{ traefik_tls_min_version | default('VersionTLS13') }}"
+      minVersion: "{{ 'VersionTLS12' if (traefik_tls_floor | default('')) == 'VersionTLS12' else 'VersionTLS13' }}"  # anything else: 1.3
       cipherSuites:
         - "TLS_AES_128_GCM_SHA256"
         - "TLS_AES_256_GCM_SHA384"

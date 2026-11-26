@@ -104,7 +104,7 @@ traefik_origin_pull_port: 8443
 # The TLS floor of every :443 router that names no option (tls.options.default):
 # the entrypoint's modern@file never applies, routers carry their own tls block.
 # Way back for an old client: "VersionTLS12" in config.yml, then nos --tags traefik.
-traefik_tls_min_version: "VersionTLS13"
+traefik_tls_floor: "VersionTLS13"
 traefik_domain: "traefik{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
 traefik_log_level: "INFO"               # DEBUG / INFO / WARN / ERROR
 

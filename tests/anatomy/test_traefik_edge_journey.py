@@ -330,9 +330,9 @@ def test_the_blanket_https_redirect_yields_to_it():
 # name another option. The effect is probed by roles/pazny.traefik/tasks/verify-tls.yml.
 
 def test_every_443_router_inherits_the_tls13_floor():
-    floor = yaml.safe_load((REPO / "config.d" / "30-edge.yml").read_text()).get("traefik_tls_min_version")
-    assert floor == "VersionTLS13", f"config.d/30-edge.yml traefik_tls_min_version is {floor!r}"
-    opts = _render_tpl(TRAEFIK_MW, traefik_tls_min_version=floor)["tls"]["options"]
+    floor = ni.default_config().get("traefik_tls_floor")
+    assert floor == "VersionTLS13", f"the default layers set traefik_tls_floor to {floor!r}"
+    opts = _render_tpl(TRAEFIK_MW, traefik_tls_floor=floor)["tls"]["options"]
     assert opts["default"]["minVersion"] == floor and opts["modern"]["minVersion"] == "VersionTLS13"
     sec = [r for r in _routers(install_face=True).values() if r.get("entryPoints") == ["websecure"]]
     assert sec and not [r for r in sec if (r.get("tls") or {}).get("options")], "a :443 router names its own TLS option"
