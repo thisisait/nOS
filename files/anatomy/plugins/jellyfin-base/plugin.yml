@@ -129,6 +129,12 @@ notification:
   on_low:      []
   on_info:     []
 
+# How the login page takes the estate brand (row estate-brand): tasks/post.yml already writes
+# the Authentik button into LoginDisclaimer; CustomCss sits in the same document.
+branding:
+  kind: api
+  hook: "POST /System/Configuration/branding: LoginDisclaimer + CustomCss (roles/pazny.jellyfin/tasks/post.yml)"
+
 e2e:
   probes:
     - name: oidc-start-reaches-authentik

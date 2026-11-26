@@ -170,6 +170,21 @@
                                                        "properties": {"FACE_E2E": {"enum": ["0", "1"]}}}}}}
       }
     },
+    "branding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "hook"],
+      "description": "How the app takes the estate brand (row estate-brand): api = an HTTP call, env = container env, file = a rendered file or blueprint. Listed by tools/e2e-plan.py --branding; absent and no branding_none = UNDECLARED.",
+      "properties": {
+        "kind": {"enum": ["api", "env", "file"]},
+        "hook": {"type": "string", "minLength": 10, "description": "Where the brand goes in, named so a reader can find it (endpoint, env var, template)."}
+      }
+    },
+    "branding_none": {
+      "type": "string",
+      "minLength": 20,
+      "description": "Why this app has no brand hook (no login page, or the upstream offers none). Listed as kind none."
+    },
     "e2e_none": {
       "type": "string",
       "minLength": 40,

@@ -169,6 +169,11 @@ ui-extension:
     description: "SSO / IdP — RBAC groups, OIDC providers, agent clients"
     health_check: "/-/health/ready/"
 
+# The first login page every SSO user sees (row estate-brand): the title from estate_brand_title.
+branding:
+  kind: file
+  hook: "blueprints/47-estate-brand.yaml.j2: authentik_brands.brand branding_title (logo: next slice)"
+
 gdpr:
   purpose: |
     Authentik is the platform identity provider and SSO authority. It
