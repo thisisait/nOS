@@ -1251,6 +1251,9 @@ post_provision_tasks: []
 # Each stack has its own docker-compose.yml in a subdirectory of stacks_dir.
 stacks_dir: "{{ ansible_facts['env']['HOME'] }}/stacks"
 stacks_shared_network: "shared_net"
+# Every compose project, in the order a removal stops them (blank-reset, import-state read it).
+# One list, so a new stack cannot be missed by `nos --remove` (test_blank_reset_confirmation_accuracy).
+nos_stacks: [iiab, observability, infra, apps, devops, b2b, voip, engineering, data]
 
 # ── Stack-up bring-up tuning (tasks/stacks/stack-up.yml) ─────────────────────
 # stack_up_parallel: true  → fire `docker compose up --wait` for every wave-2
