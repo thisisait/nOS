@@ -67,7 +67,15 @@ const HMAC_SECRET = () => env.WING_EVENTS_HMAC_SECRET || process.env.WING_EVENTS
  *  `emit_bone_event` documents — "never raises"). Unconfigured secret is a
  *  silent no-op, not an error — same degrade as every other optional wiring
  *  in this BFF (KEAP unconfigured, Wing token unset, …). */
-export async function postTableAudit(uid: string, slug: string, rowId: string): Promise<void> {
+/** True when a table write can be signed into the audit trail at all. */
+export const auditConfigured = (): boolean => !!HMAC_SECRET();
+
+export async function postTableAudit(
+	uid: string,
+	slug: string,
+	rowId: string,
+	extra: Record<string, unknown> = {}
+): Promise<void> {
 	const secret = HMAC_SECRET();
 	if (!secret) return;
 	const { body, headers } = signEvent(secret, {
@@ -76,7 +84,7 @@ export async function postTableAudit(uid: string, slug: string, rowId: string): 
 		run_id: `face-bff-${Date.now()}`,
 		source: 'face',
 		actor_id: uid,
-		result: { slug, row_id: rowId }
+		result: { ...extra, slug, row_id: rowId }
 	});
 	try {
 		await fetch(BONE_EVENTS_URL(), { method: 'POST', headers, body });

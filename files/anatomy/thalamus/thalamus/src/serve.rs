@@ -383,6 +383,8 @@ struct Watch {
 
 /// How long it is watched: the Runner's SESSION_WALL_CLOCK_S, past which Wing ends it anyway.
 const WATCH_BOUND_SECS: u64 = 3600;
+/// The table only the operator writes, through the face BFF (bff/tables/+server.ts).
+const VERDICTS: &str = "immune-verdicts";
 /// The most of a run's report the model hears, in bytes (Wing caps its body at the same).
 const REPORT_HEARD: usize = 4096;
 
@@ -2238,6 +2240,10 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         let a = self.ledger.lock().map_err(|_| none("ledger poisoned".into()))?.approved(decision).map_err(none)?;
         if a.actor != format!("user:{}", who.uid()) {
             return Err(none("the approval belongs to another person".into()));
+        }
+        // A verdict is the operator's face edit, never an Iris card or form (row immune-verdicts-write-path).
+        if a.table == VERDICTS || a.lines.as_ref().is_some_and(|l| l.table == VERDICTS) {
+            return Err(none(format!("{VERDICTS} is written only by the operator's face edit; nothing written")));
         }
         match (a.op, a.row_id, a.lines) {
             (RowOp::Update, Some(row), _) => self.update(who, &a.table, &row, a.values, a.old).map(|r| vec![(a.table, r)]).map_err(none),

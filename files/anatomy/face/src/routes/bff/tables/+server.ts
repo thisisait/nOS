@@ -22,11 +22,11 @@ import {
 	keapWriteConfigured,
 	UpstreamError
 } from '$lib/server/upstream';
-import { canReadTable, canWriteTables, canViewAnatomy } from '$lib/security/tier';
+import { canReadTable, canWriteTables, canViewAnatomy, reachesTier } from '$lib/security/tier';
 import { BOOK_SCOPED, filterBookRows, mayWriteBookRow, type Row } from '$lib/security/bookScope';
 import { toTableSummaries, type TableSummary } from '$lib/tables/summary';
 import { narrowView, decorateRowRefs } from '$lib/tables/view';
-import { postTableAudit } from '$lib/server/audit';
+import { auditConfigured, postTableAudit } from '$lib/server/audit';
 import type { DataTable, DataTableRow, ColumnSpec, Identity } from '$lib/contracts';
 import { FACE_LAYOUTS, FACE_WALLPAPERS, FACE_CONTROLS, FACE_DOCK } from '$lib/server/defaults';
 
@@ -34,6 +34,11 @@ import { FACE_LAYOUTS, FACE_WALLPAPERS, FACE_CONTROLS, FACE_DOCK } from '$lib/se
 // unreachable) live in `repoDefaults`/`FALLBACK_COLUMNS` below; any other valid
 // slug is served live-from-KEAP-only (empty on failure).
 const SLUG_RE = /^[a-z0-9][a-z0-9._-]{0,127}$/;
+
+// Row immune-verdicts-write-path: a verdict is the operator's (Tier 1) face edit, `why` <= 300
+// characters, and its audit event names who, cell and verdict, never the why text.
+const VERDICTS = 'immune-verdicts';
+const VERDICT_WHY_MAX = 300;
 
 /** Repo-default column specs per config table — the editor's fallback shape when
  *  KEAP's table def is unreachable (also the shape the seeder authored). */
@@ -361,6 +366,18 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	try {
 		if (body.op === 'upsertRow') {
 			if (!body.row || typeof body.row !== 'object') throw error(400, 'row object required');
+			const row = body.row as Record<string, unknown>;
+			if (slug === VERDICTS) {
+				if (!reachesTier(1, locals.identity.groups))
+					throw error(403, 'An immune verdict is written by the operator (Tier 1) only.');
+				if (String(row.why ?? '').length > VERDICT_WHY_MAX)
+					throw error(400, `why is capped at ${VERDICT_WHY_MAX} characters.`);
+				if (!auditConfigured())
+					throw error(
+						503,
+						'An immune verdict needs its audit trail (WING_EVENTS_HMAC_SECRET is unset).'
+					);
+			}
 			if (BOOK_SCOPED.has(slug)) {
 				const ctx = await scopeContext(locals.identity, slug);
 				const invoices = slug === 'invoice' ? ([body.row] as DataTableRow[]) : ctx.invoices;
@@ -385,7 +402,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			const rowId = String(
 				(body.row as Record<string, unknown>).slug ?? (body.row as Record<string, unknown>).id ?? ''
 			);
-			void postTableAudit(locals.identity.uid, slug, rowId);
+			const extra = slug === VERDICTS ? { cell: row.cell, verdict: row.verdict } : {};
+			void postTableAudit(locals.identity.uid, slug, rowId, extra);
 			return result;
 		}
 		if (body.op === 'createTable') {
