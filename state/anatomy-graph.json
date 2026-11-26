@@ -8686,7 +8686,7 @@
       "from": "skill:roadmap-integrate",
       "to": "doctrine:ssot/doctrine/gates.md#7",
       "kind": "governed_by",
-      "via": "cited at .claude/skills/roadmap-integrate/SKILL.md:32",
+      "via": "cited at .claude/skills/roadmap-integrate/SKILL.md:37",
       "citations": 2,
       "derived": "doctrine-cite",
       "evidence": "derived"
