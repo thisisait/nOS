@@ -324,6 +324,20 @@ def test_the_blanket_https_redirect_yields_to_it():
     assert blanket < _routers(install_face=True)["bare-ip-to-face-web"]["priority"]
 
 
+# ── the :443 TLS floor (operator 2026-11-23, tls-modern-never-applied (b)) ──
+# modern@file on the entrypoint never reached a router (each has `tls: {}`), so
+# :443 took `default` at TLS 1.2. The floor lives in `default`; routers must not
+# name another option. The effect is probed by roles/pazny.traefik/tasks/verify-tls.yml.
+
+def test_every_443_router_inherits_the_tls13_floor():
+    floor = yaml.safe_load((REPO / "config.d" / "30-edge.yml").read_text()).get("traefik_tls_min_version")
+    assert floor == "VersionTLS13", f"config.d/30-edge.yml traefik_tls_min_version is {floor!r}"
+    opts = _render_tpl(TRAEFIK_MW, traefik_tls_min_version=floor)["tls"]["options"]
+    assert opts["default"]["minVersion"] == floor and opts["modern"]["minVersion"] == "VersionTLS13"
+    sec = [r for r in _routers(install_face=True).values() if r.get("entryPoints") == ["websecure"]]
+    assert sec and not [r for r in sec if (r.get("tls") or {}).get("options")], "a :443 router names its own TLS option"
+
+
 # ── test_edge_auth_vocabulary_is_closed ─────────────────────────────────────
 # services.yml.j2 gates on `_auth == 'proxy'`; every other value, a typo
 # included, renders ungated. 2026-08-11 REM-192's fix nearly shipped as
