@@ -4,7 +4,7 @@
 # Active when this checkout runs:
 #     git config core.hooksPath tools/git-hooks
 #
-# Two rules:
+# Three rules (and the release-tag CI gate below):
 #   1. `pzny` branch is local-cross-feature; it may push ONLY to a
 #      remote named `gitea` (the operator's local Gitea mirror, which
 #      drives the Woodpecker auto-deploy pipeline). Pushing pzny to
@@ -13,6 +13,8 @@
 #      moves only via PR merge on the remote side (branch protection on
 #      GitHub + Gitea enforces it server-side; this hook is the local
 #      belt to that server-side suspenders).
+#   3. A push to origin dev/master without NOS_RAW_PUSH=1 is refused:
+#      tools/nos-push sets it, so the mirror sync and push score run.
 #
 # Bypass for emergencies: `git push --no-verify` skips this hook (don't
 # use it casually — it bypasses every local pre-push check).
@@ -152,6 +154,23 @@ else:
 			fi
 			;;
 	esac
+
+	# A push to origin dev/master goes through tools/nos-push (mirror sync + push score):
+	# raw pushes left the Gitea dev mirror 94 commits stale (2026-10-07). nos-push sets
+	# NOS_RAW_PUSH=1 itself. Ruled (a) by the operator 2026-11-23; feature branches pass.
+	if [[ "$remote" == "origin" && ( "$remote_ref" == refs/heads/dev || "$remote_ref" == refs/heads/master ) \
+		&& "${NOS_RAW_PUSH:-}" != "1" ]]; then
+		cat >&2 <<-EOF
+			✖ pre-push refused: a raw push to origin ${remote_ref#refs/heads/} skips the mirror sync and the push score.
+
+			Push with tools/nos-push (or \`nos push\`) instead, e.g.:
+			    tools/nos-push origin ${remote_ref#refs/heads/}
+
+			Loud bypass (no mirror sync, no score):
+			    NOS_RAW_PUSH=1 git push origin ${remote_ref#refs/heads/}
+		EOF
+		exit 1
+	fi
 done
 
 exit 0

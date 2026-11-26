@@ -25,7 +25,10 @@ Worktrees branch off `dev` by default.
 The `master` protection is **not** a workflow file — it is a GitHub repo-settings
 operation a fresh operator (or anyone forking nOS) MUST configure once, or direct pushes
 to `master` silently succeed and the PR gate is bypassed. `tools/git-hooks/pre-push` is a
-client-side backstop, not a substitute for the server-side rule.
+client-side backstop, not a substitute for the server-side rule. Install it by hand, once per
+checkout: `git config core.hooksPath tools/git-hooks` (no converge sets it). It also refuses a
+raw `git push` to origin `dev`/`master`: push with `tools/nos-push`, which syncs the mirrors,
+scores the push and sets `NOS_RAW_PUSH=1`; the loud bypass is `NOS_RAW_PUSH=1 git push ...`.
 
 **GitHub — Repo Settings → Branches → add a rule for `master`:**
 
@@ -80,7 +83,7 @@ gh api repos/:owner/:repo/actions/secrets --jq '.secrets[].name'   # expect both
    rebased"). `squash` is disabled and `required_linear_history` forbids a merge commit,
    so no PR merge method works at that size. When `merge-base(master, dev) == master
    tip` — always true in this flow — a rebase-merge IS a fast-forward, so
-   `git push origin origin/dev:master` produces identical history. Verify the merge-base
+   `tools/nos-push origin origin/dev:master` produces identical history. Verify the merge-base
    equality first.
 2. **Commits are unsigned while the ruleset requires signatures.** The admin bypass logs
    the violations and lets them through, so the signature rule has never been met.

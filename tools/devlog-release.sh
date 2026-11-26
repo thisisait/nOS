@@ -60,12 +60,12 @@ cat <<EOF
 ALL PRE-FLIGHT CHECKS GREEN. Remaining release checklist (operator-gated):
 
   1. tools/ci-local.sh                 # frozen 1:1 wet-test gate
-  2. git push origin dev
+  2. tools/nos-push origin dev
   3. gh pr create --base master --head dev ...
   4. (wait for green Integration ubuntu-24.04 on the PR)
   5. gh pr merge <N> --rebase --admin  # sole-operator admin bypass
   6. git checkout dev && git fetch && git reset --hard origin/master
-     git push --force-with-lease origin dev
+     tools/nos-push --force-with-lease origin dev
   7. git tag $VERSION master && git push origin $VERSION
      # ↑ the tag push triggers .github/workflows/pages.yml → devlog publish
   8. gh release create $VERSION --notes-file <(...)
