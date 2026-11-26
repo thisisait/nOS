@@ -12,7 +12,7 @@
     "organism": 0,
     "habitat": 9,
     "sense": 90,
-    "limb": 136,
+    "limb": 137,
     "memory": 53,
     "law": 57,
     "reflex": 54,
@@ -846,6 +846,10 @@
       "kind": "effector"
     },
     "effector:loop-bench": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:loop-branch-guard": {
       "level": "limb",
       "kind": "effector"
     },
