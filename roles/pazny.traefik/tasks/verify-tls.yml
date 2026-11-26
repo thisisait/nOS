@@ -16,8 +16,10 @@
   delay: 5
   timeout: 60
   changed_when: false
-  check_mode: false
+  # --check renders nothing, so the floor it would set is not live yet.
+  when: not ansible_check_mode
 
 - name: "[pazny.traefik Verify] TLS floor result"
   ansible.builtin.debug:
     msg: "{{ _traefik_tls_probe.stdout }}"
+  when: not ansible_check_mode
