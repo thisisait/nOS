@@ -70,6 +70,7 @@
     src: dynamic/middlewares.yml.j2
     dest: "{{ traefik_dynamic_dir }}/middlewares.yml"
     mode: '0600'   # carries wing/face edge tokens + KEAP proxy secret
+  register: _traefik_dynamic_mw   # verify-tls.yml restarts on a change (VirtioFS: no file watch)
   # File provider is hot-watched, no restart needed.
 
 - name: "[pazny.traefik] Render dynamic TLS pairs"

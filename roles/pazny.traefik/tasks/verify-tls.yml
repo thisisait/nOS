@@ -2,6 +2,15 @@
 # The edge's TLS floor, read from a handshake rather than from the config that
 # declares it (modern@file was declared and never applied, 2026-10-02).
 # Retries cover the file provider picking up a fresh middlewares.yml.
+# The file provider watches conf.d, but a bind mount on VirtioFS sends no inotify (Authentik
+# blueprints, 2026-11-10), so a changed middlewares.yml (where the floor lives) is restarted in.
+- name: "[pazny.traefik Verify] Restart traefik when its dynamic middlewares changed"
+  ansible.builtin.command: "{{ docker_bin }} compose -f {{ stacks_dir }}/infra/docker-compose.yml -p infra restart traefik"
+  changed_when: true
+  when:
+    - not ansible_check_mode
+    - _traefik_dynamic_mw is defined and _traefik_dynamic_mw is changed
+
 - name: "[pazny.traefik Verify] TLS floor on :{{ traefik_https_port | default(443) }} (handshake probe)"
   ansible.builtin.command:
     argv:
@@ -16,6 +25,8 @@
   delay: 5
   timeout: 60
   changed_when: false
+  # rc 2 = UNKNOWN (could not probe): shown below, not red; rc 1 = the floor is measured wrong.
+  failed_when: _traefik_tls_probe.rc == 1
   # --check renders nothing, so the floor it would set is not live yet.
   when: not ansible_check_mode
 
