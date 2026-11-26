@@ -12,7 +12,9 @@ Absorbed (2026-11-08, roadmap gate-diet-role-journeys), one section each:
   test_backup_refuses_to_publish_an_empty_archive, test_a_sqlite_dump_survives_a_denied_host,
   test_a_good_dump_survives_the_next_backup, test_a_removal_without_a_survivor_stops,
   test_restore_dry_run_gathers_its_own_evidence, test_restore_templating.
-Every assert of those files survives here with the same inputs and expectations.
+Every assert of those files survives here with the same inputs and expectations, except
+two always-true ones removed 2026-11-26 (suite-prune): the bash pipefail self-check and
+the key-stem regex the test carried itself.
 """
 
 from __future__ import annotations
@@ -338,7 +340,7 @@ def test_nightly_set_is_not_only_the_keap_db():
 # Every `rc=$?` in backup.sh follows `dump | gzip | encrypt | aws s3 cp`; without
 # `set -o pipefail` it reads aws's status and a failed dump uploads empty, logged
 # OK. 2026-09-01 a review called pipefail missing while the snapshot gate's own
-# docstring said so; pinned here, behaviour and string both.
+# docstring said so; pinned here.
 
 def test_pipefail_is_set_before_any_pipeline_rc() -> None:
     body = _script()
@@ -352,21 +354,6 @@ def test_pipefail_is_set_before_any_pipeline_rc() -> None:
     assert m.start() < first_rc, (
         "`pipefail` is set AFTER the first `rc=$?`, so the reads above it are "
         "still the last command's status")
-
-
-def test_the_shell_actually_behaves_that_way() -> None:
-    """Assert the behaviour, not the string — the string is only a proxy for it."""
-    with_pf = subprocess.run(
-        ["bash", "-c", "set -u -o pipefail; false | gzip -c | cat >/dev/null; echo $?"],
-        capture_output=True, text=True, timeout=30).stdout.strip()
-    without = subprocess.run(
-        ["bash", "-c", "set -u; false | gzip -c | cat >/dev/null; echo $?"],
-        capture_output=True, text=True, timeout=30).stdout.strip()
-    assert with_pf == "1", f"pipefail did not propagate the failure: rc={with_pf!r}"
-    assert without == "0", (
-        f"a failing head-of-pipe reported rc={without!r} WITHOUT pipefail — if this "
-        "ever becomes non-zero the gate above is guarding something that no "
-        "longer matters, and should be re-read rather than trusted")
 
 
 def test_the_sibling_gate_does_not_still_deny_it() -> None:
@@ -851,20 +838,6 @@ def test_filename_parsing_strips_the_aws_columns():
         "does not unescape — the regex needs single backslashes."
     )
     assert not any("03:00" in o for o in out), f"time column survived: {out}"
-
-
-@pytest.mark.parametrize("name,stem", [
-    ("mariadb.sql.gz.enc", "mariadb"),
-    ("postgres.sql.gz.enc", "postgres"),
-    ("keap-db.gz.enc", "keap-db"),
-    ("dir-gitea.tar.gz.enc", "dir-gitea"),
-])
-def test_a_key_reduces_to_its_canonical_stem(name, stem):
-    """The plan bug: `.enc` and the compression extension must actually strip."""
-    plain = re.sub(r"\.enc$", "", name)
-    noext = re.sub(r"\.sql\.gz$|\.tar\.gz$|\.json\.gz$|\.json$|\.gz$", "", plain)
-    assert noext == stem, f"{name} reduced to {noext!r}, wanted {stem!r}"
-    assert not noext.endswith(".enc"), "the .enc suffix survived"
 
 
 def test_the_key_ring_is_joined_on_a_real_newline():
