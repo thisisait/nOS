@@ -13,18 +13,13 @@ import importlib.util
 import os
 import pathlib
 import re
-import shutil
 import socket
-import subprocess
 import tempfile
 
-import pytest
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 CRATE = REPO / "files/anatomy/thalamus/thalamus"
-needs_cargo_binding = pytest.mark.skipif(not shutil.which("cargo"), reason="cargo runs the resolver")
-needs_cargo_ledger = pytest.mark.skipif(not shutil.which("cargo"), reason="cargo runs the ledger writer")
 
 
 # ── test_thalamus_binding ───────────────────────────────────────────────────
@@ -65,20 +60,12 @@ def test_the_rust_cases_read_the_register_not_a_copy():
     assert not list(CRATE.rglob("llm-backends*.yml")), "a copied register drifts from the real one"
 
 
-@needs_cargo_binding
-def test_the_resolver_runs():
-    r = subprocess.run(["cargo", "test", "--quiet", "--manifest-path", str(CRATE / "Cargo.toml"),
-                        "--test", "binding"], capture_output=True, text=True, timeout=600, check=False)
-    assert r.returncode == 0, r.stdout + r.stderr
-    n = re.search(r"(\d+) passed", r.stdout)
-    assert n and int(n[1]) >= 13, r.stdout
-
-
 # ── test_thalamus_ledger_fields ─────────────────────────────────────────────
 # A function moved from AgentKit into the thalamus is compared row by row with
 # Wing's ledger: every column must exist in Wing's table by name and type, Wing's
 # required columns be filled, every event type be in the contract. Oracles are
-# Wing's SQL and event-types.yml, never a copied list; `cargo test ledger` runs too.
+# Wing's SQL and event-types.yml, never a copied list; `cargo test ledger` runs nightly
+# (test_thalamus_and_face_lanes_run.py).
 
 LEDGER = CRATE / "src/ledger.rs"
 WING_SQL = REPO / "files/anatomy/wing/db/schema-extensions.sql"
@@ -150,14 +137,6 @@ def test_every_event_type_is_in_the_contract():
 def test_a_planted_type_goes_red():
     _, unlisted = _unlisted(_rust().replace('=> "agent_message"', '=> "agent_chatter"', 1))
     assert unlisted == {"agent_chatter"}
-
-
-@needs_cargo_ledger
-def test_the_writer_runs():
-    r = subprocess.run(["cargo", "test", "--quiet", "--manifest-path", str(CRATE / "Cargo.toml"), "ledger"],
-                       capture_output=True, text=True, timeout=600, check=False)
-    assert r.returncode == 0, r.stdout + r.stderr
-    assert re.search(r"[1-9]\d* passed", r.stdout), r.stdout
 
 
 # ── test_thalamus_env_matches_plist ─────────────────────────────────────────

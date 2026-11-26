@@ -4,27 +4,23 @@ WHY. The layout is what the person laid out, and the thalamus holds it as theirs
 the decoder accepts past its caps (a 65th workspace, a widget narrower than 80 px, a spec
 with two keys, a parent cycle) would be saved and restored as if valid; one it refuses must
 be refused at the save, never held. A v2 file a person already has must load as v3, the same
-in Rust and in TypeScript, or one side would draw it elsewhere. This runs `cargo test
-workspace` in the contract crate, whose test decodes every fixture sample, re-encodes it to
-itself, refuses every `refused` sample and migrates every `migrated` v2 sample to its v3
-(genui I5h; canvas v3 2026-10-18). The decoder was the pupil's until it retired (2026-11-08);
-serve now checks every workspace_save with it (tests/serve.rs).
+in Rust and in TypeScript, or one side would draw it elsewhere. `cargo test workspace` in the
+contract crate (CI thalamus job; named nightly in test_thalamus_and_face_lanes_run.py) decodes
+every fixture sample, re-encodes it to itself, refuses every `refused` sample and migrates
+every `migrated` v2 sample to its v3 (genui I5h; canvas v3 2026-10-18). The decoder was the
+pupil's until it retired (2026-11-08); serve now checks every workspace_save with it
+(tests/serve.rs).
 """
 from __future__ import annotations
 
 import json
 import pathlib
-import re
-import shutil
-import subprocess
 
-import pytest
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 SPEC = REPO / "files/anatomy/contracts/workspace-layout.yml"
 FIXTURE = REPO / "files/anatomy/contracts/workspace-layout.fixture.json"
-CRATE = REPO / "files/anatomy/thalamus"
 # The cases the definition names; the fixture may hold more, never fewer.
 MUST_REFUSE = {"a 65th workspace", "a board on a workspace that is not its child", "a widget w: 79", "an unknown key", "a spec with two keys", "5 lens conditions",
                "a heading with a spec", "a parent that names no workspace", "a parent cycle", "nesting 7 deep"}
@@ -64,12 +60,3 @@ def test_the_fixture_migrates_v2_files_and_draws_every_kind():
     assert kinds == {"widget", "heading", "frame", "board"}, kinds
     spaces = [s for c in fx["samples"] for s in c["layout"]["workspaces"]]
     assert any("view" in s for s in spaces) and any("parent" in s for s in spaces), "no sample keeps a view or a parent"
-
-
-@pytest.mark.skipif(not shutil.which("cargo"), reason="cargo runs the contract's decoder")
-def test_the_contract_decodes_and_refuses_the_fixture():
-    r = subprocess.run(["cargo", "test", "--locked", "-p", "nos-contract", "workspace"],
-                       cwd=CRATE, capture_output=True, text=True, timeout=1800, check=False)
-    out = r.stdout + r.stderr
-    assert r.returncode == 0, out[-6000:]
-    assert re.search(r"workspace::\S*fixture\S* \.\.\. ok", out), "the fixture test did not run:\n" + out[-2000:]
