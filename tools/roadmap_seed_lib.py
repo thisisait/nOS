@@ -396,6 +396,17 @@ SPEC_PARTS = {
 }
 
 
+BUILDER = re.compile(r"^Builder:[ \t]*(\S.*)$", re.I | re.M)
+
+
+def not_loop_work(body: str | None) -> str | None:
+    """The row's last `Builder:` line when it names session or operator (operator 2026-11-23: the loop
+    never builds such a row, whatever its spec says); None when it says loop or there is no line."""
+    lines = BUILDER.findall(str(body or ""))
+    last = lines[-1].strip() if lines else ""
+    return f"Builder: {last}" if last.lower().startswith(("session", "operator")) else None
+
+
 def spec_ready(body: str | None) -> tuple[bool, list[str]]:
     """Does the row carry a READY SPEC (operator 2026-11-13: the loop builds only those)?
 
