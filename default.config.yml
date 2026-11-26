@@ -1691,7 +1691,7 @@ iiab_terminal_bin_path: "{{ homebrew_prefix }}/bin/iiab-terminal"
 # refuses ghcr blob storage (a Claude cloud session) flips this in
 # profiles/cloud-e2e.yml — docs/cloud-e2e.md §Registries.
 authentik_image: "ghcr.io/goauthentik/server"
-authentik_version: "2026.5.7"                      # REM-283: same-minor patch, five 2026-09-09 HIGH GHSAs
+authentik_version: "2026.5.9"                      # same-minor patch: 11 GHSAs (3 critical) fixed in 2026.5.9 (2026-11)
 infisical_version: "v0.162.19"   # synced to role default (cleared version-pin shadow) [swept v0.162.16 2026-08-11]
 vaultwarden_version: "1.37.5"            # REM-338: GHSA-x9cq + GHSA-9pjj; invalid env now stops startup (none of ours affected). Prior REM-291 1.37.4.
 
