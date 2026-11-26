@@ -83,7 +83,7 @@ outranks config.yml; `nos` names each toggle it overrides.
 | `none` | converge only (default; every ordinary run) |
 | `data` | today's blank scope: derived state (docker, dbs, service data, configs). SOURCE (`~/nos/tenants/**` user files) and images KEPT. |
 | `deep` | data + docker images/build cache + brew/npm/pip caches (today's `flush=deep` scope; `~/.ollama` still opt-in via `flush_ollama`) |
-| `all` | deep + user SOURCE: the full uninstall source set (`nos_data_root`, `~/.nos`, `~/bone`, `~/pulse`, `~/wing`, `~/keap`, hermes dirs, `~/.openclaw`, service registry). With `leave=false` this then REINSTALLS from zero. |
+| `all` | deep + user SOURCE: the full uninstall source set (`nos_data_root`, `~/.nos`, `~/bone`, `~/pulse`, `~/wing`, `~/keap`, `~/thalamus`, `~/receptor`, hermes dirs, `~/.openclaw`, service registry). With `leave=false` this then REINSTALLS from zero. |
 
 **A data-level removal touches only what nOS owns.** Every path `remove=data` would delete must lie
 under `nos_data_root`, `stacks_dir`, the external storage root (when configured) or a home declared in
