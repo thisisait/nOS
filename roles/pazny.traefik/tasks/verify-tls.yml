@@ -1,0 +1,23 @@
+---
+# The edge's TLS floor, read from a handshake rather than from the config that
+# declares it (modern@file was declared and never applied, 2026-10-02).
+# Retries cover the file provider picking up a fresh middlewares.yml.
+- name: "[pazny.traefik Verify] TLS floor on :{{ traefik_https_port | default(443) }} (handshake probe)"
+  ansible.builtin.command:
+    argv:
+      - bash
+      - "{{ role_path }}/files/tls-floor-probe.sh"
+      - "{{ traefik_https_port | default(443) }}"
+      - "{{ authentik_domain if (install_authentik | default(false) | bool) else traefik_domain }}"
+      - "{{ traefik_tls_min_version | default('VersionTLS13') }}"
+  register: _traefik_tls_probe
+  until: _traefik_tls_probe.rc == 0
+  retries: 6
+  delay: 5
+  timeout: 60
+  changed_when: false
+  check_mode: false
+
+- name: "[pazny.traefik Verify] TLS floor result"
+  ansible.builtin.debug:
+    msg: "{{ _traefik_tls_probe.stdout }}"

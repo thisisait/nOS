@@ -635,6 +635,18 @@
     _wait_stacks: ["infra"]
   when: _core_infra_enabled | bool
 
+# Traefik is up and healthy: does :443 hold the TLS floor the config declares?
+- name: "[Core] pazny.traefik verify (TLS floor handshake)"
+  ansible.builtin.include_role:
+    name: pazny.traefik
+    tasks_from: verify-tls.yml
+    apply:
+      tags: ['traefik', 'verify']
+  when:
+    - install_traefik | default(true) | bool
+    - _core_infra_enabled | bool
+  tags: ['traefik', 'verify']
+
 # ── Start OBSERVABILITY stack (DB and configs ready) ────────────────────────
 
 - name: "[Core] Start OBSERVABILITY stack (docker compose up -d)"
