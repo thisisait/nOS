@@ -80,6 +80,21 @@
   check_mode: false
   no_log: true
 
+# Success is read from the legs' own statuses, never implied by attempting them
+# (n8n hid a never-created owner behind failed_when: false for months, 2026-09-21).
+# A 204 proves both the admin token and the admin user.
+- name: "[pazny.influxdb Post] Admin credential must land (no silent green)"
+  ansible.builtin.assert:
+    that: _influx_pw_update.status | default(0) == 204
+    fail_msg: >-
+      InfluxDB admin password did not reconverge (user lookup {{ _influx_users.status | default('none') }},
+      update {{ _influx_pw_update.status | default('skipped') }}). A 401 means influxdb_admin_token is not
+      the token in the volume; Grafana's datasource uses the same token.
+  when:
+    - not ansible_check_mode
+    - _influxdb_container.stdout | default('') | length > 0
+    - _influxdb_health.status | default(0) == 200
+
 - name: "[pazny.influxdb Post] Show access info"
   ansible.builtin.debug:
     msg: |

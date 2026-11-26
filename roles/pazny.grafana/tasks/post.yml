@@ -64,3 +64,18 @@
   check_mode: false
   no_log: true
   notify: Restart grafana
+
+# Success is read from the legs' own statuses, never implied by attempting them
+# (n8n hid a never-created owner behind failed_when: false for months, 2026-09-21).
+- name: "[pazny.grafana Post] Admin credential must land (no silent green)"
+  ansible.builtin.assert:
+    that: >-
+      _grafana_pw_probe.status | default(0) == 200
+      or 'Admin password changed successfully' in (_grafana_pw_reset.stdout | default(''))
+    fail_msg: >-
+      Grafana admin password neither logs in nor was reset by grafana-cli
+      (probe {{ _grafana_pw_probe.status | default('none') }}, reset rc {{ _grafana_pw_reset.rc | default('skipped') }}).
+  when:
+    - not ansible_check_mode
+    - _grafana_container.stdout | default('') | length > 0
+    - _grafana_health.status | default(0) == 200

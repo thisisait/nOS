@@ -7,7 +7,7 @@
 #
 # After the startup wizard, /Startup/* answers 403 (10.11+: 401). Pro non-blank runy
 # reconverge password via AuthenticateUserByName -> POST /Users/{id}/Password
-# with previous_password_prefix for the OLD password. Degrades gracefully at DRIFT.
+# with previous_password_prefix for the OLD password. DRIFT fails the run (terminal assert).
 # ==============================================================================
 
 - name: "[pazny.jellyfin Post] Wait for API"
@@ -193,6 +193,23 @@
   changed_when: false
   failed_when: false
   no_log: true
+
+# Success is read from the legs' own statuses, never implied by attempting them
+# (n8n hid a never-created owner behind failed_when: false for months, 2026-09-21).
+- name: "[pazny.jellyfin Post] Admin credential must land (no silent green)"
+  ansible.builtin.assert:
+    that: >-
+      _jf_user.status | default(0) in [200, 204]
+      or _jf_auth_new.status | default(0) == 200
+      or _jf_pw_reset.status | default(0) in [200, 204]
+      or _jf_qc_auth.status | default(0) == 200
+    fail_msg: >-
+      Jellyfin admin is not provisioned: the startup user POST, the current-password login,
+      the previous-prefix reset and the Quick Connect login all failed
+      (startup read {{ _jf_startup.status | default('none') }}).
+  when:
+    - not ansible_check_mode
+    - _jf_ready.status | default(0) == 200
 
 - name: "[pazny.jellyfin Post] Read the server configuration"
   ansible.builtin.uri:

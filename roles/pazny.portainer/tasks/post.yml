@@ -306,6 +306,25 @@
     - _portainer_pw_drift | default(false) | bool
     - not (portainer_admin_auto_reset | default(false) | bool)
 
+# Success is read from the legs' own statuses, never implied by attempting them
+# (n8n hid a never-created owner behind failed_when: false for months, 2026-09-21).
+# OAuth active (AuthenticationMethod 3) holds: the local admin is break-glass only, as above.
+- name: "[pazny.portainer Post] Admin credential must land (no silent green)"
+  ansible.builtin.assert:
+    that: >-
+      _portainer_admin_create.status | default(0) == 200
+      or _portainer_auth_new.status | default(0) == 200
+      or _portainer_pw_reset.status | default(0) in [200, 204]
+      or _portainer_admin_reinit.status | default(0) == 200
+      or (_portainer_authmethod | default(0) | int) == 3
+    fail_msg: >-
+      Portainer admin is not provisioned: admin init, current-password login, the previous-prefix
+      reset and the drift heal all failed (admin check {{ _portainer_admin_check.status | default('none') }}).
+      See the DRIFT diagnostic above.
+  when:
+    - not ansible_check_mode
+    - _portainer_ready.status | default(0) in [200, 303]
+
 - name: "[pazny.portainer Post] Get auth token for admin (for OAuth2 config)"
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ portainer_port | default(9002) }}/api/auth"
