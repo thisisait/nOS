@@ -700,6 +700,27 @@ fn commit_without_a_decision_row_is_err() {
     assert_eq!(posts(&rig).len(), 1);
 }
 
+#[test]
+fn an_approved_verdict_write_is_refused_at_commit() {
+    // Row immune-verdicts-write-path: an Iris card or a form never writes a verdict, even approved.
+    let rig = rig_n("verdict", mapped(), vec![ROWS.into(), POSTED.into()], vec![answer("hi")]);
+    let who = alice();
+    let (uuid, approval) = ("0b7e6f3a-2c1d-4e5f-8a9b-1c2d3e4f5a6b", "1b7e6f3a-2c1d-4e5f-8a9b-1c2d3e4f5a6b");
+    let ok = {
+        let l = rig.srv.ledger.lock().unwrap();
+        l.start(&thalamus::ledger::Session { uuid, agent_name: "iris", agent_version: 1, actor: "user:alice-smith",
+            model_uri: "ollama-qwen" }).unwrap();
+        l.record(uuid, Kind::ApprovalRequest, Some("propose_row_edit"), &serde_json::json!({
+            "approval": approval, "table": "immune-verdicts", "row_id": "r1",
+            "cells": [{"key": "verdict", "old": "unsure", "new": "false-alarm"}]})).unwrap();
+        l.record(uuid, Kind::ApprovalDecision, Some("propose_row_edit"),
+            &serde_json::json!({"approval": approval, "decision": "approve"})).unwrap()
+    };
+    let err = rig.srv.commit(&who, ok).unwrap_err();
+    assert!(err.contains("operator's face edit"), "{err}");
+    assert!(posts(&rig).is_empty(), "a verdict was written");
+}
+
 // --- increment 7: the three controls, raised without the model ---
 
 fn reader(rig: &Rig, name: &str, py: &str) {
