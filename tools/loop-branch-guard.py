@@ -12,8 +12,11 @@ drops a branch it names. Session commits are cherry-picked after the check and a
 from __future__ import annotations
 
 import fnmatch
+import pathlib
 import subprocess
 import sys
+
+import yaml
 
 HELD = (
     "tests/*", "*.test.ts", "*.spec.ts", "files/anatomy/thalamus/*/tests/*",
@@ -22,18 +25,28 @@ HELD = (
 )
 
 
-def held(path: str) -> bool:
+#: Files tools/regenerate.py writes are committed with the branch (never hand-edited), so not held.
+GENERATED = frozenset((yaml.safe_load((pathlib.Path(__file__).resolve().parents[1] / "state" / "generated.yml")
+                       .read_text(encoding="utf-8")) or {}).get("files") or {})
+#: A shrink-only list may lose lines (the debt shrinks); one that gains a line is held.
+SHRINK_ONLY = "tests/anatomy/*_pending.txt"
+
+
+def held(path: str, added: int = 1) -> bool:
+    if path in GENERATED or (fnmatch.fnmatch(path, SHRINK_ONLY) and added == 0):
+        return False
     return any(fnmatch.fnmatch(path, pat) for pat in HELD)
 
 
 def hits(base: str, head: str) -> list[tuple[str, str, list[str]]]:
-    log = subprocess.run(["git", "log", "--no-merges", "--format=%x00%h %s", "--name-only", f"{base}..{head}"],
+    log = subprocess.run(["git", "log", "--no-merges", "--format=%x00%h %s", "--numstat", f"{base}..{head}"],
                          capture_output=True, text=True, check=True).stdout
     out = []
     for chunk in log.split("\0")[1:]:
-        head_line, *files = [ln for ln in chunk.splitlines() if ln.strip()]
+        head_line, *stats = [ln for ln in chunk.splitlines() if ln.strip()]
         sha, _, subject = head_line.partition(" ")
-        bad = [f for f in files if held(f)]
+        files = [(st.split("\t")[2], int(st.split("\t")[0]) if st.split("\t")[0].isdigit() else 1) for st in stats]
+        bad = [f for f, added in files if held(f, added)]
         if bad:
             out.append((sha, subject, bad))
     return out
@@ -44,8 +57,10 @@ def _self_test() -> None:
               ".github/workflows/ci.yml", "state/judge-sets.yml", "files/anatomy/thalamus/thalamus/tests/serve.rs"):
         assert held(p), p
     for p in ("tools/roadmap-status.py", "roles/pazny.traefik/tasks/main.yml", "docs/tests.md",
-              "files/anatomy/face/src/lib/a.ts", "ssot/doctrine/face.md"):
+              "files/anatomy/face/src/lib/a.ts", "ssot/doctrine/face.md", "tests/fixtures/selfmodel-recall.json"):
         assert not held(p), p
+    assert held("tests/anatomy/credential_doubles_pending.txt", 1)
+    assert not held("tests/anatomy/credential_doubles_pending.txt", 0)
 
 
 if __name__ == "__main__":
