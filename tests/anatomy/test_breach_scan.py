@@ -10,7 +10,7 @@ Woodpecker python:3.13-slim self-skips):
   2. bin/breach-scan.php against a seeded SQLite DB — escalation, the 3-channel
      critical insert, deterministic-uuid dedup, dry-run, and inertness.
 
-(tests/wing-api/*.php is excluded from CI, so the deadline math is pinned HERE.)
+(No PHP suite under tests/wing-api covers the deadline math, so it is pinned HERE.)
 """
 from __future__ import annotations
 

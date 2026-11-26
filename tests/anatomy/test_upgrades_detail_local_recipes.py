@@ -22,9 +22,7 @@ This gate pins the fix:
   3. ``notFound`` stays correct: true only when the service has no recipes at all.
 
 Regex/source-only (no PHP execution) — consistent with test_planned_recipe_link.py
-and test_plan_choice_ui.py, so the gate runs on the pytest+pyyaml stack (the
-functional twin lives in tests/wing-api/test_upgrade_repository.php, which needs
-composer and is --ignore'd in CI).
+and test_plan_choice_ui.py, so the gate runs on the pytest+pyyaml stack.
 """
 
 from __future__ import annotations
