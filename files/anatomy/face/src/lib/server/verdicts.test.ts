@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const ENV = vi.hoisted(() => ({}) as Record<string, string>);
 vi.mock('$app/env/private', () => new Proxy(ENV, { has: () => true }));
 
-import { POST } from './+server';
+import { POST } from '../../routes/bff/tables/+server';
 import type { Identity } from '$lib/contracts';
 
 const OPERATOR: Identity = {
