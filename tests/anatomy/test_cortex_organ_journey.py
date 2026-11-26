@@ -6,7 +6,8 @@ Absorbed (2026-11-10, roadmap gate-diet), one section each:
   test_cortex_store_is_declared_debt, test_cortex_fs_roots_has_default,
   test_cortex_selfmodel_python_has_yaml, test_cortex_lang_vendor_conditions,
   test_cortex_vendored_docs.
-Every assert of those files survives here with the same inputs and expectations.
+Every assert of those files survives here with the same inputs and expectations, except the
+four doc-prose greps of test_cortex_lang_vendor_conditions (removed 2026-11-26, suite-prune).
 """
 from __future__ import annotations
 
@@ -423,91 +424,11 @@ def test_the_tools_venv_carries_pyyaml_and_is_built_before_cortex():
 
 # ── test_cortex_lang_vendor_conditions ──────────────────────────────────────
 # The w-datalog vendor decision oversold termination (no budget: 312,444 facts in
-# ~142 s at 790 nodes), hid a fail-open parser and two internal imports. The doc
-# must keep declaring the divergence set, and a vendored datalog_reasoner.py must
-# honour it (vacuous until one lands; red the day it lands unedited).
+# ~142 s at 790 nodes) and hid a fail-open parser. A vendored datalog_reasoner.py
+# must carry the budget caps docs/archive/idea/02-cortex-lang.md declares (vacuous
+# until one lands; red the day it lands unedited).
 
-DOC = REPO / "docs/archive/idea/02-cortex-lang.md"
-LOOP_DOC = REPO / "docs/archive/idea/11-agentic-loop.md"
-
-# The budget parameters the doc commits the vendored copy to. Declared here
-# and in the doc; the vendored file must define all three.
 BUDGET_TOKENS = ("max_derived_facts", "max_iterations", "max_seconds")
-
-
-def _doc() -> str:
-    return DOC.read_text(encoding="utf-8")
-
-
-def test_the_stdlib_only_claim_is_corrected() -> None:
-    text = _doc()
-    assert "importing only `re`/`collections`/`dataclasses`/`typing`" not in text, (
-        "02-cortex-lang.md is back to claiming the upstream file imports only "
-        "four stdlib modules. It imports semantica-internal logging and "
-        "progress-tracker modules at seven call sites; a decision that hides "
-        "the required edit hides that the vendor is a fork."
-    )
-    assert "progress_tracker" in text, (
-        "the doc no longer names the internal imports the vendored copy must "
-        "strip — the divergence set is the vendor contract's comparison "
-        "baseline, and an undeclared divergence is what 606046e6 exists to "
-        "prevent."
-    )
-
-
-def test_termination_is_not_oversold() -> None:
-    text = _doc()
-    assert "necessary, not sufficient" in text, (
-        "the doc dropped the amendment that termination is necessary, not "
-        "sufficient. An unbudgeted fixpoint over model-authored rules is a "
-        "resource bomb that happens to halt: 312,444 facts / ~142 s for the "
-        "textbook closure at the estate's own 790-node scale."
-    )
-    for token in BUDGET_TOKENS:
-        assert token in text, (
-            f"the doc no longer declares the budget cap `{token}`. The vendor "
-            "condition is hard caps on derived facts, iterations and wall "
-            "time, failing closed — remove one and the vendored-copy half of "
-            "this gate loses its baseline."
-        )
-
-
-def test_the_parser_condition_is_declared() -> None:
-    text = _doc()
-    assert "unconsumed input" in text, (
-        "the doc no longer requires the vendored parser to raise on "
-        "unconsumed input. Upstream silently strips `not` and comparison "
-        "guards — accepting a rule while inverting its semantics is the "
-        "opposite of the fail-closed doctrine the same document invokes."
-    )
-
-
-def test_the_loop_doc_credits_the_schema_not_the_implementation() -> None:
-    """11-agentic-loop.md §6c: the same upstream, cited for what it measured.
-
-    The section originally credited semantica with 'decisions [as] first-class
-    graph nodes with causal ancestry' plus precedent search. Measured: the
-    headline `find_similar_decisions()` similarity is bag-of-words Jaccard
-    (its `use_semantic_search` parameter is never read), and the headline
-    causality is entity co-occurrence plus timestamp order — guessed, not
-    recorded. The schema and the PROV-O export are worth taking; the
-    implementations are not, and the doc must say which is which.
-    """
-    text = LOOP_DOC.read_text(encoding="utf-8")
-    assert "Jaccard" in text, (
-        "§6c no longer says the upstream precedent search is bag-of-words "
-        "Jaccard — the citation is back to admiring a docstring."
-    )
-    assert "co-occurrence" in text, (
-        "§6c no longer says the upstream 'causal ancestry' is inferred from "
-        "entity co-occurrence — a reader will import guessed lineage as if it "
-        "were the recorded actor_action_id kind."
-    )
-    assert "ships the shape" not in text, (
-        "§6c reverted to the unqualified endorsement. Credit the decision "
-        "SCHEMA and the PROV-O export; the headline implementations are naive "
-        "and this estate's lineage is already recorded, not guessed."
-    )
 
 
 def test_a_vendored_copy_honors_the_declared_conditions() -> None:

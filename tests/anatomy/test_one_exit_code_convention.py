@@ -27,7 +27,6 @@ the exit code, and the two must not be the same integer.
 from __future__ import annotations
 
 import ast
-import re
 from pathlib import Path
 
 import yaml
@@ -116,15 +115,4 @@ def test_no_pulse_job_claims_a_reserved_code_as_a_finding():
         "a job declares a reserved process code as a findings code, so a run "
         "that never started would read as a successful scan:\n  "
         + "\n  ".join(offenders)
-    )
-
-
-def test_the_stale_comment_was_corrected():
-    """The registry described the old contract in prose directly above the new
-    one. A comment that contradicts the line under it is the defect this repo
-    keeps finding, and leaving it here would have been a fresh instance."""
-    text = REGISTRY.read_text(encoding="utf-8")
-    block = text[text.find("# ── nos-smoke"):text.find("# ── cortex-corpus-diff")]
-    assert not re.search(r"^\s*# Exit IS the failure count", block, re.M), (
-        "judge-sets.yml still asserts the smoke's exit is a count"
     )

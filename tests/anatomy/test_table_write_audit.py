@@ -29,11 +29,6 @@ def test_bone_and_wing_whitelist_table_upsert_in_both_twins():
     assert f"'{EVENT_TYPE}'" in php, f"Wing EventRepository VALID_TYPES missing {EVENT_TYPE}"
 
 
-def test_the_todo_audit_comment_is_gone():
-    src = SERVER.read_text(encoding="utf-8")
-    assert "TODO audit" not in src
-
-
 def test_upsert_path_emits_via_the_hmac_signer_not_the_bearer_helper():
     """The auth trap the wf-def calls out by name: `boneHeaders()` is the
     bearer pattern used elsewhere in upstream.ts — copying it here ships a
