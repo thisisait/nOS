@@ -1,9 +1,9 @@
 {
   "initialized_at": "2026-04-08T12:00:00Z",
-  "last_full_scan": "2026-11-23T02:19:04Z",
-  "last_advisory_check": "2026-11-23T03:09:38+01:00",
+  "last_full_scan": "2026-11-26T02:26:50Z",
+  "last_advisory_check": "2026-11-26T03:14:32+01:00",
   "last_remediation_applied": "2026-04-09T12:00:00Z",
-  "scan_cycle": 114,
+  "scan_cycle": 117,
   "scanner_version": "2.0.0",
   "config": {
     "batch_size": 5,
@@ -17,13 +17,13 @@
   },
   "components": {
     "traefik": {
-      "last_checked": "2026-11-19T03:03:07+01:00",
-      "last_cve_scan": "2026-11-19T03:03:07+01:00",
+      "last_checked": "2026-11-24T03:11:06+01:00",
+      "last_cve_scan": "2026-11-24T03:11:06+01:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-11-19T03:03:07+01:00",
-      "findings_count": 21,
+      "last_attack_probe": "2026-11-24T03:11:06+01:00",
+      "findings_count": 22,
       "status": "scanned",
-      "notes": "Cycle-109 (tls_crypto_weakness). CVE CLEAN at v3.7.18 (go1.27.3): the 2026-11-12 advisories GHSA-x5pf-cqh3-2gv8 (Compress zstd memory DoS, HIGH 8.7, would hit every router through compress@file), GHSA-rr42-h8r2-f28g, GHSA-p956-6gvv-mxqp, GHSA-cp28-5662-543f and GHSA-ccgh-9g52-6vwg all list patched v3.7.18 = live. v3.7.19 (2026-11-13) only bumps dependencies: x/crypto 0.58.0 hits GO-2026-5932 (openpgp), but the binary has 0 x/crypto/openpgp symbols (N/A); quic-go 0.64.1 has no OSV entry and HTTP/3 is not enabled; Go stdlib 1.27.3 has CVE-2026-97054 (MaxBytesReader race, fixed 1.27.4) but no buffering middleware or maxRequestBodyBytes appears anywhere under /etc/traefik (grep of traefik.yml and conf.d; THEORETICAL). PROBE MITIGATED for the cipher suites: TLS1.0 and TLS1.1 refused (protocol_version alert, tested with OpenSSL 3.5.9 at SECLEVEL=0), TLS1.2 accepts only ECDHE-RSA-AES128-GCM-SHA256 and ECDHE-RSA-CHACHA20-POLY1305. ECDHE-RSA-AES256-GCM-SHA384, every CBC suite and every static-RSA suite got a server handshake_failure alert (Python/OpenSSL 3.5.9, SECLEVEL=0, TLS1.2 cap). 3DES was not testable because the client has no 3DES, TLS1.3. Cert: LE YR2, RSA-2048, *.pazny.eu/*.apps.pazny.eu/pazny.eu, notAfter 2026-12-29 (40 days). Unknown SNI gets the default wildcard (sniStrict off on default, low value). Origin-pull door (:8443) is not published live. REM-162/238 (modern option inert), REM-339 (renew hook), REM-341 (no HSTS on forward-auth 302s) stand.",
+      "notes": "Cycle-114 (default_credentials_test). Live v3.7.19. No published advisory lists 3.7.19 as affected (newest batch 2026-11-12, fixed 3.7.18). +REM-376 MEDIUM: Brotli writer memory, fixed in 3.7.20 (2026-11-23), no advisory. PROBE: MITIGATED: no basicAuth or digestAuth middleware in the role templates, api.insecure false, GET 127.0.0.1:8082/api/rawdata returns 404. The opt-in dashboard route was not exercised. REM-162/238/339/341 not re-measured.",
       "last_scan_attempt": "2026-11-19T03:10:55+01:00"
     },
     "nginx": {
@@ -37,23 +37,23 @@
       "last_scan_attempt": "2026-10-14T04:19:32+02:00"
     },
     "authentik": {
-      "last_checked": "2026-11-20T03:12:54+01:00",
-      "last_cve_scan": "2026-11-20T03:12:54+01:00",
+      "last_checked": "2026-11-25T03:14:49+01:00",
+      "last_cve_scan": "2026-11-25T03:14:49+01:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-11-20T03:12:54+01:00",
-      "findings_count": 10,
+      "last_attack_probe": "2026-11-25T03:14:49+01:00",
+      "findings_count": 12,
       "status": "scanned",
-      "notes": "Cycle-110 (resource_exhaustion_vectors). CVE CLEAN: the GHSA repo list still tops out at the 2026-09-09 wave (fixed at live 2026.5.7). 2026.5.8 and 2026.8.5 (2026-10-21) carry no advisory, and cve.now has nothing in 14 d. OSV's goauthentik.io Go hits (GO-2024-2479/3085, GO-2025-3822/4136/4137) are pseudo-version range noise from 2024-25. REM-343 RE-MEASURED and its open question closed: authentik_core_session has 21,350 rows (41 authenticated), the table is 79 MB in a 175 MB DB (was 74/120 MB at cycle-94), and reputation policies are still 0. The ~880 rows/h source is Uptime Kuma 2.5.9: over the last 24 h, its monitors hit /application/o/authorize/ and /if/flow/default-authentication-flow/ 883.1 times per hour each, and every anonymous walk persists a session. Fix: point those monitors at /-/health/ready/ or the outpost ping and accept a 302. OBSERVATION, cause not identified: infra-authentik-server-1 is the only running container with State.OOMKilled=true (2 GiB limit, 622 MiB now, 0 restarts, so a child was killed and not the container). On 2026-11-19 at 03:13:10Z it logged a gunicorn WORKER TIMEOUT, at 03:41:41Z a 'SIGKILL! Perhaps out of memory?', and of the 48 requests slower than 3 s in the 40 h log, the 12 slowest all fall between them and are internal (::1 ipc/outpost: /api/v3/core/brands 10-22 s, /api/v3/outposts/proxy up to 298 s). In local time that is 04:13-04:41, about an hour after the 03:05 backup and the cycle-109 run.",
+      "notes": "Cycle-115 (ssrf_vector_analysis). +REM-377 HIGH (DRF 3.17.1 Accept-header CPU DoS; THEORETICAL, not reproduced), +REM-380 LOW (certifi, emSign G3; vendor CRITICAL). Newer: 2026.8.6 (2026-11-20, dependency updates, no GHSA); repo advisories still top out at the 2026-09-09 wave. OSV over the 171 container distributions has many more dependency hits; only DRF, PyJWT, anyio (CRITICAL CVE-2026-63374, N/A: httpx only in the unused Entra provider, non-ASCII hosts) and certifi were traced; the other HIGH hits were not. SSRF MITIGATED: 1 source (built-in), 0 OAuth sources, notification transports local+email with no webhook URL, 0 SCIM and 0 SAML providers, 0 OAuth2 logout URIs; password-policy and SMS/captcha sinks need admin configuration; avatar mode 'gravatar,initials' issues a HEAD to a fixed host.",
       "last_scan_attempt": "2026-11-20T03:23:19+01:00"
     },
     "grafana": {
-      "last_checked": "2026-11-20T03:12:54+01:00",
-      "last_cve_scan": "2026-11-20T03:12:54+01:00",
+      "last_checked": "2026-11-25T03:14:49+01:00",
+      "last_cve_scan": "2026-11-25T03:14:49+01:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-11-20T03:12:54+01:00",
-      "findings_count": 16,
+      "last_attack_probe": "2026-11-25T03:14:49+01:00",
+      "findings_count": 17,
       "status": "scanned",
-      "notes": "Cycle-110 (resource_exhaustion_vectors). CVE: cve.now's 7 d window holds CVE-2026-87956 (Mqtt datasource cleartext broker creds, 6.1) and CVE-2026-110337 (Strava datasource token use, 4.1), both MEDIUM and both N/A: neither plugin is installed (plugins dir: frser-sqlite, exploretraces, lokiexplore, metricsdrilldown, pyroscope). Releases since the 12.4.15 wave are 13.x only (v13.3.1 and the others, 2026-11-10). The gh global-advisory feed for github.com/grafana/grafana tops out at 2026-06-22 (stale), and OSV's Go-module matches are pseudo-version noise, so neither counts as clean evidence. REM-356 stays open (live 12.4.14). +REM-369 LOW EXPLOITABLE: the router has no authentik@file, so basic auth is evaluated for anonymous internet callers, and 5 bad passwords per 5 min lock the local 'admin' identity used by the pazny.grafana and mcp_gateway post tasks. Verified in v12.4.14 source and live with non-existent probe usernames only: the 6th attempt was logged 'temporarily blocked' and the response is an identical 401. Basic auth was also confirmed over the public Cloudflare path (188.114.96.9). POST /login returns 400 auth.client.notConfigured, so it is not a second door. Also checked: 0 public dashboards (dashboard_public), so the public-dashboard query DoS path is closed. Loki's unbounded max_query_lookback over 744 h retention is reachable via any Grafana Viewer (role_attribute_path gives any Authentik user at least Viewer; all 4 current Grafana users are Admin). That is the REM-231 facet and was not re-filed. Container: 1 GiB, 1.0 CPU, 253 MiB, OOMKilled=false.",
+      "notes": "Cycle-115 (ssrf_vector_analysis). +REM-378 MEDIUM provisional (12.4.16). SSRF: REM-355 relay path re-measured as present (Loki and Tempo still access=proxy, both /ready reachable, no COOKIE_SAMESITE env in the container); no shutdown fired. CVE-2026-106472 (Prometheus resource API SSRF) applies to 12.4.14 and is fixed from 12.4.15: THEORETICAL, all 5 org users are Admin. frser-sqlite is the only SQL plugin; no service accounts. CVE-2026-10084, -87956, -110337 N/A (Enterprise SAML, plugins not installed).",
       "last_scan_attempt": "2026-11-20T03:23:19+01:00"
     },
     "portainer": {
@@ -107,14 +107,14 @@
       "last_scan_attempt": "2026-11-17T03:14:38+01:00"
     },
     "n8n": {
-      "last_checked": "2026-11-21T03:12:41+01:00",
-      "last_cve_scan": "2026-11-21T03:12:41+01:00",
+      "last_checked": "2026-11-26T03:14:32+01:00",
+      "last_cve_scan": "2026-11-26T03:14:32+01:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-11-21T03:12:41+01:00",
+      "last_attack_probe": "2026-11-26T03:14:32+01:00",
       "findings_count": 13,
       "status": "scanned",
-      "notes": "Cycle-111 (supply_chain_freshness). CVE CLEAN AT LIVE: n8nio/n8n:2.47.7. OSV npm n8n@2.47.7 returns 0 records. The newest repo GHSAs are still the 2026-11-13 wave (fixed <= 2.47.6), and cve.now has no n8n entry since 11-14. CVE-2026-119557 (Databricks traversal) is fixed in 2.46.4 per cve.now fixStatus, so REM-349's floor is met (owner to close; this scanner does not write resolution). PROBE (supply_chain_freshness): image MITIGATED. Hub digest for 2.47.7 is sha256:b4b90747…, equal to local. The compose template and role tasks have no community-node install, npm or get_url fetch, or build. FRESHNESS WATCH, THEORETICAL, not filed: 'stable' moved to 2.48.7 on 2026-11-20. The 2.47 line has had no release since 2.47.7 (2026-11-13), while 2.48.5 (11-18) shipped expression-sandbox changes ('Hand dollar property reads to the expression engine', 'Keep small objects inside an Error in sandboxed expressions') and a credential-check change. No advisory yet. n8n's bi-weekly disclosure (the next is expected around 11-27) will likely list 2.48.x-only fixes, so pre-stage 2.48.7 (one-way DB migrations; back up ~/n8n). REM-202/253/310/324/349/358 stand.",
-      "last_scan_attempt": "2026-11-21T03:26:05+01:00"
+      "notes": "Cycle-116 (docker_escape_paths). CVE CLEAN AT LIVE n8nio/n8n:2.47.7. The newest repo GHSAs are the 2026-11-13 wave; their CVE ids (CVE-2026-130166 = GHSA-m7qq, CVE-2026-130167 = GHSA-q8rc) were assigned 11-23, both fixed by 2.47.6. CVE-2026-126384 (GraphicsMagick in Edit Image) is fixed in 2.45.5. OSV npm n8n@2.47.7 returns 0. Malicious npm package n8n-nodes-social-tiktok (MAL-2026-20343, 11-23): N/A, ~/n8n/nodes/package.json has no dependencies. Upstream stable is now 2.49.6 (2026-11-25); the bi-weekly disclosure is expected around 11-27. PROBE re-measured: uid 1000, pid 1 CapEff=0, no setuid binaries, no socket, docker-socket-proxy NXDOMAIN, single rw bind ~/n8n. REM-358 STILL PRESENT: N8N_SSRF_ALLOWED_IP_RANGES=192.168.65.254/32,fdc4:f303:9324::254/128, with extra_hosts keap+auth to host-gateway. No new row. REM-202/253/310/324/349/358 stand; REM-349's floor is met (owner to close).",
+      "last_scan_attempt": "2026-11-26T03:14:32+01:00"
     },
     "openwebui": {
       "last_checked": "2026-10-15T04:15:03+02:00",
@@ -157,24 +157,24 @@
       "last_scan_attempt": "2026-10-12T04:06:40+02:00"
     },
     "mariadb": {
-      "last_checked": "2026-11-19T03:03:07+01:00",
-      "last_cve_scan": "2026-11-19T03:03:07+01:00",
+      "last_checked": "2026-11-24T03:11:06+01:00",
+      "last_cve_scan": "2026-11-24T03:11:06+01:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-11-19T03:03:07+01:00",
+      "last_attack_probe": "2026-11-24T03:11:06+01:00",
       "findings_count": 9,
       "status": "scanned",
-      "notes": "Cycle-109 (tls_crypto_weakness). +REM-368 MEDIUM: MariaDB 11.8.10 (2026-11-16) fixes 13 Oracle Oct-2026 CPU CVEs (CVE-2026-101608..101802, CVSS 4.4-7.5). Live 11.8.9 is affected. The HIGH ones are N/A here: two are Replication, which is not configured, and one is Client programs. What remains is low-priv DoS by any tenant user (THEORETICAL, loopback 3306). mariadb:11.8.10 is not on Docker Hub yet (404). GHSA-cp3h-jjxp-9pvr (ST_NumPoints OOB read) is fixed at 11.8.7, N/A. PROBE: TLS is offered with an on-disk self-signed RSA-2048/SHA-256 cert (CN=mariadb, SAN mariadb/infra-mariadb-1/127.0.0.1, notAfter 2036-11-13, key 0600) but require_secure_transport=0, so REM-217 stands (THEORETICAL, needs a fabric position). All 14 accounts are on mysql_native_password, counted from the plugin names in global_priv without credentials, so REM-306 stands.",
+      "notes": "Cycle-114 (default_credentials_test). Live 11.8.9. REM-368 stands: mariadb:11.8.10 is still 404 on Docker Hub (2026-11-24). CVE-2026-107814, 107815, 107818, 107821, 107822 and 107823 are fixed at 11.8.9 per cve.org. No newer MariaDB Server CVE in cve.now since 2026-11-10. PROBE: MITIGATED in the templates: the root password and the app and mysqld_exporter passwords defined in default.credentials.yml are HKDF-derived; live mariadb_root_password is 43 chars and not _pw_-shaped. Live accounts were not read this cycle. REM-217 and REM-306 not re-measured.",
       "last_scan_attempt": "2026-11-19T03:10:55+01:00"
     },
     "postgresql": {
-      "last_checked": "2026-11-21T03:12:41+01:00",
-      "last_cve_scan": "2026-11-21T03:12:41+01:00",
+      "last_checked": "2026-11-26T03:14:32+01:00",
+      "last_cve_scan": "2026-11-26T03:14:32+01:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-11-21T03:12:41+01:00",
+      "last_attack_probe": "2026-11-26T03:14:32+01:00",
       "findings_count": 11,
       "status": "scanned",
-      "notes": "Cycle-111 (supply_chain_freshness). CVE CLEAN AT LIVE (select version() = PostgreSQL 16.16, aarch64 musl). The 2026-11-19 Depthfirst PoC early warning SZB-3914c4d932 maps to exactly one PostgreSQL CVE, CVE-2026-116331 (8.8, min/max aggregate SORTOP type confusion, GitHub PoC notdenied/CVE-2026-116331-PoC since 11-16), fixed in 16.16 and so moot live. The other three IDs are MySQL/Oracle. The other cve.now 'postgresql' hits since 11-14 are third-party products (PEM, Metasploit msfdb, NocoDB, Dokploy, pREST, MapServer and others), none installed. PROBE: REM-350 RECURRED. infra-postgresql-1 (created 2026-11-16T08:46Z) runs image sha256:13ec811c…, which is absent from the store. Tag nos/postgis:16.16-alpine-3.6.4 now resolves to sha256:9a5a4ea4… (Created 2026-11-15T10:12Z, LastTagTime 2026-11-18T19:38Z, so it was re-pointed after the container started). Both carry PG_VERSION=16.16 with identical PG_SHA256. The PostGIS and apk layers of the running image cannot be compared, because they are not inspectable. Base postgres:16.16-alpine is tag-only (Hub digest now sha256:1d5b02d3…) and not in the local store. The PostGIS tarball is sha256-pinned (default.config.yml:844). apk rundeps are unpinned. No new row (REM-350 scope). REM-181/248/282/350/354/357 stand.",
-      "last_scan_attempt": "2026-11-21T03:26:05+01:00"
+      "notes": "Cycle-116 (docker_escape_paths). CVE CLEAN AT LIVE: postgres --version = 16.16, and the postgresql.org security table's newest cohort is fixed in 16.16/18.7/17.12/15.20. REM-357's floor is met live (pin default.config.yml:839 is 16.16-alpine); owner to re-verify and close. cve.now 'postgresql' hits in the last 7 d are client drivers (pgjdbc CVE-2026-1348xx, psqlODBC CVE-2026-1365xx) and EDB PEM. N/A to the server; no pgjdbc jar or psqlodbc .so was found in any running container that has sh. PROBE: pid 1 is uid 70 with CapEff=0 and the image has no setuid binaries, so COPY ... TO PROGRAM lands as uid 70 with no caps (docker exec defaults to root because Config.User is empty; that is operator-only). Not privileged, seccomp=2, certs ro. The infra socket proxy still answers _ping from here: REM-318/357 chain stands, POST=0. REM-350 RECURRED again: running image 000077c14198 (container created 2026-11-21) is absent from the local store. No new row.",
+      "last_scan_attempt": "2026-11-26T03:14:32+01:00"
     },
     "redis": {
       "last_checked": "2026-11-22T03:00:27+01:00",
@@ -187,13 +187,13 @@
       "last_scan_attempt": "2026-11-17T03:14:38+01:00"
     },
     "ollama": {
-      "last_checked": "2026-11-18T03:15:08+01:00",
-      "last_cve_scan": "2026-11-18T03:15:08+01:00",
+      "last_checked": "2026-11-24T03:11:06+01:00",
+      "last_cve_scan": "2026-11-24T03:11:06+01:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-11-18T03:15:08+01:00",
+      "last_attack_probe": "2026-11-24T03:11:06+01:00",
       "findings_count": 6,
       "status": "scanned",
-      "notes": "Cycle-108 (docker_escape_paths). CVE CLEAN at live 0.40.6: the ollama/ollama repo has no published security advisory, cve.now lists no Ollama-server entry since 2026-10-15 (the two hits are Nuxt Ollama and ChatOllama, different products), and a web search found no November 2026 CVE. Newest stable is 0.40.16 (2026-11-09), so the lag is REM-346. PROBE: Ollama is a host process (user pazny, 127.0.0.1:11434), so it has nothing to escape from; it is an escape TARGET. REM-292 RE-CONFIRMED, not refiled: GET http://192.168.65.254:11434/api/version returns 200 from devops-gitea-1 and from iiab-vaultwarden-1 (which has no extra_hosts). EXPLOITABLE given a container foothold. None of the 76 bind mounts covers ~/.ollama (OLLAMA_MODELS is ~/.ollama/models). REM-126 and REM-346 unchanged.",
+      "notes": "Cycle-114 (default_credentials_test). CVE CLEAN at live 0.40.6: the ollama/ollama repo lists no advisory since 2026-10-20, cve.now lists no Ollama-server entry since 2026-11-10, and the web search found no November 2026 advisory. Newest stable 0.40.17 (2026-11-10): lag is REM-346. PROBE: N/A, no credential surface by design; GET /api/tags answers 200 from host loopback without auth. Container reach is REM-292 (not re-measured). REM-126 unchanged.",
       "last_scan_attempt": "2026-11-18T03:25:56+01:00"
     },
     "bluesky_pds": {
@@ -266,13 +266,13 @@
       "last_scan_attempt": "2026-10-08T04:12:47+02:00"
     },
     "jellyfin": {
-      "last_checked": "2026-11-19T03:03:07+01:00",
-      "last_cve_scan": "2026-11-19T03:03:07+01:00",
+      "last_checked": "2026-11-25T03:14:49+01:00",
+      "last_cve_scan": "2026-11-25T03:14:49+01:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-11-19T03:03:07+01:00",
-      "findings_count": 8,
+      "last_attack_probe": "2026-11-25T03:14:49+01:00",
+      "findings_count": 9,
       "status": "scanned",
-      "notes": "Cycle-109 (tls_crypto_weakness). CVE: no Jellyfin release after v12.4 (2026-10-26) and no GHSA after 2026-09-22; REM-351 trio (through 12.4, no fix) and REM-360 (.NET Brotli, 12.4) stand; OSV empty for Jellyfin.Server/Controller 12.2.0. PROBE: edge MITIGATED (media.pazny.eu: TLS1.2 AEAD/TLS1.3 only, TLS1.0/1.1 refused, LE wildcard to 2026-12-29, HSTS 1y includeSubDomains, http 301). REM-322 re-confirmed EXPLOITABLE on the LAN: docker publishes 0.0.0.0:8096 and [::]:8096 cleartext, so passwords and tokens bypass edge TLS. No network.xml in /config/config, so KnownProxies is empty. Token-in-URL leak MITIGATED: 1703 media.pazny.eu requests in 7 days of Traefik access logs, 0 with api_key/ApiKey/token query parameters. No new row.",
+      "notes": "Cycle-115 (ssrf_vector_analysis). +REM-379 MEDIUM (reach from shared_net measured; CVE-2026-119549 still unfixed, not exercised). CVE: no release after v12.4 and no repo GHSA after 2026-09-22. CVE-2026-126499 (before 12.0) fixed live. REM-351 stands. REM-360 and REM-279 version legs look live-satisfied at 12.4. Rest of the SSRF surface MITIGATED: see REM-379.",
       "last_scan_attempt": "2026-11-19T03:10:55+01:00"
     },
     "homeassistant": {
@@ -286,24 +286,24 @@
       "last_scan_attempt": "2026-10-13T04:03:41+02:00"
     },
     "uptime_kuma": {
-      "last_checked": "2026-11-19T03:03:07+01:00",
-      "last_cve_scan": "2026-11-19T03:03:07+01:00",
+      "last_checked": "2026-11-25T03:14:49+01:00",
+      "last_cve_scan": "2026-11-25T03:14:49+01:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-11-19T03:03:07+01:00",
+      "last_attack_probe": "2026-11-25T03:14:49+01:00",
       "findings_count": 11,
       "status": "scanned",
-      "notes": "Cycle-109 (tls_crypto_weakness). +REM-366 MEDIUM: all 25 active HTTPS edge-host monitors carry ignore_tls=1, which gates off the cert-expiry notification (monitor.js:2081) although expiry_notification=1. Strict verification passes from the container, so the flag is not needed. With REM-339/REM-340 no expiry detector works before the 2026-12-29 notAfter. +REM-367 HIGH provisional: live 2.5.9 runs jsonata 2.2.2 unsandboxed (public PoC jsonata#859, code execution); 2.5.12 (2026-11-17, PR #8187) sandboxes it. With disableAuth=true (re-read live) that is EXPLOITABLE from a peer, THEORETICAL for outsiders. 2.5.12 also covers REM-361's 2.5.11 floor. Edge MITIGATED: uptime.pazny.eu TLS sound, authentik proxy cookie HttpOnly+Secure+SameSite=Lax, but the 302 still has no HSTS (REM-341 stands). Kuma's own DB is sqlite with no TLS leg; host port 127.0.0.1:3001 only.",
+      "notes": "Cycle-115 (ssrf_vector_analysis). No new row. Live 2.5.12 with jsonata-sandbox.js present, so REM-361/REM-367 version legs look satisfied. REM-335 re-read: disableAuth=true, 1 user, 0 API keys, 29 http + 3 port monitors; uptime-kuma:3001 answers a peer (from jellyfin, 302). Monitor SSRF: EXPLOITABLE from a peer container (REM-335, and REM-044 premise), edge anonymous MITIGATED (302 to Authentik). CVE-2026-136135 (VulDB, MEDIUM, API-key IDOR, public PoC; GHSA-qj5w-7r6x-6hfx not published): affected commit e7420f8 diverges from 2.5.12, no fix named; needs a second user's keys and there is 1 user, so no boundary to cross. CVE-2026-119552 (through 2.5.8) and GHSA-86ch-2247-gr56 (<= 2.5.8) fixed live. GHSA-437w-j82f-9vjh still 404.",
       "last_scan_attempt": "2026-11-19T03:10:55+01:00"
     },
     "calibreweb": {
-      "last_checked": "2026-11-20T03:12:54+01:00",
-      "last_cve_scan": "2026-11-20T03:12:54+01:00",
+      "last_checked": "2026-11-26T03:14:32+01:00",
+      "last_cve_scan": "2026-11-26T03:14:32+01:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-11-20T03:12:54+01:00",
-      "findings_count": 4,
+      "last_attack_probe": "2026-11-26T03:14:32+01:00",
+      "findings_count": 5,
       "status": "scanned",
-      "notes": "Cycle-110 (resource_exhaustion_vectors). CVE CLEAN: 0.6.27 is still the latest release (2026-08-08). cve.now has nothing in 30 d, GHSA global advisories are unchanged (newest CVE-2025-65858 LOW), and OSV has no PyPI calibreweb 0.6.27 entry. PROBE MITIGATED (read-only app.db): config_uploading=0, so the upload/convert vector is closed. config_converterpath is empty, so there is no ebook-convert subprocess (the universal-calibre DOCKER_MOD binaries are installed but not wired). config_ratelimiter=1 (flask-limiter on login), config_public_reg=0, config_anonbrowse=0, config_kobo_proxy=0, and the schedule_* cover/metadata jobs are 0. The edge is authentik@file-gated (8 Authentik users). Container limits are 512m and 0.5 CPU, with no pids limit (REM-241). It runs at 127 MiB with 16 PIDs, 0 restarts and no OOM. Remaining surface is authenticated OPDS/search against a small library: THEORETICAL. Side note, not re-tested: app.db now shows config_reverse_proxy_trusted_ips='127.0.0.1,::1', so REM-364's 'trustedhosts EMPTY' premise should be re-measured on the next unauthenticated_endpoint_scan. REM-364 stands until then.",
-      "last_scan_attempt": "2026-11-20T03:23:19+01:00"
+      "notes": "Cycle-116 (docker_escape_paths). CVE CLEAN: 0.6.27 is still the latest release (2026-08-08). The janeczku/calibre-web GHSA endpoint is empty, OSV PyPI calibreweb@0.6.27 returns 0, and cve.now has nothing in 30 d. PROBE: +REM-382 LOW. The unused universal-calibre DOCKER_MOD is downloaded from lscr.io (floating tag) and installed as root on every recreate. Vectors: socket/proxy MITIGATED (gated_net only; docker-socket-proxy does not resolve). Escalation MITIGATED: cps.py runs as uid 501 with CapEff 0, root and abc are password-locked, and the setuid su needs pam_rootok. pid 1 (s6) is root with default caps and NNP=0 (REM-274 class). Binds /books and /config are rw and no other container mounts them. host.docker.internal=192.168.65.254 is reachable (REM-292). REM-364 stands; its trusted-IPs premise was not re-measured.",
+      "last_scan_attempt": "2026-11-26T03:14:32+01:00"
     },
     "kiwix": {
       "last_checked": "2026-11-21T03:12:41+01:00",
@@ -326,14 +326,14 @@
       "last_scan_attempt": "2026-11-21T03:26:05+01:00"
     },
     "rustfs": {
-      "last_checked": "2026-11-20T03:12:54+01:00",
-      "last_cve_scan": "2026-11-20T03:12:54+01:00",
+      "last_checked": "2026-11-26T03:14:32+01:00",
+      "last_cve_scan": "2026-11-26T03:14:32+01:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-11-20T03:12:54+01:00",
+      "last_attack_probe": "2026-11-26T03:14:32+01:00",
       "findings_count": 14,
       "status": "scanned",
-      "notes": "Cycle-110 (resource_exhaustion_vectors). CVE: no new GHSA (newest is still the 2026-10-18 batch), cve.now has nothing in 30 d, and OSV has no crates.io entry. NOT a flat clean: 1.0.5 (2026-11-10, PR #8969) replaced zstd 0.13.3/zstd-safe 7.3.0 for RUSTSEC-2026-0391/0398/0403. These are unscored, have no CVE alias, and reachability through S3 Select/Parquet was not assessed. 1.0.6 (2026-11-15) is the latest; live is 1.0.3. 1.0.5 also ships 'fix(scanner): reduce memory retention' (#8971). PROBE THEORETICAL: (1) Memory: 512 MiB limit, 0.5 CPU, 275 MiB resident at idle (54%), 0 restarts, OOMKilled=false. The daily 2.7 GiB backup upload fits today. (2) Disk: /data sits on /Volumes/SSD1TB (931 GiB, 82% used, 172 GiB free), shared with postgresql, mariadb, loki and others, and no bucket quota is set. Only the root key can fill it. That key is held by the host backup job (pazny.backup uses rustfs_access_key; REM-249), and no container other than rustfs carries S3 credentials. Backup retention is bounded (7d/4w/3m; 4 dailies at 2.7G each). (3) The edge is authentik-gated per cycle-104, so anonymous load lands on the Authentik outpost (REM-343). No new row. REM-190/249/276/307/323 stand.",
-      "last_scan_attempt": "2026-11-20T03:23:19+01:00"
+      "notes": "Cycle-116 (docker_escape_paths). LIVE IS NOW rustfs/rustfs:1.0.6 (container created 2026-11-21, pin default.config.yml:1474). The cycle-110 note said 1.0.3. CVE CLEAN at 1.0.6: the newest repo GHSAs are still the 2026-10-18 batch (fixed <= 1.0.2), OSV crates.io rustfs@1.0.6 returns 0, and cve.now has nothing in 14 d. Upstream 1.0.7-preview.1/.2 (2026-11-25) carry only an STS inline-policy Id backport, with no security wording. REM-276 and REM-307 floors (1.0.2) are met live; owner to re-verify and close. PROBE MITIGATED: uid 10001, pid 1 CapEff=0, no setuid binaries, seccomp=2, not privileged, single rw bind /data. docker-socket-proxy does not resolve (NXDOMAIN), so no proxy reach. host.docker.internal is reachable (REM-292 class). No new row. REM-190/249/323 stand (REM-323 still lists 1.0.3 as current_version).",
+      "last_scan_attempt": "2026-11-26T03:14:32+01:00"
     },
     "tileserver": {
       "last_checked": "2026-11-22T03:00:27+01:00",
@@ -406,23 +406,23 @@
       "last_scan_attempt": "2026-11-17T03:14:38+01:00"
     },
     "wing": {
-      "last_checked": "2026-11-18T03:15:08+01:00",
-      "last_cve_scan": "2026-11-18T03:15:08+01:00",
+      "last_checked": "2026-11-24T03:11:06+01:00",
+      "last_cve_scan": "2026-11-24T03:11:06+01:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-11-18T03:15:08+01:00",
-      "findings_count": 7,
+      "last_attack_probe": "2026-11-24T03:11:06+01:00",
+      "findings_count": 8,
       "status": "scanned",
-      "notes": "Cycle-108 (docker_escape_paths). CVE CLEAN: live FrankenPHP v1.13.5 / PHP 8.5.12 / Caddy v2.11.9 are each the newest release; the cve.now FrankenPHP set (CVE-2026-128014..128027, CVE-2026-122233) is fixed at or below 1.13.4 and the 2026-11-05 GHSAs at 1.13.5. Composer: the GitHub advisory database returns no advisory for the 35 locked packages. REM-347 NEEDS OWNER RE-CHECK: its GHSA-hwfg-qwvh-2wfx returns 404 from the GitHub advisory API and is absent from OSV, and neither source flags symfony/yaml 7.4.22 (newest listed advisory GHSA-2v3c-qxhr-7vpv is fixed in 7.4.18). PROBE: Wing is a host process and an escape TARGET, reachable from containers at 192.168.65.254:9000. MITIGATED: WING_EDGE_TOKEN is set (64 chars), a GET / with forged X-Authentik-* headers and no edge token returns 403, /pulse and /admin return 403, and the API returns 401 without a bearer (pulse_jobs, admin/state, remediation, scan/state, events, patches, inbox). Anonymous by design: /api/v1/hub/systems, /hub/health and /metrics. The medulla door 127.0.0.1:8095 is reachable the same way and answers 401 on the same routes. Pulse job registration is limited to an allow-list of binaries and repo/home script trees with a per-argument regex. +REM-365 LOW: Grafana binds the whole Wing data directory read-only, so host-0600 JSON files and two full DB backups are readable in that container; tokens are SHA-256 hashes (verified in the data), job secrets are `secret:` references, no secret-shaped text found. THEORETICAL. REM-359 unchanged.",
+      "notes": "Cycle-114 (default_credentials_test). +REM-375 HIGH: live FrankenPHP v1.13.5 embeds PHP 8.5.12; PHP 8.5.13 (2026-11-19) fixes six CRITICAL advisories; fix is FrankenPHP 1.13.6. Upload-progress path mitigated in the Caddyfile. OSV over the 35 locked composer packages returns nothing; REM-347 still needs the owner re-check. PROBE: MITIGATED: wing_api_token, wing_edge_token, wing_halt_token and wing_answer_token in ~/.nos/secrets.yml are each 64 chars, not _pw_-shaped and not default-like (length and shape only, never printed). wing_intents_token was not present in that file; where it is stored was not checked. No token or login was tried. REM-359 and REM-365 unchanged and not re-measured.",
       "last_scan_attempt": "2026-11-18T03:25:56+01:00"
     },
     "pulse": {
-      "last_checked": "2026-11-18T03:15:08+01:00",
-      "last_cve_scan": "2026-11-18T03:15:08+01:00",
+      "last_checked": "2026-11-24T03:11:06+01:00",
+      "last_cve_scan": "2026-11-24T03:11:06+01:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-11-18T03:15:08+01:00",
+      "last_attack_probe": "2026-11-24T03:11:06+01:00",
       "findings_count": 2,
       "status": "scanned",
-      "notes": "Cycle-108 (docker_escape_paths). CVE: OSV over the 10 venv packages returns only certifi 2026.7.22 GHSA-6q48-6c7w-9gw2, which is REM-348 (unchanged). httpx 0.28.1, httpcore 1.0.9, h11 0.16.0, anyio 4.15.1, idna 3.20, PyYAML 6.0.3 and pip 26.3 are clean. PROBE: MITIGATED. Pulse is a host process (python -m pulse, user pazny) with no listening socket; its only connections are outbound to 127.0.0.1:9000. It executes jobs read from wing.db, so the route from a container to host execution would be a write to pulse_jobs. That write needs a Wing bearer with pulse.write (API returns 401 without one), and of the 76 bind mounts on the host only Grafana's covers wing.db, read-only (REM-365); none covers ~/pulse/state or ~/.nos/secrets.yml. Job env secrets in the database are `secret:` references resolved from ~/.nos/secrets.yml on the host. REM-234 was not re-measured this cycle.",
+      "notes": "Cycle-114 (default_credentials_test). CVE: OSV over the 10 venv packages flags only certifi 2026.7.22 (GHSA-6q48-6c7w-9gw2, PYSEC-2026-4320), which is REM-348. PROBE: N/A, no listener and no login surface. REM-234 not re-measured.",
       "last_scan_attempt": "2026-11-18T03:25:56+01:00"
     },
     "miniflux": {
@@ -486,13 +486,13 @@
       "last_scan_attempt": "2026-10-16T04:10:28+02:00"
     },
     "ntfy": {
-      "last_checked": "2026-11-19T03:03:07+01:00",
-      "last_cve_scan": "2026-11-19T03:03:07+01:00",
+      "last_checked": "2026-11-25T03:14:49+01:00",
+      "last_cve_scan": "2026-11-25T03:14:49+01:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-11-19T03:03:07+01:00",
+      "last_attack_probe": "2026-11-25T03:14:49+01:00",
       "findings_count": 7,
       "status": "scanned",
-      "notes": "Cycle-109 (tls_crypto_weakness). CVE: v2.38.1 (2026-11-16) is a security release (template DoS hardening, web-push timeouts and per-prefix limit, S3 upload buffering). Live v2.28.0 has no GHSA/OSV entry; template DoS needs publish rights under deny-all (MITIGATED), web push is not configured and S3 attachments are not used. REM-362 stands, but its target should now read v2.38.1. Not a new row. PROBE MITIGATED: ntfy.pazny.eu 200 with HSTS 1y, http 301, TLS1.2 AEAD/TLS1.3 only; the container's cleartext :80 is published on 127.0.0.1:2586 only; base-url is https; behind-proxy true. Go 1.27.x stdlib CVE-2026-97054 (net/http MaxBytesReader race, fixed 1.27.4) not assessed against ntfy's code paths (low confidence).",
+      "notes": "Cycle-115 (ssrf_vector_analysis). No new row. v2.38.2 (2026-11-24, security release): go-smtp GO-2026-7029 N/A (no SMTP listener configured), reservation fixes N/A (enable_reservations=false), X-Forwarded-For multi-line spoof: not expected here because Traefik forwards one appended header line (code knowledge, not tested; medium). REM-362 target should read v2.38.2. No repo GHSA. SSRF MITIGATED: live /v1/config has web push, calls, emails, payments off; server.yml sets no upstream-base-url, web-push, SMTP, Twilio or Firebase; attach and icon URLs are fetched by clients. CVE-2026-39087 (web-push regex) fixed in 2.22.0.",
       "last_scan_attempt": "2026-11-19T03:10:55+01:00"
     },
     "mailpit": {
@@ -506,14 +506,14 @@
       "last_scan_attempt": "2026-10-06T04:14:44+02:00"
     },
     "spacetimedb": {
-      "last_checked": "2026-11-20T03:12:54+01:00",
-      "last_cve_scan": "2026-11-20T03:12:54+01:00",
+      "last_checked": "2026-11-26T03:14:32+01:00",
+      "last_cve_scan": "2026-11-26T03:14:32+01:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-11-20T03:12:54+01:00",
-      "findings_count": 5,
+      "last_attack_probe": "2026-11-26T03:14:32+01:00",
+      "findings_count": 6,
       "status": "scanned",
-      "notes": "Cycle-110 (resource_exhaustion_vectors). CVE CLEAN: live v2.7.0-hotfix3. There is no GHSA in clockworklabs/SpacetimeDB, no OSV crates.io entry, and cve.now only matches the unrelated 'Spacetime' Ad Inserter. Upstream is at v2.15.0 (2026-11-10), which is above REM-333's v2.10.0 floor. REM-309 RE-CONFIRMED with one anonymous handshake: GET https://forum.pazny.eu/stdb/v1/database/nos-forum/subscribe with WS upgrade headers and no token -> 101 Switching Protocols with a fresh Spacetime-Identity. The router nos-forum-stdb is unchanged (sanction ipAllowList 0.0.0.0/0, strip, security-headers, compress; accessLogs false). rateLimit/inFlightReq still appear only in keap-ext.yml and keap-ingest.yml. The container has a 1 GiB limit, 1.0 CPU and no pids limit, and runs at 126 MiB with 19 PIDs. REM-309/333/334/173 stand. No new row.",
-      "last_scan_attempt": "2026-11-20T03:23:19+01:00"
+      "notes": "Cycle-116 (docker_escape_paths). CVE CLEAN: live v2.7.0-hotfix3. The repo advisory endpoint is empty, OSV crates.io spacetimedb-core returns 0, and cve.now matches only the unrelated Ad Inserter plugin. Upstream is at v2.16.3 (2026-11-24); the v2.16.1/.3 notes have no security items. REM-333 (v2.10.0 floor) stands. PROBE: +REM-381 MEDIUM. The container itself is MITIGATED: uid 1000, CapEff=0, keys mounted ro, no socket, seccomp=2. However, it is an infra_net peer of infra-docker-socket-proxy-1. Measured from inside: _ping OK, /containers/json lists 41 containers, the same with the REM-334 '?a=/.well-known/openid-configuration' suffix, and POST is 403. With REM-334 this is a blind, unauthenticated GET path to the Docker API. The setuid su/mount/ssh-keysign are present (NNP=0) but give nothing to uid 1000 without a password. REM-309/333/334/173 stand.",
+      "last_scan_attempt": "2026-11-26T03:14:32+01:00"
     },
     "postgres": {
       "last_checked": "2026-11-21T03:12:41+01:00",
@@ -567,25 +567,25 @@
       "cycle_mod": 2,
       "name": "default_credentials_test",
       "description": "Test admin panels for default/weak credentials",
-      "last_run": "2026-11-16T10:41:08+01:00",
+      "last_run": "2026-11-24T03:11:06+01:00",
       "findings": 0,
-      "note": "Cycle-106 over tileserver/loki/tempo/n8n/postgresql: NO NEW FINDINGS. n8n and postgresql are MITIGATED (HKDF-derived owner/superuser credentials, setup closed, SCRAM only from host). loki, tempo and tileserver are N/A: no credential surface by design (unauthenticated exposure already REM-231/201). Previous: Cycle-98 over kiwix/paperclip/postgres/traefik/mariadb: +REM-354."
+      "note": "Cycle-114 over ollama/wing/pulse/traefik/mariadb: NO NEW FINDINGS. Wing, traefik and mariadb MITIGATED by template and shape checks; ollama and pulse N/A. No credential was submitted. Previous: Cycle-106 over tileserver/loki/tempo/n8n/postgresql: NO NEW FINDINGS. n8n and postgresql are MITIGATED (HKDF-derived owner/superuser credentials, setup closed, SCRAM only from host). loki, tempo and tileserver are N/A: no credential surface by design (unauthenticated exposure already REM-231/201). Previous: Cycle-98 over kiwix/paperclip/postgres/traefik/mariadb: +REM-354."
     },
     {
       "cycle_mod": 3,
       "name": "ssrf_vector_analysis",
       "description": "Analyze internal network paths for SSRF potential",
-      "last_run": "2026-11-12T03:13:31+01:00",
+      "last_run": "2026-11-25T03:14:49+01:00",
       "findings": 1,
-      "note": "Cycle-99 over tileserver/loki/tempo/authentik/grafana. +REM-355 (Grafana datasource proxy relays public-edge requests to Loki /ingester/shutdown via GET and Tempo /shutdown via any method; cross-site GET-CSRF through SameSite=Lax; THEORETICAL). MITIGATED as SSRF origins: tileserver (remote marker icons off, style sources local), loki (alertmanager_url and remote_write hardcoded), tempo (remote_write hardcoded), authentik (0 OAuth/SAML sources, 0 webhook transports, sinks admin-only). Lesson: the 'observability backends are fabric-only' framing behind REM-201/REM-231 misses that Grafana is a public, method-transparent relay into them. Read the proxy's validateRequest, not just port maps. Static analysis at the exact live tags plus PATCH route checks; no shutdown was fired."
+      "note": "Cycle-115 over jellyfin/uptime_kuma/ntfy/authentik/grafana: +REM-379 (jellyfin's shared_net reach for the unfixed CVE-2026-119549). REM-355 and REM-335 re-measured, unchanged. ntfy and authentik MITIGATED as SSRF origins. Lesson: 'egress is docker-network bound' is not a mitigation when that network carries unauthenticated GET control endpoints; measure reach from inside the container. Previous: Cycle-99 over tileserver/loki/tempo/authentik/grafana. +REM-355 (Grafana datasource proxy relays public-edge requests to Loki /ingester/shutdown via GET and Tempo /shutdown via any method; cross-site GET-CSRF through SameSite=Lax; THEORETICAL). MITIGATED as SSRF origins: tileserver (remote marker icons off, style sources local), loki (alertmanager_url and remote_write hardcoded), tempo (remote_write hardcoded), authentik (0 OAuth/SAML sources, 0 webhook transports, sinks admin-only). Lesson: the 'observability backends are fabric-only' framing behind REM-201/REM-231 misses that Grafana is a public, method-transparent relay into them. Read the proxy's validateRequest, not just port maps. Static analysis at the exact live tags plus PATCH route checks; no shutdown was fired."
     },
     {
       "cycle_mod": 4,
       "name": "docker_escape_paths",
       "description": "Check socket-mounted services for container escape vectors",
-      "last_run": "2026-11-18T03:25:56+01:00",
-      "findings": 1,
-      "note": "Cycle-108 over ollama/wing/pulse/gitea/vaultwarden. Three of the five are host processes, so the question for them is what a container can reach on the host. Ollama: still open without authentication from any container (REM-292). Wing and the medulla door: reachable, but the edge token and bearer checks hold (403/401). Pulse: no listener; its job table can only be written through Wing. gitea and vaultwarden: no socket, privileged mode, cap_add or host namespace; root with default caps and NNP off remains (REM-304, REM-293; THEORETICAL). +REM-365 LOW: Grafana's read-only bind of the whole Wing data directory. Lesson: under Docker Desktop a bind presents host files as owned by the container user, so a host 0600 mode protects nothing inside the mount; scope the bind, not the mode."
+      "last_run": "2026-11-26T03:14:32+01:00",
+      "findings": 2,
+      "note": "Cycle-116 over calibreweb/rustfs/spacetimedb/n8n/postgresql. +REM-381 MEDIUM (spacetimedb is an infra_net peer of the socket proxy; the REM-334 unverified-iss fetch gives a blind, unauthenticated GET path to the Docker API) and +REM-382 LOW (calibre-web unused DOCKER_MOD installed as root). No classic escape precondition in any of the five: no socket, none privileged, no cap_add, no host namespaces, seccomp=2. App processes run non-root with CapEff=0 (calibre-web pid 1 s6 is root by LSIO design and drops to uid 501)."
     },
     {
       "cycle_mod": 5,
@@ -1236,6 +1236,59 @@
       "closed": [],
       "amended": [],
       "note": "Cycle-113. Probe found nothing new; the five disclosures are already tracked. REM-374 (gitea) came from the CVE leg. Requests were anonymous GETs, dig CHAOS queries and one throwaway alpine:3 peer on shared_net (removed). No CRITICAL, so the report was not touched."
+    },
+    {
+      "cycle": 114,
+      "probe": "default_credentials_test",
+      "components": [
+        "ollama",
+        "wing",
+        "pulse",
+        "traefik",
+        "mariadb"
+      ],
+      "at": "2026-11-24T03:11:06+01:00",
+      "findings": [],
+      "closed": [],
+      "amended": [],
+      "note": "No credential was submitted anywhere; assessed from templates, length/shape booleans of secrets and single anonymous GETs. An earlier response in this session was stopped by a safety classifier, after which no login surface was probed (later live actions: one br GET at the edge, one GET to 127.0.0.1:8082/api/rawdata, docker inspect/exec version reads, the secrets shape check). REM-375 and REM-376 come from the CVE leg. No CRITICAL row, so the report was not touched."
+    },
+    {
+      "cycle": 115,
+      "probe": "ssrf_vector_analysis",
+      "components": [
+        "jellyfin",
+        "uptime_kuma",
+        "ntfy",
+        "authentik",
+        "grafana"
+      ],
+      "at": "2026-11-25T03:14:49+01:00",
+      "findings": [
+        "REM-379"
+      ],
+      "closed": [],
+      "amended": [],
+      "note": "Read-only: source reads, sqlite/psql SELECTs, health and ready GETs from inside jellyfin and grafana. No shutdown endpoint, payload upload or oversized header was sent. REM-377, REM-378 and REM-380 come from the CVE leg. OPERATOR NOTE: a docker inspect filter printed AUTHENTIK_SECRET_KEY into this session's transcript; the value is in none of the five notebook files, but the transcript under ~/.claude/projects holds it and it went to the model API. Consider rotating it."
+    },
+    {
+      "cycle": 116,
+      "probe": "docker_escape_paths",
+      "components": [
+        "calibreweb",
+        "rustfs",
+        "spacetimedb",
+        "n8n",
+        "postgresql"
+      ],
+      "at": "2026-11-26T03:14:32+01:00",
+      "findings": [
+        "REM-381",
+        "REM-382"
+      ],
+      "closed": [],
+      "amended": [],
+      "note": "Read-only: docker inspect, in-container /proc status reads, setuid enumeration, sqlite read-only on calibre app.db, and GETs to docker-socket-proxy from spacetimedb and postgresql (_ping, /version, /containers/json counted by Id, no values printed). A single empty POST to /containers/create got 403. No forged JWT was sent to the public lane. Edge routing (Traefik dynamic config) was not re-read this cycle. Env was listed only for N8N SSRF/NODES keys."
     }
   ],
   "last_full_scan_summary": "Cycle-109 (2026-11-19) batch jellyfin,uptime_kuma,ntfy,traefik,mariadb; probe tls_crypto_weakness. +REM-366 MEDIUM (Kuma ignore_tls kills expiry alerts), +REM-367 HIGH provisional (Kuma 2.5.9 jsonata 2.2.2 code execution, fixed in 2.5.12), +REM-368 MEDIUM (MariaDB 11.8.10, 13 CVEs, image not yet on Docker Hub). Traefik CVE CLEAN at 3.7.18. Jellyfin unchanged (REM-351/360/322). ntfy: REM-362 target should be v2.38.1. Edge TLS MITIGATED (TLS1.2 accepts only ECDHE-RSA-AES128-GCM and CHACHA20). No CRITICAL, so the report was not touched."

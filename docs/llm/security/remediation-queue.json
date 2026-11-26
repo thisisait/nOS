@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-23T03:09:38+01:00",
+  "generated_at": "2026-11-26T03:14:32+01:00",
   "generator": "NOS Vulnerability Scanner v1",
   "items": [
     {
@@ -6690,25 +6690,213 @@
       "source": "https://github.com/advisories/GHSA-fpmh-frq8-7rj8 ; https://api.osv.dev/v1/vulns/GO-2026-6865 ; https://github.com/klauspost/compress/blob/v1.20.0/zstd/decoder.go (line 231 go d.startStreamDecoder, line 837 decodeLiterals, no recover in the decoder) ; https://github.com/go-gitea/gitea/blob/v28.4.0/modules/packages/arch/metadata.go (line 103) ; https://github.com/go-gitea/gitea/blob/v28.4.0/modules/packages/debian/metadata.go (line 127) ; https://github.com/go-gitea/gitea/blob/v28.4.0/modules/packages/conda/metadata.go (line 114) ; https://github.com/go-gitea/gitea/blob/release/v28/go.mod",
       "evidence": "OSV querybatch over the 217 Go modules in the live binary returned GO-2026-6865 for klauspost/compress 1.20.0. CALL PATH (v28.4.0 source): the Arch, Debian and Conda parsers call zstd.NewReader on uploader-supplied bytes with default options. In klauspost/compress v1.20.0 a reader with concurrency != 1 takes `go d.startStreamDecoder`, and decodeLiterals -> huff0.ReadTable (the advisory's panicking frame) runs inside that goroutine with no recover(), so gitea's HTTP recovery middleware cannot catch it and the Go runtime aborts the whole process. The 1-CPU quota does not save it: go_sched_gomaxprocs_threads for job gitea is 2 (Prometheus, 2026-11-23), so concurrency is 2 and the goroutine path is taken. The registry is unused: /data/gitea/packages is 0 bytes, and anonymous /api/v1/packages/pazny answers 'token is required'. NOT DONE: no crafted frame was uploaded, and there is no measured crash. That is why confidence is medium and not high.",
       "remediation_detail": "Cycle-113 CVE leg, gitea. ACTION NOW (the registry is empty, so nothing is lost): add GITEA__packages__ENABLED: 'false' to roles/pazny.gitea/templates/compose.yml.j2 behind a gitea_packages_enabled | default(false) toggle, then converge. This also retires the container-registry XSS and RubyGems injection surface that the 28.x waves keep patching. First confirm that no apps/ manifest or Woodpecker pipeline pushes to git.<tld> as a registry (a grep of .woodpecker and roles/pazny.gitea found none; apps/ was not searched). VERIFY: GET https://git.<tld>/v2/ should answer 404 instead of 401 (expected, untested). LATER: when a 28.x release lists klauspost/compress >= 1.20.2, bump gitea_version and re-enable only if the registry is wanted. Detection: devops-gitea-1 RestartCount is 0 today, and a rise together with a 'zstd' / 'huff0' goroutine trace in the log is the signature. NOT FILED (lower or unreachable): GO-2026-6905 blakesmith/ar panic (runs in the request goroutine, recovered; replaced on main by #40401), GHSA-j6qf-3m9c-vwj3 chi ClientIPFromXFF (MODERATE, not called by gitea), GO-2026-5932 x/crypto/openpgp (unmaintained notice)."
+    },
+    {
+      "status": "pending",
+      "found_at": "2026-11-24T03:11:06+01:00",
+      "scan_cycle": 114,
+      "id": "REM-375",
+      "cve_ids": [
+        "CVE-2026-129474",
+        "CVE-2026-129496",
+        "CVE-2026-115560",
+        "CVE-2026-126714",
+        "CVE-2026-129481",
+        "CVE-2026-129182",
+        "CVE-2026-128064"
+      ],
+      "ghsa_ids": [
+        "GHSA-8mjj-2r7p-4hg2",
+        "GHSA-gr4f-wgx5-jpfv",
+        "GHSA-658j-r8rw-q6mx",
+        "GHSA-fm2m-fjf5-v3cp",
+        "GHSA-g3vh-838c-65v7",
+        "GHSA-2fjv-p558-g82m",
+        "GHSA-f6gg-rchx-xw8j"
+      ],
+      "finding_ref": "CVE-C114-WING-FRANKENPHP-1.13.5-EMBEDS-PHP-8.5.12-BELOW-8.5.13-SIX-CRITICAL-ADVISORIES-2026-11-19",
+      "component": "wing",
+      "severity": "HIGH",
+      "severity_note": "Upstream rates six of these CRITICAL (no CVSS score published). Rated HIGH here: THEORETICAL, NOT reproduced. No request path in Wing was shown to meet the engine advisory's conditions (a magic method call reached with a fatal error at that point, plus memory-address knowledge). Upstream says a framework or magic method alone does not establish exploitability. Not MEDIUM, because the configuration preconditions of CVE-2026-129474 look present and the PHP code runs before Wing's own auth. The host-side process runs as user pazny, so impact would be host code execution.",
+      "auto_fixable": true,
+      "current_version": "FrankenPHP v1.13.5 (PHP 8.5.12, ZTS, Caddy v2.11.9) at ~/.local/bin/frankenphp; pin default.config.yml:666 frankenphp_version 1.13.5. PHP is embedded: otool -L lists no libphp, so a Homebrew PHP upgrade does not fix it.",
+      "fix_version": "FrankenPHP 1.13.6 (2026-11-19, embeds PHP 8.5.13; frankenphp-mac-arm64 asset present). Not 1.14.0: it moves to PHP 8.6.",
+      "remediation_type": "version_bump",
+      "confidence": "medium",
+      "source": "https://github.com/php/php-src/security/advisories/GHSA-8mjj-2r7p-4hg2 ; https://github.com/php/php-src/security/advisories/GHSA-gr4f-wgx5-jpfv ; https://github.com/php/php-src/security/advisories/GHSA-658j-r8rw-q6mx ; https://github.com/php/php-src/security/advisories/GHSA-fm2m-fjf5-v3cp ; https://github.com/php/php-src/security/advisories/GHSA-g3vh-838c-65v7 ; https://github.com/php/php-src/security/advisories/GHSA-2fjv-p558-g82m ; https://github.com/php/php-src/security/advisories/GHSA-f6gg-rchx-xw8j ; https://github.com/php/frankenphp/releases/tag/v1.13.6 ; https://raw.githubusercontent.com/php/php-src/php-8.5.13/NEWS",
+      "evidence": "Cycle-114, 2026-11-24, read-only. TRIAGE from the opening part of each advisory (CVE-2026-129474 was read further; the others only about the first 1,300 characters plus a keyword search for thread/ZTS/FrankenPHP): CVE-2026-129474 (engine, >=8.5.0 <8.5.13): needs fatal_error_backtraces=1 and zend.exception_ignore_args=0. The binary defaults are 1 and 0 (php-cli read, no php.ini loaded); the live Caddyfile has one php_ini line (session.upload_progress.enabled 0), so the SERVER values are inferred, not measured. Wing enables Tracy (app/Bootstrap/Booting.php:65) and Tracy 2.12.0 sets zend.exception_ignore_args=0 at runtime (vendor/tracy/tracy/src/Tracy/Debugger/Debugger.php:208), so that ini workaround would be undone. __call/__callStatic exist in vendor (nette/utils, guzzle). CVE-2026-129496 (timezone cache): the part read names non-thread-safe builds and live is ZTS, so likely N/A; partially read. CVE-2026-115560 (upload progress): MITIGATED, progress is off in the live Caddyfile and multipart gets 415 before PHP. CVE-2026-126714 and CVE-2026-129481 (session): save_handler is files by default and live is ZTS, where the 126714 advisory says a hard memory-limit failure in another thread can interrupt a session write; need an interrupted write plus a gadget, or a user-defined stream wrapper close path; no such path found, not exhaustively searched; THEORETICAL. CVE-2026-129182: described for FPM and mod_php with path-specific ini; THEORETICAL. CVE-2026-128064 (uppercase HTTPS scheme goes plaintext): outbound calls not audited. FPM and CGI advisories (129289, 129291, 129292, 129538) N/A: not this SAPI. Not triaged: SOAP, DOM, PHAR, URI and folded-header advisories (129506, 129501, 15353, 128090, 129438, 127960). Out of batch, owner to check: dolibarr reports PHP 8.2.33 (8.2.36 is fixed); wordpress 8.3.37 is fixed.",
+      "remediation_detail": "Set frankenphp_version to 1.13.6 in default.config.yml:666, converge wing, restart eu.thisisait.nos.wing and confirm `frankenphp version` prints PHP 8.5.13. Interim workaround: add `php_ini fatal_error_backtraces 0` next to the existing php_ini line in roles/pazny.wing/templates/wing.Caddyfile.j2. Do NOT rely on zend.exception_ignore_args 1: Tracy sets it back to 0 at runtime. A full grep of app, vendor and bin (php and neon) found nothing that sets fatal_error_backtraces, and app/config has no top-level php: section. Separately, on Darwin the Pulse-run Wing jobs appear to use /opt/homebrew/bin/php (post.yml comments; that PHP is 8.5.12), so upgrade Homebrew PHP too; not verified."
+    },
+    {
+      "status": "pending",
+      "found_at": "2026-11-24T03:11:06+01:00",
+      "scan_cycle": 114,
+      "id": "REM-376",
+      "cve_ids": [],
+      "ghsa_ids": [],
+      "finding_ref": "SCAN-C114-TRAEFIK-3.7.19-COMPRESS-BROTLI-WRITER-MEMORY-UNBOUNDED-FIXED-IN-3.7.20-NO-ADVISORY",
+      "component": "traefik",
+      "severity": "MEDIUM",
+      "severity_note": "No CVE or GHSA exists for this; it comes from the release notes. Availability only. THEORETICAL: memory use was not measured and no slow-client test was run. Same shape as GHSA-x5pf-cqh3-2gv8 (zstd in Compress, HIGH 8.7, fixed in 3.7.18). restart: unless-stopped recovers the edge, which is the shared entry point for every service.",
+      "auto_fixable": true,
+      "current_version": "traefik:v3.7.19 live (infra-traefik-1); pin default.config.yml:1342 traefik_image_version v3.7.19",
+      "fix_version": "v3.7.20 (2026-11-23; image tag present on Docker Hub). Not v3.8.0, a new minor.",
+      "remediation_type": "version_bump",
+      "confidence": "medium",
+      "source": "https://github.com/traefik/traefik/pull/14324 ; https://github.com/traefik/traefik/releases/tag/v3.7.20 ; https://github.com/traefik/traefik/security/advisories/GHSA-x5pf-cqh3-2gv8",
+      "evidence": "Cycle-114, 2026-11-24. PR #14324 (merged 2026-11-20): with default options a Brotli writer uses more than 12 MiB and each response keeps its writer until fully written, so slow clients can hold memory. compress.go at v3.7.19 creates brotli.NewWriter(rw) with no options (line 221) and defaults to gzip, br, zstd (line 24). Live conf.d/middlewares.yml: `compress: {}`, attached to the file-provider service routers by services.yml.j2 (lines 95, 97, 161, 163, 223; lane routers not checked). One ordinary anonymous GET to the auth host with Accept-Encoding: br returned content-encoding: br. Container memory limit 1 GiB. No load was generated.",
+      "remediation_detail": "Bump traefik_image_version to v3.7.20. Interim: limit the Compress middleware in roles/pazny.traefik/templates/dynamic/middlewares.yml.j2 to `encodings: [gzip]` until the bump lands (zstd is already bounded at 3.7.18+, so `[gzip, zstd]` also works)."
+    },
+    {
+      "status": "pending",
+      "found_at": "2026-11-25T03:14:49+01:00",
+      "scan_cycle": 115,
+      "id": "REM-377",
+      "cve_ids": [
+        "CVE-2026-114138"
+      ],
+      "ghsa_ids": [
+        "GHSA-33wh-fxxf-88vv"
+      ],
+      "finding_ref": "CVE-C115-AUTHENTIK-2026.5.7-BUNDLES-DRF-3.17.1-ANON-ACCEPT-HEADER-CPU-DOS-NO-RELEASED-2026.5.x-FIX",
+      "component": "authentik",
+      "severity": "HIGH",
+      "severity_note": "Advisory HIGH 7.5 (AV:N, no auth). Availability only, on the IdP every SSO app depends on. THEORETICAL: code path read end to end, NOT reproduced (no large-Accept request was sent). authentik's front router allows 1 MiB of headers (MaxHeaderBytes = Go default, internal/utils/web/server.go at 2026.5.7). Cloudflare's cap on the public path was not measured. Same axis as REM-343 but a different defect and fix.",
+      "auto_fixable": false,
+      "current_version": "ghcr.io/goauthentik/server:2026.5.7 live (server + worker); pin default.config.yml:1694; djangorestframework 3.17.1 and django 5.2.17 read in-container",
+      "fix_version": "djangorestframework 3.18.2. First authentik release found with it: 2026.8.6 (2026-11-20, uv.lock 3.18.3). 2026.5.8 still ships 3.17.1. The bump is on branch version-2026.5 but unreleased, so a 2026.5.9 would be the same-minor fix.",
+      "remediation_type": "version_bump",
+      "confidence": "medium",
+      "source": "https://github.com/advisories/GHSA-33wh-fxxf-88vv ; https://api.osv.dev (PyPI djangorestframework 3.17.1) ; https://github.com/goauthentik/authentik/releases/tag/version%2F2026.8.6 ; https://github.com/goauthentik/authentik/pull/27383",
+      "evidence": "Cycle-115 CVE leg: OSV querybatch over the container's Python distributions. (1) Live rest_framework/negotiation.py get_accept_list splits Accept with no cap; _MediaType calls django parse_header_parameters per token; live _parseparam recounts quotes for each ';' (quadratic) and has no length cap. (2) views.py:412 negotiates before perform_authentication (420) and check_throttles, so auth and throttling do not help; a 406 negotiates again. (3) Anonymous reach: GET https://auth.pazny.eu/api/v3/core/brands/current/ = 200; FlowExecutorView is AllowAny. The authentik router has no authentik@file or rate limit. (4) Capacity: 1.0 CPU, WEB__WORKERS=2. (5) Traefik 3.7.19 sets no maxHeaderBytes or respondingTimeouts; worker HTTP is httptools. SIBLINGS CHECKED, not applicable: CVE-2026-114136 (default parser is ORJSONParser using bytes.decode, which rejects transform codecs; JSONParser only on SCIM source views), CVE-2026-114137 (DRF authtoken not used), PyJWT CRITICAL CVE-2026-102268 (needs a mixed HMAC+asymmetric allow-list with raw PEM; the decode calls read pass a single algorithm or a parsed key, and 0 OAuth sources exist). CRITICAL anyio CVE-2026-63374 is N/A: its TLS client is used only through httpx/httpcore, imported only by the Microsoft Entra provider (0 configured), and it needs a non-ASCII host name. CRITICAL certifi GHSA-6q48-6c7w-9gw2 is REM-380. Traced: DRF, PyJWT, anyio, certifi. The other HIGH hits (aiohttp, oauthlib, msgpack, pyasn1, cryptography, urllib3, sqlparse, dnspython, httplib2) were NOT traced.",
+      "remediation_detail": "Bump authentik_version to 2026.5.9 once released with DRF >= 3.18.2, or go to 2026.8.6 now (minor jump: back up the DB, migrations are one-way). Interim: set http.maxHeaderBytes (e.g. 16384; check that OIDC cookies and redirects still fit) on the Traefik websecure and :8443 entrypoints, and add a rateLimit middleware to the authentik router. Verify: importlib.metadata version of djangorestframework in the server container is >= 3.18.2."
+    },
+    {
+      "status": "pending",
+      "found_at": "2026-11-25T03:14:49+01:00",
+      "scan_cycle": 115,
+      "id": "REM-378",
+      "cve_ids": [
+        "CVE-2026-107561",
+        "CVE-2026-88943",
+        "CVE-2026-88960"
+      ],
+      "ghsa_ids": [],
+      "finding_ref": "CVE-C115-GRAFANA-12.4.14-BELOW-12.4.16-THREE-UNPUBLISHED-CVES-2026-11-24-AND-PROMETHEUS-RESOURCE-SSRF",
+      "component": "grafana",
+      "severity": "MEDIUM",
+      "severity_note": "Provisional for the three new CVEs: the vendor release notes name them, but the CVE records, OSV and the grafana.com pages do not exist yet (all 404 on 2026-11-25), so severity and applicability are UNKNOWN. Re-rate on publication.",
+      "auto_fixable": true,
+      "current_version": "grafana/grafana:12.4.14 live (observability-grafana-1); pin default.config.yml:917",
+      "fix_version": "12.4.16 (2026-11-24; same-day 13.0.14 / 13.1.11 / 13.2.7 / 13.3.2). Supersedes the 12.4.15 target of REM-356. Tag present on Docker Hub.",
+      "remediation_type": "version_bump",
+      "confidence": "medium",
+      "source": "https://github.com/grafana/grafana/releases/tag/v12.4.16 ; https://grafana.com/security/security-advisories/cve-2026-106472/ ; https://grafana.com/security/security-advisories/cve-2026-111000/ ; https://grafana.com/security/security-advisories/cve-2026-107509/",
+      "evidence": "Cycle-115. v12.4.16 '### Security' lists Fix CVE-2026-107561, -88943, -88960; it also updates Go to 1.26.11 and Alpine to 3.24.4. REM-356 RE-RATE INPUT: its eight advisories are now published. Applicable: CVE-2026-106472 (MEDIUM 6.3, SSRF in the Prometheus data source resource API; http://prometheus:9090 is provisioned as proxy, no data-source credentials checked), CVE-2026-82014 (4.3, team preferences). CVE-2026-111000 (HIGH 7.1, Editor takes Admin on a folder): all 5 org users are Admin, so THEORETICAL. Not applicable: 106475, 81843 (no Elasticsearch), 107365 (no Cloud Monitoring), 102589 (renderer token; no renderer env seen), 107509 (vendor lists <13.1.0 as fixed). CVE-2026-10084 is Enterprise SAML; the image is OSS. REM-356 stands open and was not edited.",
+      "remediation_detail": "Bump grafana_version 12.4.14 -> 12.4.16 (patch, same line); this closes the version leg of REM-356 as well. REM-227 still needs >= 13.1."
+    },
+    {
+      "status": "pending",
+      "found_at": "2026-11-25T03:14:49+01:00",
+      "scan_cycle": 115,
+      "id": "REM-379",
+      "cve_ids": [
+        "CVE-2026-119549"
+      ],
+      "ghsa_ids": [],
+      "finding_ref": "PROBE-C115-SSRF-JELLYFIN-ON-SHARED-NET-TURNS-THE-UNFIXED-SVG-SSRF-INTO-A-RELAY-TO-UNAUTHENTICATED-BACKENDS-AND-HOST-PORTS",
+      "component": "jellyfin",
+      "severity": "MEDIUM",
+      "severity_note": "Reach is MEASURED; the SSRF itself is the published, unfixed CVE-2026-119549 (through 12.4) and was NOT exercised. THEORETICAL end to end: GET-only, mostly blind unless the target returns an image. MEDIUM as REM-355, which has the same targets with a different origin. Any Authentik account in the SSO role list, nos-guests included, gets a Jellyfin login.",
+      "auto_fixable": false,
+      "current_version": "jellyfin/jellyfin:12.4 live (iiab-jellyfin-1 on iiab_iiab_net + shared_net)",
+      "fix_version": "n/a (network topology). The bug itself has no fixed release; REM-351 tracks that.",
+      "remediation_type": "architecture",
+      "confidence": "medium",
+      "source": "https://www.cve.org/CVERecord?id=CVE-2026-119549 ; https://security-tracker.debian.org/tracker/CVE-2026-119549 ; https://github.com/jellyfin/jellyfin/blob/v12.4/src/Jellyfin.Drawing.Skia/SvgSecurityValidator.cs ; roles/pazny.jellyfin/templates/compose.yml.j2 ; attack_probe:ssrf_vector_analysis",
+      "evidence": "Cycle-115 ssrf_vector_analysis; adds to REM-351, whose interim relies on 'egress being docker-network bound'. That is not a mitigation. From inside iiab-jellyfin-1, health/ready GETs returned 200 for loki:3100 (ready, services), tempo:3200, prometheus:9090, uptime-kuma:3001 (302), spacetimedb:3000, gitea:3000, n8n:5678, rustfs:9000, influxdb:8086, blackbox-exporter:9115, redis-exporter:9121, grafana:3000, authentik-server:9000, ntfy, traefik:8080/ping, and host.docker.internal:11434 (Ollama), :3000, :3100, with no extra_hosts. REM-355 documents that Loki /ingester/shutdown and Tempo /shutdown accept plain GET; neither was called. Source at v12.4: POST /UserImage is [Authorize] and lets a user set their own image; GET /UserImage has no Authorize; SvgSecurityValidator returns null for any data URI whose media type is not image/svg+xml, consistent with the CVE text; SkiaEncoder sets ResolveExternalImages=None, whose effect on that path was not tested. No upstream validator commit since 2026-08-30. Live: 4 non-admin users; SSO roles include nos-guests. MITIGATED siblings: SSO avatar fetch (AvatarUrlFormat not set), Live TV tuner URLs (non-admins have permission Kind 5 = 0), remote-image download and item image upload (elevation required, read in RemoteImageController and ImageController at v12.4; the RemoteSearch POSTs are open to any user and their provider fetches were not traced).",
+      "remediation_detail": "Give Jellyfin a network holding only Traefik (the gated_net pattern, with the Traefik upstream resolving there) and drop shared_net and iiab_net. gated_net also holds KEAP, face, calibre-web and apex, so use a dedicated network rather than joining it; check OIDC to auth.pazny.eu and metadata providers still work. Network moves do not close host.docker.internal under Docker Desktop: that needs an egress rule or auth on host services (REM-292 class). Also drop nos-guests from jellyfin_oidc_user_roles if guests need no login. Verify: from the container loki:3100/ready and tempo:3200/ready fail."
+    },
+    {
+      "status": "pending",
+      "found_at": "2026-11-25T03:14:49+01:00",
+      "scan_cycle": 115,
+      "id": "REM-380",
+      "cve_ids": [],
+      "ghsa_ids": [
+        "GHSA-6q48-6c7w-9gw2"
+      ],
+      "finding_ref": "CVE-C115-AUTHENTIK-2026.5.7-BUNDLES-CERTIFI-2026.4.22-TRUSTING-COMPROMISED-EMSIGN-ECC-ROOT-G3",
+      "component": "authentik",
+      "severity": "LOW",
+      "severity_note": "Vendor CRITICAL; LOW on this estate. Reachable, but needs an on-path attacker holding a compromised eMudhra intermediate key, and the live outbound HTTPS calls found are a version check (a forged answer can fake or hide an update notice) and a Gravatar HEAD. THEORETICAL.",
+      "auto_fixable": false,
+      "current_version": "certifi 2026.4.22 in ghcr.io/goauthentik/server:2026.5.7 (server and worker); pin default.config.yml:1694",
+      "fix_version": "certifi >= 2026.10.19. First authentik release found with it: 2026.8.6. On branch version-2026.5, unreleased. Same bump as REM-377.",
+      "remediation_type": "version_bump",
+      "confidence": "high",
+      "source": "https://github.com/advisories/GHSA-6q48-6c7w-9gw2 ; https://github.com/goauthentik/authentik/releases/tag/version%2F2026.8.6",
+      "evidence": "Cycle-115 CVE leg. Both containers' certifi cacert.pem carries 'emSign ECC Root CA - G3', and the image's system store (/etc/ssl/certs) carries it too. No REQUESTS_CA_BUNDLE or SSL_CERT_FILE is set, and get_http_session is plain requests, so it uses certifi. Configured sinks: version.goauthentik.io and gravatar.com; 0 OAuth sources, SCIM, SAML, Entra, Google Workspace, SMS, captcha, Duo or HIBP. Expression policies that call requests were not enumerated. Intermediate revocation is not checked by requests.",
+      "remediation_detail": "Take the REM-377 bump. Optional: AUTHENTIK_DISABLE_UPDATE_CHECK=true removes the version call. Verify: certifi >= 2026.10.19 in both containers, and check the system store separately."
+    },
+    {
+      "id": "REM-381",
+      "finding_ref": "PROBE-C116-DOCKER-ESCAPE-PATHS-SPACETIMEDB-UNVERIFIED-ISS-FETCH-REACHES-INFRA-DOCKER-SOCKET-PROXY-WITHOUT-A-FOOTHOLD",
+      "component": "spacetimedb",
+      "severity": "MEDIUM",
+      "status": "pending",
+      "scan_cycle": 116,
+      "found_at": "2026-11-26T03:14:32+01:00",
+      "cve_ids": [],
+      "ghsa_ids": [],
+      "severity_note": "REM-318 assumes an attacker needs code execution in an infra_net peer before reaching the proxy. Via REM-334 the attacker needs no foothold: an unauthenticated request on the public forum lane makes spacetimedb send a GET of the attacker's choice, and the proxy is one hop from spacetimedb. The GETs are blind (no response body shown to the attacker) and POST=0, so this gives no secret read-back and no escape, which is why it is MEDIUM. The impact is DoS amplification and an oracle on the Docker API. THEORETICAL: not fired end to end at the edge.",
+      "auto_fixable": false,
+      "current_version": "clockworklabs/spacetime:v2.7.0-hotfix3 (infra-spacetimedb-1, on infra_infra_net + shared_net); infra-docker-socket-proxy-1 tecnativa CONTAINERS=1 IMAGES=1 EVENTS=1 VOLUMES=1 NETWORKS=1 POST=0 on infra_infra_net",
+      "fix_version": "n/a, topology. REM-318's change (move docker-socket-proxy to a dedicated internal network that only traefik joins) closes this path completely. REM-334's lane guard closes the trigger. Either one alone is enough for this row.",
+      "remediation_type": "architecture",
+      "confidence": "medium",
+      "source": "Live probe 2026-11-26 (docker exec, read-only GETs). Related: REM-318, REM-334, REM-309. Upstream: https://github.com/clockworklabs/SpacetimeDB (no advisory; repo security-advisories endpoint empty 2026-11-26). Proxy path rules: https://github.com/Tecnativa/docker-socket-proxy",
+      "evidence": "(1) From inside infra-spacetimedb-1: docker-socket-proxy resolves to 172.20.0.3. GET /_ping returns OK, and /version returns Docker Desktop 4.89.0, Engine 29.7.2, API 1.55. GET /containers/json lists 41 containers (counted 'Id' keys, printed no values). GET /containers/json?a=/.well-known/openid-configuration ALSO lists 41, so the proxy ignores the suffix that REM-334's format! call appends after a '?' in iss. POST /containers/create returns 403. (2) This container runs uid 1000, pid 1 CapEff=0, not privileged, keys mounted read-only, no socket. The container itself is MITIGATED; the exposure comes only from where it sits on the network. (3) REM-334 (source read) shows that any non-local iss is fetched before signature validation, from a public-lane endpoint (/stdb/v1/identity/websocket-token). Combining (1) and (3): iss=http://docker-socket-proxy:2375/<api path>? produces a GET from spacetimedb to the Docker API. NOT measured: whether the OIDC fetch caps body size or time. If it buffers the whole body, GET /images/{name}/get or /containers/{id}/export (expected to pass under IMAGES=1 and CONTAINERS=1 by tecnativa's path-prefix rules; not measured) streams a multi-GB tarball into a 1 GiB container and loads the shared LinuxKit VM, and /events (EVENTS=1) holds a connection open indefinitely.",
+      "remediation_detail": "Cycle-116 docker_escape_paths probe. This row combines two existing rows; it does not replace either. Feasibility of each vector: classic container escape MITIGATED (no socket, CapEff 0, non-root, seccomp=2, runc); proxy write leg MITIGATED (POST=0); proxy read leg EXPLOITABLE from a foothold (REM-318) and, newly, THEORETICAL without one (this row: blind GET via REM-334). ACTION: (1) Take REM-318's network split. It is the single change that removes the proxy from this container's reach and from every other infra_net peer. (2) While editing the proxy, set IMAGES=0 and VOLUMES=0. Per REM-318, traefik's docker provider needs only CONTAINERS, NETWORKS, EVENTS, VERSION and PING, so EVENTS stays, and the network split is what covers the /events stream. (3) REM-334's lane guard as written. VERIFY: from infra-spacetimedb-1, `wget -T3 http://docker-socket-proxy:2375/_ping` must fail to resolve or connect."
+    },
+    {
+      "id": "REM-382",
+      "finding_ref": "PROBE-C116-DOCKER-ESCAPE-PATHS-CALIBREWEB-UNUSED-UNIVERSAL-CALIBRE-DOCKER-MOD-FETCHED-AND-INSTALLED-AS-ROOT-FROM-A-FLOATING-TAG-ON-EVERY-RECREATE",
+      "component": "calibreweb",
+      "severity": "LOW",
+      "status": "pending",
+      "scan_cycle": 116,
+      "found_at": "2026-11-26T03:14:32+01:00",
+      "cve_ids": [],
+      "ghsa_ids": [],
+      "severity_note": "Supply-chain and root-at-boot surface, not an escape primitive. The mod's code runs as container root with the full default capability set and NoNewPrivs=0, before s6 drops to the app user. Cycle-110 measured the binaries it installs as unused. REM-207 (no digest pinning, estate-wide) covers tags in general; this row is the specific, deletable case. THEORETICAL.",
+      "auto_fixable": true,
+      "current_version": "lscr.io/linuxserver/calibre-web:0.6.27 with DOCKER_MODS=linuxserver/mods:universal-calibre (roles/pazny.calibre_web/templates/compose.yml.j2, environment block)",
+      "fix_version": "n/a, configuration: delete the DOCKER_MODS line. If ebook conversion is wanted later, pin the mod to a versioned tag instead of the floating one, and set config_converterpath so it is actually used.",
+      "remediation_type": "configuration",
+      "confidence": "medium",
+      "source": "Live probe 2026-11-26 (docker logs / docker exec iiab-calibre-web-1). Cycle-110 app.db read (scan-state calibreweb notes: config_converterpath empty, config_uploading=0). Mods docs: https://github.com/linuxserver/docker-mods . Related: REM-207, REM-274, REM-364.",
+      "evidence": "(1) Container logs show '[mod-init] Downloading linuxserver/mods:universal-calibre from lscr.io' and then '[pkg-install-init] Installing all mod packages', run by the s6 init. pid 1 is s6-svscan with Uid 0, CapEff a80425fb (the default set) and NoNewPrivs 0. (2) The app process (python3 /app/calibre-web/cps.py) runs as Uid 501 with CapEff 0. root and abc are both password-locked in /etc/shadow, and pam.d/su allows passwordless su only for uid 0 (pam_rootok), so the setuid su found in the image does not give the app user root. In-container escalation is MITIGATED. (3) Network: gated_net only. docker-socket-proxy does not resolve. host.docker.internal resolves to 192.168.65.254 (REM-292 class, already filed estate-wide). (4) Binds: /books and /config, both read-write, and no other running container mounts either path. (5) The compose comment records that the mod adds 4m09s to first boot, which is the reason for start_period 600s. (6) Re-measured this cycle, app.db read-only: config_converterpath='' and config_binariesdir='' (so the helper.py embed-metadata and convert branches, which require binariesdir, are off; it is '' rather than NULL, so autodetect_calibre_binaries() does not run). config_uploading=0. config_kepubifypath=/usr/bin/kepubify is the image's own binary (dated 2026-09-27, the image build), not the mod's; the mod adds /app/calibre and /usr/bin/ebook-convert. roles/pazny.calibre_web/tasks/ sets only config_calibre_dir. Nothing wires the mod's binaries.",
+      "remediation_detail": "Cycle-116 docker_escape_paths probe, calibre-web. Vector ratings: socket or proxy reach MITIGATED (gated_net); privilege escalation from the app user MITIGATED (uid 501, CapEff 0, locked root); host reach via 192.168.65.254 THEORETICAL, already REM-292; root-time code from an unpinned remote mod THEORETICAL (this row). ACTION: remove `DOCKER_MODS: linuxserver/mods:universal-calibre` from roles/pazny.calibre_web/templates/compose.yml.j2 and lower the healthcheck start_period to match. Optional, matching REM-274's pattern: add security_opt no-new-privileges:true. LSIO's s6 init still needs CHOWN, SETUID and SETGID to drop to PUID, so test cap_drop before adopting it. VERIFY: the next recreate's logs have no [mod-init] Downloading line, and the cps.py process still runs as uid 501."
     }
   ],
   "summary": {
-    "total_items": 364,
+    "total_items": 372,
     "by_severity": {
       "CRITICAL": 45,
-      "HIGH": 110,
-      "MEDIUM": 126,
-      "LOW": 83
+      "HIGH": 112,
+      "MEDIUM": 130,
+      "LOW": 85
     },
     "by_status": {
       "resolved": 167,
       "wontfix": 4,
       "vendor-blocked": 5,
       "obsolete": 1,
-      "pending": 187
+      "pending": 195
     },
-    "auto_fixable": 236,
-    "manual_review_required": 128,
-    "note": "+1 ROW 2026-11-23 (cycle-113 batch alloy,dnsmasq,bone,gitea,vaultwarden; probe version_header_leakage): REM-374 MEDIUM (gitea 28.4.0 embeds klauspost/compress 1.20.0, CVE-2026-116591; an authenticated package upload can abort the process; exploitable by source analysis, not reproduced; no 28.x fix; the registry is empty, so disable packages). Probe: nothing new, all disclosure is already tracked (REM-287, REM-328, REM-329, REM-352, REM-353). CVE leg otherwise clean at the live versions: Alloy 1.22.0, dnsmasq 2.93, gitea 28.4.0, vaultwarden 1.37.5. LIKELY LIVE-SATISFIED, owner to re-verify: REM-353 (its own close condition, live 1.37.5, is met), REM-363 (package floors met), REM-154, REM-236. OPERATOR ACTION: the scanner printed the vaultwarden OIDC client secret into its own session transcript (grep too broad); rotate it. The value is in no security/ file. No CRITICAL, so the report was not touched."
+    "auto_fixable": 240,
+    "manual_review_required": 132,
+    "note": "+2 ROWS 2026-11-26 (cycle-116 batch calibreweb,rustfs,spacetimedb,n8n,postgresql; probe docker_escape_paths): REM-381 MEDIUM (spacetimedb: the REM-334 unverified-iss fetch reaches the infra docker-socket-proxy with no foothold, a blind GET-only path that undercuts REM-318's 'needs RCE first' premise; REM-318's network split closes it), REM-382 LOW (calibreweb: the unused universal-calibre DOCKER_MOD is fetched from a floating tag and installed as root on every recreate). CVE leg CLEAN for all five at live versions. No CRITICAL, so the report was not touched. LIKELY LIVE-SATISFIED on the version leg, owner to re-verify (status untouched): REM-276 and REM-307 (live rustfs 1.0.6 >= the 1.0.2 floor), REM-357 (live PostgreSQL 16.16), REM-349 (n8n 2.47.7 >= 2.46.4, carried over from cycle-111)."
   }
 }
