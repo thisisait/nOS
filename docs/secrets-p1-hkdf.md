@@ -32,7 +32,7 @@ ONCE in `main.yml`, its result exposed by a single `set_fact` as
 `nos_derived_secrets` (a flat `{key: value}` dict), `nos_secret_scheme` and
 `nos_secret_master`.** Both tasks are `no_log: true`.
 
-- Why not a Jinja filter: constraint 1 — `default.config.yml` /
+- Why not a Jinja filter: constraint 1 — the default layers /
   `default.credentials.yml` are eagerly resolved by the plugin loader via
   `template_vars: "{{ vars }}"` in a context where ansible filter plugins are
   NOT loaded. A filter in a vars file aborts the run

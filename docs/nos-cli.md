@@ -318,7 +318,7 @@ measured: the GUI killalls (`killall Dock` / `killall Finder`,
 restart** in nOS's own tasks (the vendored `osx-command-line-tools` role's
 `softwareupdate -i` can trigger an OS update, but `--tags upgrade` does not
 reach it). The killalls defer by default (`defer_gui_restarts: true`,
-`default.config.yml`), so a normal or blank run no longer flickers the GUI
+`config.d/10-host-desktop.yml`), so a normal or blank run no longer flickers the GUI
 mid-run, and `--tags upgrade` is provably free of all of them — gate
 `tests/anatomy/test_upgrade_tag_host_quiet.py`. Background:
 `docs/archive/upgrade-reset-scope-and-session-safety.md` §Run-hardening.

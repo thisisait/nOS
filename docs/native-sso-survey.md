@@ -11,7 +11,7 @@
 >
 > Source of truth for the current bucket of each service:
 > per-plugin `authentik.mode:` in `files/anatomy/plugins/<svc>-base/plugin.yml`.
-> The central `authentik_oidc_apps` list in `default.config.yml` was
+> The central `authentik_oidc_apps` list in `config.d/35-identity.yml` was
 > retired in D1.3 (2026-05-05) and survives only as an empty Tier-2
 > apps_runner channel.
 

@@ -48,7 +48,7 @@ arm the backend. The path, in the order a converge walks it:
 
 ## What "not armed" means (the flag, and the injection)
 
-`minimax_enabled: false` (in `default.config.yml`) is the master switch.
+`minimax_enabled: false` (in `config.d/60-agents.yml`) is the master switch.
 
 - `roles/pazny.wing/tasks/post.yml` renders `NOS_MINIMAX_ENABLED` from it (`'0'`
   when false) and passes it, plus the base URL and the two model remaps, to the

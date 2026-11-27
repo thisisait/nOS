@@ -36,7 +36,7 @@ every header_oidc + forward_auth provider.
 ## RBAC tiers
 
 Four tiers bound to Authentik groups by expression policies (`authentik_rbac_tiers` +
-`authentik_app_tiers` in `default.config.yml`). The per-service tier is each plugin's
+`authentik_app_tiers` in `config.d/35-identity.yml`). The per-service tier is each plugin's
 `authentik.tier`; `authentik_app_tiers` is the manifest-app fallback. Examples:
 
 | Tier | Groups | e.g. |
@@ -154,7 +154,7 @@ Its identity flow:
    page.
 
 The agent profile MUST have a matching `nos-<name>` row in
-`default.config.yml::authentik_agent_clients` (anatomy gate
+`config.d/35-identity.yml::authentik_agent_clients` (anatomy gate
 [`test_agent_clients_in_authentik_blueprint_register_all_runners`](../tests/anatomy/test_sso_doctrine.py)
 catches future remediator-class registration gaps).
 

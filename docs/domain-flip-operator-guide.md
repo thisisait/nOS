@@ -302,7 +302,7 @@ Currently every service relays to `mailpit:1025` (dev sink, no
 delivery). With Stalwart up:
 - Stalwart becomes the authoritative outbound MTA for `@pazny.eu`
 - Mailpit stays as a bcc sink for dev visibility (`stalwart →
-  mailpit` chained relay) — switch is one variable in default.config.yml
+  mailpit` chained relay) — switch is one variable in the default layers
 
 ---
 
