@@ -79,7 +79,7 @@ pub struct Session<'a> {
 
 /// What a write may do: add a row KEAP names, or change cells of one that exists (the card's op).
 pub use nos_contract::renderers::RowOp;
-use nos_contract::renderers::{ColumnAddApproval, Component, TableSchemaApproval};
+use nos_contract::renderers::{ColumnAddApproval, Component, TableSchemaApproval, PROGRAM_WRITES_MAX};
 
 /// One approved write, as the request showed it to the person.
 #[derive(Debug)]
@@ -154,57 +154,23 @@ impl Ledger {
     /// no key empty or `__` (KEAP reads those as row sharing). Every write passes here.
     pub fn approved(&self, decision: i64) -> Result<Approved, String> {
         let (actor, req) = self.request(decision)?;
-        let field = |k: &str| req.get(k).and_then(Value::as_str).map(str::to_string).ok_or(format!("request has no {k}"));
-        let op = match req.get("op").map(|o| o.as_str()) {
-            None | Some(Some("update")) => RowOp::Update,
-            Some(Some("insert")) => RowOp::Insert,
-            Some(Some("insert_many")) => RowOp::InsertMany,
-            Some(Some("delete")) => RowOp::Delete,
-            Some(o) => return Err(format!("request op {o:?} is neither insert, insert_many, update nor delete")),
-        };
-        let row_id = match op {
-            RowOp::Update | RowOp::Delete => Some(field("row_id")?),
-            RowOp::Insert if req.get("row_id").is_some() => return Err("an insert names no row".into()),
-            RowOp::Insert => None,
-            RowOp::InsertMany => req.get("row_id").map(|_| field("row_id")).transpose()?,
-        };
-        let lines = match (op, req.get("lines")) {
-            (RowOp::InsertMany, Some(l)) => Some(approved_lines(l)?),
-            (RowOp::InsertMany, None) => return Err("insert_many carries its lines".into()),
-            (_, Some(_)) => return Err("only insert_many carries lines".into()),
-            (_, None) => None,
-        };
-        // An existing parent is shown, never written: each cell old == new, and no value goes out.
-        let existing = op == RowOp::InsertMany && row_id.is_some();
-        let (mut values, mut old) = (Map::new(), Map::new());
-        for c in req.get("cells").and_then(Value::as_array).ok_or("request has no cells")? {
-            let key = c.get("key").and_then(Value::as_str).ok_or("a cell has no key")?;
-            if key.is_empty() || key.starts_with("__") {
-                return Err(format!("cell {key:?} cannot be written"));
-            }
-            let new = c.get("new").cloned().ok_or("a cell has no new value")?;
-            match (op, c.get("old")) {
-                (_, Some(v)) if existing && *v == new => continue,
-                _ if existing => return Err("an existing parent is not changed here".into()),
-                (RowOp::Update, Some(v)) => {
-                    old.insert(key.to_string(), v.clone());
-                }
-                (RowOp::Update | RowOp::Delete, None) => return Err("a cell has no old value".into()),
-                // A delete writes nothing: each old is what the person saw go, re-read before the DELETE.
-                (RowOp::Delete, Some(v)) if new.is_null() => {
-                    old.insert(key.to_string(), v.clone());
-                    continue;
-                }
-                (RowOp::Delete, _) => return Err("a delete leaves every cell empty".into()),
-                (_, Some(_)) => return Err("an insert has no old value".into()),
-                (_, None) => {}
-            }
-            values.insert(key.to_string(), new);
+        approved_request(actor, &req)
+    }
+
+    /// What a program card approved (row iris-code-mode-write-card): its source and 1 to
+    /// PROGRAM_WRITES_MAX writes, each held to approved()'s checks; insert_many never.
+    pub fn approved_program(&self, decision: i64) -> Result<(String, Vec<Approved>), String> {
+        let (actor, req) = self.request(decision)?;
+        if req.get("source").and_then(Value::as_str).is_none_or(|s| s.trim().is_empty()) {
+            return Err("the request is no program: it holds no source".into());
         }
-        if values.is_empty() && old.is_empty() && !existing {
-            return Err("a write changes at least one cell".into());
-        }
-        Ok(Approved { actor, table: field("table")?, op, row_id, values, old, lines })
+        let writes = req.get("writes").and_then(Value::as_array).filter(|w| (1..=PROGRAM_WRITES_MAX).contains(&w.len()))
+            .ok_or(format!("the request is no program: it holds 1 to {PROGRAM_WRITES_MAX} writes"))?;
+        let all = writes.iter().enumerate().map(|(i, w)| match approved_request(actor.clone(), w) {
+            Ok(a) if a.op == RowOp::InsertMany || a.lines.is_some() => Err(format!("write {}: a program writes no insert_many", i + 1)),
+            r => r.map_err(|e| format!("write {}: {e}", i + 1)),
+        }).collect::<Result<Vec<_>, _>>()?;
+        Ok((actor, all))
     }
 
     /// The request an approve decision answers, in an open session, and the session's actor.
@@ -394,6 +360,61 @@ impl Ledger {
 
 /// An insert_many request's lines: 1 to 20, each an insert of at least one cell, none keyed
 /// empty, `__` or the parent's own column.
+/// approved() over one request: the write's shape, as the doc on approved() says.
+fn approved_request(actor: String, req: &Value) -> Result<Approved, String> {
+    let field = |k: &str| req.get(k).and_then(Value::as_str).map(str::to_string).ok_or(format!("request has no {k}"));
+    let op = match req.get("op").map(|o| o.as_str()) {
+        None | Some(Some("update")) => RowOp::Update,
+        Some(Some("insert")) => RowOp::Insert,
+        Some(Some("insert_many")) => RowOp::InsertMany,
+        Some(Some("delete")) => RowOp::Delete,
+        Some(o) => return Err(format!("request op {o:?} is neither insert, insert_many, update nor delete")),
+    };
+    let row_id = match op {
+        RowOp::Update | RowOp::Delete => Some(field("row_id")?),
+        RowOp::Insert if req.get("row_id").is_some() => return Err("an insert names no row".into()),
+        RowOp::Insert => None,
+        RowOp::InsertMany => req.get("row_id").map(|_| field("row_id")).transpose()?,
+    };
+    let lines = match (op, req.get("lines")) {
+        (RowOp::InsertMany, Some(l)) => Some(approved_lines(l)?),
+        (RowOp::InsertMany, None) => return Err("insert_many carries its lines".into()),
+        (_, Some(_)) => return Err("only insert_many carries lines".into()),
+        (_, None) => None,
+    };
+    // An existing parent is shown, never written: each cell old == new, and no value goes out.
+    let existing = op == RowOp::InsertMany && row_id.is_some();
+    let (mut values, mut old) = (Map::new(), Map::new());
+    for c in req.get("cells").and_then(Value::as_array).ok_or("request has no cells")? {
+        let key = c.get("key").and_then(Value::as_str).ok_or("a cell has no key")?;
+        if key.is_empty() || key.starts_with("__") {
+            return Err(format!("cell {key:?} cannot be written"));
+        }
+        let new = c.get("new").cloned().ok_or("a cell has no new value")?;
+        match (op, c.get("old")) {
+            (_, Some(v)) if existing && *v == new => continue,
+            _ if existing => return Err("an existing parent is not changed here".into()),
+            (RowOp::Update, Some(v)) => {
+                old.insert(key.to_string(), v.clone());
+            }
+            (RowOp::Update | RowOp::Delete, None) => return Err("a cell has no old value".into()),
+            // A delete writes nothing: each old is what the person saw go, re-read before the DELETE.
+            (RowOp::Delete, Some(v)) if new.is_null() => {
+                old.insert(key.to_string(), v.clone());
+                continue;
+            }
+            (RowOp::Delete, _) => return Err("a delete leaves every cell empty".into()),
+            (_, Some(_)) => return Err("an insert has no old value".into()),
+            (_, None) => {}
+        }
+        values.insert(key.to_string(), new);
+    }
+    if values.is_empty() && old.is_empty() && !existing {
+        return Err("a write changes at least one cell".into());
+    }
+    Ok(Approved { actor, table: field("table")?, op, row_id, values, old, lines })
+}
+
 fn approved_lines(l: &Value) -> Result<ApprovedLines, String> {
     let text = |k: &str| l.get(k).and_then(Value::as_str).filter(|v| !v.is_empty()).map(str::to_string).ok_or(format!("lines have no {k}"));
     let (table, ref_key) = (text("table")?, text("ref_key")?);
