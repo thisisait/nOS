@@ -25,6 +25,16 @@
   loop_control:
     label: "{{ item.path }}"
 
+# A new release migrates the data dir in place and upstream states no rollback (REM-333 is fixed only on
+# v2.10+); the data dir is unbacked (config.d/40-data.yml), so this copy is the rollback. Keys are not migrated.
+- name: "[pazny.spacetimedb] One-way upgrade guard"
+  ansible.builtin.import_tasks: ../../../tasks/one-way-upgrade-guard.yml  # relative: ansible-lint cannot evaluate playbook_dir
+  vars:
+    owg_name: spacetimedb
+    owg_service: spacetimedb
+    owg_pin: "{{ spacetimedb_version }}"
+    owg_data_dir: "{{ spacetimedb_data_dir }}"
+
 - name: "[pazny.spacetimedb] Stat JWT private key"
   ansible.builtin.stat:
     path: "{{ spacetimedb_keys_dir }}/id_ecdsa"

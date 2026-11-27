@@ -9,7 +9,7 @@
 | **Host port** | `127.0.0.1:3030` → container `3000` (`spacetimedb_port`; 3030 to stay clear of Grafana's 3000) |
 | **Stack** | `infra` |
 | **Toggle** | `install_spacetimedb: false` (default.config.yml:533); excluded from `profiles/all-on.yml` |
-| **Image** | `clockworklabs/spacetime:v2.7.0-hotfix3` (`spacetimedb_version`) |
+| **Image** | `clockworklabs/spacetime:v2.10.1` (`spacetimedb_version`) |
 | **Compose** | `~/stacks/infra/overrides/spacetimedb.yml` |
 | **Data** | `spacetimedb_data_dir`; ECDSA keypair in `spacetimedb_keys_dir` |
 | **Manifest node** | `nos.infra.spacetimedb` |

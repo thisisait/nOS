@@ -1101,7 +1101,7 @@ docker_socket_proxy_version: "v0.5.0"  # registry tag IS v-prefixed. v0.5.0: HAP
 
 spacetimedb_domain: "spacetime{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 spacetimedb_port: 3030                  # host → container 3000 (HTTP + WebSocket)
-spacetimedb_version: "v2.7.0-hotfix3"           # REM-135: v2.7.0-hotfix3 (was v2.6.1). Pinned for blank reproducibility; excluded from all-on profile.
+spacetimedb_version: "v2.10.1"           # REM-333 (JWT impersonation, fixed v2.10.0); one way: the role cold-copies the data first. Prior REM-135 v2.7.0-hotfix3. Pinned for blank reproducibility; excluded from all-on profile.
 spacetimedb_keys_dir: "{{ nos_data_root }}/platform/services/spacetimedb/keys"
 spacetimedb_install_host_cli: true      # install `spacetime` binary on host so the operator can publish modules
 spacetimedb_dev_db: "dev"               # logical dev DB name printed in onboarding hint
