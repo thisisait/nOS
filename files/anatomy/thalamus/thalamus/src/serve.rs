@@ -2182,10 +2182,12 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             Decision::Approve if tool == Some("cortex_program") => {
                 let (done, failed, rest) = self.commit_program(who, id);
                 let ids = |rows: &Written| rows.iter().map(|r| r.1.clone()).collect::<Vec<_>>();
-                let rec = json!({"approval": approval, "written": ids(&done), "failed": failed.as_ref().map(|f| &f.0),
+                // the other arms' shape: written true | false | "partial", rows; then failed and not attempted
+                let state = match (&failed, done.is_empty()) { (None, _) => json!(true), (Some(_), true) => json!(false), _ => json!("partial") };
+                let rec = json!({"approval": approval, "written": state, "rows": rows_json(&done), "failed": failed.as_ref().map(|f| &f.0),
                                  "error": failed.as_ref().map(|f| &f.1), "not_attempted": rest});
                 let said = match &failed {
-                    None => format!("Approved: {} rows written: {}.", done.len(), ids(&done).join(", ")),
+                    None => format!("Approved: the program's {} writes done: {}.", done.len(), ids(&done).join(", ")),
                     Some((_, why)) if done.is_empty() && rest.is_empty() => format!("Approved, but nothing was written: {why}"),
                     Some((at, why)) => format!("Approved, but the program stopped at {at}: {why}. Written: {}; failed: {at}; not attempted: {}.",
                                                if done.is_empty() { "none".into() } else { ids(&done).join(", ") },
@@ -3341,7 +3343,8 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
     fn program_card(&self, who: &Person, out: &mut dyn Write, o: &mut Open, args: &Value, last_read: &[String]) -> Result<Value, String> {
         let s = |k: &str| args[k].as_str().unwrap_or("").to_string();
         let (table, op, source) = (s("table"), s("op"), s("source"));
-        let named = said_numbers(&o.messages).to_string();
+        // misnamed() is a one-row check: "the invoices over 5000" would warn on every write
+        let named = String::new();
         let mut writes = vec![];
         if op == "insert" {
             writes.push(self.propose_row_insert(who, &json!({"table": table, "values": args["values"]}), &o.tables_seen, &o.shown, &named)?);

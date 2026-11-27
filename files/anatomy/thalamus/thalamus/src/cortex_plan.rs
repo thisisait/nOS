@@ -511,14 +511,14 @@ pub fn calls(p: &Plan, many: bool, info: impl Fn(&str) -> Result<(String, Value)
         Ok((key, typed))
     }).collect::<Result<Map<String, Value>, String>>()?;
     if many {
-        // check() reads every match whatever the limit: a rank or a limit would pick no rows for the write
-        if p.order.is_some() || p.limit.is_some() {
-            return Err(format!("{w} acts on every row the filters find; rank and limit pick no rows for it: filter instead"));
-        }
         let (look, rows) = if w == "insert" {
             (json!({"table": table, "limit": 0}), vec![])
         } else {
             let rows = check(&q, true)?;
+            // check() reads every match whatever the limit: a limit below it would not pick the rows written
+            if p.limit.is_some_and(|l| l < rows.len() as i64) {
+                return Err(format!("{w} acts on every row the filters find ({}), more than limit picks: filter instead", rows.len()));
+            }
             if !(1..=PROGRAM_WRITES_MAX).contains(&rows.len()) {
                 return Err(format!("{w} acts on 1 to {PROGRAM_WRITES_MAX} rows; the pipeline matched {} rows of {title}: filter until 1 to {PROGRAM_WRITES_MAX} are left", rows.len()));
             }
