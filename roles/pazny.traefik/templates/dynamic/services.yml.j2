@@ -79,6 +79,11 @@ http:
 {% if s.id == 'miniflux' and ((sso_autologin_miniflux | default(sso_autologin_min_tier_3 | default(sso_autologin | default(false)))) | bool) %}
 {% set _extra_mw = _extra_mw + ['miniflux-autologin@file'] %}
 {% endif %}
+{# RustFS serves its console under /rustfs/console/ and answers 403 at / (1.0.6, measured 2026-11-23):
+   the bare root goes there, as the nginx door's `location = /` does. Defined under the SAME gate. #}
+{% if s.id == 'rustfs' and install_rustfs | default(false) | bool %}
+{% set _extra_mw = _extra_mw + ['rustfs-console-root@file'] %}
+{% endif %}
 {# Document server (OnlyOffice / euro-office): never edge-cache a live-collab
    editor — its secure_link-signed /cache/* URLs get CloudFlare-cached (empty
    during the conversion race → "Download failed"). Force no-store. #}
