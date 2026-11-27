@@ -259,6 +259,10 @@ paperclip_drain_timeout_s: 900                     # a converge waits this long 
 # so the rows never reach the model (one model request per such turn); a planned write becomes ONE program
 # card of 1-20 writes (row iris-code-mode-write-card) the person approves, never the model.
 iris_plan_run: "model"
+# Cloud rows whose cortex plan is ONE forced cortex_program tool call (row iris-code-mode-engines), e.g.
+# [mistral-eu]. A row joins only after its probe on this host (ruling 2026-11-18): arm it, run the smoke,
+# read engine/constrained on the plan row. A 4xx to the forced call downgrades that request to free text.
+iris_plan_tool_rows: []
 # The model tokens one Iris turn may spend (prompt + completion, every request of the turn); 0 = off.
 # Off until row iris-code-mode-bench measures the p99 turn and proposes a value (operator 2026-11-18).
 # A backend that reports no usage is counted as request + answer bytes / 4.

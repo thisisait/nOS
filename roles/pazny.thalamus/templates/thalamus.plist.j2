@@ -99,6 +99,9 @@
         <!-- iris_plan_run: thalamus runs a plan of reads itself and ends the turn (src/serve.rs run_program). -->
         <key>NOS_IRIS_PLAN_RUN</key>
         <string>{{ iris_plan_run | default('model') }}</string>
+        <!-- iris_plan_tool_rows: cloud rows that plan as one forced tool call (src/cortex_plan.rs Engine::Tool). -->
+        <key>NOS_IRIS_PLAN_TOOL</key>
+        <string>{{ iris_plan_tool_rows | default([]) | join(',') }}</string>
         <key>NOS_CORTEX_URL</key>
         <string>http://127.0.0.1:{{ cortex_port | default(8098) }}</string>
         <!-- The organ's RO token (validate only); read once as nos:cortex_ro_token, then removed. -->

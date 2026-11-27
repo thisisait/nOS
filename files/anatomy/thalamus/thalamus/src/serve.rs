@@ -2674,11 +2674,14 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
             Ok(c) => c,
             Err(why) => return refused(o, format!("the table catalogue is unreadable ({why})"), "infra", json!({})),
         };
-        let mut engine = Engine::of(&model.name);
+        // ponytail: read per plan, not a Server/Cortex field (the rigs build both as literals); a field when they move.
+        let tool_rows: Vec<String> = std::env::var("NOS_IRIS_PLAN_TOOL").unwrap_or_default().split(',')
+            .map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
+        let mut engine = Engine::chosen(&model.name, model.local, &tool_rows);
         // ponytail: the plan sees this turn only, not the conversation; a follow-up ("now as a chart") falls back.
         let mut msgs = vec![json!({"role": "system", "content": cortex_plan::primer(engine, &catalogue)}), json!({"role": "user", "content": text})];
         let mut gbnf: Option<String> = None;
-        let mut downgrade: Option<String> = None;
+        let mut downgrade: Option<(&'static str, String)> = None;
         for round in 0..2 {
             let mut body = json!({"model": model.model_id, "messages": msgs});
             match engine {
@@ -2691,14 +2694,18 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                 },
                 Engine::JsonSchema => body["response_format"] = json!({"type": "json_schema",
                     "json_schema": {"name": "cortex_plan", "schema": cortex_plan::ast_schema()}}),
+                Engine::Tool => {
+                    body["tools"] = json!([cortex_plan::tool_def()]);
+                    body["tool_choice"] = json!({"type": "function", "function": {"name": "cortex_program"}});
+                }
                 Engine::Free => {}
             }
             let answer = match self.plan_chat(model, o, body) {
                 Ok(m) => m,
-                // Ollama MLX answers 501 to any format: the same request, unconstrained.
-                Err(why) if engine == Engine::JsonSchema => {
+                // Ollama MLX answers 501 to any format, a row may 400 a forced call: the same request, unconstrained.
+                Err(why) if engine == Engine::JsonSchema || (engine == Engine::Tool && cortex_plan::tool_refused(&why)) => {
                     // said on the plan row: a timeout or a 500 downgrades too, and a constrained run must show it
-                    downgrade = Some(why);
+                    downgrade = Some((engine.name(), why));
                     engine = Engine::Free;
                     msgs[0] = json!({"role": "system", "content": cortex_plan::primer(engine, &catalogue)});
                     match self.plan_chat(model, o, json!({"model": model.model_id, "messages": msgs})) {
@@ -2714,6 +2721,10 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                     Ok(st) => cortex_plan::render(&st),
                     Err(why) => return refused(o, format!("the plan is not the AST JSON ({why})"), "model", json!({})),
                 },
+                Engine::Tool => match cortex_plan::tool_stages(&answer) {
+                    Ok(st) => cortex_plan::render(&st),
+                    Err(why) => return refused(o, format!("the plan is not one cortex_program call ({why})"), "model", json!({})),
+                },
                 _ => cortex_plan::extract(&said),
             };
             let (primer_sha, grammar_sha) = cortex_plan::fingerprint(engine, gbnf.as_deref());
@@ -2721,10 +2732,12 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                                    "primer_sha256": primer_sha, "grammar_sha256": grammar_sha,
                                    "catalogue": if c.rich_catalogue { "rich" } else { "lean" },
                                    "catalogue_digest": &cortex_plan::sha256_hex(&catalogue)[..16], "catalogue_tables": catalogue_tables});
-            if let Some(d) = &downgrade {
-                asked["downgraded_from"] = json!(Engine::JsonSchema.name());
+            if let Some((from, d)) = &downgrade {
+                asked["downgraded_from"] = json!(from);
                 asked["downgrade"] = json!(d);
             }
+            // a tool call's content is null: the repair round hears the pipeline it rendered
+            let said = if engine == Engine::Tool { source.clone() } else { said };
             let _ = self.record(o, Kind::ToolUse, tool, asked);
             match cortex_plan::validate(c, &source) {
                 Err(why) => return refused(o, why, "infra", json!({})),
