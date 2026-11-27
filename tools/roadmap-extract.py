@@ -24,14 +24,14 @@ import sys
 
 import urllib.request
 
-from keap_api import human_base, human_headers, paged
+from keap_api import ROADMAP_UNNAMED, human_base, human_headers, paged, roadmap_table
 import roadmap_seed_lib as lib
 from roadmap_seed_lib import seed_dir  # noqa: F401
 
 #: NOS_ROADMAP_TABLE_ID overrides for an estate whose roadmap table was minted
 #: through the agent door (id == slug, e.g. "roadmap"); KEAP_API_URL for a
-#: non-default loopback publish. Defaults are the operator estate's values.
-TABLE = os.environ.get("NOS_ROADMAP_TABLE_ID", "2d498264-bc9a-4324-9935-489e5e4d92f3")
+#: non-default loopback publish. Else the config layers' keap_roadmap_table_id (keap_api.roadmap_table).
+TABLE = roadmap_table()
 BASE = f"{human_base()}/api/tables/{TABLE}"
 
 def _get_rows() -> list[dict]:
@@ -62,6 +62,9 @@ def _render(v: dict) -> str:
 
 
 def main() -> int:
+    if not TABLE:
+        print(ROADMAP_UNNAMED, file=sys.stderr)
+        return 2
     write = "--write" in sys.argv
     d = seed_dir()
     if not any(a.startswith("NOS_SEED_DIR") for a in os.environ) and "NOS_SEED_DIR" not in os.environ:

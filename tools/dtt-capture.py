@@ -70,10 +70,11 @@ def _live_columns() -> dict | None:
         import urllib.request
 
         sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-        from keap_api import human_base, human_headers  # noqa: PLC0415
+        from keap_api import human_base, human_headers, roadmap_table  # noqa: PLC0415
 
-        table = os.environ.get("NOS_ROADMAP_TABLE_ID",
-                               "2d498264-bc9a-4324-9935-489e5e4d92f3")
+        table = roadmap_table()
+        if not table:
+            return None   # nothing names the table: the same as KEAP unreadable
         req = urllib.request.Request(f"{human_base()}/api/tables/{table}",
                                      headers=human_headers())
         with urllib.request.urlopen(req, timeout=5) as r:

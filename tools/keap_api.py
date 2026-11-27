@@ -228,3 +228,32 @@ def paged(fetch, rows_url: str, limit: int = 500) -> dict:
     data["rows"] = rows
     data.pop("nextCursor", None)
     return first
+
+
+#: What a roadmap tool says when nothing names the table (it never guesses an id).
+ROADMAP_UNNAMED = "cannot name the roadmap table: set NOS_ROADMAP_TABLE_ID, or run with a Python that has PyYAML"
+
+
+def roadmap_table() -> str:
+    """The roadmap DataTable's id, one answer for every tool (row roadmap-table-id-literals):
+    NOS_ROADMAP_TABLE_ID, else `keap_roadmap_table_id` from the operator's config.yml, else from the
+    default layers; "" when none names it. A plain string: no Jinja render. nos_identity (PyYAML) is
+    imported here, so this module stays stdlib-only for its other callers."""
+    env = os.environ.get("NOS_ROADMAP_TABLE_ID", "").strip()
+    if env:
+        return env
+    try:
+        import nos_identity as ni  # noqa: PLC0415
+        import yaml  # noqa: PLC0415
+    except ImportError:
+        return ""
+    try:
+        cfg = ni.operator_file("config.yml")
+        doc = (yaml.safe_load(cfg.read_text(encoding="utf-8")) or {}) if cfg.is_file() else {}
+        value = doc.get("keap_roadmap_table_id") if isinstance(doc, dict) else None
+        if not (isinstance(value, str) and value.strip()):
+            value = ni.default_config().get("keap_roadmap_table_id")
+    except Exception:  # noqa: BLE001 — an unreadable layer names nothing
+        return ""
+    return value.strip() if isinstance(value, str) and "{{" not in value else ""
+

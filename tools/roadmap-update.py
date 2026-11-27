@@ -41,7 +41,6 @@ Usage:
 import argparse
 import datetime
 import json
-import os
 import subprocess
 import sys
 import urllib.error
@@ -49,9 +48,9 @@ import urllib.request
 
 #: NOS_ROADMAP_TABLE_ID overrides for an estate whose roadmap table was minted
 #: through the agent door (id == slug, e.g. "roadmap"); KEAP_API_URL for a
-#: non-default loopback publish. Defaults are the operator estate's values.
-TABLE = os.environ.get("NOS_ROADMAP_TABLE_ID", "2d498264-bc9a-4324-9935-489e5e4d92f3")
-from keap_api import human_base, human_headers, paged, write_row
+#: non-default loopback publish. Else the config layers' keap_roadmap_table_id (keap_api.roadmap_table).
+from keap_api import ROADMAP_UNNAMED, human_base, human_headers, paged, roadmap_table, write_row
+TABLE = roadmap_table()
 
 KEAP = human_base()   # the identity outpost when configured, else the loopback publish
 
@@ -104,6 +103,9 @@ def main() -> int:
     ap.add_argument("--title", help="corrected claim of what the row is")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
+    if not TABLE:
+        print(ROADMAP_UNNAMED, file=sys.stderr)
+        return 2
 
     if not (args.status or args.target or args.occurred or args.owner or args.title):
         _die("nothing to change — pass at least one of "

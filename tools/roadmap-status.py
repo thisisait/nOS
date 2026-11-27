@@ -45,7 +45,6 @@ import argparse
 import collections
 import datetime
 import json
-import os
 import re
 import sys
 import urllib.error
@@ -57,12 +56,12 @@ DEF = REPO / "state/keap-tables/roadmap.table.yml"
 
 #: Same table id and forward-auth headers as the seeder. Loopback only — the
 #: agent surface is bound to 127.0.0.1 and the estate's edge never sees this.
-from keap_api import human_base, human_headers, paged  # noqa: E402 — sibling helper in tools/
+from keap_api import ROADMAP_UNNAMED, human_base, human_headers, paged, roadmap_table  # noqa: E402 — sibling helper in tools/
 from roadmap_seed_lib import knowledge_pack, rank  # noqa: E402
 #: NOS_ROADMAP_TABLE_ID overrides for an estate whose roadmap table was minted
 #: through the agent door (id == slug, e.g. "roadmap"); KEAP_API_URL for a
-#: non-default loopback publish. Defaults are the operator estate's values.
-TABLE = os.environ.get("NOS_ROADMAP_TABLE_ID", "2d498264-bc9a-4324-9935-489e5e4d92f3")
+#: non-default loopback publish. Else the config layers' keap_roadmap_table_id (keap_api.roadmap_table).
+TABLE = roadmap_table()
 BASE = f"{human_base()}/api/tables/{TABLE}"
 
 #: X-Authentik-* admin identity + the SEC-02 x-keap-proxy-secret (resolved once
@@ -312,6 +311,9 @@ def main() -> int:
     ap.add_argument("--knowledge", action="store_true",
                     help="one markdown file of the board (bodies whole) to attach to a conversation")
     args = ap.parse_args()
+    if not TABLE:   # a reader: UNKNOWN and exit 0, never a guessed table
+        print(f"UNKNOWN: {ROADMAP_UNNAMED}")
+        return 0
 
     try:
         table = get(BASE)["data"]
