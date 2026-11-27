@@ -298,7 +298,7 @@
 		{#snippet item(x: (typeof items)[number])}
 			<li data-delta={x.delta} value={l.ordered ? x.n : undefined}>
 				{@render mark(x.delta)}{#if x.tone}<Badge tone={x.tone}>{x.tone}</Badge
-					>{' '}{/if}{x.text}{#if x.detail}<span class="muted"> — {x.detail}</span>{/if}
+					>{' '}{/if}{x.text}{#if x.detail}<span class="muted">{' — '}{x.detail}</span>{/if}
 			</li>
 		{/snippet}
 		{#if l.ordered}<ol>
@@ -366,7 +366,7 @@
 				{@const d = inherit(n.delta, parent)}
 				{#if shownIn(d, view)}
 					<li data-delta={d}>
-						{@render mark(d)}{n.label}{#if n.note}<span class="muted"> — {n.note}</span>{/if}
+						{@render mark(d)}{n.label}{#if n.note}<span class="muted">{' — '}{n.note}</span>{/if}
 						{#if n.children?.length}<ul>{@render listNodes(n.children, d)}</ul>{/if}
 					</li>
 				{/if}
