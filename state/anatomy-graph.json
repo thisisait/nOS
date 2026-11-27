@@ -4,7 +4,7 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 625,
+    "nodes": 626,
     "edges": 587,
     "nodes_pulse": 54,
     "nodes_judge": 5,
@@ -27,7 +27,7 @@
     "nodes_agent": 17,
     "nodes_tasktype": 9,
     "nodes_skill": 16,
-    "nodes_reader": 73,
+    "nodes_reader": 74,
     "nodes_effector": 131,
     "nodes_article": 28,
     "nodes_organ_system": 13,
@@ -3997,6 +3997,13 @@
       "title": "Is OpenHuman on this Mac set up to stay on this Mac: per profile (`users/*/config.toml`) privacy mode, analytics, updaters, model route, memory and background routes, cron; the active profile's session, onboarding, tool list, imprint; MCP servers (RED if the RW token is in them), install, running, any non-loopback socket (`lsof`), and a second Ollama (another binary, or a port other than 11434); UNKNOWN without a config or a running process. `--selftest` needs no app.",
       "anchor": "02.02.04",
       "description": "Reader tools/openhuman-status.py: Is OpenHuman on this Mac set up to stay on this Mac: per profile (`users/*/config.toml`) privacy mode, analytics, updaters, model route, memory and background routes, cron; the active profile's session, onboarding, tool list, imprint; MCP servers (RED if the RW token is in them), install, running, any non-loopback socket (`lsof`), and a second Ollama (another binary, or a port other than 11434); UNKNOWN without a config or a running process. `--selftest` needs no app."
+    },
+    "reader:origin-lock-report": {
+      "kind": "reader",
+      "source": "tools/origin-lock-report.py",
+      "title": "READER over one checkout's lockfiles, given as paths: composer.lock (`packages` + `packages-dev`, `require` edges, `abandoned`) and package-lock.json v2/v3 (`packages`, npm's nearest-`node_modules` resolution, `deprecated`); dependency cycles and dead packages, names clipped; a missing, malformed or escaping file is UNKNOWN; no network, subprocess or write; `--strict` exits 3 on a finding, 2 on UNKNOWN (row git-origin-watcher, slice 1; fixtures `state/fixtures/origin-watch/`).",
+      "anchor": "02.02.04",
+      "description": "Reader tools/origin-lock-report.py: READER over one checkout's lockfiles, given as paths: composer.lock (`packages` + `packages-dev`, `require` edges, `abandoned`) and package-lock.json v2/v3 (`packages`, npm's nearest-`node_modules` resolution, `deprecated`); dependency cycles and dead packages, names clipped; a missing, malformed or escaping file is UNKNOWN; no network, subprocess or write; `--strict` exits 3 on a finding, 2 on UNKNOWN (row git-origin-watcher, slice 1; fixtures `state/fixtures/origin-watch/`)."
     },
     "reader:permission-status": {
       "kind": "reader",
