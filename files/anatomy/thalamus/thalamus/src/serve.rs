@@ -9,7 +9,7 @@ use crate::ledger::{Kind, Ledger, RowOp, Session};
 use crate::septum::Septum;
 use nos_contract::renderers::{is_date, ActionApproval, ApprovalsList, Axis, CellChange, Chart, ChartKind, Choice, Component, Dashboard, DashboardWidget, Dendrogram, DENDROGRAM_MAX, Kpi, RunKind, RunNode, RunStatus,
                                Dropped, FieldKind, Form, FormField, InboxItem, InboxList, KnowledgeNode, KnowledgeTree, need_node_id, Lens, LensOp, Lines, List, ListItem, Omitted, Parent, RedStatus,
-                               Row, RowDiffApproval, SchemaColumn, ColumnAddApproval, ColumnKind, ExistingColumn, Series, Table, TableResults, TableSchemaApproval, Timeline, TimelineItem, Visibility};
+                               ProgramApproval, Row, RowDiffApproval, SchemaColumn, ColumnAddApproval, ColumnKind, ExistingColumn, Series, Table, TableResults, TableSchemaApproval, Timeline, TimelineItem, Visibility};
 use nos_contract::wire::{check_params, check_spec, decode_to_thalamus, encode, CatalogueColumn, CatalogueTable, ChartSpec, EstateState, ControlView, Decision, FormSpec,
                          FallbackKind, KnowledgeSpec, KpiSpec, Limb, ReaderName, Op, ParamKind, Phase, PlanAsked, PlanTable, Scope, ModelOption, OpenApproval, ToShell, ToThalamus, Trigger, WidgetChart, WidgetSpec, MAX_REPLAY};
 use nos_contract::uid;
@@ -698,11 +698,11 @@ fn mint_uuid() -> std::io::Result<String> {
 }
 
 /// The calls a program the thalamus runs may hold (row iris-code-mode-reads); any other keeps the model's loop.
-const PROGRAM_TOOLS: [&str; 2] = ["query_rows", "show"];
+const PROGRAM_TOOLS: [&str; 3] = ["query_rows", "show", "propose_program"];
 /// A program's wall clock, checked between its calls beside face.stopped().
 const PROGRAM_WALL: Duration = Duration::from_secs(60);
 
-/// A cortex plan mapped to tool calls (plan()); `program` is minted only for reads the thalamus runs.
+/// A cortex plan mapped to tool calls (plan()); `program` is minted only for a plan the thalamus runs.
 struct Planned {
     msg: Value,
     source: String,
@@ -722,6 +722,11 @@ fn receipt_of(name: &str, v: &Value) -> Value {
         r["shown"] = json!(v["rows"].as_array().or(v["groups"].as_array()).map(Vec::len));
         return r;
     }
+    if name == "propose_program" {
+        r["rendered"] = json!("program_approval");
+        r["writes"] = v["writes"].as_u64().map_or(Value::Null, Value::from);
+        return r;
+    }
     r["rendered"] = json!(v["shown"].as_str().filter(|k| k.chars().all(|c| c.is_ascii_lowercase() || c == '_')));
     for k in ["points_drawn", "value"] {
         if let Some(n) = v.get(k).filter(|n| n.is_number()) {
@@ -739,6 +744,7 @@ fn program_line(title: Option<&str>, receipt: &[Value], failed: Option<(usize, &
             Some(n) => format!("showed {n} of the {} matched rows{of} ({} in the table)", r["matched"], r["total"]),
             None => format!("{} of the {} rows{of} match", r["matched"], r["total"]),
         },
+        (Some("propose_program"), _) => format!("asked the person to approve {} writes{of} on one card; nothing is written unless they approve", r["writes"]),
         (_, kind) => {
             let kind = kind.unwrap_or("view");
             match (r.get("value"), r.get("points_drawn")) {
@@ -1995,25 +2001,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             RowOp::Update => "propose_row_edit",
             RowOp::Delete => "propose_row_delete",
         };
-        // The record is the card. approved() tests presence, so an insert's row_id and olds are
-        // removed by op, never nulled; an update's real `old: null` (an empty cell) stays, and so
-        // does an existing parent's old (== new). A line is always an insert.
-        let mut rec = serde_json::to_value(&d).map_err(|e| format!("unrecordable card: {e}"))?;
-        let strip = |cells: &mut Value| cells.as_array_mut().into_iter().flatten().for_each(|c| { c.as_object_mut().map(|c| c.remove("old")); });
-        if d.op == RowOp::Insert || (d.op == RowOp::InsertMany && d.row_id.is_none()) {
-            rec.as_object_mut().map(|r| r.remove("row_id"));
-            strip(&mut rec["cells"]);
-        }
-        rec.pointer_mut("/lines/rows").and_then(Value::as_array_mut).into_iter().flatten().for_each(strip);
-        // The record keeps epoch (approved() compares it with KEAP); the person reads a date as its day.
-        let said = |table: &str, cells: Vec<CellChange>| {
-            let dates = o.dates.get(table).cloned().unwrap_or_default();
-            let say = |v: Value| day(&v).map_or(v, Value::from);
-            cells.into_iter().map(|c| if dates.contains(&c.key) { CellChange { old: say(c.old), new: say(c.new), ..c } } else { c }).collect()
-        };
-        let cells = said(&d.table, d.cells);
-        let lines = d.lines.map(|l| Lines { rows: l.rows.into_iter().map(|r| said(&l.table, r)).collect(), ..l });
-        let card = RowDiffApproval { cells, lines, ..d };
+        let (mut rec, card) = card_of(&o.dates, d)?;
         let Some(w) = outside else { return self.asking(o, out, tool, rec, Component::RowDiffApproval(card)) };
         // Whose it is rides the warning too, after a misnamed row's; the contract caps it at 400.
         let warning: String = card.warning.iter().chain([&w]).map(String::as_str).collect::<Vec<_>>().join("; ").chars().take(400).collect();
@@ -2753,7 +2741,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                     return refused(o, why, "model", json!({"errors": [], "registry_hash": hash}));
                 }
                 Ok(Ok((stages, src, hash))) => {
-                    let mapped = cortex_plan::plan(src.as_deref(), &stages).and_then(|p| cortex_plan::calls(&p,
+                    let mapped = cortex_plan::plan(src.as_deref(), &stages).and_then(|p| cortex_plan::calls(&p, c.run_program,
                         |t| self.table_info(who, t),
                         |args, read| self.matched(who, args, read).map(|m| m.hits.into_iter().map(|h| h.0).collect()))
                         .map(|c| (p.table, c)));
@@ -2766,14 +2754,19 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                             continue;
                         }
                         Err(why) => refused(o, why, "model", json!({"errors": [], "registry_hash": hash})),
-                        Ok((said_table, calls)) => {
+                        Ok((said_table, mut calls)) => {
+                            // the card shows render() of the AST the organ validated, never the model's own text
+                            for (_, a) in calls.iter_mut().filter(|(n, _)| n == "propose_program") {
+                                a["source"] = json!(cortex_plan::render(&stages));
+                                a["registry_hash"] = json!(hash);
+                            }
                             let plan: Vec<Value> = calls.iter().map(|(n, a)| json!([n, a])).collect();
                             // which table the mapper read, by every name (tools/iris-bench.py same_pipeline)
                             let table = self.table_info(who, &said_table).map(|(id, i)| json!({"said": said_table, "id": id,
                                 "title": i.pointer("/data/title").cloned().unwrap_or(Value::Null)})).unwrap_or(Value::Null);
-                            // reads only, and the thalamus runs them: the program's id is on its plan row too
-                            let reads = c.run_program && calls.iter().all(|(n, _)| PROGRAM_TOOLS.contains(&n.as_str()));
-                            let program = reads.then(mint_uuid).and_then(Result::ok).map(|u| format!("cx-{}", &u.replace('-', "")[..20]));
+                            // the thalamus runs it (reads, or reads then one program card): its id is on its plan row too
+                            let runs = c.run_program && calls.iter().all(|(n, _)| PROGRAM_TOOLS.contains(&n.as_str()));
+                            let program = runs.then(mint_uuid).and_then(Result::ok).map(|u| format!("cx-{}", &u.replace('-', "")[..20]));
                             let mut res = json!({"valid": true, "errors": [], "registry_hash": hash, "plan": plan, "table": table});
                             if let Some(p) = &program {
                                 res["program"] = json!(p);
@@ -3279,7 +3272,14 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
         o.messages.push(json!({"role": "assistant", "content": null, "tool_calls": [{"id": program, "type": "function",
             "function": {"name": "cortex_program", "arguments": json!({"source": source}).to_string()}}]}));
         let (mut receipt, mut failed, mut stopped) = (vec![], None::<(usize, String, String)>, None::<&str>);
-        for (i, call) in msg["tool_calls"].as_array().into_iter().flatten().enumerate() {
+        let calls = msg["tool_calls"].as_array().cloned().unwrap_or_default();
+        let writes = calls.iter().any(|c| c.pointer("/function/name") == Some(&json!("propose_program")));
+        if writes && !o.pending.is_empty() {
+            stopped = Some("Stopped: an approval is already waiting; nothing ran.");
+        }
+        // the rows the last read rendered: a program card asks only for those
+        let mut last_read: Vec<String> = vec![];
+        for (i, call) in calls.iter().enumerate().take_while(|_| stopped.is_none()) {
             if face.stopped(&o.session) {
                 stopped = Some("Stopped.");
                 break;
@@ -3296,12 +3296,21 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
             let _ = self.record(o, Kind::ToolUse, Some(&name), json!({"args": args}));
             activity(out, o, Phase::Tool { name: name.clone() });
             let span = o.trace.as_mut().map(|t| t.begin("iris.tool"));
-            let result = self.run_tool(who, out, o, face, &name, &args, &shown);
+            let result = if name == "propose_program" {
+                self.program_card(who, out, o, &args, &last_read)
+            } else {
+                self.run_tool(who, out, o, face, &name, &args, &shown)
+            };
             if let (Some(s), Some(t)) = (span, o.trace.as_mut()) {
                 t.end(s, result.is_ok(), vec![("gen_ai.tool.name", json!(crate::otel::tool_name(&name)))]);
             }
             match result {
-                Ok(v) => receipt.push(receipt_of(&name, &v)),
+                Ok(v) => {
+                    if name == "query_rows" {
+                        last_read = v["rows"].as_array().into_iter().flatten().filter_map(|r| r["__id"].as_str().map(str::to_string)).collect();
+                    }
+                    receipt.push(receipt_of(&name, &v));
+                }
                 Err(why) => {
                     let _ = self.record(o, Kind::ToolResult, Some(&name), json!({"error": why}));
                     failed = Some((i, name, why));
@@ -3324,6 +3333,51 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
             None => line,
         };
         send(out, &ToShell::Text { session: o.session.clone(), text: said });
+    }
+
+    /// A write program's one card (row iris-code-mode-write-card): each row the last read showed, built as the
+    /// single-row tools build it (old to new, read as the person); a row nothing would change is dropped, and a
+    /// row outside whom the person works for refuses the program before any card. The request row is the card.
+    fn program_card(&self, who: &Person, out: &mut dyn Write, o: &mut Open, args: &Value, last_read: &[String]) -> Result<Value, String> {
+        let s = |k: &str| args[k].as_str().unwrap_or("").to_string();
+        let (table, op, source) = (s("table"), s("op"), s("source"));
+        let named = said_numbers(&o.messages).to_string();
+        let mut writes = vec![];
+        if op == "insert" {
+            writes.push(self.propose_row_insert(who, &json!({"table": table, "values": args["values"]}), &o.tables_seen, &o.shown, &named)?);
+        } else {
+            for id in args["row_ids"].as_array().into_iter().flatten().filter_map(Value::as_str) {
+                if !last_read.iter().any(|r| r == id) {
+                    return Err(format!("row {id} was not in the rows the program just showed; nothing is asked"));
+                }
+                let one = json!({"table": table, "row_id": id, "values": args["values"]});
+                match op.as_str() {
+                    "update" => writes.extend(self.row_edit(who, &one, &o.shown, &o.dates, &o.names, &named)?),
+                    "delete" => writes.push(self.propose_row_delete(who, &one, &o.shown, &o.names, &named)?),
+                    w => return Err(format!("{w} is no program write")),
+                }
+            }
+        }
+        if writes.is_empty() {
+            return Err(NOTHING_CHANGES.into());
+        }
+        for d in &writes {
+            if let Some(w) = self.outside(who, d)? {
+                return Err(format!("row {} is {w}: the program is refused before any card", d.row_id.as_deref().unwrap_or("new")));
+            }
+        }
+        let (recs, cards): (Vec<Value>, Vec<RowDiffApproval>) = writes.into_iter().map(|d| card_of(&o.dates, d)).collect::<Result<Vec<_>, _>>()?
+            .into_iter().unzip();
+        let n = cards.len();
+        let card = ProgramApproval { source, writes: cards, read_from: o.read_free.clone() };
+        // checked before the ledger holds it: a card the shell would refuse is never left pending
+        Component::ProgramApproval(card.clone()).check()?;
+        let rec = json!({"source": card.source, "registry_hash": args["registry_hash"], "writes": recs, "read_from": card.read_from});
+        let program = o.program.as_ref().map(|p| p.0.clone());
+        let mut v = self.asking(o, out, "cortex_program", rec, Component::ProgramApproval(card))?;
+        o.acting.insert(text(&v["approval"]), json!({"program": program}));
+        v["writes"] = json!(n);
+        Ok(v)
     }
 
     /// One tool call of `name`, run as the person: the tools path and the program runner share it,
@@ -4171,6 +4225,12 @@ impl Server {
     /// The cell diff of one existing row the person can read; only changed cells survive.
     fn propose_row_edit(&self, who: &Person, args: &Value, shown: &HashMap<(String, String), String>,
                         dates: &HashMap<String, Vec<String>>, names: &HashMap<String, String>, asked: &str) -> Result<RowDiffApproval, String> {
+        self.row_edit(who, args, shown, dates, names, asked)?.ok_or_else(|| NOTHING_CHANGES.into())
+    }
+
+    /// propose_row_edit's card; None when nothing would change (a program drops that row).
+    fn row_edit(&self, who: &Person, args: &Value, shown: &HashMap<(String, String), String>,
+                dates: &HashMap<String, Vec<String>>, names: &HashMap<String, String>, asked: &str) -> Result<Option<RowDiffApproval>, String> {
         let s = |k: &str| args.get(k).and_then(Value::as_str).filter(|v| !v.is_empty()).ok_or(format!("propose_row_edit needs `{k}`"));
         let (alias, row_id) = (s("table")?, s("row_id")?);
         let (table, title) = shown_row(shown, alias, row_id)?;
@@ -4195,11 +4255,11 @@ impl Server {
             .filter(|c| c.old != c.new)
             .collect();
         if cells.is_empty() {
-            return Err("nothing would change".into());
+            return Ok(None);
         }
         let warning = misnamed(asked, names.get(table).and_then(|k| current.get(k)), &cells);
-        Ok(RowDiffApproval { table: table.to_string(), title: title.clone(), op: RowOp::Update, row_id: Some(row_id.to_string()),
-                             cells, read_from: vec![], lines: None, warning })
+        Ok(Some(RowDiffApproval { table: table.to_string(), title: title.clone(), op: RowOp::Update, row_id: Some(row_id.to_string()),
+                                  cells, read_from: vec![], lines: None, warning }))
     }
 
     /// Every value of one row the person was shown, each old -> null: what the delete removes.
@@ -5567,6 +5627,31 @@ fn queried<'a>(seen: &'a HashMap<String, String>, alias: &str) -> Result<&'a Str
 
 /// (table, row) per row a commit wrote, in order.
 type Written = Vec<(String, String)>;
+
+/// What an edit that changes no cell is told; a program drops that row instead (row_edit).
+const NOTHING_CHANGES: &str = "nothing would change";
+
+/// One write as the ledger records it and as the card draws it. The record is the card: approved() tests
+/// presence, so an insert's row_id and olds are removed by op, never nulled; an update's real `old: null`
+/// (an empty cell) stays, and so does an existing parent's old (== new). A line is always an insert.
+/// The record keeps epoch (approved() compares it with KEAP); the person reads a date as its day.
+fn card_of(dates: &HashMap<String, Vec<String>>, d: RowDiffApproval) -> Result<(Value, RowDiffApproval), String> {
+    let mut rec = serde_json::to_value(&d).map_err(|e| format!("unrecordable card: {e}"))?;
+    let strip = |cells: &mut Value| cells.as_array_mut().into_iter().flatten().for_each(|c| { c.as_object_mut().map(|c| c.remove("old")); });
+    if d.op == RowOp::Insert || (d.op == RowOp::InsertMany && d.row_id.is_none()) {
+        rec.as_object_mut().map(|r| r.remove("row_id"));
+        strip(&mut rec["cells"]);
+    }
+    rec.pointer_mut("/lines/rows").and_then(Value::as_array_mut).into_iter().flatten().for_each(strip);
+    let said = |table: &str, cells: Vec<CellChange>| {
+        let dates = dates.get(table).cloned().unwrap_or_default();
+        let say = |v: Value| day(&v).map_or(v, Value::from);
+        cells.into_iter().map(|c| if dates.contains(&c.key) { CellChange { old: say(c.old), new: say(c.new), ..c } } else { c }).collect()
+    };
+    let cells = said(&d.table, d.cells);
+    let lines = d.lines.map(|l| Lines { rows: l.rows.into_iter().map(|r| said(&l.table, r)).collect(), ..l });
+    Ok((rec, RowDiffApproval { cells, lines, ..d }))
+}
 
 /// Written rows as the person reads them: "table/row, ...".
 fn said_rows(rows: &[(String, String)]) -> String {
