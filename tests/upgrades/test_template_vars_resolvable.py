@@ -8,9 +8,10 @@ recipe-authoring path (upgrade-architect → PR) relies on.
 
 A reference is considered resolvable when its base identifier is:
   * an engine runtime token (upgrade_id / recipe / installed / ...), or
-  * a key defined in default.config.yml / default.credentials.yml /
-    tests/config.yml / any role's defaults (these become play-vars the
-    controller hands to the engine as tmpl_vars), or
+  * a key defined in the default layers (tools/nos_identity.default_layers(),
+    the set main.yml loads as vars_files) /
+    default.credentials.yml / tests/config.yml / any role's defaults (these
+    become play-vars the controller hands to the engine as tmpl_vars), or
   * guarded by ``| default(...)`` in the same expression (then undefined is
     fine — Jinja falls through to the default).
 """
@@ -59,8 +60,13 @@ def _top_keys(path):
 
 
 def _known_names():
+    import sys
+    sys.path.insert(0, os.path.join(ROOT, "tools"))
+    from nos_identity import default_layers   # the same layer set main.yml loads
     known = set(ENGINE_TOKENS)
-    for rel in ("default.config.yml", "default.credentials.yml", "tests/config.yml"):
+    for path in default_layers():
+        known |= _top_keys(str(path))
+    for rel in ("default.credentials.yml", "tests/config.yml"):
         known |= _top_keys(os.path.join(ROOT, rel))
     for f in glob.glob(os.path.join(ROOT, "roles", "pazny.*", "defaults", "main.yml")):
         known |= _top_keys(f)

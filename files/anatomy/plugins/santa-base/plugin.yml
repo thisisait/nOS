@@ -1,0 +1,71 @@
+# =============================================================================
+# santa-base — Article 30 record for Santa exec telemetry (2026-11-23)
+#
+# The Art-30 entry and nothing else: no authentik block (no web surface, no
+# route), no compose, no lifecycle (the role installs a sha256-pinned vendor pkg
+# and renders nothing; MONITOR mode is the pkg default).
+# =============================================================================
+
+name: santa-base
+version: 0.1.0
+description: |
+  Santa (northpolesec) — the Endpoint Security client in MONITOR mode: it allows
+  every exec and logs it to /var/db/santa/santa.log. Installed and pinned by
+  roles/pazny.santa; read by tools/santa-status.py.
+upstream: https://github.com/northpolesec/santa
+license: Apache-2.0
+
+type:
+  - service
+
+_NOS_PLUGIN: "santa-base"
+
+requires:
+  role: pazny.santa
+  feature_flag: install_santa
+  variables:
+    - santa_version
+    - santa_pkg_sha256
+
+# No authentik block = SSO mode none: no web surface.
+
+# Measured: a vendor pkg and a system extension; no estate service upstream.
+depends_on: []
+
+gdpr:
+  purpose: |
+    Security monitoring of this host: record every program that executes so
+    the operator can see what ran outside the trees nOS declares
+    (tools/santa-status.py). Nothing is blocked.
+  legal_basis: legitimate_interests   # Art. 6(1)(f) — securing the estate by its operator
+  balancing_test: >-
+    The log names the local user, uid, path and arguments of each exec by any
+    account on the operator's own host. It stays on the host and rotates by size within about
+    a day; santa.log is world-readable (vendor mode 644), events.db and rules.db root-only.
+  data_source: the macOS Endpoint Security framework on this host
+  data_categories:
+    - exec_telemetry                # path, sha256, pid, user, uid, arguments per exec
+  data_subjects:                    # every local account: Santa logs each exec on the host, whoever runs it
+    - operators
+    - local_accounts                # any other macOS user on this host (family, guests, the agent user)
+  retention_days: 1                 # size-bound: vendor newsyslog keeps 10 x 25 MB (~19 h of rotations on this host, 2026-11-23)
+  processors: []                    # on-device; nOS configures no sync server
+  eu_residency: true
+  transfers_outside_eu: false
+  storage_location: >-
+    Host only: /var/db/santa/santa.log and its rotations (rotated by the vendor's
+    /etc/newsyslog.d/com.northpolesec.santa.newsyslog.conf), events.db and rules.db.
+  security_measures:
+    - "MONITOR mode only: no configuration profile, no rules (test_santa_is_monitor_only)"
+    - "The pkg is downloaded and verified as root into a root-only 0700 dir (santa_pkg_sha256)"
+    - "nOS renders no profile, so no sync server is configured; nothing is sent off the host"
+  notes: >-
+    Arguments can carry secrets typed on a command line; the log is local and
+    rotates within a day. tools/santa-status.py prints path, user and count, never arguments.
+
+notification:
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []

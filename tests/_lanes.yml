@@ -21,6 +21,7 @@ nightly:
   tests/anatomy/test_a_postgres_db_restores_alone.py: playbook
   tests/anatomy/test_face_wing_contract.py: cargo + node
   tests/anatomy/test_thalamus_serve.py: cargo binary
+  tests/anatomy/test_medulla_is_one_static_binary.py: cargo build medulla + thalamus, then otool/ldd (row gate-diet-cargo-leftovers)
   tests/anatomy/test_thalamus_shell_contract.py: cargo
   tests/anatomy/test_blank_run_leaves_a_record.py: playbook
   tests/anatomy/test_host_daemon_stop_is_authored.py: playbook

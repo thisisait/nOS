@@ -53,6 +53,12 @@
 					? 'approve deleting this row?'
 					: 'scroll to the end to approve deleting this row, or reject it'}</span
 			>
+		{:else if waiting.component.kind === 'program_approval'}
+			<span
+				>{whole
+					? `approve these ${waiting.component.props.writes.length} writes?`
+					: 'scroll to the last write to approve this program, or reject it'}</span
+			>
 		{:else if waiting.component.kind === 'action_approval'}
 			<span
 				>{whole
@@ -100,7 +106,10 @@
 		font-size: 11px;
 		color: var(--muted);
 	}
+	/* 1×1 at the left edge: "seen" means scrolled down to it. Full width, a card clipped on the right
+	   (the Iris panel past a 1280 px window edge, journey 11-16) never reached threshold 1: approve stayed locked. */
 	.end {
+		width: 1px;
 		height: 1px;
 	}
 	.ask {

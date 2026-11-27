@@ -71,6 +71,7 @@
   when:
     - _gitea_container.stdout | default('') | length > 0
     - _gitea_admin_exists.rc | default(0) != 0
+  register: _gitea_admin_create
   changed_when: true
   failed_when: false
   check_mode: false
@@ -112,11 +113,27 @@
     - _gitea_container.stdout | default('') | length > 0
     - _gitea_admin_exists.rc | default(0) == 0
     - (_gitea_pw_probe.status | default(-1)) != 200
+  register: _gitea_pw_set
   changed_when: true
   failed_when: false
   check_mode: false
   no_log: true
   notify: Restart gitea
+
+# Success is read from the legs' own statuses, never implied by attempting them
+# (n8n hid a never-created owner behind failed_when: false for months, 2026-09-21).
+- name: "[pazny.gitea Post] Admin credential must land (no silent green)"
+  ansible.builtin.assert:
+    that: >-
+      _gitea_pw_probe.status | default(0) == 200
+      or _gitea_admin_create.rc | default(1) == 0
+      or _gitea_pw_set.rc | default(1) == 0
+    fail_msg: >-
+      Gitea admin is not provisioned: the password probe, `gitea admin user create` and
+      `change-password` all failed (admin list rc {{ _gitea_admin_exists.rc | default('none') }}).
+  when:
+    - not ansible_check_mode
+    - _gitea_container.stdout | default('') | length > 0
 
 # ── SSO-mandatory guard (2026-06-09; CLI-fixed 2026-06-13) ────────────────
 # SSO is mandatory: when the local sign-in form is HIDDEN (sso_autologin), the

@@ -244,6 +244,7 @@ portainer_admin_auto_reset: false
 jellyfin_domain: "media{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 jellyfin_port: 8096
 jellyfin_lan_access: true              # true = port reachable from LAN (for TVs, mobile clients)
+jellyfin_quick_connect: true           # TV/phone sign-in by code; whoever types the code gets that session. false = off
 jellyfin_cache_dir: "{{ nos_data_root }}/platform/services/jellyfin/cache"
 jellyfin_movies_dir: "{{ ansible_facts['env']['HOME'] }}/media/movies"   # Override to your library
 jellyfin_shows_dir: "{{ ansible_facts['env']['HOME'] }}/media/shows"

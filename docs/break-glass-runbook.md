@@ -3,10 +3,6 @@
 > **Authoritative spec:** [`docs/sso-autologin-plan.md`](sso-autologin-plan.md)
 > §"Bezpečnost: break-glass + lockout". This runbook is the operator-facing
 > procedure derived from that plan.
->
-> **Pinned by:** `tests/anatomy/test_break_glass_runbook_present.py` (file
-> exists + has the CLI recovery-key, restart, and per-service fallback
-> truth-table sections).
 
 ## What this is for
 

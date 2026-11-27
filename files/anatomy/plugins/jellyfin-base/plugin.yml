@@ -129,6 +129,12 @@ notification:
   on_low:      []
   on_info:     []
 
+# How the login page takes the estate brand (row estate-brand): tasks/post.yml already writes
+# the Authentik button into LoginDisclaimer; CustomCss sits in the same document.
+branding:
+  kind: api
+  hook: "POST /System/Configuration/branding: LoginDisclaimer + CustomCss (roles/pazny.jellyfin/tasks/post.yml)"
+
 e2e:
   probes:
     - name: oidc-start-reaches-authentik
@@ -136,6 +142,12 @@ e2e:
       expect: {status: [302, 303, 307], location_contains: "{{ authentik_domain }}/application/o/authorize"}
     # A TV or phone app signs in with Quick Connect (row jellyfin-tv-login): the endpoint answers a bare
     # JSON `true` when it is on, anonymously (measured 2026-11-03). Path "" is the whole body.
+    # jellyfin_quick_connect picks which of the two runs (a rendered json_equals value would be a string).
     - name: quick-connect-enabled
       url: https://{{ jellyfin_domain | default('media' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/QuickConnect/Enabled
       expect: {status: [200], json_equals: {"": true}}
+      when: "{{ jellyfin_quick_connect | default(true) }}"
+    - name: quick-connect-disabled
+      url: https://{{ jellyfin_domain | default('media' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/QuickConnect/Enabled
+      expect: {status: [200], json_equals: {"": false}}
+      when: "{{ not (jellyfin_quick_connect | default(true) | bool) }}"

@@ -49,6 +49,9 @@
     - slug: "morning-verdict"
       def: "{{ lookup('file', playbook_dir + '/state/keap-tables/morning-verdict.table.yml') | from_yaml }}"
       rows: []
+    - slug: "immune-verdicts"
+      def: "{{ lookup('file', playbook_dir + '/state/keap-tables/immune-verdicts.table.yml') | from_yaml }}"
+      rows: []
     - slug: "efferent-queue"
       def: "{{ lookup('file', playbook_dir + '/state/keap-tables/efferent-queue.table.yml') | from_yaml }}"
       rows: []

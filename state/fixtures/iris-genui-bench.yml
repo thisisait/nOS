@@ -194,6 +194,54 @@
     - pie chart Expenses by kind
     - travel=120
     - food=42
+# v21: horizontal bar, radar and radial (row genui-chart-shapes); the terminal says every value.
+- id: chart-horizontal-bar
+  kind: chart
+  component:
+    kind: chart
+    props:
+      title: Open rows by owner
+      chart: horizontal_bar
+      x: category
+      series:
+        - name: open
+          points: [[the platform team, 12], [face, 5]]
+  expect:
+    - horizontal_bar chart Open rows by owner
+    - the platform team=12
+    - face=5
+- id: chart-radar
+  kind: chart
+  component:
+    kind: chart
+    props:
+      title: Service profile
+      chart: radar
+      x: category
+      series:
+        - name: keap
+          points: [[uptime, 9], [speed, 6], [docs, 4]]
+        - name: wing
+          points: [[uptime, 8], [speed, 7], [docs, 6]]
+  expect:
+    - radar chart Service profile
+    - "keap: uptime=9, speed=6, docs=4"
+    - "wing: uptime=8, speed=7, docs=6"
+- id: chart-radial
+  kind: chart
+  component:
+    kind: chart
+    props:
+      title: Disk by stack
+      chart: radial
+      x: category
+      series:
+        - name: GB
+          points: [[infra, 40], [iris, 10]]
+  expect:
+    - radial chart Disk by stack
+    - infra=40
+    - iris=10
 - id: tree-steps
   kind: tree
   component:
@@ -470,3 +518,21 @@
     - you could ask
     - "> Chart this by month"
     - "> Which are unmatched?"
+# v21: fact_cards (after OpenUI's Overview/Snippet cards): text only, tone as a word.
+- id: fact-cards-row
+  kind: fact_cards
+  component:
+    kind: fact_cards
+    props:
+      title: pupil-i4 at a glance
+      items:
+        - label: status
+          value: active
+          tone: ok
+        - label: due
+          value: "2026-12-01"
+          tone: warn
+  expect:
+    - pupil-i4 at a glance
+    - "[ok] status: active"
+    - "[warn] due: 2026-12-01"

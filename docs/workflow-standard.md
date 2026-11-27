@@ -260,7 +260,7 @@ and a judge cannot be retro-red against a version that was never committed.*
 
 ---
 
-## 9. The checklist
+## 10. The checklist
 
 Before running a workflow:
 
@@ -275,7 +275,7 @@ Before running a workflow:
 
 ---
 
-## 10. Open
+## 11. Open
 
 - **Fable's independent review of this ground** — the operator ran one
   (session `01RZKdTSFz1wfKpjyJj2ZYVj`); its findings are not yet folded in.
@@ -286,4 +286,4 @@ Before running a workflow:
   still answered by impression.
 - **The smallest recursive step**, not yet taken: let the loop propose a change
   to a workflow definition and have the *previous* judge rule on it. It carries
-  all three invariants of §8 and either holds or fails safely.
+  all three invariants of §9 and either holds or fails safely.

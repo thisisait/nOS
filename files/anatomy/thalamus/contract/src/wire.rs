@@ -71,6 +71,17 @@ pub enum ToThalamus {
     /// The person's own Iris cards asked and not yet decided (v17), from the ledger; serve answers
     /// `approvals_open`. nOS.app polls it to badge the menu bar and announce a new card.
     ApprovalsOpen,
+    /// A socket connection's first line (v20), never answered. `bench` marks the sessions it opens
+    /// as a bench's: only those may ask `plan_evidence`. The face never sends one; serve refuses
+    /// bench: true through the relay.
+    Hello {
+        #[serde(default)]
+        bench: bool,
+    },
+    /// The open session's own last cortex plan (v20), for a bench session only; serve answers
+    /// `plan_evidence`, or records the refusal in the ledger and sends nothing.
+    /// A struct variant, so a field (another session's id) is refused at decode, never ignored.
+    PlanEvidence {},
     /// The face's answer to an `act`: ok and what it returned, or why not.
     Acted {
         act: String,
@@ -236,6 +247,74 @@ pub enum ToShell {
     },
     /// The person's open Iris cards (v17), oldest first; deciding one still happens in its session.
     ApprovalsOpen { items: Vec<OpenApproval> },
+    /// The asking bench session's own last cortex plan (v20): never prompt text, cell text or rows.
+    /// Every field but `session` absent: it never planned.
+    PlanEvidence {
+        session: String,
+        /// Whether the organ's validator accepted the last plan.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        valid: Option<bool>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        registry_hash: Option<String>,
+        /// The cortex-lang source, only once the organ validated it (registry_hash set).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pipeline: Option<String>,
+        /// Present when the plan did not run: the estate failed (infra) or the plan did not (model).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        fallback: Option<FallbackKind>,
+        /// The table the mapper resolved, by every name the bench compares (said, id, title).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        table: Option<PlanTable>,
+        /// What the plan was asked under: engine, primer, grammar, catalogue (tools/iris-bench.py provenance).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        asked: Option<PlanAsked>,
+        /// Row iris-code-mode-bench: who ran the plan, and the turn's model calls and tokens.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        plan_run: Option<PlanRun>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        model_calls: Option<u32>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        tokens: Option<u64>,
+    },
+}
+
+/// Why a plan did not run (serve.rs plan fallback_kind): the estate failed, or the model's plan did.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FallbackKind {
+    Infra,
+    Model,
+}
+
+/// Who ran the plan's pipeline: the model through its tools, or the thalamus.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PlanRun {
+    Model,
+    Thalamus,
+}
+
+/// The table a plan read: as the model said it, KEAP's id, and its title.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PlanTable {
+    pub said: String,
+    pub id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+}
+
+/// The fingerprint of what a plan was asked under; hashes and names, never the primer or catalogue.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PlanAsked {
+    pub engine: String,
+    pub constrained: bool,
+    pub primer_sha256: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub grammar_sha256: Option<String>,
+    pub catalogue: String,
+    pub catalogue_digest: String,
 }
 
 /// One Iris card waiting for its person (v17): which session asked, the card, the tool, when.
@@ -632,6 +711,9 @@ fn check_shell(m: &ToShell) -> Result<(), String> {
             if matches!(component, Component::ActionApproval(_)) {
                 return Err("an action is asked only as an approval, never drawn as a render".into());
             }
+            if matches!(component, Component::ProgramApproval(_)) {
+                return Err("a program's writes are asked only as an approval, never drawn as a render".into());
+            }
             if matches!(component, Component::Sources(x) if x.items.iter().any(|i| i.name.is_none())) {
                 return Err("a source the thalamus sends carries the table name it resolved".into());
             }
@@ -658,6 +740,7 @@ fn check_shell(m: &ToShell) -> Result<(), String> {
                 Component::Callout(_) | Component::Steps(_) | Component::Sources(_) | Component::FollowUp(_) => {
                     Err("a callout, steps, sources or follow_up is drawn in a render, never in an approval".into())
                 }
+                Component::FactCards(_) => Err("fact cards are drawn in a render, never in an approval".into()),
                 _ => Ok(()),
             }
         }
@@ -712,6 +795,27 @@ fn check_shell(m: &ToShell) -> Result<(), String> {
                 return Err(format!("approvals_open holds at most {MAX_OPEN_APPROVALS} items"));
             }
             items.iter().try_for_each(|a| need_uuid("session", &a.session).and_then(|_| need_uuid("approval", &a.approval)))
+        }
+        ToShell::PlanEvidence { session, registry_hash, pipeline, table, asked, .. } => {
+            need_uuid("session", session)?;
+            if pipeline.is_some() && registry_hash.is_none() {
+                return Err("a plan's source crosses only once the organ validated it (registry_hash)".into());
+            }
+            let short = |what: &str, s: &str| if s.is_empty() || s.chars().count() > 200 { Err(format!("{what} is 1-200 chars")) } else { Ok(()) };
+            registry_hash.as_deref().map_or(Ok(()), |h| short("a registry hash", h))?;
+            if pipeline.as_deref().is_some_and(|p| p.chars().count() > 4000) {
+                return Err("a pipeline is at most 4000 chars".into());
+            }
+            if let Some(t) = table {
+                short("a plan table's said", &t.said)?;
+                short("a plan table's id", &t.id)?;
+                t.title.as_deref().map_or(Ok(()), |x| short("a plan table's title", x))?;
+            }
+            asked.as_ref().map_or(Ok(()), |a| {
+                [("an engine", &a.engine), ("a primer hash", &a.primer_sha256), ("a catalogue", &a.catalogue), ("a catalogue digest", &a.catalogue_digest)]
+                    .into_iter().try_for_each(|(w, s)| short(w, s))?;
+                a.grammar_sha256.as_deref().map_or(Ok(()), |g| short("a grammar hash", g))
+            })
         }
         ToShell::AnswerResult { uuid, outcome, winning_answer, .. } => {
             need_uuid("question", uuid)?;

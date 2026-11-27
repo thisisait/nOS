@@ -1,8 +1,8 @@
 """iris-bench judges the cortex plan path on the pipeline the thalamus recorded, never on its text.
 
-Offline: a fake thalamus (test_iris_bench_offline.Fake), a fake /agent/v1/validate on loopback
-answering canned reports, and a temp ledger.db this test writes. The real ~/.nos ledger is never
-opened: --plan cortex refuses to run without an explicit --ledger.
+Offline: a fake thalamus that answers the bench hello and plan_evidence (contract v20, row
+cortex-plan-evidence-without-ledger, operator ruling 2026-11-11 (b)), and a fake /agent/v1/validate on
+loopback answering canned reports. The bench opens no ledger file: the thalamus is asked, never the file.
 """
 
 from __future__ import annotations
@@ -11,7 +11,6 @@ import http.server
 import importlib.util
 import json
 import pathlib
-import sqlite3
 import subprocess
 import threading
 
@@ -120,31 +119,49 @@ def validator(monkeypatch):
     srv.shutdown()
 
 
-# ── a temp ledger, shaped like thalamus/src/ledger.rs ──
+# ── a fake thalamus that answers the bench hello and plan_evidence, as serve.rs does ──
 
 def _sid(n):
     return f"0b6f1d2e-3c4a-4b5d-8e9f-a0b1c2d3e4f{n}"
 
 
-def _ledger(path, plans):
-    """plans: {session: (source, fallback-or-None)}; a session absent from it never planned."""
-    db = sqlite3.connect(path)
-    db.executescript("CREATE TABLE sessions (id INTEGER PRIMARY KEY, uuid TEXT UNIQUE, agent_name TEXT);"
-                     "CREATE TABLE events (id INTEGER PRIMARY KEY, ts TEXT, run_id TEXT, type TEXT, task TEXT,"
-                     " result_json TEXT, source TEXT);")
-    for sid, (src, fallback) in plans.items():
-        db.execute("INSERT INTO sessions (uuid, agent_name) VALUES (?, 'iris')", (sid,))
-        use = {"source": src, "engine": "llamacpp-gbnf", "constrained": True,
-               "grammar_sha256": "g" * 64, "primer_sha256": "p" * 64}
-        res = {"valid": fallback is None, "errors": [], "registry_hash": HASH}
-        res |= {"fallback": fallback} if fallback else {"plan": [{"tool": "query_rows"}]}
-        for kind, body in (("agent_tool_use", use), ("agent_tool_result", res)):
-            db.execute("INSERT INTO events (ts, run_id, type, task, result_json, source) VALUES "
-                       "('t', ?, ?, 'agent:iris/tool:cortex_plan', ?, 'thalamus')", (sid, kind, json.dumps(body)))
-        db.execute("INSERT INTO events (ts, run_id, type, task, result_json) VALUES "
-                   "('t', ?, 'agent_tool_use', 'agent:iris/tool:query_rows', '{}')", (sid,))
-    db.commit()
-    db.close()
+ASKED = {"engine": "llamacpp-gbnf", "constrained": True, "primer_sha256": "p" * 64, "grammar_sha256": "g" * 64,
+         "catalogue": "lean", "catalogue_digest": "0123456789abcdef"}
+
+
+def _ok(src):
+    return {"valid": True, "registry_hash": HASH, "pipeline": src, "asked": ASKED}
+
+
+class PlanFake(OFF.Fake):
+    """OFF.Fake plus v20: the hello is answerless and accepted only first; plan_evidence answers the
+    session this connection opened, from `evidence` ({} = it never planned), or is refused without a hello."""
+
+    def __init__(self, script, evidence):
+        self.evidence, self.kinds = evidence, []
+        super().__init__(script)
+
+    def conn(self, c):
+        f = c.makefile("rw", encoding="utf-8")
+        mine, session = [], None
+        self.kinds.append(mine)
+        for line in f:
+            m = json.loads(line)
+            self.seen.append(m)
+            mine.append(m["t"])
+            if m["t"] == "hello":
+                continue
+            if m["t"] == "turn":
+                lines = self.script[m["text"]]
+                session = lines[0]["session"]
+            elif m["t"] == "plan_evidence" and mine[0] == "hello":
+                lines = [{"t": "plan_evidence", "session": session, **self.evidence.get(session, {})}]
+            else:
+                lines = [{"t": "refused", "reason": "no bench hello on this connection"}]
+            for x in lines:
+                f.write(json.dumps(x) + "\n")
+            f.flush()
+        c.close()
 
 
 CASE_FILE = [
@@ -154,6 +171,9 @@ CASE_FILE = [
     {"id": "fallback-ok", "prompt": "p4", "checks": {"not_blank": True}},
     {"id": "planned-anyway", "prompt": "p5", "checks": {"not_blank": True}},
 ]
+# BROKEN never validated, so its source never crosses: the thalamus sends only the fallback kind.
+EVIDENCE = {_sid(1): _ok(SAID), _sid(2): _ok(WRONG), _sid(3): {"valid": False, "fallback": "model", "asked": ASKED},
+            _sid(5): _ok(WRONG)}
 
 
 def _script():
@@ -162,33 +182,26 @@ def _script():
                       {"t": "activity", "session": _sid(n), "phase": "idle"}] for n in range(1, 6)}
 
 
-def _run(tmp_path, *extra, plans=None):
+def _run(tmp_path, *extra, evidence=None):
     cases = tmp_path / "cases.yml"
     cases.write_text(yaml.safe_dump(CASE_FILE), encoding="utf-8")
-    led = tmp_path / "ledger.db"
-    _ledger(led, plans if plans is not None else {
-        _sid(1): (SAID, None), _sid(2): (WRONG, None), _sid(3): (BROKEN, "invalid: syntax_error"),
-        _sid(5): (WRONG, None)})
-    before = led.read_bytes()
-    fake = OFF.Fake(_script())
+    fake = PlanFake(_script(), EVIDENCE if evidence is None else evidence)
     out = tmp_path / "run.json"
     try:
         rc = OFF._bench().main(["--sock", fake.path, "--offline", "--out", str(out), "--timeout", "10",
-                                "--cases", str(cases), "--ledger", str(led), *extra])
+                                "--cases", str(cases), *extra])
     finally:
         fake.close()
-    assert led.read_bytes() == before, "the bench wrote to the ledger"
-    assert not led.with_name("ledger.db-wal").exists()
     return rc, json.loads(out.read_text()), fake
 
 
-def test_a_cortex_run_is_judged_on_the_pipeline_the_ledger_holds(tmp_path, validator):
-    rc, run, _ = _run(tmp_path, "--plan", "cortex", "--validate-url", validator)
+def test_a_cortex_run_is_judged_on_the_pipeline_the_thalamus_reports(tmp_path, validator):
+    rc, run, fake = _run(tmp_path, "--plan", "cortex", "--validate-url", validator)
     res = {r["id"]: r for r in run["cases"]}
     assert res["same-plan"]["pass"], res["same-plan"]["failed"]
     assert res["wrong-plan"]["failed"] == ["pipeline_equals_expected"]
     assert set(res["broken-plan"]["failed"]) == {"pipeline_valid", "pipeline_equals_expected", "pipeline_fell_back"}
-    assert res["fallback-ok"]["pass"], res["fallback-ok"]["failed"]          # no plan row: fell back
+    assert res["fallback-ok"]["pass"], res["fallback-ok"]["failed"]          # no plan: fell back
     assert res["planned-anyway"]["failed"] == ["pipeline_fell_back"]        # absent expect = fallback is correct
     assert res["same-plan"]["pipeline"]["source"] == SAID and res["broken-plan"]["pipeline"]["fell_back"]
     # nos-assay import-iris-bench turns these into per-check rewards
@@ -202,14 +215,17 @@ def test_a_cortex_run_is_judged_on_the_pipeline_the_ledger_holds(tmp_path, valid
     assert {p for p, _, _ in Validator.seen} == {"/agent/v1/validate"}
     assert {a for _, a, _ in Validator.seen} == {"Bearer ro-test-token"}
     assert EXPECT in {s for _, _, s in Validator.seen}
+    # each case: the bench hello first, the evidence ask last, on the one connection
+    assert fake.kinds and all(k[0] == "hello" and k[-1] == "plan_evidence" for k in fake.kinds), fake.kinds
 
 
-def test_the_tools_path_judges_no_pipeline(tmp_path, validator):
-    rc, run, _ = _run(tmp_path, "--plan", "tools", "--validate-url", validator)
+def test_the_tools_path_judges_no_pipeline_and_asks_for_none(tmp_path, validator):
+    rc, run, fake = _run(tmp_path, "--plan", "tools", "--validate-url", validator)
     assert rc == 0 and all(r["pass"] for r in run["cases"])
     assert all(r["plan_checks"] == [] for r in run["cases"])
     assert run["plan_path"] == "tools" and run["provenance"]["plan"] == "tools"
     assert Validator.seen == []
+    assert all(k == ["turn"] for k in fake.kinds), fake.kinds
 
 
 def test_an_unreachable_validator_is_named_not_scored_as_a_wrong_plan(tmp_path, monkeypatch):
@@ -219,19 +235,32 @@ def test_an_unreachable_validator_is_named_not_scored_as_a_wrong_plan(tmp_path, 
     assert failed and all("validator unreachable" in f for f in failed), failed
 
 
-def test_cortex_plan_refuses_without_a_ledger_or_a_token(tmp_path, monkeypatch):
-    fake = OFF.Fake(_script())
+def test_cortex_plan_refuses_without_a_token(tmp_path, monkeypatch):
+    fake = PlanFake(_script(), EVIDENCE)
     try:
-        monkeypatch.setenv("CORTEX_TOKEN_RO", "x")
+        monkeypatch.delenv("CORTEX_TOKEN_RO", raising=False)
         assert OFF._bench().main(["--sock", fake.path, "--offline", "--out", str(tmp_path / "o.json"),
                                   "--plan", "cortex"]) == 2
-        monkeypatch.delenv("CORTEX_TOKEN_RO")
-        (tmp_path / "l.db").write_bytes(b"")
-        assert OFF._bench().main(["--sock", fake.path, "--offline", "--out", str(tmp_path / "o.json"),
-                                  "--plan", "cortex", "--ledger", str(tmp_path / "l.db")]) == 2
     finally:
         fake.close()
     assert fake.connections == 0 and not (tmp_path / "o.json").exists()
+
+
+def test_the_bench_opens_no_ledger_file():
+    """The row's gate: the bench works with --ledger removed and imports no sqlite (parsed, not grepped)."""
+    import ast
+    tree = ast.parse((REPO / "tools/iris-bench.py").read_text(encoding="utf-8"))
+    mods = {a.name.split(".")[0] for n in ast.walk(tree) if isinstance(n, ast.Import) for a in n.names}
+    mods |= {(n.module or "").split(".")[0] for n in ast.walk(tree) if isinstance(n, ast.ImportFrom)}
+    b = OFF._bench()
+    assert "sqlite3" not in mods and not hasattr(b, "read_plan") and not hasattr(b, "read_route")
+
+
+def test_a_refused_evidence_ask_is_named_never_a_verdict():
+    """A thalamus that refuses plan_evidence (the session was not a bench session): the case says so."""
+    b = OFF._bench()
+    plan = b.plan_of({"t": "refused", "reason": "not a bench session"})
+    assert "error" in plan and b.route_of(plan) is None
 
 
 def test_the_ast_comparison_is_op_by_op_not_text():
@@ -283,14 +312,13 @@ def test_an_unjudged_plan_is_no_data_not_a_failure(tmp_path, monkeypatch):
 
 def test_the_ro_token_goes_to_loopback_only(tmp_path, monkeypatch):
     monkeypatch.setenv("CORTEX_TOKEN_RO", "ro-test-token")
-    (tmp_path / "l.db").write_bytes(b"")
     (tmp_path / "c.yml").write_text(yaml.safe_dump(CASE_FILE[:1]), encoding="utf-8")
     b, sent = OFF._bench(), []
     monkeypatch.setattr(b, "validate_report", lambda url, *_: sent.append(url) or {"valid": False})
-    fake = OFF.Fake(_script())
+    fake = PlanFake(_script(), EVIDENCE)
     try:
         assert b.main(["--sock", fake.path, "--offline", "--out", str(tmp_path / "o.json"), "--plan", "cortex",
-                       "--ledger", str(tmp_path / "l.db"), "--cases", str(tmp_path / "c.yml"), "--timeout", "10",
+                       "--cases", str(tmp_path / "c.yml"), "--timeout", "10",
                        "--validate-url", "http://validator.example:8098"]) == 2
     finally:
         fake.close()
@@ -320,37 +348,15 @@ def test_a_count_accepts_the_rows_or_their_count_and_a_chart_any_kind():
     assert [p.split("chart=")[1].split(",")[0] for p in charts] == ["bar", "pie", "line"]
 
 
-def _infra_ledger(path, rows):
-    """rows: {session: [result_json, ...]}: cortex_plan tool_result rows only, as serve's refused() writes
-    them when the estate failed before the model's plan existed (no tool_use row)."""
-    db = sqlite3.connect(path)
-    db.executescript("CREATE TABLE sessions (id INTEGER PRIMARY KEY, uuid TEXT UNIQUE, agent_name TEXT);"
-                     "CREATE TABLE events (id INTEGER PRIMARY KEY, ts TEXT, run_id TEXT, type TEXT, task TEXT,"
-                     " result_json TEXT, source TEXT);")
-    for sid, results in rows.items():
-        db.execute("INSERT INTO sessions (uuid, agent_name) VALUES (?, 'iris')", (sid,))
-        for r in results:
-            db.execute("INSERT INTO events (ts, run_id, type, task, result_json, source) VALUES "
-                       "('t', ?, 'agent_tool_result', 'agent:iris/tool:cortex_plan', ?, 'thalamus')", (sid, json.dumps(r)))
-    db.commit()
-    db.close()
-
-
-def test_an_estate_failure_is_no_data_not_a_plan_verdict(tmp_path, validator):
-    """serve.rs refused(): the organ down, the model unreachable or the catalogue unreadable write
-    {valid: false, fallback, fallback_kind: infra} and no tool_use. read_plan saw "never planned", so
-    every expect-fallback case PASSED and every expect-pipeline case was red - a verdict on the model
-    for the estate's failure."""
-    down = {"valid": False, "fallback": "the cortex organ is unreachable (refused)", "fallback_kind": "infra"}
-    led = tmp_path / "ledger.db"
-    _infra_ledger(led, {_sid(n): [down] for n in range(1, 6)})
+def test_an_estate_failure_is_no_data_not_a_plan_verdict():
+    """serve.rs refused(): the organ down, the model unreachable or the catalogue unreadable is an infra
+    fallback. Judging it would be a verdict on the model for the estate's failure: it is no data."""
     b = OFF._bench()
-    for sid in (_sid(1), _sid(4)):
-        plan = b.read_plan(str(led), sid)
-        assert plan is not None and plan["fallback_kind"] == "infra" and "unreachable" in plan["fallback"], plan
-        for name, arg in (("pipeline_fell_back", True), ("pipeline_valid", True)):
-            with pytest.raises(b.Unjudged):
-                b.check(name, arg, {"plan": plan, "validate": lambda s: {"valid": True}}, 0.0)
+    plan = b.plan_of({"t": "plan_evidence", "session": _sid(1), "valid": False, "fallback": "infra"})
+    assert plan is not None and plan["fallback_kind"] == "infra", plan
+    for name, arg in (("pipeline_fell_back", True), ("pipeline_valid", True)):
+        with pytest.raises(b.Unjudged):
+            b.check(name, arg, {"plan": plan, "validate": lambda s: {"valid": True}}, 0.0)
 
 
 def test_a_plan_is_equal_to_its_expectation_up_to_how_it_names_the_table_and_the_mappers_defaults():

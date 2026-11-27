@@ -108,3 +108,23 @@ def test_dnsmasq_off_is_authored_and_takes_its_resolvers_along(tmp_path):
                        capture_output=True, text=True, env={**os.environ, "PATH": f"{bin_}:{os.environ['PATH']}"})
     assert r.returncode == 0, r.stderr
     assert sorted(p.name for p in res.iterdir()) == ["corp.example"], "the wrong resolver files went"
+
+
+def test_a_santa_nos_did_not_install_is_never_booted_out(monkeypatch):
+    """Coordinator 2026-11-23: a client Mac can carry an MDM-managed Santa. With
+    install_santa false and no nOS pkg dir on the host, no Santa job is in either
+    stop plan; with the dir, all four are."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("_guard_marker", REPO / "filter_plugins/nos_prune_guard.py")
+    g = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(g)
+    graph = json.loads((REPO / "state/anatomy-graph.json").read_text())
+    pkg_dir = yaml.safe_load((REPO / "roles/pazny.santa/defaults/main.yml").read_text())["santa_pkg_dir"]
+
+    def santa(present: bool) -> set[str]:
+        monkeypatch.setattr(g.os.path, "exists", lambda p: present if p == pkg_dir else os.path.exists(p))
+        return {r["label"] for d in ("gui", "system") for r in g.nos_host_daemon_plan(graph, d)
+                if r["install_flag"] == "install_santa"}
+
+    assert santa(False) == set(), "a Santa without nOS's pkg dir would be booted out"
+    assert len(santa(True)) == 4

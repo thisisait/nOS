@@ -1,0 +1,10 @@
+horizontal_bar chart Open rows by owner: 1 series over category x, not drawn her
+  open: the platform team=12, face=5, agents=3
+
+
+
+
+
+
+
+

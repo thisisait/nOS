@@ -231,6 +231,12 @@ jobs:
           -q
           --durations=15
 
+      # tests/wing-api: plain-PHP suites over a temp SQLite and the vendor tree above. Nothing
+      # ran them until 2026-11-26 (3 of 8 had rotted and were deleted). One shard is enough.
+      - name: Run the wing-api PHP suites.
+        if: matrix.shard == 1
+        run: bash tests/wing-api/run-all.sh
+
   pytest-result:
     name: Pytest (Python tests)
     needs: pytest

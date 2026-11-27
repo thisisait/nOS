@@ -19,6 +19,7 @@ const fx = JSON.parse(readFileSync(FIXTURE, 'utf8')) as {
 // Each kind's props, as wire.ts types them: a prop the fixture renames is named here, not drawn as nothing.
 const PROPS: Record<string, string[]> = {
 	action_approval: ['action', 'app', 'params', 'says'],
+	program_approval: ['read_from', 'source', 'writes'],
 	table_results: ['columns', 'matched', 'name', 'projected', 'query', 'rows', 'table', 'total'],
 	row_diff_approval: ['cells', 'lines', 'op', 'read_from', 'row_id', 'table', 'title', 'warning'],
 	table_schema_approval: ['columns', 'description', 'title', 'visibility'],
@@ -43,6 +44,7 @@ const PROPS: Record<string, string[]> = {
 	steps: ['items', 'title'],
 	sources: ['items', 'title'],
 	follow_up: ['prompts'],
+	fact_cards: ['items', 'title'],
 	dashboard: ['dropped', 'lens', 'name', 'widgets'],
 	kpi: ['delta', 'delta_label', 'source', 'title', 'unit', 'value']
 };
@@ -50,6 +52,7 @@ const KINDS = Object.keys(PROPS);
 // Props a sample may leave out (an insert names no row); any other missing or extra prop is a rename.
 const OPTIONAL: Record<string, string[]> = {
 	row_diff_approval: ['lines', 'read_from', 'row_id', 'warning'],
+	program_approval: ['read_from'],
 	table_schema_approval: ['description'],
 	form: ['prefill'],
 	knowledge_tree: ['title'],
@@ -321,6 +324,42 @@ describe('the pupil renders the contract fixture', () => {
 			props: { waiting, of: 1, whole: true, onseen: () => {}, ondecide: () => {} }
 		}).body;
 		expect(text(card)).toContain('approve adding these columns?');
+	});
+
+	it('a program card shows its source as text, every write, and approves only once the last was in view', () => {
+		const msg = structuredClone(
+			fx.to_shell.find((c) => c.case === "a program's writes await one approval")!.msg
+		) as Extract<ToShell, { t: 'approval_request' }>;
+		const p = msg.component.props as { source: string };
+		p.source = `${p.source} <b>not markup</b>`;
+		const html = render(Message, { props: { msg } }).body;
+		expect(html).not.toContain('<b>not markup</b>');
+		const page = text(html);
+		expect(page).toContain('a program writes 3 row(s) — nothing is written unless you approve');
+		expect(page).toContain('<b>not markup</b>');
+		for (const want of [
+			'update Invoices (invoices) / inv-3',
+			'update Invoices (invoices) / inv-7',
+			'delete Invoices (invoices) / inv-9'
+		])
+			expect(page).toContain(want);
+		const card = (whole: boolean) =>
+			render(ApprovalCard, {
+				props: {
+					waiting: { approval: msg.approval, component: msg.component },
+					of: 1,
+					whole,
+					onseen: () => {},
+					ondecide: () => {}
+				}
+			}).body;
+		// The end sentinel sits after the last write: Approve waits for it, Reject never does.
+		expect(card(false).lastIndexOf('inv-9')).toBeLessThan(card(false).indexOf('class="end'));
+		expect(card(false)).toMatch(/<button[^>]*disabled[^>]*>approve<\/button>/);
+		expect(card(false)).not.toMatch(/<button[^>]*disabled[^>]*>reject<\/button>/);
+		expect(text(card(false))).toContain('scroll to the last write to approve this program');
+		expect(card(true)).not.toMatch(/<button[^>]*disabled[^>]*>approve<\/button>/);
+		expect(text(card(true))).toContain('approve these 3 writes?');
 	});
 
 	it('an empty diff side reads (empty), not blank', () => {
@@ -805,6 +844,67 @@ describe('a chart is SVG marks and text labels, inside its box', () => {
 		for (const c of cases) inside(html(chart({ title: 'every axis', ...c })), `${c.chart}/${c.x}`);
 	});
 
+	// v21: OpenUI's horizontal bar, radar and radial (row genui-chart-shapes).
+	it('a horizontal bar is a bar per value, a radar a shape per series, a radial a ring per value', () => {
+		const shown = (kind: string) =>
+			fx.to_shell.find(
+				(c) =>
+					'component' in c.msg &&
+					c.msg.component.kind === 'chart' &&
+					c.msg.component.props.chart === kind
+			)!.msg;
+		const props = (m: ToShell) =>
+			((m as Extract<ToShell, { t: 'render' }>).component as Chart).props;
+		const hbar = html(shown('horizontal_bar'));
+		expect(hbar.match(/<rect[^>]*class="bar/g)?.length).toBe(3);
+		expect(
+			labels(hbar)
+				.filter((l) => l.anchor === 'end')
+				.map((l) => l.t)
+		).toContain('the platform team');
+		const radar = html(shown('radar'));
+		expect(radar.match(/<path[^>]*class="area/g)?.length).toBe(2);
+		expect(radar.match(/<circle/g)?.length).toBe(8);
+		for (const x of ['uptime', 'speed', 'docs', 'tests'])
+			expect(labels(radar).map((l) => l.t)).toContain(x);
+		const radial = html(shown('radial'));
+		expect(radial.match(/<path[^>]*class="slice[^>]*>\s*<title>/g)?.length).toBe(3);
+		for (const k of ['horizontal_bar', 'radar', 'radial']) tips(html(shown(k)), props(shown(k)));
+		const long = (i: number) => `a rather long label number ${i}`;
+		const cases: Chart['props'][] = [
+			{
+				chart: 'horizontal_bar',
+				x: 'category',
+				series: [0, 1].map((k) => ({
+					name: `s${k}`,
+					points: Array.from(
+						{ length: 60 },
+						(_, i) => [long(i), (i - 30) * 1e5] as [string, number]
+					)
+				}))
+			},
+			{
+				chart: 'radar',
+				x: 'category',
+				series: [0, 1, 2].map((k) => ({
+					name: `s${k}`,
+					points: Array.from({ length: 12 }, (_, i) => [long(i), i * k * 1e6] as [string, number])
+				}))
+			},
+			{
+				chart: 'radial',
+				x: 'category',
+				series: [
+					{
+						name: 'rows',
+						points: Array.from({ length: 12 }, (_, i) => [long(i), i] as [string, number])
+					}
+				]
+			}
+		];
+		for (const c of cases) inside(html(chart({ title: 'v21', ...c })), `${c.chart}/${c.x}`);
+	});
+
 	it('a chart draws no link, no foreign markup, no script', () => {
 		const h = html(
 			chart({
@@ -896,5 +996,18 @@ describe('a kpi is one big number, its delta said as text', () => {
 		const h = html(kpi({ title: '<img onerror=1>', value: 1, source: '<script>x</script>' }));
 		expect(h).not.toMatch(/<(a|script|img)[\s>]/);
 		expect(h).toContain('&lt;img');
+	});
+});
+
+// v21: row genui-fact-cards.
+describe("fact cards are a grid of the model's text", () => {
+	it('fact cards are text: a label and value per fact, the tone a word, no link or button', () => {
+		const h = html(
+			fx.to_shell.find((c) => 'component' in c.msg && c.msg.component.kind === 'fact_cards')!.msg
+		);
+		expect(h.match(/<div class="fact[^"]*"/g)?.length).toBe(3);
+		expect(text(h)).toContain('status ok active');
+		expect(text(h)).toContain('due warn 2026-12-01');
+		expect(h).not.toMatch(/<(a|button|script|img)[\s>]/);
 	});
 });

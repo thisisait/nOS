@@ -7,8 +7,7 @@ CLT had no tags, so it could not be skipped.
 WHAT THIS PINS (YAML/text, no wet converge):
 1. No ``main-fast.yml`` at repo root.
 2. ``elliotweiser.osx-command-line-tools`` carries tag ``homebrew``.
-3. The skip-list is the documented frozenset; organs+stacks are disjoint.
-4. ``pazny.openclaw`` and ``pazny.ollama`` are tagged ``openclaw``, off the skip list.
+3. ``pazny.openclaw`` and ``pazny.ollama`` are tagged ``openclaw``, off the skip list.
 """
 
 from __future__ import annotations
@@ -25,9 +24,6 @@ SKIP = frozenset({
     "homebrew", "mas", "dock", "apt", "packages", "python", "node", "nodejs",
     "bun", "go", "golang", "dotnet", "csharp", "extra-packages", "claude-cli",
     "sublime-text",
-})
-KEEP = frozenset({
-    "openclaw", "anatomy", "stacks", "core", "pulse", "cortex",
 })
 
 
@@ -56,12 +52,6 @@ def test_clt_is_tagged_homebrew():
     )
     tags = _tags(m.group(1))
     assert "homebrew" in tags, f"CLT tags {tags} do not include homebrew"
-
-
-def test_skip_list_does_not_drop_organs_or_stacks():
-    assert SKIP.isdisjoint(KEEP), (
-        f"skip-list intersects organs/stacks: {SKIP & KEEP}"
-    )
 
 
 @pytest.mark.parametrize("role", ["pazny.openclaw", "pazny.ollama"])

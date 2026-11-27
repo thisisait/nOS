@@ -1,0 +1,10 @@
+radar chart Service profile: 2 series over category x, not drawn here
+  keap: uptime=9, speed=6, docs=4, tests=7
+  wing: uptime=8, speed=7, docs=6, tests=5
+
+
+
+
+
+
+

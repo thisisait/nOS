@@ -1,0 +1,40 @@
+# =============================================================================
+# KEAP DataTable definition — "Immune verdicts"
+#
+# Row immune-verdicts-record (operator ruling 2026-11-23, session-gate-consent (a)).
+# One row per judged firing: the operator says whether one firing of one immune cell
+# was a true alarm, a false alarm, or unsure. The regulator (later row) counts each
+# cell's false-alarm rate from here and demotes a noisy cell to advisory, never silences.
+#
+# The converge creates the empty table (seed-core-tables.yml, rows: []); the operator writes
+# rows through the human door (a face edit), never an agent.
+# `cell` options are the keys of state/immune/indicators.yml (pinned by
+# test_every_indicator_is_registered.py). `why` is <= 300 characters by convention.
+# =============================================================================
+
+title: "Immune verdicts"
+description: >-
+  The operator's judgement of one firing of one immune cell: true alarm, false alarm or unsure,
+  with a one-line why. The regulator reads each cell's false-alarm rate from it.
+driver: libsql
+visibility: tier-managers
+client_scope: none
+anchors: ["nos.loop"]
+
+schema:
+  columns:
+    - { key: slug,        label: "Slug",       kind: text,   role: dimension, required: true, concept: identity.slug }
+    - { key: occurred_at, label: "Fired on",   kind: date,   role: dimension, required: true, concept: time.occurred_at }
+    - { key: cell,        label: "Cell",       kind: select, role: dimension, required: true, concept: prov.source,
+        options: ["undeclared-status", "workload-digest-status", "santa-status", "session-trace-status",
+                  "symbiont-status", "advisory-status", "net-raw-status", "host-patch-status", "identity-status",
+                  "rbac-status", "septum-status", "openhuman-status", "tailscale-status", "clamav",
+                  "advisory-patrol:nightly", "advisory-patrol:image-sbom", "authentik-tofu-drift:tofu-drift-plan",
+                  "discovery:contradiction-scan", "gitleaks:nightly-scan", "npm-supply-chain:daily-ioc-scan",
+                  "conductor:security-drift-watch", "conductor:vulnerability-scan", "immune-crawler:git-history",
+                  "prepush-score", "wing:audit-chain-verify"] }
+    - { key: firing,      label: "Firing",     kind: text,   role: dimension, required: true, concept: prov.ref }
+    - { key: verdict,     label: "Verdict",    kind: select, role: dimension, required: true, concept: evidence.verification,
+        options: ["true-alarm", "false-alarm", "unsure"] }
+    - { key: why,         label: "Why",        kind: text,   role: attribute, concept: identity.description }
+    - { key: judged_by,   label: "Judged by",  kind: text,   role: dimension, required: true, concept: access.owner }

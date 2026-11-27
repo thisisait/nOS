@@ -11,7 +11,7 @@ use nos_contract::renderers::{is_date, ActionApproval, ApprovalsList, Axis, Cell
                                Dropped, FieldKind, Form, FormField, InboxItem, InboxList, KnowledgeNode, KnowledgeTree, need_node_id, Lens, LensOp, Lines, List, ListItem, Omitted, Parent, RedStatus,
                                Row, RowDiffApproval, SchemaColumn, ColumnAddApproval, ColumnKind, ExistingColumn, Series, Table, TableResults, TableSchemaApproval, Timeline, TimelineItem, Visibility};
 use nos_contract::wire::{check_params, check_spec, decode_to_thalamus, encode, CatalogueColumn, CatalogueTable, ChartSpec, EstateState, ControlView, Decision, FormSpec,
-                         KnowledgeSpec, KpiSpec, Limb, ReaderName, Op, ParamKind, Phase, Scope, ModelOption, OpenApproval, ToShell, ToThalamus, Trigger, WidgetChart, WidgetSpec, MAX_REPLAY};
+                         FallbackKind, KnowledgeSpec, KpiSpec, Limb, ReaderName, Op, ParamKind, Phase, PlanAsked, PlanTable, Scope, ModelOption, OpenApproval, ToShell, ToThalamus, Trigger, WidgetChart, WidgetSpec, MAX_REPLAY};
 use nos_contract::uid;
 use crate::store;
 use serde_json::{json, Map, Value};
@@ -65,6 +65,9 @@ pub struct Server {
     pub data: PathBuf,
     /// iris_knowledge_tree_max (NOS_IRIS_KNOWLEDGE_TREE_MAX): the most nodes a knowledge tree draws.
     pub tree_max: usize,
+    /// iris_turn_token_ceiling (NOS_IRIS_TURN_TOKENS): the model tokens one turn may spend; 0 = off. Only the
+    /// server's env sets it: no client message carries it (row iris-turn-token-ceiling).
+    pub turn_tokens: i64,
     /// start_agent's way into Wing; an empty token is no door.
     pub wing: WingDoor,
     /// quiet()'s lines: when each was last written and how many came since.
@@ -358,6 +361,14 @@ struct Open {
     /// The runs start_agent opened this turn; converse() moves them to the connection's watch, which
     /// outlives a switch, a clear or a branch and is kept per person when the connection closes.
     watching: Vec<Watch>,
+    /// Opened fresh on a bench connection (hello bench: true): only it may ask plan_evidence.
+    /// A resumed, switched-to, cleared or branched session never is.
+    bench: bool,
+    /// The read program running now (row iris-code-mode-reads): its id and stage, stamped on each row it records.
+    program: Option<(String, usize)>,
+    /// o.tokens when this turn began, and how its spend was counted (provider usage, bytes / 4, or both).
+    turn_from: (i64, i64),
+    counted: (bool, bool),
 }
 
 /// One run Iris started: (agent, Wing session uuid), when it started (unix seconds), the next time it is asked after,
@@ -372,6 +383,8 @@ struct Watch {
 
 /// How long it is watched: the Runner's SESSION_WALL_CLOCK_S, past which Wing ends it anyway.
 const WATCH_BOUND_SECS: u64 = 3600;
+/// The table only the operator writes, through the face BFF (bff/tables/+server.ts).
+const VERDICTS: &str = "immune-verdicts";
 /// The most of a run's report the model hears, in bytes (Wing caps its body at the same).
 const REPORT_HEARD: usize = 4096;
 
@@ -382,6 +395,8 @@ struct Face {
     held: RefCell<VecDeque<String>>,
     limbs: Vec<Limb>,
     catalogue: bool,
+    /// The connection's first line was hello {bench: true} (v20): the sessions ensure() opens are a bench's.
+    bench: bool,
 }
 
 impl Face {
@@ -400,7 +415,7 @@ impl Face {
                 }
             }
         });
-        Face { rx, held: RefCell::default(), limbs: vec![], catalogue: false }
+        Face { rx, held: RefCell::default(), limbs: vec![], catalogue: false, bench: false }
     }
 
     /// The next line, or a Tick when none came for `tick` (the model-state poll), or the End.
@@ -482,6 +497,8 @@ enum Next {
 const MODEL_STATE_EVERY: Duration = Duration::from_secs(30);
 /// What a call the person stopped is answered with, and the Err a stopped model request returns.
 const STOPPED: &str = "stopped by the person";
+/// chat()'s refusal once the turn spent its ceiling (iris_turn_token_ceiling); think_from ends the turn on it.
+const OVER_CEILING: &str = "the turn's token ceiling is spent";
 /// What the model hears with an identical call that failed already in this turn (it is not run again).
 const REPEATED: &str = "this exact call failed already in this turn and was not run again: change its arguments, try another way, or answer in text";
 
@@ -679,6 +696,66 @@ fn mint_uuid() -> std::io::Result<String> {
     Ok(format!("{}-{}-{}-{}-{}", &h[..8], &h[8..12], &h[12..16], &h[16..20], &h[20..]))
 }
 
+/// The calls a program the thalamus runs may hold (row iris-code-mode-reads); any other keeps the model's loop.
+const PROGRAM_TOOLS: [&str; 2] = ["query_rows", "show"];
+/// A program's wall clock, checked between its calls beside face.stopped().
+const PROGRAM_WALL: Duration = Duration::from_secs(60);
+
+/// A cortex plan mapped to tool calls (plan()); `program` is minted only for reads the thalamus runs.
+struct Planned {
+    msg: Value,
+    source: String,
+    program: Option<String>,
+    title: Option<String>,
+}
+
+/// What the model hears of one program call: counts, kinds and numbers serve computed. An allow-list:
+/// never a cell, a row id or a group label (a `top` pair or a `groups` value is one).
+fn receipt_of(name: &str, v: &Value) -> Value {
+    let mut r = json!({"call": name});
+    if name == "query_rows" {
+        r["rendered"] = json!("table_results");
+        for k in ["matched", "total"] {
+            r[k] = v.get(k).filter(|n| n.is_number()).cloned().unwrap_or(Value::Null);
+        }
+        r["shown"] = json!(v["rows"].as_array().or(v["groups"].as_array()).map(Vec::len));
+        return r;
+    }
+    r["rendered"] = json!(v["shown"].as_str().filter(|k| k.chars().all(|c| c.is_ascii_lowercase() || c == '_')));
+    for k in ["points_drawn", "value"] {
+        if let Some(n) = v.get(k).filter(|n| n.is_number()) {
+            r[k] = n.clone();
+        }
+    }
+    r
+}
+
+/// The thalamus's closing line of a program, from its receipt: it reaches the model, so it holds no cell text.
+fn program_line(title: Option<&str>, receipt: &[Value], failed: Option<(usize, &str)>, stopped: Option<&str>) -> String {
+    let of = title.map(|t| format!(" of {t}")).unwrap_or_default();
+    let done: Vec<String> = receipt.iter().map(|r| match (r["call"].as_str(), r["rendered"].as_str()) {
+        (Some("query_rows"), _) => match r["shown"].as_u64() {
+            Some(n) => format!("showed {n} of the {} matched rows{of} ({} in the table)", r["matched"], r["total"]),
+            None => format!("{} of the {} rows{of} match", r["matched"], r["total"]),
+        },
+        (_, kind) => {
+            let kind = kind.unwrap_or("view");
+            match (r.get("value"), r.get("points_drawn")) {
+                (Some(v), _) => format!("drew a {kind}{of}: {v}"),
+                (None, Some(p)) => format!("drew a {kind}{of} of {p} points"),
+                _ => format!("drew a {kind}{of}"),
+            }
+        }
+    }).collect();
+    let ran = if done.is_empty() { String::new() } else { format!("The thalamus ran the plan: {}.", done.join("; ")) };
+    let end = match (failed, stopped) {
+        (Some((i, name)), _) => format!("The plan stopped at stage {} ({name}); nothing after it ran.", i + 1),
+        (None, Some(s)) => s.to_string(),
+        (None, None) => String::new(),
+    };
+    [ran, end].into_iter().filter(|s| !s.is_empty()).collect::<Vec<_>>().join(" ")
+}
+
 const QUERY_ROWS: &str = "Read, count or filter the rows of one DataTable, as the person. Every parameter but \
 `table` is optional: no `q` and no `where` is every row, and `limit: 0` counts without rows. In the result, \
 `total` is the exact count of rows the person may read, `matched` the count after q and where, and `columns` \
@@ -826,17 +903,18 @@ to chart its findings, propose_table_create from the report first (the person ap
 
 /// The kinds the model may choose; the rest are drawn by a tool or a control, never by show.
 /// No markdown: plain text already draws as markdown, and a markdown show was then said again as text.
-pub const SHOW_KINDS: [&str; 14] = ["table", "list", "record", "chart", "tree", "timeline", "graph", "sequence", "choice", "kpi",
-    "callout", "steps", "sources", "follow_up"];
+pub const SHOW_KINDS: [&str; 15] = ["table", "list", "record", "chart", "tree", "timeline", "graph", "sequence", "choice", "kpi",
+    "callout", "steps", "sources", "follow_up", "fact_cards"];
 
 /// The props a kind accepts, so a refusal can show the shape to retry.
 pub const SHOW_SHAPE: &[(&str, &str)] = &[
     ("table", "{title?, columns[] <=12, rows[][] <=50, each row as long as columns}"),
     ("list", "{title?, ordered, items[{text, detail?, tone? ok|info|warn|bad, delta? added|removed|changed}] <=50}"),
     ("record", "{title?, fields[{key, value, delta? added|removed|changed, was?}] <=40}; was is the old value, only when changed"),
-    ("chart", "{title?, chart bar|stacked_bar|line|area|scatter|pie, x category|number|time, series[{name, points[[x, number]] <=60}] <=6}; \
-x is a string even for number (\"3\") or time (\"2026-10-13\" or \"2026-10-13T08:00:00Z\"); line, area and stacked_bar \
-series share the same x in order; scatter needs number or time x; pie is 1 series, values >= 0"),
+    ("chart", "{title?, chart bar|stacked_bar|line|area|scatter|pie|horizontal_bar|radar|radial, x category|number|time, series[{name, points[[x, number]] <=60}] <=6}; \
+x is a string even for number (\"3\") or time (\"2026-10-13\" or \"2026-10-13T08:00:00Z\"); line, area, stacked_bar and radar \
+series share the same x in order; scatter needs number or time x; horizontal_bar needs category or number x; pie and radial are 1 series; \
+radar has 3-12 x, radial <=12, values >= 0; pie values >= 0"),
     ("tree", "{title?, nodes[{label, note?, delta? added|removed|changed, children[]}]}, depth <=4, nodes <=100; \
 a child of an added or removed node is that too: leave its delta out"),
     ("timeline", "{title?, items[{when, title, note?, hi?, until?, lane?}] <=30}; when and until as dates \
@@ -852,6 +930,7 @@ suggested[] (option labels: exactly 1, or 1 or more when multi), multi}; never a
     ("steps", "{title?, items[{title (<=120), status pending|active, detail? (<=2000)}] 1-20}; at most one active; never done or failed"),
     ("sources", "{title?, items[{table, row, note? (<=200)}] 1-20}; table and row are a row query_rows showed this session (its __id); no url"),
     ("follow_up", "{prompts[] 1-4, each <=200 chars, unique}; words the person may send next, never an action"),
+    ("fact_cards", "{title?, items[{label (<=60), value (<=200), tone? ok|info|warn|bad}] 1-12}; short facts as text, no link, no action"),
 ];
 
 /// When to reach for each kind: one sentence the model reads beside its shape (Ollama keeps descriptions only).
@@ -859,7 +938,7 @@ pub const SHOW_ABOUT: &[(&str, &str)] = &[
     ("table", "Rows you already hold, when the person compares several things across the same fields."),
     ("list", "A short set of points, findings or options, one line each with an optional detail and tone."),
     ("record", "One thing's fields side by side, or what an action would change in it."),
-    ("chart", "Numbers compared across categories or over time; with source the thalamus draws a table's own totals."),
+    ("chart", "Numbers compared across categories or over time (horizontal_bar for long labels, radar for a profile, radial for shares); with source the thalamus draws a table's own totals."),
     ("tree", "A hierarchy such as an org chart, an outline or a breakdown, at most four levels deep."),
     ("timeline", "Events in time order, as dated points or spans on lanes."),
     ("graph", "Things and the links between them, when how they connect is the point."),
@@ -870,6 +949,7 @@ pub const SHOW_ABOUT: &[(&str, &str)] = &[
     ("steps", "A plan's steps in order, each pending or active; done and failed are the thalamus's to say, not yours."),
     ("sources", "Which rows a claim or an extraction came from, so the person can check it against them."),
     ("follow_up", "Up to four next questions the person might ask, put at the end of an answer."),
+    ("fact_cards", "A few short facts side by side, such as the headline values of a row or a report, each a label and its value."),
 ];
 
 fn expected_shape(kind: &str) -> String {
@@ -913,11 +993,12 @@ pub fn show_schema() -> Value {
             closed(&["fields"], json!({"title": title, "fields": {"type": "array", "maxItems": 40,
                 "items": closed(&["key", "value"], json!({"key": {"type": "string", "maxLength": 120}, "value": {}, "delta": delta,
                     "was": {"description": "the old value of a changed field; only with delta changed"}}))}}))),
-        branch("chart", "values plotted: {title?, chart bar|stacked_bar|line|area|scatter|pie, x category|number|time, \
-series[{name, points[[x, number]] <=60}] <=6}; x is always a string (\"3\", \"2026-10-13\"); line, area and stacked_bar series \
-share the same x in the same order; scatter needs number or time x; pie is one series of values >= 0",
+        branch("chart", "values plotted: {title?, chart bar|stacked_bar|line|area|scatter|pie|horizontal_bar|radar|radial, x category|number|time, \
+series[{name, points[[x, number]] <=60}] <=6}; x is always a string (\"3\", \"2026-10-13\"); line, area, stacked_bar and radar series \
+share the same x in the same order; scatter needs number or time x; horizontal_bar category or number x; pie and radial are one series; \
+radar and radial have at most 12 x and values >= 0; pie values >= 0",
             closed(&["chart", "x", "series"], json!({"title": title,
-                "chart": {"enum": ["bar", "stacked_bar", "line", "area", "scatter", "pie"]},
+                "chart": {"enum": ["bar", "stacked_bar", "line", "area", "scatter", "pie", "horizontal_bar", "radar", "radial"]},
                 "x": {"enum": ["category", "number", "time"], "description": "how to read every x string"},
                 "series": {"type": "array", "minItems": 1, "maxItems": 6, "items": closed(&["name", "points"], json!({
                     "name": {"type": "string", "maxLength": 120},
@@ -975,7 +1056,11 @@ multi}; suggested names your pick among the options, exactly 1 unless multi; nev
                 "note": {"type": "string", "maxLength": 200}}))}}))),
         branch("follow_up", "next questions the person may send: {prompts[] 1-4}",
             closed(&["prompts"], json!({"prompts": {"type": "array", "minItems": 1, "maxItems": 4, "uniqueItems": true,
-                "items": {"type": "string", "minLength": 1, "maxLength": 200}}})))]}}})
+                "items": {"type": "string", "minLength": 1, "maxLength": 200}}}))),
+        branch("fact_cards", "short facts side by side: {title?, items[{label, value, tone?}] 1-12}, text only",
+            closed(&["items"], json!({"title": title, "items": {"type": "array", "minItems": 1, "maxItems": 12, "items": closed(&["label", "value"], json!({
+                "label": {"type": "string", "minLength": 1, "maxLength": 60}, "value": {"type": "string", "minLength": 1, "maxLength": 200},
+                "tone": {"enum": ["ok", "info", "warn", "bad"]}}))}})))]}}})
 }
 
 const QUERY_KEYS: [&str; 9] = ["table", "q", "where", "columns", "order_by", "limit", "group_by", "op", "y"];
@@ -1179,6 +1264,7 @@ impl Server {
         let mut state: Option<(String, bool)> = None;
         // The runs Iris started for this person: the connection's, whichever session is open; kept on close.
         let mut watching = self.watches_taken(&who);
+        let mut first = true;
         loop {
             // Asked after between any two lines, so lines queued by a person typing never hold a run's end back.
             if let Some(o) = open.as_mut() {
@@ -1205,6 +1291,7 @@ impl Server {
             }
             let peer = peer();
             let decoded = decode_to_thalamus(&line);
+            let was_first = std::mem::take(&mut first);
             // A turn's end may have loaded or unloaded the model; a new session has not heard its state yet.
             let boundary = matches!(decoded, Ok(ToThalamus::Turn { .. } | ToThalamus::ChoiceReply { .. } | ToThalamus::ApprovalDecision { .. }));
             match decoded {
@@ -1215,7 +1302,7 @@ impl Server {
                         refuse(&mut out, "session is not this connection's open session");
                         continue;
                     }
-                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open) {
+                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open, face.bench) {
                         keep(&ToShell::Said { session: o.session.clone(), text: text.clone() });
                         self.turn(&who, &mut out, o, &text, &face);
                         // However the turn ended (text, cap, refusal), it is over.
@@ -1223,29 +1310,29 @@ impl Server {
                     }
                 }
                 Ok(ToThalamus::Control { view }) => {
-                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open) {
+                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open, face.bench) {
                         self.control(&who, &mut out, o, view);
                     }
                 }
                 Ok(ToThalamus::WorkingFor { scope }) => {
-                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open) {
+                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open, face.bench) {
                         if self.working_for(&mut who, &mut out, o, &scope, &peer) && face.catalogue {
                             self.catalogue_to(&who, &mut out, o);
                         }
                     }
                 }
                 Ok(ToThalamus::ModelOptions) => {
-                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open) {
+                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open, face.bench) {
                         self.model_options(&mut out, o);
                     }
                 }
                 Ok(ToThalamus::ModelPick { backend, model }) => {
-                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open) {
+                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open, face.bench) {
                         self.model_pick(&mut out, o, &backend, &model, &peer);
                     }
                 }
                 Ok(ToThalamus::Widget { widget, spec, trigger }) => {
-                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open) {
+                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open, face.bench) {
                         self.widget(&who, &mut out, o, &widget, &spec, trigger);
                     }
                 }
@@ -1299,7 +1386,7 @@ impl Server {
                     send(&mut out, &ToShell::Workspace { doc });
                 }
                 Ok(ToThalamus::Catalogue) => {
-                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open) {
+                    if let Some(o) = self.ensure(&mut who, &mut out, &mut open, face.bench) {
                         face.catalogue = true;
                         self.catalogue_to(&who, &mut out, o);
                     }
@@ -1315,6 +1402,14 @@ impl Server {
                 Ok(ToThalamus::Answer { uuid, answer }) => self.answer(&who, &mut out, &peer, &uuid, &answer),
                 Ok(ToThalamus::ApprovalsOpen) => self.approvals_open(&who, &mut out),
                 Ok(ToThalamus::Acted { act, .. }) => refuse(&mut out, &format!("no act {act} waits for an answer")),
+                Ok(ToThalamus::Hello { .. }) if !was_first => refuse(&mut out, "a hello is a connection's first line"),
+                // The face never sends one, and the browser writes through the relay: a bench is the socket's.
+                Ok(ToThalamus::Hello { bench: true }) if peer.get("via").is_some() => {
+                    self.say(format!("refused a bench hello of {} through the relay", who.username));
+                    refuse(&mut out, "a bench hello is the socket's, never the relay's");
+                }
+                Ok(ToThalamus::Hello { bench }) => face.bench = bench,
+                Ok(ToThalamus::PlanEvidence {}) => self.plan_evidence(&who, &mut out, open.as_ref()),
                 Ok(ToThalamus::WorkspaceSave { doc }) => {
                     // The layout contract's refusals, checked at its one writer since the pupil retired.
                     if let Err(why) = nos_contract::workspace::decode(&doc.to_string()) {
@@ -1338,9 +1433,33 @@ impl Server {
         self.watches_kept(&who, watching);
     }
 
-    /// The connection's session, opened on its first Turn or Control; None was refused.
-    fn ensure<'a>(&self, who: &mut Person, out: &mut dyn Write, open: &'a mut Option<Open>) -> Option<&'a mut Open> {
-        self.begin(who, out, open, How::Fresh, None)
+    /// The connection's session, opened on its first Turn or Control; None was refused. One it opens
+    /// on a bench connection is a bench session.
+    fn ensure<'a>(&self, who: &mut Person, out: &mut dyn Write, open: &'a mut Option<Open>, bench: bool) -> Option<&'a mut Open> {
+        let fresh = open.is_none();
+        let o = self.begin(who, out, open, How::Fresh, None)?;
+        o.bench |= fresh && bench;
+        Some(o)
+    }
+
+    /// v20 plan_evidence: the open session's own last cortex plan, and only for a bench session (rows
+    /// cortex-plan-evidence-without-ledger, -contract, ruled (b)). Anyone else gets a refusal in the
+    /// ledger and nothing on the wire; with no session open there is no ledger row to hold it, so the log does.
+    fn plan_evidence(&self, who: &Person, out: &mut dyn Write, open: Option<&Open>) {
+        let Some(o) = open else {
+            return self.say(format!("refused plan_evidence of {}: no session is open on the connection", who.username));
+        };
+        if !o.bench {
+            let _ = self.record(o, Kind::ToolResult, Some("plan_evidence"), json!({"refused": "the session was not opened by a bench hello"}));
+            return;
+        }
+        let rows = self.ledger.lock().map_err(|_| "ledger poisoned".to_string())
+            .and_then(|l| l.plan_rows(&o.session).map_err(|e| e.to_string()));
+        match rows {
+            Ok((asked, res)) => send(out, &plan_evidence(&o.session, asked.as_ref(), res.as_ref())),
+            // The bench is owed an answer it can tell from "never planned": UNKNOWN, never empty.
+            Err(why) => refuse(out, &format!("plan evidence unreadable: the ledger said {why}")),
+        }
     }
 
     /// Opens the connection's session if none is, for workspace `tab` (None: the legacy one chat); a
@@ -1567,7 +1686,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             Err(why) => (Err(why), iris.clone()),
         };
         Ok((Open { session, model, iris, messages: vec![json!({"role": "system", "content": system})], moved: None, tokens,
-                  pending: HashMap::new(), shown: HashMap::new(), tables_seen: HashMap::new(), dates: HashMap::new(), names: HashMap::new(), read_free: vec![], forms: HashMap::new(), choices: HashMap::new(), last_group: None, trace: None, again: HashMap::new(), acting: HashMap::new(), tab: None, watching: vec![] },
+                  pending: HashMap::new(), shown: HashMap::new(), tables_seen: HashMap::new(), dates: HashMap::new(), names: HashMap::new(), read_free: vec![], forms: HashMap::new(), choices: HashMap::new(), last_group: None, trace: None, again: HashMap::new(), acting: HashMap::new(), tab: None, watching: vec![], bench: false, program: None, turn_from: tokens, counted: (false, false) },
             resumed.is_some()))
     }
 
@@ -1851,7 +1970,11 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
     }
 
     /// One ledger event; the row id, or the reason it was refused (also logged).
-    fn record(&self, o: &Open, kind: Kind, tool: Option<&str>, v: Value) -> Result<i64, String> {
+    fn record(&self, o: &Open, kind: Kind, tool: Option<&str>, mut v: Value) -> Result<i64, String> {
+        if let (Some((program, index)), Some(m)) = (&o.program, v.as_object_mut()) {
+            m.insert("program".into(), json!(program));
+            m.insert("index".into(), json!(index));
+        }
         let r = self.ledger.lock().map_err(|_| "ledger poisoned".to_string())
             .and_then(|l| l.record(&o.session, kind, tool, &v).map_err(|e| e.to_string()));
         if let Err(e) = &r {
@@ -2117,6 +2240,10 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         let a = self.ledger.lock().map_err(|_| none("ledger poisoned".into()))?.approved(decision).map_err(none)?;
         if a.actor != format!("user:{}", who.uid()) {
             return Err(none("the approval belongs to another person".into()));
+        }
+        // A verdict is the operator's face edit, never an Iris card or form (row immune-verdicts-write-path).
+        if a.table == VERDICTS || a.lines.as_ref().is_some_and(|l| l.table == VERDICTS) {
+            return Err(none(format!("{VERDICTS} is written only by the operator's face edit; nothing written")));
         }
         match (a.op, a.row_id, a.lines) {
             (RowOp::Update, Some(row), _) => self.update(who, &a.table, &row, a.values, a.old).map(|r| vec![(a.table, r)]).map_err(none),
@@ -2402,6 +2529,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
 
     /// One turn, wrapped in its spans: every return of turn_steps ends the trace here.
     fn turn(&self, who: &Person, out: &mut dyn Write, o: &mut Open, text: &str, face: &Face) {
+        (o.turn_from, o.counted) = (o.tokens, (false, false));
         o.trace = crate::otel::Trace::start(&o.session, o.tokens);
         self.turn_steps(who, out, o, text, face);
         if let Some(t) = o.trace.take() {
@@ -2438,6 +2566,13 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
             }
             _ => None,
         };
+        // iris_plan_run: thalamus: a plan of reads runs here and ends the turn (plan() mints its id only then).
+        let planned = match planned {
+            Some(Planned { msg, source, program: Some(program), title }) => {
+                return self.run_program(who, out, o, face, &msg, source, program, title);
+            }
+            p => p.map(|p| p.msg),
+        };
         // A turn that names our knowledge searches it first, so the answer is grounded or said absent.
         let named = cortex_plan::names_knowledge(text);
         let planned = planned.or_else(|| (!named.is_empty()).then(|| {
@@ -2449,7 +2584,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
     }
 
     /// The cortex plan as one assistant message of mapped tool calls; None after the model heard why not.
-    fn plan(&self, who: &Person, o: &mut Open, model: &Binding, c: &Cortex, text: &str) -> Option<Value> {
+    fn plan(&self, who: &Person, o: &mut Open, model: &Binding, c: &Cortex, text: &str) -> Option<Planned> {
         let tool = Some("cortex_plan");
         // kind: "infra" (the estate failed: no verdict on the model) or "model" (its plan does not run)
         let refused = |o: &mut Open, why: String, kind: &str, rec: Value| {
@@ -2481,7 +2616,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                     "json_schema": {"name": "cortex_plan", "schema": cortex_plan::ast_schema()}}),
                 Engine::Free => {}
             }
-            let answer = match self.chat(model, o, body, None) {
+            let answer = match self.plan_chat(model, o, body) {
                 Ok(m) => m,
                 // Ollama MLX answers 501 to any format: the same request, unconstrained.
                 Err(why) if engine == Engine::JsonSchema => {
@@ -2489,7 +2624,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                     downgrade = Some(why);
                     engine = Engine::Free;
                     msgs[0] = json!({"role": "system", "content": cortex_plan::primer(engine, &catalogue)});
-                    match self.chat(model, o, json!({"model": model.model_id, "messages": msgs}), None) {
+                    match self.plan_chat(model, o, json!({"model": model.model_id, "messages": msgs})) {
                         Ok(m) => m,
                         Err(why) => return refused(o, why, "infra", json!({})),
                     }
@@ -2526,6 +2661,10 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                     let why = format!("the validator refused it twice: {}", errors.join("; "));
                     return refused(o, why, "model", json!({"errors": errors}));
                 }
+                Ok(Ok((stages, _, hash))) if stages.len() > cortex_plan::MAX_STAGES => {
+                    let why = format!("the plan has {} stages, at most {} run", stages.len(), cortex_plan::MAX_STAGES);
+                    return refused(o, why, "model", json!({"errors": [], "registry_hash": hash}));
+                }
                 Ok(Ok((stages, src, hash))) => {
                     let mapped = cortex_plan::plan(src.as_deref(), &stages).and_then(|p| cortex_plan::calls(&p,
                         |t| self.table_info(who, t),
@@ -2545,11 +2684,18 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                             // which table the mapper read, by every name (tools/iris-bench.py same_pipeline)
                             let table = self.table_info(who, &said_table).map(|(id, i)| json!({"said": said_table, "id": id,
                                 "title": i.pointer("/data/title").cloned().unwrap_or(Value::Null)})).unwrap_or(Value::Null);
-                            let _ = self.record(o, Kind::ToolResult, tool, json!({"valid": true, "errors": [], "registry_hash": hash, "plan": plan,
-                                                                                 "table": table}));
+                            // reads only, and the thalamus runs them: the program's id is on its plan row too
+                            let reads = c.run_program && calls.iter().all(|(n, _)| PROGRAM_TOOLS.contains(&n.as_str()));
+                            let program = reads.then(mint_uuid).and_then(Result::ok).map(|u| format!("cx-{}", &u.replace('-', "")[..20]));
+                            let mut res = json!({"valid": true, "errors": [], "registry_hash": hash, "plan": plan, "table": table});
+                            if let Some(p) = &program {
+                                res["program"] = json!(p);
+                            }
+                            let _ = self.record(o, Kind::ToolResult, tool, res);
                             let tool_calls: Vec<Value> = calls.iter().enumerate().map(|(i, (n, a))| json!({"id": format!("cortex-{}", i + 1),
                                 "type": "function", "function": {"name": n, "arguments": a.to_string()}})).collect();
-                            Some(json!({"role": "assistant", "content": null, "tool_calls": tool_calls}))
+                            Some(Planned { msg: json!({"role": "assistant", "content": null, "tool_calls": tool_calls}), source, program,
+                                           title: table["title"].as_str().map(str::to_string) })
                         }
                     };
                 }
@@ -2878,6 +3024,8 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
 
     /// The model's turn over the conversation so far, tool calls and all, until it says text.
     fn think(&self, who: &Person, out: &mut dyn Write, o: &mut Open, face: &Face) {
+        // a choice reply, a decided report or an ended run starts its own turn: its own token spend
+        (o.turn_from, o.counted) = (o.tokens, (false, false));
         self.think_from(who, out, o, None, face);
     }
 
@@ -2905,6 +3053,13 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
             let msg = match first.take().map(Ok).unwrap_or_else(|| self.complete(&model, o, &tools, face.said(), face)) {
                 Ok(m) => m,
                 Err(why) if why == STOPPED => return self.end_turn(out, o, &[], STOPPED, "Stopped.".into()),
+                Err(why) if why == OVER_CEILING => {
+                    let (spent, ceiling) = (self.spent(o), self.turn_tokens);
+                    let counted = match o.counted { (true, true) => "usage+bytes", (false, true) => "bytes", _ => "usage" };
+                    let _ = self.record(o, Kind::ToolResult, Some("turn_budget"), json!({"spent": spent, "ceiling": ceiling, "counted": counted}));
+                    return self.end_turn(out, o, &[], "stopped: turn token ceiling",
+                                         format!("Stopped: this turn used {spent} tokens (ceiling {ceiling})."));
+                }
                 Err(why) => return refuse(out, &why),
             };
             o.messages.push(msg.clone());
@@ -2984,227 +3139,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                 }
                 activity(out, o, Phase::Tool { name: name.to_string() });
                 let span = o.trace.as_mut().map(|t| t.begin("iris.tool"));
-                let result = match name {
-                    "query_rows" => self.query_rows(who, &args).map(|(t, answer, notes)| {
-                        let ids: Vec<&str> = t.rows.iter().map(|r| r.__id.as_str()).collect();
-                        let _ = self.record(o, Kind::ToolResult, Some(name),
-                                            json!({"rows": ids, "matched": t.matched, "total": t.total}));
-                        // A group is a value, not a row: it never unlocks a proposal.
-                        let mut v = match answer {
-                        Answer::Total => json!({"table": t.table, "name": t.name, "query": t.query, "matched": t.matched, "total": t.total}),
-                        Answer::Groups(extra) => {
-                            let mut q = json!({"table": t.table});
-                            for k in ["q", "where"] {
-                                if let Some(x) = args.get(k).filter(|x| !x.is_null()) {
-                                    q[k] = x.clone();
-                                }
-                            }
-                            let op = args.get("op").and_then(Value::as_str).unwrap_or("count");
-                            let vals = extra.as_array().into_iter().flatten().filter_map(|g| {
-                                Some((g["value"].as_str().unwrap_or("(empty)").to_string(), g.get(op)?.as_f64()?))
-                            }).collect();
-                            let mut src = json!({"query": q, "x": args["group_by"], "op": op});
-                            if op != "count" {
-                                src["y"] = args["y"].clone();
-                            }
-                            o.last_group = Some((src, vals));
-                            let mut v = json!({"table": t.table, "name": t.name, "query": t.query, "matched": t.matched, "total": t.total, "groups": extra});
-                            // aggregate() keeps 60 days or 60 numbers and skips a row with no value there; say so.
-                            let grouped: u64 = extra.as_array().into_iter().flatten().filter_map(|g| g["count"].as_u64()).sum();
-                            if let Some(n) = (t.matched as u64).checked_sub(grouped).filter(|n| *n > 0) {
-                                v["left_out"] = json!(format!("{n} of the {} matched rows are in no group: a date keeps the last 60 days, \
-                                    a number the 60 smallest, and a row with no {} is left out", t.matched, text(&args["group_by"])));
-                            }
-                            v
-                        }
-                        Answer::Rows(extra) => {
-                            o.shown.extend(t.rows.iter().map(|r| ((t.table.clone(), r.__id.clone()), t.name.clone())));
-                            o.tables_seen.insert(t.table.clone(), t.name.clone());
-                            o.dates.insert(t.table.clone(), extra.as_array().into_iter().flatten().filter(|c| c["kind"] == "date")
-                                .filter_map(|c| c["key"].as_str().map(str::to_string)).collect());
-                            let cols = extra.as_array().map(Vec::as_slice).unwrap_or_default();
-                            if let Some(k) = cols.iter().find(|c| c["key"] == "title").or_else(|| cols.iter().find(|c| c["kind"] == "text"))
-                                .and_then(|c| c["key"].as_str()) {
-                                o.names.insert(t.table.clone(), k.to_string());
-                            }
-                            let mut v = json!({"table": t.table, "name": t.name, "query": t.query, "matched": t.matched, "total": t.total,
-                                   "columns": extra, "rows": t.rows});
-                            mark_text_cells(&mut v);
-                            // Local bench r2: 20 of 28 shown, and "row 10 does not exist" (it was row 21+).
-                            if (t.rows.len() as u64) < t.matched as u64 {
-                                v["more"] = json!(format!("{} of the {} matched rows are shown; the others are not missing: \
-                                    find one with where or q, or raise limit (<= 50)", t.rows.len(), t.matched));
-                            }
-                            v
-                        }
-                        };
-                        if let Some(m) = v.as_object_mut() {
-                            m.extend(notes);
-                        }
-                        // What a widget of this table re-runs: the arguments that drew it.
-                        let pin = WidgetSpec::Rows(Value::Object(args.as_object().into_iter().flatten()
-                            .filter(|(_, v)| !v.is_null()).map(|(k, v)| (k.clone(), v.clone())).collect()));
-                        send(out, &ToShell::Render { session: o.session.clone(), component: Component::TableResults(t), pin: Some(pin) });
-                        v
-                    }),
-                    // Its tool_result is written by decide(), once the person has answered.
-                    "propose_row_edit" | "propose_row_insert" | "propose_row_delete" | "propose_table_create" | "propose_column_add"
-                        if !o.pending.is_empty() =>
-                        Err("an approval is already waiting".to_string()),
-                    "propose_table_create" => self.propose_table_create(who, &args).and_then(|t| {
-                        let rec = serde_json::to_value(&t).map_err(|e| format!("unrecordable card: {e}"))?;
-                        self.asking(o, out, "propose_table_create", rec, Component::TableSchemaApproval(t))
-                    }),
-                    "propose_column_add" => self.propose_column_add(who, &args, &o.tables_seen).and_then(|t| {
-                        let rec = serde_json::to_value(&t).map_err(|e| format!("unrecordable card: {e}"))?;
-                        self.asking(o, out, "propose_column_add", rec, Component::ColumnAddApproval(t))
-                    }),
-                    "propose_row_edit" | "propose_row_insert" | "propose_row_delete" => {
-                        let named = said_numbers(&o.messages).to_string();
-                        let d = match name {
-                            "propose_row_edit" => self.propose_row_edit(who, &args, &o.shown, &o.dates, &o.names, &named),
-                            "propose_row_delete" => self.propose_row_delete(who, &args, &o.shown, &o.names, &named),
-                            _ => self.propose_row_insert(who, &args, &o.tables_seen, &o.shown, &named),
-                        };
-                        // Operator ruling Q7: no refusal after a free-text read; the card head says it.
-                        d.and_then(|d| {
-                            let outside = self.outside(who, &d)?;
-                            self.ask(o, out, RowDiffApproval { read_from: o.read_free.clone(), ..d }, outside)
-                        })
-                    }
-                    "show" => show(&shown.as_ref().expect("name is show").0).and_then(|(c, source)| match source.or_else(|| inferred_source(&c, o.last_group.as_ref())) {
-                        None => Ok((c, None)),
-                        Some(src) => self.sourced(who, o, c, src),
-                    }).and_then(|(c, pin)| opened(o, c).map(|c| (c, pin))).map(|(c, pin)| {
-                        let v = serde_json::to_value(&c).ok();
-                        let kind = v.as_ref().and_then(|v| v["kind"].as_str().map(str::to_string));
-                        // A sourced chart: the model hears how many points and the top one (Q3); the series
-                        // stays on screen, or a small model narrates every value again.
-                        let pts = v.as_ref().and_then(|v| v["props"]["series"][0]["points"].as_array().cloned()).unwrap_or_default();
-                        let top = pts.iter().max_by(|a, b| a[1].as_f64().partial_cmp(&b[1].as_f64()).unwrap_or(std::cmp::Ordering::Equal));
-                        let v = match (&pin, &c) {
-                            (Some(_), Component::Kpi(k)) => json!({"shown": kind, "value": k.value}),
-                            (Some(_), _) => json!({"shown": kind, "points_drawn": pts.len(), "top": top}),
-                            (None, Component::Choice(ch)) => json!({"shown": kind, "choice": ch.id,
-                                "status": "asked; the person's answer comes back as a [thalamus] message"}),
-                            (None, _) => json!({"shown": kind}),
-                        };
-                        let mut v = v;
-                        if shown.as_ref().is_some_and(|s| s.1) {
-                            let props = serde_json::to_value(&c).map(|c| c["props"].clone()).unwrap_or_default();
-                            v["normalised"] = json!(format!("drawn, but show does not take the shape you wrote; next time write props as {props}"));
-                        }
-                        let _ = self.record(o, Kind::ToolResult, Some(name), v.clone());
-                        send(out, &ToShell::Render { session: o.session.clone(), component: c, pin });
-                        v
-                    }),
-                    "list_tables" => self.list_tables(who).map(|(table, v)| {
-                        let _ = self.record(o, Kind::ToolResult, Some(name), v.clone());
-                        send(out, &ToShell::Render { session: o.session.clone(), component: Component::Table(table), pin: None });
-                        v
-                    }),
-                    "red_status" => self.red_said(who)
-                        .map(|r| {
-                            let v = serde_json::to_value(&r).unwrap_or(Value::Null);
-                            let _ = self.record(o, Kind::ToolResult, Some(name), v.clone());
-                            send(out, &ToShell::Render { session: o.session.clone(), component: Component::RedStatus(r), pin: None });
-                            v
-                        }),
-                    "read_run" => self.read_run(who, &args).map_err(|why| format!("{why}; the run is UNKNOWN, not empty"))
-                        .map(|(d, v)| {
-                            let _ = self.record(o, Kind::ToolResult, Some(name), v.clone());
-                            send(out, &ToShell::Render { session: o.session.clone(), component: Component::Dendrogram(d), pin: None });
-                            v
-                        }),
-                    "estate_services" => self.services(who, &args).map(|(table, v)| {
-                        let _ = self.record(o, Kind::ToolResult, Some(name), json!({"count": table.rows.len(), "truncated": v.get("truncated")}));
-                        send(out, &ToShell::Render { session: o.session.clone(), component: Component::Table(table), pin: None });
-                        v
-                    }),
-                    "nos_guide" => self.guide(&args).map(|(list, v, rec)| {
-                        let _ = self.record(o, Kind::ToolResult, Some(name), rec);
-                        if let Some(l) = list {
-                            send(out, &ToShell::Render { session: o.session.clone(), component: Component::List(l), pin: None });
-                        }
-                        v
-                    }),
-                    "approvals_awaiting" => self.approvals(who).map_err(|why| format!("{why}; the queue is UNKNOWN, not empty"))
-                        .map(|a| {
-                            // The ledger keeps what and where, never the agent's or a PR's free text.
-                            let _ = self.record(o, Kind::ToolResult, Some(name), json!({"count": a.items.len(),
-                                "items": a.items.iter().map(|i| json!({"kind": i.kind, "where": i.where_})).collect::<Vec<_>>()}));
-                            let v = serde_json::to_value(&a).unwrap_or(Value::Null);
-                            send(out, &ToShell::Render { session: o.session.clone(), component: Component::ApprovalsList(a), pin: None });
-                            v
-                        }),
-                    "inbox" => {
-                        // KEAP hands an admin every person's captures with no owner: the model would call them "yours".
-                        let i = self.inbox(who, !self.is_tier1(who));
-                        let _ = self.record(o, Kind::ToolResult, Some(name), json!({"count": i.items.len(),
-                            "items": i.items.iter().map(|x| json!({"kind": x.source, "refId": x.id})).collect::<Vec<_>>(),
-                            "refused": i.refused}));
-                        let mut v = serde_json::to_value(&i).unwrap_or(Value::Null);
-                        v["what"] = json!("KEAP captures and promotions, not mail");
-                        send(out, &ToShell::Render { session: o.session.clone(), component: Component::InboxList(i), pin: None });
-                        Ok(v)
-                    }
-                    "search_knowledge" | "search_memory" => self.search_knowledge(who, &args).map(|(list, v, rec)| {
-                        let _ = self.record(o, Kind::ToolResult, Some(name), rec);
-                        if let Some(l) = list {
-                            send(out, &ToShell::Render { session: o.session.clone(), component: Component::List(l), pin: None });
-                        }
-                        v
-                    }),
-                    "read_node" => self.read_node(who, &args).map(|(tree, v, rec)| {
-                        let _ = self.record(o, Kind::ToolResult, Some(name), rec);
-                        if let Some(t) = tree {
-                            let pin = Some(WidgetSpec::Knowledge(KnowledgeSpec { node: t.focus.clone() }));
-                            send(out, &ToShell::Render { session: o.session.clone(), component: Component::KnowledgeTree(t), pin });
-                        }
-                        v
-                    }),
-                    "app_slots" => self.app_slots(who, &args).inspect(|v| {
-                        let _ = self.record(o, Kind::ToolResult, Some(name), v.clone());
-                    }),
-                    "scaffold_app" => self.scaffold_app(who, &args).inspect(|v| {
-                        let _ = self.record(o, Kind::ToolResult, Some(name), json!({"kind": v["kind"], "runtime": v["runtime"]}));
-                    }),
-                    "read_loop_runs" => self.read_loop_runs(who, &args).map_err(|why| format!("{why}; the loop's record is UNKNOWN, not empty"))
-                        .map(|(component, v)| {
-                            let _ = self.record(o, Kind::ToolResult, Some(name), json!({"loop": v["loop"], "since": v["since"],
-                                "registered": v["pulse"]["registered"], "drawn": v["drawn"]}));
-                            send(out, &ToShell::Render { session: o.session.clone(), component, pin: None });
-                            v
-                        }),
-                    "propose_loop" if !o.pending.is_empty() => Err("an approval is already waiting".to_string()),
-                    "propose_loop" => self.propose_loop(who, &args).and_then(|(rec, card, draft)| {
-                        let mut v = self.asking(o, out, "propose_loop", rec, Component::Markdown(card))?;
-                        v["draft"] = json!(draft);
-                        v["schedule"] = json!("only the operator schedules it: copies it into files/anatomy/loops/ and converges; never say it runs");
-                        Ok(v)
-                    }),
-                    "propose_app" if !o.pending.is_empty() =>Err("an approval is already waiting".to_string()),
-                    "propose_app" => self.propose_app(who, &args).and_then(|(rec, card, draft)| {
-                        let mut v = self.asking(o, out, "propose_app", rec, Component::Markdown(card))?;
-                        v["draft"] = json!(draft);
-                        v["enable"] = json!("only the operator enables it: copies it into apps/ and converges; never say it is enabled");
-                        Ok(v)
-                    }),
-                    // Checked as the person against the live schema only: no row is read and no widget runs.
-                    "offer_dashboard" => self.offer_dashboard(who, &args).map(|d| {
-                        let kind = |s: &WidgetSpec| match s { WidgetSpec::Rows(_) => "rows", WidgetSpec::Chart(_) => "chart", WidgetSpec::Form(_) => "form", WidgetSpec::Kpi(_) => "kpi", WidgetSpec::Knowledge(_) => "knowledge", WidgetSpec::Reader(_) => "reader" };
-                        let _ = self.record(o, Kind::ToolResult, Some(name), json!({"name": d.name, "dropped": d.dropped.len(),
-                            "widgets": d.widgets.iter().map(|w| json!({"kind": kind(&w.spec), "table": spec_table(&w.spec)})).collect::<Vec<_>>()}));
-                        let v = json!({"offered": d.name, "widgets": d.widgets.iter().map(|w| &w.title).collect::<Vec<_>>(), "dropped": d.dropped,
-                            "status": "drawn for the person; nothing ran and nothing is placed until they place it"});
-                        send(out, &ToShell::Render { session: o.session.clone(), component: Component::Dashboard(d), pin: None });
-                        v
-                    }),
-                    "face_act" => self.face_act(out, o, face, &args),
-                    "start_agent" => self.start_agent(who, out, o, &args),
-                    "stop_agent" => self.stop_agent(who, o, &args).inspect(|v| { let _ = self.record(o, Kind::ToolResult, Some(name), v.clone()); }),
-                    _ => Err(format!("unknown tool {name:?}")),
-                };
+                let result = self.run_tool(who, out, o, face, name, &args, &shown);
                 if let (Some(i), Some(t)) = (span, o.trace.as_mut()) {
                     t.end(i, result.is_ok(), vec![("gen_ai.tool.name", json!(crate::otel::tool_name(name)))]);
                 }
@@ -3248,6 +3183,290 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
         }
     }
 
+    /// iris_plan_run: thalamus. A plan of reads runs here as the person, each call through run_tool, and ends the
+    /// turn: the model hears one `cortex_program` call and its receipt, never a row (row iris-code-mode-reads).
+    #[allow(clippy::too_many_arguments)]
+    fn run_program(&self, who: &Person, out: &mut dyn Write, o: &mut Open, face: &Face, msg: &Value, source: String,
+                   program: String, title: Option<String>) {
+        let started = Instant::now();
+        o.messages.push(json!({"role": "assistant", "content": null, "tool_calls": [{"id": program, "type": "function",
+            "function": {"name": "cortex_program", "arguments": json!({"source": source}).to_string()}}]}));
+        let (mut receipt, mut failed, mut stopped) = (vec![], None::<(usize, String, String)>, None::<&str>);
+        for (i, call) in msg["tool_calls"].as_array().into_iter().flatten().enumerate() {
+            if face.stopped(&o.session) {
+                stopped = Some("Stopped.");
+                break;
+            }
+            if started.elapsed() > PROGRAM_WALL {
+                stopped = Some("Stopped: the plan ran longer than 60 s.");
+                break;
+            }
+            let name = call.pointer("/function/name").and_then(Value::as_str).unwrap_or("").to_string();
+            let args: Value = call.pointer("/function/arguments").and_then(Value::as_str)
+                .and_then(|a| serde_json::from_str(a).ok()).unwrap_or(Value::Null);
+            o.program = Some((program.clone(), i));
+            let shown = (name == "show").then(|| normalized(&args, o.last_group.as_ref().map(|g| &g.0)));
+            let _ = self.record(o, Kind::ToolUse, Some(&name), json!({"args": args}));
+            activity(out, o, Phase::Tool { name: name.clone() });
+            let span = o.trace.as_mut().map(|t| t.begin("iris.tool"));
+            let result = self.run_tool(who, out, o, face, &name, &args, &shown);
+            if let (Some(s), Some(t)) = (span, o.trace.as_mut()) {
+                t.end(s, result.is_ok(), vec![("gen_ai.tool.name", json!(crate::otel::tool_name(&name)))]);
+            }
+            match result {
+                Ok(v) => receipt.push(receipt_of(&name, &v)),
+                Err(why) => {
+                    let _ = self.record(o, Kind::ToolResult, Some(&name), json!({"error": why}));
+                    failed = Some((i, name, why));
+                    break;
+                }
+            }
+        }
+        o.program = None;
+        let title = title.map(|t| t.chars().take(80).collect::<String>());
+        let rec = json!({"program": program, "ran": receipt.len(), "failed_at": failed.as_ref().map(|f| f.0),
+                         "wall_ms": started.elapsed().as_millis() as u64, "table": title, "receipt": receipt});
+        let _ = self.record(o, Kind::ToolResult, Some("cortex_program"), rec.clone());
+        o.messages.push(json!({"role": "tool", "tool_call_id": program, "content": rec.to_string()}));
+        let line = program_line(title.as_deref(), &receipt, failed.as_ref().map(|f| (f.0, f.1.as_str())), stopped);
+        let _ = self.record(o, Kind::Message, None, json!({"role": "thalamus", "text": line, "program": program}));
+        o.messages.push(json!({"role": "assistant", "content": line}));
+        // the person also hears why a stage failed; the model and a resume hear the line only
+        let said = match &failed {
+            Some((_, _, why)) => format!("{line} ({why})"),
+            None => line,
+        };
+        send(out, &ToShell::Text { session: o.session.clone(), text: said });
+    }
+
+    /// One tool call of `name`, run as the person: the tools path and the program runner share it,
+    /// so tier, septum, ledger and Render stay one code path.
+    #[allow(clippy::too_many_arguments)]
+    fn run_tool(&self, who: &Person, out: &mut dyn Write, o: &mut Open, face: &Face, name: &str, args: &Value,
+                shown: &Option<(Value, bool)>) -> Result<Value, String> {
+        match name {
+            "query_rows" => self.query_rows(who, &args).map(|(t, answer, notes)| {
+                let ids: Vec<&str> = t.rows.iter().map(|r| r.__id.as_str()).collect();
+                let _ = self.record(o, Kind::ToolResult, Some(name),
+                                    json!({"rows": ids, "matched": t.matched, "total": t.total}));
+                // A group is a value, not a row: it never unlocks a proposal.
+                let mut v = match answer {
+                Answer::Total => json!({"table": t.table, "name": t.name, "query": t.query, "matched": t.matched, "total": t.total}),
+                Answer::Groups(extra) => {
+                    let mut q = json!({"table": t.table});
+                    for k in ["q", "where"] {
+                        if let Some(x) = args.get(k).filter(|x| !x.is_null()) {
+                            q[k] = x.clone();
+                        }
+                    }
+                    let op = args.get("op").and_then(Value::as_str).unwrap_or("count");
+                    let vals = extra.as_array().into_iter().flatten().filter_map(|g| {
+                        Some((g["value"].as_str().unwrap_or("(empty)").to_string(), g.get(op)?.as_f64()?))
+                    }).collect();
+                    let mut src = json!({"query": q, "x": args["group_by"], "op": op});
+                    if op != "count" {
+                        src["y"] = args["y"].clone();
+                    }
+                    o.last_group = Some((src, vals));
+                    let mut v = json!({"table": t.table, "name": t.name, "query": t.query, "matched": t.matched, "total": t.total, "groups": extra});
+                    // aggregate() keeps 60 days or 60 numbers and skips a row with no value there; say so.
+                    let grouped: u64 = extra.as_array().into_iter().flatten().filter_map(|g| g["count"].as_u64()).sum();
+                    if let Some(n) = (t.matched as u64).checked_sub(grouped).filter(|n| *n > 0) {
+                        v["left_out"] = json!(format!("{n} of the {} matched rows are in no group: a date keeps the last 60 days, \
+                            a number the 60 smallest, and a row with no {} is left out", t.matched, text(&args["group_by"])));
+                    }
+                    v
+                }
+                Answer::Rows(extra) => {
+                    o.shown.extend(t.rows.iter().map(|r| ((t.table.clone(), r.__id.clone()), t.name.clone())));
+                    o.tables_seen.insert(t.table.clone(), t.name.clone());
+                    o.dates.insert(t.table.clone(), extra.as_array().into_iter().flatten().filter(|c| c["kind"] == "date")
+                        .filter_map(|c| c["key"].as_str().map(str::to_string)).collect());
+                    let cols = extra.as_array().map(Vec::as_slice).unwrap_or_default();
+                    if let Some(k) = cols.iter().find(|c| c["key"] == "title").or_else(|| cols.iter().find(|c| c["kind"] == "text"))
+                        .and_then(|c| c["key"].as_str()) {
+                        o.names.insert(t.table.clone(), k.to_string());
+                    }
+                    let mut v = json!({"table": t.table, "name": t.name, "query": t.query, "matched": t.matched, "total": t.total,
+                           "columns": extra, "rows": t.rows});
+                    mark_text_cells(&mut v);
+                    // Local bench r2: 20 of 28 shown, and "row 10 does not exist" (it was row 21+).
+                    if (t.rows.len() as u64) < t.matched as u64 {
+                        v["more"] = json!(format!("{} of the {} matched rows are shown; the others are not missing: \
+                            find one with where or q, or raise limit (<= 50)", t.rows.len(), t.matched));
+                    }
+                    v
+                }
+                };
+                if let Some(m) = v.as_object_mut() {
+                    m.extend(notes);
+                }
+                // What a widget of this table re-runs: the arguments that drew it.
+                let pin = WidgetSpec::Rows(Value::Object(args.as_object().into_iter().flatten()
+                    .filter(|(_, v)| !v.is_null()).map(|(k, v)| (k.clone(), v.clone())).collect()));
+                send(out, &ToShell::Render { session: o.session.clone(), component: Component::TableResults(t), pin: Some(pin) });
+                v
+            }),
+            // Its tool_result is written by decide(), once the person has answered.
+            "propose_row_edit" | "propose_row_insert" | "propose_row_delete" | "propose_table_create" | "propose_column_add"
+                if !o.pending.is_empty() =>
+                Err("an approval is already waiting".to_string()),
+            "propose_table_create" => self.propose_table_create(who, &args).and_then(|t| {
+                let rec = serde_json::to_value(&t).map_err(|e| format!("unrecordable card: {e}"))?;
+                self.asking(o, out, "propose_table_create", rec, Component::TableSchemaApproval(t))
+            }),
+            "propose_column_add" => self.propose_column_add(who, &args, &o.tables_seen).and_then(|t| {
+                let rec = serde_json::to_value(&t).map_err(|e| format!("unrecordable card: {e}"))?;
+                self.asking(o, out, "propose_column_add", rec, Component::ColumnAddApproval(t))
+            }),
+            "propose_row_edit" | "propose_row_insert" | "propose_row_delete" => {
+                let named = said_numbers(&o.messages).to_string();
+                let d = match name {
+                    "propose_row_edit" => self.propose_row_edit(who, &args, &o.shown, &o.dates, &o.names, &named),
+                    "propose_row_delete" => self.propose_row_delete(who, &args, &o.shown, &o.names, &named),
+                    _ => self.propose_row_insert(who, &args, &o.tables_seen, &o.shown, &named),
+                };
+                // Operator ruling Q7: no refusal after a free-text read; the card head says it.
+                d.and_then(|d| {
+                    let outside = self.outside(who, &d)?;
+                    self.ask(o, out, RowDiffApproval { read_from: o.read_free.clone(), ..d }, outside)
+                })
+            }
+            "show" => show(&shown.as_ref().expect("name is show").0).and_then(|(c, source)| match source.or_else(|| inferred_source(&c, o.last_group.as_ref())) {
+                None => Ok((c, None)),
+                Some(src) => self.sourced(who, o, c, src),
+            }).and_then(|(c, pin)| opened(o, c).map(|c| (c, pin))).map(|(c, pin)| {
+                let v = serde_json::to_value(&c).ok();
+                let kind = v.as_ref().and_then(|v| v["kind"].as_str().map(str::to_string));
+                // A sourced chart: the model hears how many points and the top one (Q3); the series
+                // stays on screen, or a small model narrates every value again.
+                let pts = v.as_ref().and_then(|v| v["props"]["series"][0]["points"].as_array().cloned()).unwrap_or_default();
+                let top = pts.iter().max_by(|a, b| a[1].as_f64().partial_cmp(&b[1].as_f64()).unwrap_or(std::cmp::Ordering::Equal));
+                let v = match (&pin, &c) {
+                    (Some(_), Component::Kpi(k)) => json!({"shown": kind, "value": k.value}),
+                    (Some(_), _) => json!({"shown": kind, "points_drawn": pts.len(), "top": top}),
+                    (None, Component::Choice(ch)) => json!({"shown": kind, "choice": ch.id,
+                        "status": "asked; the person's answer comes back as a [thalamus] message"}),
+                    (None, _) => json!({"shown": kind}),
+                };
+                let mut v = v;
+                if shown.as_ref().is_some_and(|s| s.1) {
+                    let props = serde_json::to_value(&c).map(|c| c["props"].clone()).unwrap_or_default();
+                    v["normalised"] = json!(format!("drawn, but show does not take the shape you wrote; next time write props as {props}"));
+                }
+                let _ = self.record(o, Kind::ToolResult, Some(name), v.clone());
+                send(out, &ToShell::Render { session: o.session.clone(), component: c, pin });
+                v
+            }),
+            "list_tables" => self.list_tables(who).map(|(table, v)| {
+                let _ = self.record(o, Kind::ToolResult, Some(name), v.clone());
+                send(out, &ToShell::Render { session: o.session.clone(), component: Component::Table(table), pin: None });
+                v
+            }),
+            "red_status" => self.red_said(who)
+                .map(|r| {
+                    let v = serde_json::to_value(&r).unwrap_or(Value::Null);
+                    let _ = self.record(o, Kind::ToolResult, Some(name), v.clone());
+                    send(out, &ToShell::Render { session: o.session.clone(), component: Component::RedStatus(r), pin: None });
+                    v
+                }),
+            "read_run" => self.read_run(who, &args).map_err(|why| format!("{why}; the run is UNKNOWN, not empty"))
+                .map(|(d, v)| {
+                    let _ = self.record(o, Kind::ToolResult, Some(name), v.clone());
+                    send(out, &ToShell::Render { session: o.session.clone(), component: Component::Dendrogram(d), pin: None });
+                    v
+                }),
+            "estate_services" => self.services(who, &args).map(|(table, v)| {
+                let _ = self.record(o, Kind::ToolResult, Some(name), json!({"count": table.rows.len(), "truncated": v.get("truncated")}));
+                send(out, &ToShell::Render { session: o.session.clone(), component: Component::Table(table), pin: None });
+                v
+            }),
+            "nos_guide" => self.guide(&args).map(|(list, v, rec)| {
+                let _ = self.record(o, Kind::ToolResult, Some(name), rec);
+                if let Some(l) = list {
+                    send(out, &ToShell::Render { session: o.session.clone(), component: Component::List(l), pin: None });
+                }
+                v
+            }),
+            "approvals_awaiting" => self.approvals(who).map_err(|why| format!("{why}; the queue is UNKNOWN, not empty"))
+                .map(|a| {
+                    // The ledger keeps what and where, never the agent's or a PR's free text.
+                    let _ = self.record(o, Kind::ToolResult, Some(name), json!({"count": a.items.len(),
+                        "items": a.items.iter().map(|i| json!({"kind": i.kind, "where": i.where_})).collect::<Vec<_>>()}));
+                    let v = serde_json::to_value(&a).unwrap_or(Value::Null);
+                    send(out, &ToShell::Render { session: o.session.clone(), component: Component::ApprovalsList(a), pin: None });
+                    v
+                }),
+            "inbox" => {
+                // KEAP hands an admin every person's captures with no owner: the model would call them "yours".
+                let i = self.inbox(who, !self.is_tier1(who));
+                let _ = self.record(o, Kind::ToolResult, Some(name), json!({"count": i.items.len(),
+                    "items": i.items.iter().map(|x| json!({"kind": x.source, "refId": x.id})).collect::<Vec<_>>(),
+                    "refused": i.refused}));
+                let mut v = serde_json::to_value(&i).unwrap_or(Value::Null);
+                v["what"] = json!("KEAP captures and promotions, not mail");
+                send(out, &ToShell::Render { session: o.session.clone(), component: Component::InboxList(i), pin: None });
+                Ok(v)
+            }
+            "search_knowledge" | "search_memory" => self.search_knowledge(who, &args).map(|(list, v, rec)| {
+                let _ = self.record(o, Kind::ToolResult, Some(name), rec);
+                if let Some(l) = list {
+                    send(out, &ToShell::Render { session: o.session.clone(), component: Component::List(l), pin: None });
+                }
+                v
+            }),
+            "read_node" => self.read_node(who, &args).map(|(tree, v, rec)| {
+                let _ = self.record(o, Kind::ToolResult, Some(name), rec);
+                if let Some(t) = tree {
+                    let pin = Some(WidgetSpec::Knowledge(KnowledgeSpec { node: t.focus.clone() }));
+                    send(out, &ToShell::Render { session: o.session.clone(), component: Component::KnowledgeTree(t), pin });
+                }
+                v
+            }),
+            "app_slots" => self.app_slots(who, &args).inspect(|v| {
+                let _ = self.record(o, Kind::ToolResult, Some(name), v.clone());
+            }),
+            "scaffold_app" => self.scaffold_app(who, &args).inspect(|v| {
+                let _ = self.record(o, Kind::ToolResult, Some(name), json!({"kind": v["kind"], "runtime": v["runtime"]}));
+            }),
+            "read_loop_runs" => self.read_loop_runs(who, &args).map_err(|why| format!("{why}; the loop's record is UNKNOWN, not empty"))
+                .map(|(component, v)| {
+                    let _ = self.record(o, Kind::ToolResult, Some(name), json!({"loop": v["loop"], "since": v["since"],
+                        "registered": v["pulse"]["registered"], "drawn": v["drawn"]}));
+                    send(out, &ToShell::Render { session: o.session.clone(), component, pin: None });
+                    v
+                }),
+            "propose_loop" if !o.pending.is_empty() => Err("an approval is already waiting".to_string()),
+            "propose_loop" => self.propose_loop(who, &args).and_then(|(rec, card, draft)| {
+                let mut v = self.asking(o, out, "propose_loop", rec, Component::Markdown(card))?;
+                v["draft"] = json!(draft);
+                v["schedule"] = json!("only the operator schedules it: copies it into files/anatomy/loops/ and converges; never say it runs");
+                Ok(v)
+            }),
+            "propose_app" if !o.pending.is_empty() =>Err("an approval is already waiting".to_string()),
+            "propose_app" => self.propose_app(who, &args).and_then(|(rec, card, draft)| {
+                let mut v = self.asking(o, out, "propose_app", rec, Component::Markdown(card))?;
+                v["draft"] = json!(draft);
+                v["enable"] = json!("only the operator enables it: copies it into apps/ and converges; never say it is enabled");
+                Ok(v)
+            }),
+            // Checked as the person against the live schema only: no row is read and no widget runs.
+            "offer_dashboard" => self.offer_dashboard(who, &args).map(|d| {
+                let kind = |s: &WidgetSpec| match s { WidgetSpec::Rows(_) => "rows", WidgetSpec::Chart(_) => "chart", WidgetSpec::Form(_) => "form", WidgetSpec::Kpi(_) => "kpi", WidgetSpec::Knowledge(_) => "knowledge", WidgetSpec::Reader(_) => "reader" };
+                let _ = self.record(o, Kind::ToolResult, Some(name), json!({"name": d.name, "dropped": d.dropped.len(),
+                    "widgets": d.widgets.iter().map(|w| json!({"kind": kind(&w.spec), "table": spec_table(&w.spec)})).collect::<Vec<_>>()}));
+                let v = json!({"offered": d.name, "widgets": d.widgets.iter().map(|w| &w.title).collect::<Vec<_>>(), "dropped": d.dropped,
+                    "status": "drawn for the person; nothing ran and nothing is placed until they place it"});
+                send(out, &ToShell::Render { session: o.session.clone(), component: Component::Dashboard(d), pin: None });
+                v
+            }),
+            "face_act" => self.face_act(out, o, face, &args),
+            "start_agent" => self.start_agent(who, out, o, &args),
+            "stop_agent" => self.stop_agent(who, o, &args).inspect(|v| { let _ = self.record(o, Kind::ToolResult, Some(name), v.clone()); }),
+            _ => Err(format!("unknown tool {name:?}")),
+        }
+    }
+
     /// Ends the turn before its calls `rest` ran: each is answered `why` (an unanswered call is a shape
     /// providers reject, Runner.php compactForSynthesis), and `text` is said and kept as the thalamus's.
     fn end_turn(&self, out: &mut dyn Write, o: &mut Open, rest: &[Value], why: &str, text: String) {
@@ -3257,6 +3476,18 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
         }
         let _ = self.record(o, Kind::Message, None, json!({"role": "thalamus", "text": text}));
         send(out, &ToShell::Text { session: o.session.clone(), text });
+    }
+
+    /// The plan's model request, an iris.complete span like every other (a thalamus-run turn has only this one).
+    fn plan_chat(&self, model: &Binding, o: &mut Open, body: Value) -> Result<Value, String> {
+        let (span, before) = (o.trace.as_mut().map(|t| t.begin("iris.complete")), o.tokens);
+        let msg = self.chat(model, o, body, None);
+        if let (Some(i), Some(t)) = (span, o.trace.as_mut()) {
+            t.end(i, msg.is_ok(), vec![("gen_ai.request.model", json!(model.model_id)),
+                                       ("gen_ai.usage.input_tokens", json!(o.tokens.0 - before.0)),
+                                       ("gen_ai.usage.output_tokens", json!(o.tokens.1 - before.1))]);
+        }
+        msg
     }
 
     /// One chat-completions call; the model gets the conversation, never a KEAP header.
@@ -3288,6 +3519,10 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
     /// One chat-completions request as `body` says, the binding's sampling added; the message it answered.
     /// With `face`, a Stop the person sends meanwhile returns Err(STOPPED) within 200 ms.
     fn chat(&self, model: &Binding, o: &mut Open, body: Value, face: Option<&Face>) -> Result<Value, String> {
+        if self.turn_tokens > 0 && self.spent(o) >= self.turn_tokens {
+            return Err(OVER_CEILING.into());
+        }
+        let sent = body.to_string().len() as i64;
         let v = match face {
             None => post_chat(model, body)?,
             // ponytail: ureq cannot abort, so the request finishes alone on its thread (its 300 s timeout bounds
@@ -3306,9 +3541,25 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                 }
             }
         };
-        o.tokens.0 += v.pointer("/usage/prompt_tokens").and_then(Value::as_i64).unwrap_or(0);
-        o.tokens.1 += v.pointer("/usage/completion_tokens").and_then(Value::as_i64).unwrap_or(0);
+        // A backend that reports no usage is counted, never read as zero: request and answer bytes / 4.
+        match (v.pointer("/usage/prompt_tokens").and_then(Value::as_i64), v.pointer("/usage/completion_tokens").and_then(Value::as_i64)) {
+            (Some(p), c) => {
+                o.tokens.0 += p;
+                o.tokens.1 += c.unwrap_or(0);
+                o.counted.0 = true;
+            }
+            _ => {
+                o.tokens.0 += sent / 4;
+                o.tokens.1 += v.pointer("/choices/0/message").map_or(0, |m| m.to_string().len() as i64) / 4;
+                o.counted.1 = true;
+            }
+        }
         v.pointer("/choices/0/message").cloned().ok_or_else(|| "model answered without a message".into())
+    }
+
+    /// The model tokens this turn spent so far (prompt + completion).
+    fn spent(&self, o: &Open) -> i64 {
+        (o.tokens.0 - o.turn_from.0) + (o.tokens.1 - o.turn_from.1)
     }
 }
 
@@ -5142,6 +5393,31 @@ to {draft}; nothing is scheduled by that.\n\n```yaml\n{yaml}```");
 /// A card column as KEAP's columnDefSchema takes it (camelCase refs; zod fills role and onDelete).
 /// The read-back of an approved schema: each column KEAP holds carries every field sent, as sent
 /// (KEAP adds its defaults, role and onDelete, so extra fields are fine); same count, same order.
+/// The wire's plan evidence from a session's last cortex_plan tool_use and tool_result. The source
+/// crosses only once the organ validated it (the result names its registry_hash): an unvalidated one
+/// is model text. A fallback crosses as its kind, never its words, which may quote the model.
+pub fn plan_evidence(session: &str, asked: Option<&Value>, res: Option<&Value>) -> ToShell {
+    let s = |v: Option<&Value>, k: &str| v.and_then(|v| v.get(k)).and_then(Value::as_str).map(str::to_string);
+    let registry_hash = s(res, "registry_hash");
+    let fallback = res.filter(|r| r.get("plan").is_none()).map(|r| match r.get("fallback_kind").and_then(Value::as_str) {
+        Some("infra") => FallbackKind::Infra,
+        _ => FallbackKind::Model,
+    });
+    let table = res.and_then(|r| r.get("table")).and_then(|t| Some(PlanTable {
+        said: t.get("said")?.as_str()?.to_string(), id: t.get("id")?.as_str()?.to_string(),
+        title: t.get("title").and_then(Value::as_str).map(str::to_string) }));
+    let asked_as = asked.and_then(|a| Some(PlanAsked {
+        engine: s(Some(a), "engine")?, constrained: a.get("constrained")?.as_bool()?, primer_sha256: s(Some(a), "primer_sha256")?,
+        grammar_sha256: s(Some(a), "grammar_sha256"), catalogue: s(Some(a), "catalogue")?, catalogue_digest: s(Some(a), "catalogue_digest")? }));
+    ToShell::PlanEvidence {
+        session: session.to_string(),
+        valid: res.and_then(|r| r.get("valid")).and_then(Value::as_bool),
+        pipeline: registry_hash.as_ref().and(s(asked, "source")),
+        registry_hash, fallback, table, asked: asked_as,
+        plan_run: None, model_calls: None, tokens: None,
+    }
+}
+
 fn held_as_sent(held: &[Value], sent: &[Value]) -> bool {
     held.len() == sent.len() && held.iter().zip(sent).all(|(h, s)| s.as_object().is_some_and(|o| o.iter().all(|(k, v)| h.get(k) == Some(v))))
 }

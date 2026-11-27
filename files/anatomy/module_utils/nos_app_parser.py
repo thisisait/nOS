@@ -372,13 +372,17 @@ def standards_violations(record: Dict[str, Any]) -> List[str]:
         if any(str(k).lower().startswith("traefik.") for k in keys):
             v.append("standard traefik-label: services.%s sets traefik.* labels; the runner derives "
                      "routing from meta.name + meta.ports[0], delete them" % svc)
+        for key in ("extends", "env_file", "label_file", "build"):
+            if key in d:
+                v.append("standard host-file: services.%s uses %s, which reads a host file the "
+                         "parser never sees; a manifest ships no files, inline it" % (svc, key))
         for ref in sorted(set(r for t in _strings(d) for r in _interpolations(t))):
             if _PLATFORM_SECRET_RE.search(re.split(r"[:?+-]", ref.strip("${}"), maxsplit=1)[0]):
                 v.append("standard platform-secret: services.%s references %s, a platform "
                          "credential no tenant app may hold; remove it" % (svc, ref))
             else:
                 v.append("standard env-interpolation: services.%s uses %s; only $SERVICE_FQDN_*, "
-                         "$SERVICE_PASSWORD_*, $SERVICE_USER_*, $SERVICE_BASE64_* are filled, "
+                         "$SERVICE_PASSWORD_*, $SERVICE_USER_*, $SERVICE_BASE64_*, $SERVICE_EDGE_TOKEN are filled, "
                          "write the value itself, or $$ for a literal $" % (svc, ref))
         for vol in d.get("volumes") or []:
             src, kind = (str(vol.get("source") or ""), vol.get("type")) if isinstance(vol, dict) \
@@ -614,13 +618,15 @@ def gate_eu_residency(
 #   $SERVICE_USER_<SUFFIX>       -> <app>_user (lowercase suffix)
 #   $SERVICE_BASE64_64_<NAME>    -> 64-byte base64 (e.g. session keys)
 #   $SERVICE_BASE64_32_<NAME>    -> 32-byte base64
+#   $SERVICE_EDGE_TOKEN          -> 32-char random; Traefik sends it as
+#                                   X-Nos-Edge-Token (auth: proxy apps)
 #
 # `_<SUFFIX>` groups identical credentials across services that share a
 # DB, e.g. $SERVICE_PASSWORD_POSTGRES is the same value wherever it
 # appears in the same template. This matches Coolify's behaviour.
 
 _TOKEN_RE = re.compile(
-    r"\$SERVICE_(FQDN|PASSWORD|USER|BASE64_64|BASE64_32)_([A-Z0-9_]+)"
+    r"\$SERVICE_(?:(FQDN|PASSWORD|USER|BASE64_64|BASE64_32)_([A-Z0-9_]+)|(EDGE)_(TOKEN)\b)"
 )
 
 
@@ -659,8 +665,8 @@ def resolve_tokens(
     alias = (host_alias or "").strip(".")
 
     def replace(match: re.Match) -> str:
-        kind = match.group(1)
-        suffix = match.group(2)
+        kind = match.group(1) or match.group(3)
+        suffix = match.group(2) or match.group(4)
         cache_key = "%s_%s" % (kind, suffix)
         if cache_key in seed:
             value = seed[cache_key]
@@ -677,7 +683,7 @@ def resolve_tokens(
             value = ".".join(parts)
         elif kind == "USER":
             value = "%s_%s" % (app_name, suffix.lower())
-        elif kind == "PASSWORD":
+        elif kind in ("PASSWORD", "EDGE"):
             value = _random_password(32)
         elif kind == "BASE64_64":
             value = base64.b64encode(secrets.token_bytes(64)).decode("ascii")
@@ -688,7 +694,7 @@ def resolve_tokens(
         # Cache so the same token reappearing in `text` resolves identically.
         seed[cache_key] = value
         # Only secrets get returned to the caller (FQDN/USER are derivable).
-        if kind in ("PASSWORD", "BASE64_64", "BASE64_32"):
+        if kind in ("PASSWORD", "BASE64_64", "BASE64_32", "EDGE"):
             out_secrets[cache_key] = value
         return value
 

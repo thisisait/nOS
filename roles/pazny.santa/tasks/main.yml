@@ -7,7 +7,7 @@
 - name: "Santa | macOS only"
   ansible.builtin.assert:
     that: ansible_os_family == 'Darwin'
-    fail_msg: "pazny.mac.santa is macOS-only (Santa is an Endpoint Security client)."
+    fail_msg: "pazny.santa is macOS-only (Santa is an Endpoint Security client)."
   tags: ['santa']
 
 - name: "Santa | Read the installed version"

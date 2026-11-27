@@ -320,7 +320,9 @@ def _apply_step(step: dict, tips: dict[str, dict], driver, branch: str,
             log(f"  github: NOT pushed (needs --push-github). The promotion is:")
             log(f"          git push origin {target[:12]}:refs/heads/{branch}")
             return 0
-        rc, _, err = _git("push", "origin", f"{target}:refs/heads/{branch}", check=False)
+        # forge-sync IS the mirror sync: tell tools/git-hooks/pre-push this is no raw push.
+        rc, _, err = _git("push", "origin", f"{target}:refs/heads/{branch}",
+                          env={"NOS_RAW_PUSH": "1"}, check=False)
         if rc != 0:
             log(f"  github: push refused — {err.splitlines()[-1] if err else 'no reason given'}")
             return 1

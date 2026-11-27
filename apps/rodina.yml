@@ -1,0 +1,109 @@
+---
+# rodina: the operator's family genealogy site, behind the "kin" email-link gate (row kin-recognition-gate).
+# Both images are built locally from the genealogy project: `nos/build.sh <version>` there.
+#
+# The operator fills four values in credentials.yml, inside the apps_runner block, before the first converge:
+#   app_secrets:
+#     rodina:
+#       PASSWORD_ALLOW: "a@example.cz, b@example.cz"   # the family emails; empty or unset = nobody can sign in
+#       PASSWORD_GMAILUSER: "<the Gmail address that sends the links>"
+#       PASSWORD_GMAIL: "<a Google app password for that address>"
+# Unset, each one is minted as a random string: the gate fails closed (nobody listed, the mail login refused).
+# BASE64_64_KIN (the signing key) is minted by nOS; rotating it signs everyone out.
+# Removing an email = edit PASSWORD_ALLOW + `nos --tags apps`: that person is out at their next page load.
+
+meta:
+  name: "rodina"
+  version: "0.1.8"
+  summary: "Rodokmen rodiny, jen pro rodinu: přihlášení odkazem z emailu."
+  category: "knowledge"
+  ports: [8080]
+  tags: ["self-hosted", "genealogy", "static", "kin"]
+
+gdpr:
+  purpose: |
+    A family history (genealogy) site shared only with the family. It shows records from digitised parish
+    registers and what relatives told the operator, including names, dates and places of living relatives.
+    Access is limited to a list of family email addresses: a listed person asks for a one-time login link,
+    which is mailed through the operator's Gmail account (Google, USA) and then holds a signed session
+    for 30 days. The gate stores only spent link ids and a mail counter; its log keeps a hash of the email,
+    never the address or a token. This is a purely personal, household activity (GDPR Art. 2(2)(c), operator
+    2026-11-21); the manifest records it under legitimate interests because the parser takes only Art. 6
+    bases. It is the declared exception to the estate's SSO rule: family members are not estate users.
+  legal_basis: "legitimate_interests"
+  balancing_test: >-
+    The operator's interest is sharing the family's history with the family. Only listed relatives can read
+    it, the site is not indexed, nothing is profiled or sold, and a relative is removed on request.
+  data_source: not_from_subject          # parish registers and other relatives
+  data_categories:
+    - "name"
+    - "birth_and_death_dates"
+    - "family_relations"
+    - "places"
+    - "email"                # the allow-list and the address a login link is sent to
+  data_subjects:
+    - "family_members"       # living and deceased relatives named in the tree
+    - "end_users"            # the relatives who sign in (TLS required)
+  retention_days: -1         # a family archive; a relative's entry is removed on request
+  processors:
+    - "Google (Gmail SMTP): sends the login links"
+  transfers_outside_eu: true  # Gmail is a US service
+
+compose:
+  services:
+    rodina:
+      image: "rodina-web:0.1.8"
+      container_name: rodina
+      restart: unless-stopped
+      expose:
+        - "8080"
+      environment:
+        - "KIN_UPSTREAM=rodina-kin:8081"
+      depends_on:
+        - rodina-kin
+      read_only: true
+      tmpfs:
+        - /var/cache/nginx
+        - /var/run
+        - /etc/nginx/conf.d
+      cap_drop:
+        - ALL
+      cap_add:
+        - CHOWN
+        - SETGID
+        - SETUID
+      security_opt:
+        - "no-new-privileges:true"
+      mem_limit: 128m
+      cpus: 0.5
+
+    rodina-kin:
+      image: "kin:0.1.8"
+      container_name: rodina-kin
+      restart: unless-stopped
+      expose:
+        - "8081"
+      environment:
+        - "KIN_SECRET=$SERVICE_BASE64_64_KIN"
+        - "KIN_ALLOW=$SERVICE_PASSWORD_ALLOW"
+        - "KIN_SMTP_USER=$SERVICE_PASSWORD_GMAILUSER"
+        - "KIN_SMTP_PASSWORD=$SERVICE_PASSWORD_GMAIL"
+        - "KIN_PUBLIC_URL=https://$SERVICE_FQDN_RODINA"
+        - "KIN_TITLE=Rodokmen Páznerových"
+        - "KIN_SESSION_DAYS=30"
+        - "KIN_COOKIE=kin_rodina"
+      volumes:
+        - rodina_kin:/data
+      read_only: true
+      cap_drop:
+        - ALL
+      security_opt:
+        - "no-new-privileges:true"
+      mem_limit: 64m
+      cpus: 0.25
+
+  volumes:
+    rodina_kin:
+
+nginx:
+  auth: "none"     # the kin gate inside the app decides access (declared exception, see gdpr.purpose)

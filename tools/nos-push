@@ -102,15 +102,16 @@ for spec in "${REFSPECS[@]}"; do
 	fi
 done
 
-# 1. Run the git push; abort everything if it fails.
+# 1. Run the git push; abort everything if it fails. NOS_RAW_PUSH=1 tells
+#    tools/git-hooks/pre-push this push is ours, not a raw one to origin dev/master.
 #    Empty array expansion in bash produces a literal '' arg, which git
 #    rejects as "bad repository". Branch on array size to avoid it.
 if [ "${#GIT_ARGS[@]}" -gt 0 ]; then
 	echo "→ git push ${GIT_ARGS[*]}"
-	git -C "$PUSH_DIR" push "${GIT_ARGS[@]}"
+	NOS_RAW_PUSH=1 git -C "$PUSH_DIR" push "${GIT_ARGS[@]}"
 else
 	echo "→ git push"
-	git -C "$PUSH_DIR" push
+	NOS_RAW_PUSH=1 git -C "$PUSH_DIR" push
 fi
 
 # 1b. Success is the remote ref, not git's exit code: ls-remote each refspec's

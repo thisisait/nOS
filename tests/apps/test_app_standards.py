@@ -109,6 +109,10 @@ def test_the_mistral_manifest_is_refused_with_each_reason():
     ({"cap_drop": ["ALL"], "cap_add": ["SYS_ADMIN"]}, "cap-add"),
     ({"network_mode": "host"}, "host-namespace"),
     ({"pid": "host"}, "host-namespace"),
+    ({"extends": {"file": "../../iiab/overrides/keap.yml", "service": "keap"}}, "host-file"),
+    ({"env_file": "../../infra/.env"}, "host-file"),
+    ({"label_file": "labels"}, "host-file"),
+    ({"build": "../../.."}, "host-file"),
 ])
 def test_each_rule_refuses_by_name(svc, rule):
     assert _rules(_with(**svc)) == {rule}

@@ -862,7 +862,7 @@ redis_version: "8.10.3"                  # 8.10.2 MULTI-after-ACL-revoke bypass,
 # IIAB – WORDPRESS
 # ==============================================================================
 # (the rest of this section is a config.d layer)
-wordpress_version: "7.1.4"              # 7.1.3+7.1.4 security releases (unauth comment disclosure, upgrade-window RCE, stored XSS). Prior CVE-2026-87902 at 7.1.2.
+wordpress_version: "7.1.5"              # 7.1.5 security release (2026-11-18: SQLi in WP_Meta_Query + Customizer, unauth stored XSS, XML-RPC DoS). Prior 7.1.4.
 
 # ==============================================================================
 # IIAB – NEXTCLOUD
@@ -885,7 +885,7 @@ kiwix_version: "3.8.2"                             # Docker image tag (ghcr.io/k
 # GEO – image pins (the rest of geo is the 70-geo layer under config.d)
 # ==============================================================================
 
-maps_tileserver_version: "v5.6.0"                  # Docker image tag (maptiler/tileserver-gl). Pinned from floating latest (REM-117 reproducibility shadow; v5.6.0 verified on Docker Hub). tileserver-gl is CVE-clean in-window.
+maps_tileserver_version: "v5.7.0"                  # maptiler/tileserver-gl (REM-117 pinned from latest). v5.7.0: bugfixes, viewer on maplibre-gl v6 (REM-327).
 maps_planetiler_version: "0.10.2"              # ghcr.io/onthegomap/planetiler
 geolibre_image: "ghcr.io/opengeos/geolibre"
 geolibre_version: "v3.2.0@sha256:7c43f124f306d7c00c66660faf73eced043d6ddd749a06afb055ed223e79cebe"   # image label v3.2.0, rev aa28b2a; the digest nos-atlas was tested against
@@ -920,14 +920,14 @@ grafana_version: "12.4.14"              # CVE-2026-100105, -88858, -88967 (12.4.
                                         # the five-release 2026-08-18 wave). Same minor as the
                                         # 12.4.4 CVE-2026-27876 pin it replaces, so no post-start
                                         # automation is orphaned — memory version-pins-default-config-shadow.
-prometheus_version: "v3.13.2"   # synced to role default (cleared version-pin shadow) [swept v3.11.3 2026-08-06]
-loki_version: "3.7.6"           # synced to role default (cleared version-pin shadow) [swept 3.7.2 2026-08-06]
+prometheus_version: "v3.16.0"   # Go/x-net/grpc security rebuilds since 3.13.3; no breaking notes for our flags [2026-11-21]. Prior v3.13.2.
+loki_version: "3.7.10"          # grpc 1.83.2 (high), containerd, Go 1.26.10 rebuilds (REM-285, REM-314) [2026-11-21]. Prior 3.7.6.
 
 # Gitea Docker
-gitea_version: "28.3.0"                 # 2026-11-01: 7 high (GHSA-32h8, -9v6p, -6h2f, -jh8p, -37xv, -8g99, -8p3x) + 15 medium fixed in 28.3.0; prior 28.2.0
+gitea_version: "28.4.0"                 # 2026-11-16: 9 high (GHSA-frjx, -6m4f, -wmr3, -wgx7, -4p89, -w87g, -q3q9, -9vh6, -5mx6) fixed in 28.4.0; prior 28.3.0
 
-postgres_exporter_version: "v0.20.1"  # [swept 2026-08-06]
-mysqld_exporter_version: "v0.19.0"  # [swept 2026-08-06]
+postgres_exporter_version: "v0.20.1"  # v0.21.x held: deprecates PG_EXPORTER_* env (grafana compose sets PG_EXPORTER_EXTEND_QUERY_PATH), wraps counters [2026-11-21]
+mysqld_exporter_version: "v0.20.0"  # v0.21.0 held: BREAKING metric-type change + $$ password escaping in config files [2026-11-21].
 # -alpine, and the suffix is load-bearing. Upstream's DEFAULT image is now
 # scratch — no wget, no shell, nothing but the binary — so the compose
 # healthcheck (`CMD wget --spider`) could not EXECUTE and docker reported the
@@ -938,9 +938,9 @@ mysqld_exporter_version: "v0.19.0"  # [swept 2026-08-06]
 # One declaration, not a hardcoded suffix in the template: pin-latest-scan
 # matches candidate tags by SHAPE, so this keeps tracking the -alpine line
 # rather than drifting back onto scratch at the next sweep.
-redis_exporter_version: "v1.89.0-alpine"  # [swept v1.88.0-alpine 2026-08-11]
-cadvisor_version: "v0.49.1"
-blackbox_exporter_version: "v0.28.0"  # [swept 2026-08-06]
+redis_exporter_version: "v1.98.0-alpine"  # v1.93.0 TLS minimumVersion fix [2026-11-21]. Prior v1.89.0-alpine.
+cadvisor_version: "v0.49.2"  # last gcr.io-line patch; upstream moved to ghcr.io/google/cadvisor from v0.60 (template change, not taken).
+blackbox_exporter_version: "v0.29.1"  # Go 1.27.3 + x/net HTTP/2 + eMudhra CA distrust [2026-11-21]. Prior v0.28.0.
 
 # app_secrets is the apps_runner secret-store (its own default is `{}` in
 # roles/pazny.apps_runner/defaults). That role default only materialises during
@@ -987,7 +987,10 @@ n8n_data_dir: "{{ ansible_facts['env']['HOME'] }}/n8n"
 #       Internal PostgreSQL, Redis, Sidekiq – all in one container.
 # ==============================================================================
 
-gitlab_version: "18.11.13-ce.0"  # 2026-10-21 critical patch (CVE-2026-110264 CVSS 10, -112212 7.5); last 18.11.x; 19.x is the next step
+# 2026-11-21: 18.11 is past backport (101 advisory matches; critical CVE-2026-105437 fixed in 19.x only).
+# EXISTING 18.11 data must walk the required stops 19.2 -> 19.5 -> 19.6 (upgrades/gitlab.yml, one
+# `--tags upgrade` run per stop); a plain converge with this pin skips them. Fresh installs: PG 18.
+gitlab_version: "19.6.1-ce.0"
 
 # ── which LOCAL forge the agent loop targets (tools/recipe-pr.sh) ─────────────
 # Gitea + Woodpecker is PRIMARY. GitLab is an optional drop-in replacement
@@ -1079,17 +1082,17 @@ openwebui_admin_email: "{{ default_admin_email }}"
 # Requires: install_gitea: true + manual OAuth2 application in Gitea
 # ==============================================================================
 # (the rest of this section is a config.d layer)
-woodpecker_version: "v3.19.0"           # GHSA-6frq-4g8m-8xw9 (fixed 3.19.0), -xwpq-2mq8-p55x, -v6jr-fc8m-whr3 (3.18.0), high [advisory-status 2026-11-15]. Prior REM-105.
+woodpecker_version: "v3.20.1"           # 3.20.0 security batch (agent token out of env, config fetch hardening); 3.20.1 reverts its envsubst break. Prior 3.19.0.
 
 # ==============================================================================
 # IIAB – PORTAINER CE (Docker management UI)
 # ==============================================================================
 # (the rest of this section is a config.d layer)
-portainer_version: "2.45.3"             # GHSA-j3mf-q9qf-5qf8 (critical, <=2.45.2) fixed 2.45.3 [advisory-status 2026-10-23]; REM-295 bind-mount bypass fixes (LTS 2.39 unpatched)
+portainer_version: "2.45.4"             # GHSA-26fg, -9xr4, -45qw, -xfw5, -m2rf (high) + 6 medium fixed 2.45.4; its breaking notes hit non-admin/k8s only (tier 1).
 # Shared Traefik/Portainer Docker-API gateway (templates/stacks/infra base
 # compose). Guards docker.sock = root-on-host — pinned, never floating
 # (2026-06-10 review; the C1 pin gate doesn't scan base-stack templates).
-docker_socket_proxy_version: "v0.4.2"  # registry tag IS v-prefixed (0.4.2 was only the OCI label — pull fails bare)
+docker_socket_proxy_version: "v0.5.0"  # registry tag IS v-prefixed. v0.5.0: HAProxy 3.4.2, ALLOW_PAUSE/UNPAUSE, BIND_CONFIG env.
 
 # ==============================================================================
 # INFRA – SPACETIMEDB (realtime DB, BSL 1.1)
@@ -1123,13 +1126,13 @@ nos_forum_cloudflare_turn_key_id: ""    # Cloudflare dashboard → Realtime → 
 # IIAB – JELLYFIN (media server)
 # ==============================================================================
 # (the rest of this section is a config.d layer)
-jellyfin_version: "12.2"                # GHSA-6828 (critical traversal) + GHSA-cf3c (high) fixed only in 12; one-way DB migration, cold copy first (one-way-upgrade-guard)
+jellyfin_version: "12.4"                # REM-360: .NET 10.0.14 (12.3 bugfixes). Was 12.2 (GHSA-6828/-cf3c); one-way DB migration, cold copy first (one-way-upgrade-guard)
 
 # ==============================================================================
 # IIAB – UPTIME KUMA (monitoring dashboard)
 # ==============================================================================
 # (the rest of this section is a config.d layer)
-uptime_kuma_version: "2.5.9"        # GHSA-86ch-2247-gr56 (<=2.5.8) + GHSA-v2p3 (admin RCE) fixed [advisory-status 2026-10-31]. REM-073 2026-07-24.
+uptime_kuma_version: "2.5.12"        # REM-361 (Node 22.23.5, GHSA-437w admin RCE, 2.5.11) + REM-367 (jsonata sandbox, 2.5.12). Prior 2.5.9.
 
 # ==============================================================================
 # IIAB – CALIBRE-WEB (ebook server)
@@ -1248,6 +1251,9 @@ post_provision_tasks: []
 # Each stack has its own docker-compose.yml in a subdirectory of stacks_dir.
 stacks_dir: "{{ ansible_facts['env']['HOME'] }}/stacks"
 stacks_shared_network: "shared_net"
+# Every compose project, in the order a removal stops them (blank-reset, import-state read it).
+# One list, so a new stack cannot be missed by `nos --remove` (test_blank_reset_confirmation_accuracy).
+nos_stacks: [iiab, observability, infra, apps, devops, b2b, voip, engineering, data]
 
 # ── Stack-up bring-up tuning (tasks/stacks/stack-up.yml) ─────────────────────
 # stack_up_parallel: true  → fire `docker compose up --wait` for every wave-2
@@ -1336,7 +1342,7 @@ coexistence_secondary_ttl_days: 7
 # Backward compatibility – old monolithic compose dir (will be removed after migration)
 
 # ── Traefik ────────────────────────────────────────────────────────────────────
-traefik_image_version: "v3.7.18"  # GHSA-p956-6gvv-mxqp, -x5pf-cqh3-2gv8, -ccgh-9g52-6vwg, -cp28-5662-543f (high) fixed v3.7.18 [2026-11-15]. Prior v3.7.17, REM-251.
+traefik_image_version: "v3.7.19"  # quic-go, klauspost/compress, x/crypto bumps [2026-11-21]. Prior v3.7.18 (GHSA-p956, -x5pf, -ccgh, -cp28), REM-251.
 
 # ── Tier-1 service ports lifted from role defaults ────────────────────────────
 # These are referenced via lookup('vars', '<svc>_port') in the Traefik file
@@ -1468,7 +1474,7 @@ authentik_oidc_homeassistant_client_secret: "{{ nos_derived_secrets.oidc_homeass
 # RUSTFS – S3-compatible object storage
 # ==============================================================================
 # (the rest of this section is a config.d layer)
-rustfs_version: "1.0.3"                 # GHSA-xm99 (high) + 5 medium; skip 1.0.0/1.0.1 (GHSA-28w4); one-way metadata, cold copy first (one-way-upgrade-guard)
+rustfs_version: "1.0.6"                 # 1.0.4 CA distrust, 1.0.5 root-derived account scope fix. Skip 1.0.0/1.0.1 (GHSA-28w4); one-way metadata, cold copy (one-way-upgrade-guard)
 
 # ==============================================================================
 # B2B – ERPNEXT (CRM + ERP + HR + Accounting)
@@ -1512,7 +1518,7 @@ authentik_oidc_erpnext_client_secret: "{{ nos_derived_secrets.oidc_erpnext }}"
 #
 # Check it with `tools/app-version.py`, which asks the application. Until a
 # converge runs, the claim below is UNVERIFIED and the reader will say so.
-freescout_version: "2.2.8"               # nfrastack; CHANGELOG claims app 1.8.238 (REM-250). UNVERIFIED until `tools/app-version.py`
+freescout_version: "2.2.26"               # nfrastack; app 1.8.252 (REM-275 floor 1.8.242). Image tag only, app version unverified until `tools/app-version.py`
 authentik_oidc_freescout_client_id: "nos-freescout"
 authentik_oidc_freescout_client_secret: "{{ nos_derived_secrets.oidc_freescout }}"
 
@@ -1521,7 +1527,7 @@ authentik_oidc_freescout_client_secret: "{{ nos_derived_secrets.oidc_freescout }
 # Requires: install_postgresql: true, redis_docker: true
 # ==============================================================================
 # (the rest of this section is a config.d layer)
-outline_version: "1.12.0"     # 2026-10-25: 44 advisories <1.12 incl. GHSA-f28f-75h4-499q + GHSA-48rq-wx9j-g949 (critical); notes 1.10-1.12 list no breaking change
+outline_version: "1.13.0"     # 1.13.0: Node 26.13.1, OAuth/MCP hardening; no breaking notes for Docker. Prior 1.12.0 (44 advisories <1.12).
 
 # ==============================================================================
 # VOIP – MIKOPBX (Asterisk 22 PBX; SQLite + Redis inside, no infra DB)
@@ -1529,7 +1535,7 @@ outline_version: "1.12.0"     # 2026-10-25: 44 advisories <1.12 incl. GHSA-f28f-
 # need NAT pinned through the API — docs/systems/mikopbx/README.md.
 # ==============================================================================
 
-mikopbx_version: "2026.3.40"           # mikopbx/mikopbx, multi-arch (Asterisk 22.8.2 inside)
+mikopbx_version: "2026.9.5"            # 40 advisories <= 2026.3.40 (5 critical: GHSA-qhh5 fixed 2026.6.99); one-way /cf migration, cold copy (one-way-upgrade-guard)
 mikopbx_domain: "pbx{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 mikopbx_port: 8088                     # Web UI + REST API (loopback publish)
 mikopbx_sip_port: 5060                 # SIP signaling (UDP+TCP), published port
@@ -1635,9 +1641,9 @@ landing_host_note: ""                   # one host-specific paragraph (config.ym
 landing_contact: ""                     # who to ask, as text (config.yml)
 # nginx stable-alpine. The tag says what we meant, the digest says what we get
 # (mcp_gateway precedent). Digest is the multi-arch INDEX (arm64 + amd64).
-# Asked at the source registry (Docker Hub library/nginx), 2026-10-23: 1.30.6 fixes
-# CVE-2026-15176, -93479, -95101, -97629, -97205 (nginx.org CHANGES-1.30).
-apex_version: "1.30.6-alpine@sha256:47928bf67eb62a1863cb08d9ecb52d3e704304ba614eaee17884204677702951"
+# Asked at the source registry (Docker Hub library/nginx), 2026-11-21: 1.30.7 fixes the six HIGH
+# advisories against 1.30.6 (CVE-2026-113425, -118899, -121810, -123007, -123633, -123634; advisory-status).
+apex_version: "1.30.7-alpine@sha256:caf4e1e032a20f9c3c5e28fc7f25ffd768ad8677b4975c54193075997b3a97e3"
 
 # ==============================================================================
 # KEAP – Knowledge Explorer and Preserver (where nOS keeps its memory)
@@ -1688,9 +1694,9 @@ iiab_terminal_bin_path: "{{ homebrew_prefix }}/bin/iiab-terminal"
 # refuses ghcr blob storage (a Claude cloud session) flips this in
 # profiles/cloud-e2e.yml — docs/cloud-e2e.md §Registries.
 authentik_image: "ghcr.io/goauthentik/server"
-authentik_version: "2026.5.7"                      # REM-283: same-minor patch, five 2026-09-09 HIGH GHSAs
+authentik_version: "2026.5.9"                      # same-minor patch: 11 GHSAs (3 critical) fixed in 2026.5.9 (2026-11)
 infisical_version: "v0.162.19"   # synced to role default (cleared version-pin shadow) [swept v0.162.16 2026-08-11]
-vaultwarden_version: "1.37.4"            # REM-291: seven org/2FA authz fixes (REM-261 was 1.37.3)
+vaultwarden_version: "1.37.5"            # REM-338: GHSA-x9cq + GHSA-9pjj; invalid env now stops startup (none of ours affected). Prior REM-291 1.37.4.
 
 # ==============================================================================
 # BACKUP — copy #1 (pazny.backup role): nightly DB dumps + named volumes +

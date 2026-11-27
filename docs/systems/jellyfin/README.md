@@ -13,7 +13,7 @@
 | **Stack** | `iiab` |
 | **Node id** | `nos.iiab.jellyfin` |
 | **Toggle** | `install_jellyfin: false` (**default OFF**) |
-| **Image** | `jellyfin/jellyfin:12.2` (`jellyfin_version`; GHSA-6828 critical fixed only in 12) |
+| **Image** | `jellyfin/jellyfin:12.4` (`jellyfin_version`; GHSA-6828 critical fixed only in 12, .NET 10.0.14 in 12.4) |
 | **Config** | `{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/shared/jellyfin/config` → `/config` (default `~/nos/tenants/dev/shared/jellyfin/config`) — SQLite DB, server plugins, `plugins/configurations/SSO-Auth.xml` |
 | **Cache** | `{{ nos_data_root }}/platform/services/jellyfin/cache` → `/cache` (default `~/nos/platform/services/jellyfin/cache`) — regenerable transcode/artwork cache, not user data |
 | **Media** | `~/media/movies`, `~/media/shows`, `~/media/music` → `/media/*` **read-only** (`jellyfin_movies_dir` / `jellyfin_shows_dir` / `jellyfin_music_dir`) |

@@ -80,7 +80,7 @@ Mandatory external-SSD format: **APFS Case-Sensitive** (or HFS+ Journaled Case-S
 ansible-playbook main.yml
 
 # Clean reinstall — wipes ALL data and secrets, prompts for a new prefix
-# (without --confirm this is a DRY RUN; legacy -e blank=true still works, deprecated)
+# (without --confirm this is a DRY RUN; the old -e blank=true is retired and refused)
 nos --remove=data --confirm
 
 # Syntax only
@@ -168,7 +168,7 @@ docker compose -f ~/stacks/iiab/docker-compose.yml ps
 └── rustfs/
 ```
 
-A removal run (`nos --remove=… --confirm`, legacy `blank=true`) honors these paths — wipes the real data, not just empty `~/service` fallbacks.
+A removal run (`nos --remove=… --confirm`) honors these paths — wipes the real data, not just empty `~/service` fallbacks.
 
 ---
 

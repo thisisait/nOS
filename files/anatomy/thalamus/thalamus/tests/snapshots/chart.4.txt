@@ -1,0 +1,10 @@
+radial chart Disk by stack: 1 series over category x, not drawn here
+  GB: infra=40, observability=25, iris=10
+
+
+
+
+
+
+
+

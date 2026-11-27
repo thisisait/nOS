@@ -41,3 +41,17 @@ export function arcPath(cx: number, cy: number, r: number, a0: number, a1: numbe
 		return `M${p(a0)}A${r},${r} 0 1 1 ${p(a0 + Math.PI)}A${r},${r} 0 1 1 ${p(a0)}Z`;
 	return `M${cx},${cy}L${p(a0)}A${r},${r} 0 ${a1 - a0 > Math.PI ? 1 : 0} 1 ${p(a1)}Z`;
 }
+
+/** A ring's arc from a0 to a1 between radii r0 < r, clockwise from 12 o'clock; under a whole turn. */
+export function ringPath(
+	cx: number,
+	cy: number,
+	r0: number,
+	r: number,
+	a0: number,
+	a1: number
+): string {
+	const p = (rr: number, a: number) => `${r1(cx + rr * Math.sin(a))},${r1(cy - rr * Math.cos(a))}`;
+	const big = a1 - a0 > Math.PI ? 1 : 0;
+	return `M${p(r, a0)}A${r},${r} 0 ${big} 1 ${p(r, a1)}L${p(r0, a1)}A${r0},${r0} 0 ${big} 0 ${p(r0, a0)}Z`;
+}

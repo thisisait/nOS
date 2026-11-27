@@ -29,6 +29,7 @@ also correcting the operator-facing box.
 from __future__ import annotations
 
 import re
+import sys
 from pathlib import Path
 
 import pytest
@@ -58,16 +59,19 @@ def _real_compose_stacks() -> set[str]:
 
 
 def _down_loop_stacks() -> list[str]:
-    """The stack names listed in the `compose ... -p <item> down -v` loop."""
-    src = _blank_src()
-    # The down task's loop is the first `loop:` block in the file (the stop task).
-    match = re.search(
-        r'-p \{\{ item \}\} down -v.*?\n  loop:\n(?P<body>(?:    - \S+\n)+)',
-        src,
-        re.DOTALL,
-    )
-    assert match, "could not locate the compose-down stack loop in blank-reset.yml"
-    return re.findall(r"    - (\S+)\n", match.group("body"))
+    """The stacks the `compose ... -p <item> down -v` task loops over: a literal
+    list, or the one declared list `nos_stacks` (default layers) it names."""
+    import yaml
+    sys.path.insert(0, str(REPO_ROOT / "tools"))
+    import nos_identity as ni
+    task = next((t for t in yaml.safe_load(_blank_src())
+                 if "down -v" in str(t.get("ansible.builtin.shell", ""))), None)
+    assert task, "could not locate the compose-down stack loop in blank-reset.yml"
+    loop = task["loop"]
+    if loop == "{{ nos_stacks }}":
+        loop = ni.default_config()["nos_stacks"]
+    assert isinstance(loop, list), f"unrecognised down-loop shape: {loop!r}"
+    return loop
 
 
 def _prompt_block() -> str:

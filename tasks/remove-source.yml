@@ -21,6 +21,16 @@
        Press ENTER to PERMANENTLY DELETE, or Ctrl+C -> A to cancel
   when: not nos_assume_yes
 
+# blank-reset unloads the macOS plists; on Linux the two units stop here, before their homes go.
+- name: "[Remove:source] Stop the thalamus and receptor units (Linux)"
+  ansible.builtin.command: "{{ nos_user_systemctl | default('systemctl --user') }} stop {{ item }}.service"
+  loop: [eu.thisisait.nos.thalamus, eu.thisisait.nos.receptor]
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"   # systemctl --user needs the user bus
+  when: (nos_service_manager | default('launchd')) == 'systemd-user'
+  changed_when: false
+  failed_when: false   # absent on a host that never ran them
+
 - name: "[Remove:source] Remove the SOURCE tree + side-car + registry"
   ansible.builtin.file:
     path: "{{ item }}"

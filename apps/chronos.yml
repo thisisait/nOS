@@ -1,0 +1,155 @@
+---
+# ============================================================================
+# Chronos Timeline: causal timeline of Czech political events, built from
+# public news RSS by local LLM agents (impact scoring, NER, embeddings).
+#
+# One image, built locally from this repo (see deploy/nos/HANDOFF.md):
+#   docker build -t chronos-timeline:0.14.0 .
+# Frontend + API on 8787, libSQL database in the chronos_data volume.
+# LLM: Ollama on the host only; nothing leaves the machine.
+# ============================================================================
+
+meta:
+  name: "chronos"
+  version: "0.14.0"
+  summary: "Časová osa událostí z českých zpravodajských RSS, analyzovaná lokálními LLM agenty."
+  homepage: "https://github.com/PaznerA/chronos-timeline"
+  category: "knowledge"
+  ports: [8787]
+  tags: ["self-hosted", "timeline", "news", "llm", "ollama"]
+
+# ── GDPR Article 30 ─────────────────────────────────────────────────────────
+# Operator decisions of 2026-11-17 (deploy/nos/HANDOFF.md, section 2):
+#   lawful basis  public_task (Art. 6(1)(e))
+#   scope         all news from the feeds, not only politics
+#   retention     no erasure horizon; erasure on request by an admin
+#   access        tier 3 (nos-users)
+# Still open: reported political positions may be Art. 9 special-category data,
+# and Art. 6(1)(e) alone does not cover those. An Art. 9(2) condition is needed
+# on top, most likely (e) "manifestly made public by the data subject".
+gdpr:
+  purpose: |
+    Build a searchable causal timeline of events from general Czech news RSS
+    feeds. The feeds are not filtered to politics, so ordinary news naming
+    private individuals (crime, accidents, local stories) is stored too; the
+    operator accepted that scope. Agents store article titles and summaries,
+    the names and roles of persons, organisations and places mentioned in
+    them, a local LLM impact score and text embeddings. Since 0.6.0 it also
+    stores orange and red disaster alerts (GDACS) and weather warnings
+    (MeteoAlarm); those carry no personal data and are scored from a table,
+    without a model. MeteoAlarm warnings are kept as an archive record, not
+    as operational redistribution, and say so where they are shown. Exports
+    leave out anything whose licence does not clearly allow redistribution
+    (news, MeteoAlarm). Since 0.7.0 the local model also proposes
+    cause-and-effect links between stored events; a proposal is shown
+    labelled as the model's proposal and counts as a link only after an
+    operator approves it. Since 0.8.0 it also keeps three public number
+    series (ČNB exchange rates, Eurostat inflation, GFZ Kp index; no personal
+    data) and flags unusual days in them by arithmetic, again only as
+    proposals. Since 0.9.0 it stores security news from NÚKIB and CESNET
+    (titles and summaries; no names are extracted from them) and ENISA's
+    list of exploited vulnerabilities. Since 0.10.0 articles about the same
+    story are grouped by their embeddings and the local model sorts each
+    news story into one topic from a fixed list (the lanes of the
+    timeline) and says which word in the text tells when the reported
+    thing happened; the date is then computed in code. Since 0.12.0 it
+    also stores official press releases and statistics (European
+    Commission, ČSÚ, ČNB, CERT-EU) and USGS earthquake records; these are
+    scored from a table and no names are extracted from them. Since 0.13.0
+    the same holds for press releases of Czech ministries, the EU Council,
+    the ECB, UN News, WHO outbreak news, NASA, NOAA and Hacker News
+    stories (titles and links; authors are not kept). Since 0.14.0
+    operators can mark turning points and file stories under them; when an
+    operator looks a historical event up, the name they type is sent to
+    wikidata.org (Wikimedia Foundation, USA) and nothing else is; the
+    typed text may name a person, so this is declared as a transfer
+    outside the EU (operator 2026-11-18). WIKIDATA_LOOKUP=0 turns it off.
+    Operators leave their Authentik username on agent runs, erasures and the decisions they make on proposals (audit).
+    Events are a historical archive and are kept without an erasure horizon
+    (retention -1). On request an admin erases an event or a named entity
+    (with every event that names it) in the app; the erasure is audited by id
+    and leaves a SHA-256 tombstone of the source URL or name so the crawler
+    cannot re-add it. Processing stays on this host (local Ollama); apart
+    from the Wikidata lookup nothing is shared, no profiling, no automated decisions about the people named.
+  legal_basis: "public_task"
+  data_source: not_from_subject          # Art. 14: collected from news, not from the people named
+  special_categories: ["political_opinions"]   # Art. 9, not checked by the parser (see HANDOFF)
+  data_categories:
+    - "name"                 # persons named in news articles (public and private)
+    - "public_role"          # role in the event (e.g. minister, party chair)
+    - "political_opinions"   # positions as reported by the press
+    - "news_content"         # article titles and summaries, source URLs
+    - "username"             # operator who triggered an agent run
+  data_subjects:
+    - "public_figures"       # politicians and officials named in news
+    - "private_individuals"  # people named in general news (crime, accidents, local)
+    - "operators"            # estate users of the app
+  retention_days: -1
+  processors: []             # Ollama on this host; RSS sources are read, not processors
+  transfers_outside_eu: true   # Wikidata lookup: the typed event name goes to wikidata.org (US)
+
+# ── SSO: Authentik forward-auth in front ───────────────────────────────────
+# The app has no login. It reads X-authentik-username/-email/-groups that
+# Traefik copies from the outpost (believed only with the edge token): nos-providers / nos-admins = admin,
+# nos-managers = editor (run agents, emergency stop), everyone else = viewer.
+# No per-user state beyond the audit username, hence forward_auth.
+authentik:
+  mode: forward_auth
+  provider_type: forward_auth
+  client_id: nos-chronos
+  client_secret: "{{ nos_derived_secrets.oidc_chronos }}"
+  slug: chronos
+  name: 'Chronos Timeline'
+  enabled: true
+  launch_url: "https://chronos.apps.{{ tenant_domain | default('dev.local') }}"
+  tier: 3   # user-tier: read access for nos-users (operator decision 2026-11-17)
+
+compose:
+  services:
+    chronos:
+      image: "chronos-timeline:0.14.0"
+      container_name: chronos
+      restart: unless-stopped
+      # Traefik is the only edge; no host port.
+      expose:
+        - "8787"
+      environment:
+        # Ollama's native API (only it honours keep_alive). The GPU is shared with nOS:
+        # short keep_alive, one request at a time, at most AGENT_BATCH_SIZE events per agent per run.
+        - "LLM_BASE_URL=http://host.docker.internal:11434"
+        - "LLM_MODEL=qwen3.5:9b"
+        - "LLM_KEEP_ALIVE=2m"
+        - "AGENT_BATCH_SIZE=10"
+        - "EMBEDDING_MODEL=nomic-embed-text"
+        - "EMBEDDING_DIM=768"
+        - "PIPELINE_INTERVAL_MIN=60"
+        - "CHRONOS_ADMIN_GROUPS=nos-providers,nos-admins"
+        - "CHRONOS_EDITOR_GROUPS=nos-managers"
+        # Operator decision: a contact (URL or address) the crawler sends in its User-Agent, so a feed
+        # owner can reach whoever runs this. Unset = "Chronos-Crawler/0.6" with no contact.
+        #   - "CRAWLER_CONTACT=<contact>"
+        # Traefik sends this as X-Nos-Edge-Token behind Authentik; the app believes the
+        # X-authentik-* headers only with it and refuses to start without it.
+        - "EDGE_TOKEN=$SERVICE_EDGE_TOKEN"
+      extra_hosts:
+        - "host.docker.internal:host-gateway"
+      volumes:
+        - chronos_data:/data
+      # Hardening: the process needs no privileges and writes only to /data.
+      user: "1000:1000"            # the image's node user
+      read_only: true
+      tmpfs:
+        - /tmp
+      cap_drop:
+        - ALL
+      security_opt:
+        - "no-new-privileges:true"
+      mem_limit: 512m
+      cpus: 1.0
+
+  volumes:
+    chronos_data:
+
+nginx:
+  auth: "proxy"
+  rbac_tier: 3

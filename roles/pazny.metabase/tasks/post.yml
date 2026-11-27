@@ -201,3 +201,18 @@
          else ('already converged' if (_mb_session_new.status | default(0) == 200)
                else 'DRIFT — manual reset required (both old and new passwords rejected)') }}
   when: _mb_ready.status | default(0) == 200 and _mb_setup_token | default('', true) | length == 0
+
+# Success is read from the legs' own statuses, never implied by attempting them
+# (n8n hid a never-created owner behind failed_when: false for months, 2026-09-21).
+- name: "[pazny.metabase Post] Admin credential must land (no silent green)"
+  ansible.builtin.assert:
+    that: >-
+      _mb_setup.status | default(0) == 200
+      or _mb_session_new.status | default(0) == 200
+      or _mb_pw_reset.status | default(0) in [200, 204]
+    fail_msg: >-
+      Metabase admin is unreachable by every leg: /api/setup, the current-password login
+      and the previous-prefix reset all failed. Reset user 1 in the metabase database by hand.
+  when:
+    - not ansible_check_mode
+    - _mb_ready.status | default(0) == 200

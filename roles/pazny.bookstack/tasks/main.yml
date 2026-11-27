@@ -40,7 +40,7 @@
   # `https://example.com`, DB_HOST stayed `localhost`, and the app 500'd on
   # every request. We now own .env on the host side. If an existing broken
   # install fails migrations with "Table 'users' already exists", drop the
-  # bookstack DB (or re-run with `-e blank=true`) and re-apply.
+  # bookstack DB (or re-run with `nos --remove=data --confirm`) and re-apply.
 
 - name: "[pazny.bookstack] Render compose override fragment"
   ansible.builtin.template:

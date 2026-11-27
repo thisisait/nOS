@@ -268,6 +268,19 @@ services:
            Operator dump by email from Recipient / User tables. Unverified
            live — method:manual until a read-only SQL one-liner is proven."
 
+  - id: app_chronos
+    flag: apps_runner_enabled
+    method: manual
+    note: "libSQL /data/chronos.db in the chronos container: audit rows with
+           the subject's Authentik username; for a person named in news, the
+           events and entity rows naming them. Unverified live — method:manual."
+
+  - id: app_rodina
+    flag: apps_runner_enabled
+    method: manual
+    note: "What the site shows about a person comes from the genealogy project's data/ (built
+           into rodina-web); the kin gate holds no address (hashed counters only). The operator
+           exports the person's entries from data/. Unverified live — method:manual."
   - id: app_twofauth
     flag: apps_runner_enabled
     method: manual

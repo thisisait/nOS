@@ -14,8 +14,13 @@ change). Input: `## Built` in `~/.cache/nos-roadmap-loop/ledger.md`.
 - Run `git fetch -q origin`. The batch is `origin/loop/dev`: every `## Built`
   row is already in it, in order (roadmap-loop fast-forwards each one).
 - Create `integrate/<YYYY-MM-DD>` at `origin/loop/dev`. If `origin/dev` is not
-  an ancestor of it, merge `origin/dev` in. Add the session's own fix
-  branches by cherry-pick.
+  an ancestor of it, merge `origin/dev` in.
+- Run `tools/loop-branch-guard.py origin/dev origin/loop/dev` before anything else is added.
+  Each `HELD` line is a loop commit that touched tests, gates, the ratchet, `.claude/`, CI
+  workflows, the push guards or operator files, which the loop must not write. Read each one in
+  a fresh context: drop its branch (a `## Roadblocks` line), or keep it only when a ruling in
+  the row covers it and say so in the batch file. Never keep one silently (operator 2026-11-26).
+- Then add the session's own fix branches by cherry-pick; they are outside that range.
 - Generated files conflict by nature (the graph, the body plan, the imprint,
   the pin). Take either side, then run `tools/regenerate.py` after the last
   pick. Commit the result as
@@ -38,7 +43,7 @@ ruling it cites.
 
 - Create a fixed detached worktree, `~/.cache/nos-roadmap-loop/suite-wt`, at
   the batch head (`git worktree prune` first).
-- Run `tests/fast.sh > ~/.cache/nos-roadmap-loop/suite-<date>.log 2>&1` and
+- Run `tests/fast.sh tests --ignore=tests/e2e > ~/.cache/nos-roadmap-loop/suite-<date>.log 2>&1` and
   wait for the `total:` line. Read the summary with
   `grep -E '^(total:|FAILED|ERROR)'`.
 - Run repo-wide ansible-lint if any YAML under roles/, tasks/ or playbooks/
@@ -89,8 +94,8 @@ It runs on its own cadence (every ~2 h) and needs no prompt from the operator fo
 - **Integrate** when `watch.md` says `integrate:` or the loop has been idle with Built rows.
   Landing on dev stays the operator's: hand him one command.
 - **Answer the explore drafts** in `~/.cache/nos-roadmap-loop/explore/`. Read the code the draft
-  names; in `top-to-loop.md` write `revise: <what>` at least once before `accepted`, so every
-  spec gets two rounds. On accept, capture or update the row with `/dtt-capture` (body = the
+  names; a complete draft that needs no ruling is `accepted` in round 1, and `revise: <what>`
+  is only for a real gap (2026-11-14). On accept, capture or update the row with `/dtt-capture` (body = the
   spec, ruling line if any) and commit + `nos dtt seed --sync`.
 - **Rule from precedent.** A choice the operator's earlier rulings or the doctrine already
   decide (done → review, ssot/doctrine/gates.md §7, organic names, no new Latte page…) is ruled by citing them.

@@ -111,6 +111,15 @@
 - slug: app-credentials-in-nos
   parent: vault
   track: security
+- slug: app-edge-token
+  parent: ''
+  track: security
+- slug: app-ingest-door
+  parent: manifest-app-hosting-gaps
+  track: platform
+- slug: app-same-origin-tiles
+  parent: manifest-app-hosting-gaps
+  track: platform
 - slug: app-standards-are-parsed
   parent: face-app-builder
   track: security
@@ -294,6 +303,9 @@
 - slug: ci-macos-idempotence-step
   parent: body-habitat
   track: release
+- slug: ci-macos-lane-gates
+  parent: macos-idempotence-four-changes
+  track: release
 - slug: ci-macos14-lane
   parent: body-habitat
   track: release
@@ -356,6 +368,9 @@
   track: platform
 - slug: config-d-mail-social
   parent: default-config-split
+  track: platform
+- slug: config-d-tenant-head
+  parent: config-split-edge
   track: platform
 - slug: config-layering-docs
   parent: default-config-split
@@ -429,6 +444,9 @@
 - slug: converge-host-skip
   parent: converge-speed
   track: platform
+- slug: converge-host-skip-doc
+  parent: converge-host-skip
+  track: platform
 - slug: converge-keap-churn
   parent: archive
   track: cortex
@@ -440,6 +458,9 @@
   track: platform
 - slug: converge-plugin-vars
   parent: converge-speed
+  track: platform
+- slug: converge-recap-reader
+  parent: converge-watch
   track: platform
 - slug: converge-small-cuts
   parent: converge-speed
@@ -530,6 +551,9 @@
   track: security
 - slug: csv-party-importer-leaks-id
   parent: digest-review-remediation
+  track: security
+- slug: custody-keychain-write-off-argv
+  parent: wing-apply-through-medulla
   track: security
 - slug: daemon-manifest-drift
   parent: body-organ
@@ -1095,6 +1119,9 @@
 - slug: fixture-halyard-studio
   parent: fixtures
   track: platform
+- slug: fixture-kolben-expected
+  parent: fixture-kolben-it
+  track: platform
 - slug: fixture-kolben-it
   parent: fixtures
   track: platform
@@ -1124,6 +1151,9 @@
   track: platform
 - slug: forum-token-in-access-log
   parent: nos-forum
+  track: security
+- slug: forward-auth-sign-out-route
+  parent: ''
   track: security
 - slug: foss-crm-and-wordpress-cms
   parent: consulting-firm-deployment
@@ -1158,6 +1188,9 @@
 - slug: gate-diet
   parent: forge
   track: platform
+- slug: gate-diet-cargo-leftovers
+  parent: gate-diet-proxies-nightly
+  track: platform
 - slug: gate-diet-cold-files
   parent: gate-diet
   track: platform
@@ -1170,6 +1203,9 @@
 - slug: gate-diet-role-journeys
   parent: gate-diet
   track: platform
+- slug: gated-net-is-not-traefik-only
+  parent: ''
+  track: security
 - slug: gatehouse
   parent: ''
   track: body
@@ -1230,6 +1266,9 @@
 - slug: geolibre-atlas-serve
   parent: nos-atlas
   track: platform
+- slug: geolibre-bump-3-9
+  parent: ''
+  track: platform
 - slug: gis-property
   parent: commons
   track: platform
@@ -1239,6 +1278,9 @@
 - slug: gitlab-18-11-13-upgrade
   parent: forge
   track: security
+- slug: grafana-check-trend-panel
+  parent: grafana-check-trend-view
+  track: agents
 - slug: grafana-check-trend-view
   parent: loop-grafana-check
   track: agents
@@ -1302,6 +1344,9 @@
 - slug: identity-reader-knows-nos-pulse
   parent: ''
   track: security
+- slug: image-cache-root-ruling
+  parent: portable-ssd-offline-replication
+  track: platform
 - slug: image-sbom-cleanup-never-raises
   parent: ''
   track: security
@@ -1350,6 +1395,9 @@
 - slug: imprint-short-for-local-models
   parent: imprint
   track: agents
+- slug: imprint-three-entrances
+  parent: imprint
+  track: platform
 - slug: invoice-identity-cross-source
   parent: ''
   track: platform
@@ -1425,6 +1473,9 @@
 - slug: iris-choice-followups
   parent: iris-genui-forms
   track: agents
+- slug: iris-claims-unperformed-action
+  parent: iris-subagents-finish
+  track: agents
 - slug: iris-dashboards-in-keap
   parent: iris-genui-workspace-poc
   track: face
@@ -1445,6 +1496,9 @@
   track: face
 - slug: iris-face-app
   parent: pupil-web-remote
+  track: face
+- slug: iris-face-journey-workspaces
+  parent: iris-subagents-finish
   track: face
 - slug: iris-face-stale-session-refused
   parent: ''
@@ -1509,6 +1563,9 @@
 - slug: iris-over-mcp-to-hermes-openhuman
   parent: ''
   track: agents
+- slug: iris-panel-overflows-window
+  parent: iris-subagents-finish
+  track: face
 - slug: iris-place-here-or-new-tab
   parent: iris-genui
   track: agents
@@ -1524,6 +1581,12 @@
 - slug: iris-speaks-cortex-lang
   parent: iris-genui-bench
   track: cortex
+- slug: iris-stop-ends-the-turn
+  parent: iris-subagents-finish
+  track: agents
+- slug: iris-subagent-journey-bench
+  parent: iris-subagent-journey-gaps
+  track: agents
 - slug: iris-subagent-journey-gaps
   parent: wits-thalamus
   track: agents
@@ -1803,6 +1866,9 @@
 - slug: loop-news-scout
   parent: loop-definition-model
   track: agents
+- slug: loop-news-scout-consolidate
+  parent: loop-news-scout
+  track: agents
 - slug: loop-operator-model
   parent: sere
   track: agents
@@ -1851,6 +1917,9 @@
 - slug: loop-verdict-vacuity
   parent: ''
   track: agents
+- slug: loops-doctrine-7-1-closed
+  parent: iris-loops
+  track: cortex
 - slug: loops-maintenance-pause
   parent: ''
   track: agents
@@ -1859,6 +1928,9 @@
   track: release
 - slug: managed-resources-manifest
   parent: spine-converge
+  track: platform
+- slug: manifest-app-hosting-gaps
+  parent: ''
   track: platform
 - slug: manifest-origin
   parent: body-habitat
@@ -2022,6 +2094,9 @@
 - slug: nos-immune
   parent: watch
   track: security
+- slug: nos-land-verb
+  parent: cli-limbs-more-verbs
+  track: platform
 - slug: nos-linux-fhs-layout
   parent: nos-system-user-linux
   track: platform
@@ -2232,6 +2307,9 @@
 - slug: paperclip-linked-worktree-refused
   parent: ''
   track: agents
+- slug: paperclip-mem-and-own-backups
+  parent: symbiosome-tidy-paperclip
+  track: platform
 - slug: paperclip-nested-git-rw
   parent: paperclip-workspace-mounts-no-git
   track: security
@@ -2586,6 +2664,9 @@
 - slug: restic-prune-runs
   parent: keel
   track: platform
+- slug: restore-rerun-same-date
+  parent: restic-prune-runs
+  track: platform
 - slug: retire-healing-words
   parent: body-plan
   track: platform
@@ -2645,6 +2726,9 @@
   track: security
 - slug: scrub-bare-token-shapes
   parent: watch
+  track: security
+- slug: scrub-pem-blocks
+  parent: scrub-bare-token-shapes
   track: security
 - slug: sec
   parent: vault
@@ -2928,6 +3012,9 @@
 - slug: tables-system-flag
   parent: face
   track: face
+- slug: tables-system-flag-metadata
+  parent: tables-system-flag
+  track: face
 - slug: tag-gate-reads-blocking-jobs
   parent: forge
   track: release
@@ -2997,6 +3084,9 @@
 - slug: tofu-state-out-of-the-checkout
   parent: estate-dev-split
   track: platform
+- slug: tofu-tier-binding-hardening
+  parent: tofu-tier-binding-missing
+  track: security
 - slug: tofu-tier-binding-missing
   parent: gatehouse
   track: security
@@ -3207,6 +3297,9 @@
 - slug: wing-inc1-latte-gone
   parent: wing-organ-without-face
   track: face
+- slug: wing-inc1-questions-history
+  parent: wing-inc1-inbox-app
+  track: face
 - slug: wing-inc2-agents-timeline
   parent: wing-organ-without-face
   track: face
@@ -3215,6 +3308,9 @@
   track: face
 - slug: wing-inc2-latte-delete
   parent: wing-inc2-face-cutover
+  track: face
+- slug: wing-inc2-latte-retire
+  parent: wing-inc2-agents-timeline
   track: face
 - slug: wing-inc2-repoint-producers
   parent: wing-inc2-face-cutover

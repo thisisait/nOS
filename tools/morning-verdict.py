@@ -104,9 +104,12 @@ def advisory(now: datetime) -> tuple[str, str, dict]:
 
 
 def rows(now: datetime) -> list[dict]:
-    day = now.strftime("%Y-%m-%d")    # occurred_at is kind date: an epoch int there is refused
+    day = now.strftime("%Y-%m-%d")
+    # a kind-date cell takes epoch seconds (KEAP 400 "expected epoch seconds" on "2026-11-16", every row,
+    # 11-15 and 11-16); noon UTC of the slug's day, the shape roadmap-update writes
+    noon = int(now.replace(hour=12, minute=0, second=0, microsecond=0).timestamp())
     said = {n: run(n) for n in RUN} | {ADVISORY: advisory(now)}
-    return [{"slug": f"{day}-{n}", "occurred_at": day, "reader": n,
+    return [{"slug": f"{day}-{n}", "occurred_at": noon, "reader": n,
              "verdict": v, "why": why, "counts": counts}
             for n, (v, why, counts) in said.items()]
 

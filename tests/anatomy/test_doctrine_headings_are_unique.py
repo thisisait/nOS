@@ -4,11 +4,10 @@ Subject: ssot/doctrine/ssot.md. The citation indexer
 (`tools/doctrine-cite.py` `index_doc`) last-write-wins on a repeated section
 number, so two `## 9` headings silently become one address. This gate pins
 ssot/doctrine/*.md and docs/doctrine/*.md. A duplicate number outside that tree is not a nos-sot
-address; docs/workflow-standard.md still carries two headings numbered 9.
+address.
 
-Retro-red: the checker fails a synthetic duplicate (title and number) and
-fails the live companion on number `9`. A check that cannot fail on a broken
-input pins nothing.
+Retro-red: the checker fails a synthetic duplicate (title and number). A
+check that cannot fail on a broken input pins nothing.
 """
 from __future__ import annotations
 
@@ -22,7 +21,6 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 DOCTRINE = REPO / "docs" / "doctrine"
-WORKFLOW_STANDARD = REPO / "docs" / "workflow-standard.md"
 
 ATX = re.compile(r"^(#{1,6})\s+(.+?)\s*$", re.M)
 
@@ -85,15 +83,3 @@ def test_every_doctrine_file_has_unique_headings(tool):
             if number_dups:
                 collisions.append(f"{rel} duplicate section numbers: {number_dups}")
     assert not collisions, "doctrine heading collisions:\n  " + "\n  ".join(collisions)
-
-
-def test_workflow_standard_section_nine_is_a_named_collision(tool):
-    """Companion, not constitution. If the two §9 headings are repaired,
-    delete this test. File on this line: docs/workflow-standard.md.
-    """
-    text = WORKFLOW_STANDARD.read_text(encoding="utf-8")
-    dups = _dups(_numbered_ids(tool, text))
-    assert dups.get("9") == 2, (
-        "docs/workflow-standard.md no longer has two headings numbered 9 — "
-        "remove this test"
-    )

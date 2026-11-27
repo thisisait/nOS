@@ -204,6 +204,32 @@
 						card {a.approval}: {a.tool} in session {a.session}, asked {a.asked_at}
 					</li>{/each}
 			</ul>{/if}
+	{:else if msg.t === 'plan_evidence'}
+		<!-- A bench reads it over the socket; said here for any other host of a message. -->
+		<ul class="muted">
+			<li>
+				plan of {msg.session}: {msg.valid === undefined
+					? 'never planned'
+					: msg.valid
+						? 'valid'
+						: 'not valid'}{#if msg.registry_hash}, registry {msg.registry_hash}{/if}{#if msg.fallback},
+					fell back ({msg.fallback}){/if}
+			</li>
+			{#if msg.pipeline}<li>pipeline {msg.pipeline}</li>{/if}
+			{#if msg.table}<li>
+					table {msg.table.said} → {msg.table.id}{#if msg.table.title}
+						({msg.table.title}){/if}
+				</li>{/if}
+			{#if msg.asked}<li>
+					asked under {msg.asked.engine}{msg.asked.constrained ? ', constrained' : ''}, primer {msg
+						.asked.primer_sha256}{#if msg.asked.grammar_sha256}, grammar {msg.asked
+							.grammar_sha256}{/if}, catalogue {msg.asked.catalogue}
+					{msg.asked.catalogue_digest}
+				</li>{/if}
+			{#if msg.plan_run}<li>run by {msg.plan_run}</li>{/if}
+			{#if msg.model_calls !== undefined}<li>model calls {msg.model_calls}</li>{/if}
+			{#if msg.tokens !== undefined}<li>tokens {msg.tokens}</li>{/if}
+		</ul>
 	{:else if msg.t === 'workspace'}
 		<p class="muted">
 			{msg.doc ? 'the workspace the thalamus holds' : 'the thalamus holds no workspace yet'}

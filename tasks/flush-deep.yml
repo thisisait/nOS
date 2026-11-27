@@ -2,9 +2,9 @@
 # ==============================================================================
 # FLUSH: DEEP — extra cleanup on top of blank-reset.yml
 #
-# Run: ansible-playbook main.yml -K -e flush=deep
+# Run: nos --remove=deep --confirm
 #
-# What flush=deep adds beyond blank=true:
+# What remove=deep adds beyond remove=data:
 #   - Docker: prune ALL images (not just stopped container residue)
 #   - Docker: prune build cache
 #   - Homebrew: stale package versions + download cache

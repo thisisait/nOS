@@ -126,6 +126,7 @@ Each refusal is named `standard <rule>:` and says how to fix it
 | `env-interpolation` | `$VAR` / `${VAR}` anywhere but the magic tokens; `$$` is a literal `$` |
 | `platform-secret` | a reference to `KEAP_*`, `WING_*`, `BONE_*`, `*_API_TOKEN` and other platform credentials |
 | `bind-mount` / `docker-socket` | a host path mount (named volumes only), `docker.sock` |
+| `host-file` | `extends`, `env_file`, `label_file`, `build`: each reads a host file the parser never sees |
 | `floating-image-tag` | no tag, `latest`, `alpine`, `3`, `15-alpine`; a `x.y` version, a date tag or `@sha256:` passes |
 | `network-not-apps-net` | declared `networks:` without `apps_net` (omit it and the runner attaches apps_net + Traefik's net; `[gated_net]` alone is SEC-02) |
 | `no-resource-limits` | a service without `mem_limit` and `cpus` (or `deploy.resources.limits`) |
@@ -147,6 +148,7 @@ suffix → same value):
 | `$SERVICE_PASSWORD_<SUFFIX>`       | 32-char random; same SUFFIX = same value            |
 | `$SERVICE_BASE64_32_<NAME>`        | 32-byte base64                                      |
 | `$SERVICE_BASE64_64_<NAME>`        | 64-byte base64                                      |
+| `$SERVICE_EDGE_TOKEN`             | 32-char random; Traefik sends it as `X-Nos-Edge-Token` (`auth: proxy`) |
 
 Generated secrets persist to `credentials.yml` under the
 `app_secrets:` key (idempotent — re-running with the same prefix
@@ -165,6 +167,15 @@ nginx:
 in. `oidc` skips the gate and instead pushes the app's OAuth client
 config into Authentik (`authentik_oidc_apps` is extended at run
 time).
+
+An app that reads identity from the `X-authentik-*` headers must also
+check `X-Nos-Edge-Token`: any container on `apps_net`/`shared_net` can
+reach the app directly and forge those headers. Traefik sets the edge
+token on every proxied request (overwriting a client-sent one), so pass
+it in with `- "EDGE_TOKEN=$SERVICE_EDGE_TOKEN"` and reject a request
+whose header does not match (constant-time compare). Authentik cannot
+sign a JWT for a proxy provider (it forces `signing_key = None`), so a
+signature check is not an alternative.
 
 ---
 
@@ -240,6 +251,26 @@ down on a skipped task) — `docker compose -p apps down` cleans them
 manually.
 
 ---
+
+## A small site for people who are not estate users: the kin gate
+
+`auth: none` plus a gate inside the app, for a household site whose readers are not estate users (first:
+`apps/rodina.yml`, row kin-recognition-gate). It is a declared exception to the SSO rule: say so in `gdpr.purpose`.
+
+The app ships two images. The kin gate (`kin:<ver>`, stdlib Python, today built from the genealogy
+project's `nos/kin/` with its tests) and the site's nginx, which sends every path through
+`auth_request /_kin/check` and proxies `/_kin/` to the gate. The contract:
+
+| | |
+|---|---|
+| `KIN_SECRET` | `$SERVICE_BASE64_64_KIN`, minted by nOS |
+| `KIN_ALLOW` | the listed emails, `$SERVICE_PASSWORD_ALLOW` seeded in `credentials.yml` → `app_secrets.<app>` |
+| `KIN_SMTP_USER` / `KIN_SMTP_PASSWORD` | seeded the same way (default host smtp.gmail.com:465) |
+| `KIN_PUBLIC_URL` | `https://$SERVICE_FQDN_<APP>` |
+| paths | `/_kin/check` (204/401), `/_kin/login`, `/_kin/send`, `/_kin/open`, `/_kin/logout`, `/_kin/healthz` |
+
+An unseeded value is minted as a random string, so the gate fails closed. A second app copies `apps/rodina.yml`
+and its nginx conf; when there are two, the gate image moves into nOS as its own cell.
 
 ## Troubleshooting
 

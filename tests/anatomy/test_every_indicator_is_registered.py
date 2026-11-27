@@ -73,3 +73,12 @@ def test_every_entry_names_a_source_that_exists():
     gone = [k for k, v in reg["indicators"].items() if not (REPO / v["source"]).exists()]
     gone += [k for k in reg["not_indicators"] if not (REPO / "tools" / k).exists()]
     assert not gone, "registry entries whose source is gone: " + ", ".join(sorted(gone))
+
+
+def test_every_indicator_can_be_judged():
+    """The immune-verdicts `cell` options are exactly the registry keys: a new cell can be judged."""
+    defn = yaml.safe_load((REPO / "state/keap-tables/immune-verdicts.table.yml").read_text(encoding="utf-8"))
+    cell = next(c for c in defn["schema"]["columns"] if c["key"] == "cell")
+    keys = set(_registry()["indicators"])
+    assert set(cell["options"]) == keys, (
+        f"missing: {sorted(keys - set(cell['options']))}  stale: {sorted(set(cell['options']) - keys)}")

@@ -378,6 +378,10 @@
       - "{{ ears_runtime_dir | default(ansible_facts['env']['HOME'] + '/ears') }}"
       - "{{ face_home | default(ansible_facts['env']['HOME'] + '/face') }}"
       - "{{ acme_home | default(ansible_facts['env']['HOME'] + '/.acme.sh') }}"
+      # Host-organ program homes (bin, log, build tree), all only: deep keeps the build cache
+      # (ruled 2026-11-23). Their launchd plists go in blank-reset, the Linux units in remove-source.
+      - "{{ thalamus_home | default(ansible_facts['env']['HOME'] + '/thalamus') }}"
+      - "{{ receptor_runtime_dir | default(ansible_facts['env']['HOME'] + '/receptor') }}"
       # backup.log + the PLAINTEXT dump staging; the restic repo is the survivor.
       - "{{ ansible_facts['env']['HOME'] }}/backups"
       - "{{ ansible_facts['env']['HOME'] }}/restore-temp"

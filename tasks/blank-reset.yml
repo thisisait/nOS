@@ -2,7 +2,7 @@
 # ==============================================================================
 # BLANK RESET - clean reinstall of all services
 #
-# Run: ansible-playbook main.yml -K -e blank=true
+# Run: nos --remove=data --confirm (reached only through tasks/run-mode.yml)
 #
 # What gets DELETED:
 #   - Docker containers, volumes, compose files
@@ -93,16 +93,7 @@
     {{ docker_bin }} compose
     -f "{{ stacks_dir }}/{{ item }}/docker-compose.yml"
     -p {{ item }} down -v --remove-orphans -t {{ blank_stop_timeout | default(30) }} 2>&1 || true
-  loop:
-    - iiab
-    - observability
-    - infra
-    - apps
-    - devops
-    - b2b
-    - voip
-    - engineering
-    - data
+  loop: "{{ nos_stacks }}"
   failed_when: false
   changed_when: true
 

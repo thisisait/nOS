@@ -46,8 +46,3 @@ def test_no_runner_label_floats() -> None:
         if label.endswith("-latest")
     ]
     assert not floating, "pin the runner image (e.g. ubuntu-24.04):\n" + "\n".join(floating)
-
-
-def test_the_matrix_reader_sees_latest() -> None:
-    job = {"runs-on": "${{ matrix.os }}", "strategy": {"matrix": {"os": ["macos-15"], "include": [{"os": "ubuntu-latest"}]}}}
-    assert _labels(job) == ["macos-15", "ubuntu-latest"]

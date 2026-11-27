@@ -315,6 +315,35 @@ class TestAuthModes(object):
         # No forward-auth middleware
         assert not any("authentik@file" in lbl for lbl in app["traefik_labels"])
 
+    def test_proxy_mode_edge_token_reaches_app_only_via_traefik(self, render, tmp_path):
+        # A peer on apps_net can forge X-authentik-*; the app trusts them only beside the
+        # edge token Traefik sets (overwriting a client's), after authentik, stable per seed.
+        rec = _record()
+        rec["compose"]["services"]["demo"]["environment"].append("EDGE=$SERVICE_EDGE_TOKEN")
+        path = _write_app(tmp_path, "demo", rec)
+        kw = dict(tenant_domain="dev.local", apps_subdomain="apps", extra_eu_registries=[],
+                  strict=False, traefik_network="shared_net")
+        app, secrets, _ = render._process_one(path, secret_seed={}, **kw)
+        token = [e for e in app["compose"]["services"]["demo"]["environment"]
+                 if e.startswith("EDGE=")][0][len("EDGE="):]
+        assert len(token) == 32
+        assert ("traefik.http.middlewares.demo-edge.headers.customrequestheaders."
+                "X-Nos-Edge-Token=" + token) in app["traefik_labels"]
+        chain = [lbl for lbl in app["traefik_labels"]
+                 if lbl.startswith("traefik.http.routers.demo.middlewares=")][0]
+        assert chain.index("authentik@file") < chain.index("demo-edge@docker")
+        again, _, _ = render._process_one(path, secret_seed=secrets, **kw)
+        assert again["traefik_labels"] == app["traefik_labels"]
+        blank, _, _ = render._process_one(path, secret_seed={"demo": {"EDGE_TOKEN": ""}}, **kw)
+        edge = [lbl for lbl in blank["traefik_labels"] if "X-Nos-Edge-Token=" in lbl][0]
+        assert len(edge.split("X-Nos-Edge-Token=")[1]) == 32
+        oidc = _write_app(tmp_path, "demo", _record(nginx_overrides={"auth": "oidc"}))
+        app, _, _ = render._process_one(oidc, secret_seed={}, **kw)
+        assert not any("X-Nos-Edge-Token" in lbl for lbl in app["traefik_labels"])
+        from module_utils import nos_app_parser
+        assert nos_app_parser._interpolations("$SERVICE_EDGE_TOKEN") == []
+        assert nos_app_parser._interpolations("$SERVICE_EDGE_TOKEN_X") == ["$SERVICE_EDGE_TOKEN_X"]
+
     def test_proxy_mode_authentik_entry_has_external_host(self, render, tmp_path):
         path = _write_app(tmp_path, "demo", _record())
         app, _, _ = render._process_one(

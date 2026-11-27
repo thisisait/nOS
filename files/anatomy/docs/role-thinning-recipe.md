@@ -154,7 +154,7 @@ git show HEAD~1:roles/pazny.${SVC}/templates/compose.yml.j2 \
 ### Step 6: Wet-test parity (the real gate)
 
 ```bash
-ansible-playbook main.yml -K -e blank=true
+nos --remove=data --confirm
 ```
 
 Expected after blank:

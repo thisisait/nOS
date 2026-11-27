@@ -7,7 +7,7 @@
 #
 # After the startup wizard, /Startup/* answers 403 (10.11+: 401). Pro non-blank runy
 # reconverge password via AuthenticateUserByName -> POST /Users/{id}/Password
-# with previous_password_prefix for the OLD password. Degrades gracefully at DRIFT.
+# with previous_password_prefix for the OLD password. DRIFT fails the run (terminal assert).
 # ==============================================================================
 
 - name: "[pazny.jellyfin Post] Wait for API"
@@ -173,6 +173,77 @@
          else ('updated' if (_jf_pw_reset.status | default(0) in [200, 204])
                else ('DRIFT — manual reset required' if (_jf_startup.status | default(0) in [401, 403]) else 'fresh install')) }}
   when: _jf_ready.status | default(0) == 200
+
+# ── Quick Connect (jellyfin_quick_connect): TV/phone code sign-in, on by default ──
+# Own admin token: the SSO one below exists only with Authentik. Read back from the anonymous endpoint.
+- name: "[pazny.jellyfin Post] Admin token for Quick Connect"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ jellyfin_port | default(8096) }}/Users/AuthenticateByName"
+    method: POST
+    body_format: json
+    headers:
+      Authorization: 'MediaBrowser Client="nOS", Device="Ansible", DeviceId="ansible-reconverge", Version="1.0"'
+    body:
+      Username: "{{ jellyfin_admin_user | default('admin') }}"
+      Pw: "{{ jellyfin_admin_password | default(nos_derived_secrets.jellyfin) }}"
+    status_code: [200, 401]
+    timeout: 10
+  register: _jf_qc_auth
+  when: _jf_ready.status | default(0) == 200
+  changed_when: false
+  failed_when: false
+  no_log: true
+
+# Success is read from the legs' own statuses, never implied by attempting them
+# (n8n hid a never-created owner behind failed_when: false for months, 2026-09-21).
+- name: "[pazny.jellyfin Post] Admin credential must land (no silent green)"
+  ansible.builtin.assert:
+    that: >-
+      _jf_user.status | default(0) in [200, 204]
+      or _jf_auth_new.status | default(0) == 200
+      or _jf_pw_reset.status | default(0) in [200, 204]
+      or _jf_qc_auth.status | default(0) == 200
+    fail_msg: >-
+      Jellyfin admin is not provisioned: the startup user POST, the current-password login,
+      the previous-prefix reset and the Quick Connect login all failed
+      (startup read {{ _jf_startup.status | default('none') }}).
+  when:
+    - not ansible_check_mode
+    - _jf_ready.status | default(0) == 200
+
+- name: "[pazny.jellyfin Post] Read the server configuration"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ jellyfin_port | default(8096) }}/System/Configuration"
+    headers:
+      Authorization: "MediaBrowser Token=\"{{ _jf_qc_auth.json.AccessToken | default('') }}\""
+    timeout: 10
+  register: _jf_sysconf
+  when: _jf_qc_auth.json.AccessToken is defined
+  no_log: true
+
+- name: "[pazny.jellyfin Post] Set Quick Connect to {{ jellyfin_quick_connect | default(true) | bool }}"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ jellyfin_port | default(8096) }}/System/Configuration"
+    method: POST
+    body_format: json
+    body: "{{ _jf_sysconf.json | combine({'QuickConnectAvailable': jellyfin_quick_connect | default(true) | bool}) }}"
+    headers:
+      Authorization: "MediaBrowser Token=\"{{ _jf_qc_auth.json.AccessToken | default('') }}\""
+    status_code: [200, 204]
+    timeout: 10
+  when:
+    - _jf_sysconf.json is defined
+    - _jf_sysconf.json.QuickConnectAvailable | default(true) != (jellyfin_quick_connect | default(true) | bool)
+  changed_when: true
+  no_log: true
+
+- name: "[pazny.jellyfin Post] Read back — Quick Connect matches the knob"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ jellyfin_port | default(8096) }}/QuickConnect/Enabled"
+    timeout: 10
+  register: _jf_qc_now
+  when: _jf_ready.status | default(0) == 200   # anonymous: a refused admin login still gets checked
+  failed_when: _jf_qc_now.json | default(none) != (jellyfin_quick_connect | default(true) | bool)
 
 # ── SSO-Auth provider via the plugin API (v4 wipes a hand-rendered XML) ──────
 # Existing fields (CanonicalLinks = per-user links) are kept; only ours change.

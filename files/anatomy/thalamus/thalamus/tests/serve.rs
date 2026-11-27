@@ -165,6 +165,11 @@ thread_local! {
 }
 
 thread_local! {
+    /// The next rig's turn token ceiling (iris_turn_token_ceiling); 0 is off.
+    static TURN_TOKENS: std::cell::Cell<i64> = const { std::cell::Cell::new(0) };
+}
+
+thread_local! {
     /// The next rig's Wing door for start_agent; the default is none configured.
     static WING: std::cell::RefCell<serve::WingDoor> = Default::default();
 }
@@ -215,6 +220,7 @@ fn rig_deciders(name: &str, map: serde_json::Value, (keap_url, keap): (String, S
             p
         } else { d.clone() },
         tree_max: 50,
+        turn_tokens: TURN_TOKENS.with(|c| c.take()),
         wing: WING.with(|w| w.take()),
         quiet: Default::default(),
     };
@@ -692,6 +698,27 @@ fn commit_without_a_decision_row_is_err() {
         &serde_json::json!({"approval": approval, "decision": "approve"})).unwrap();
     assert!(rig.srv.commit(&who, ok).is_ok());
     assert_eq!(posts(&rig).len(), 1);
+}
+
+#[test]
+fn an_approved_verdict_write_is_refused_at_commit() {
+    // Row immune-verdicts-write-path: an Iris card or a form never writes a verdict, even approved.
+    let rig = rig_n("verdict", mapped(), vec![ROWS.into(), POSTED.into()], vec![answer("hi")]);
+    let who = alice();
+    let (uuid, approval) = ("0b7e6f3a-2c1d-4e5f-8a9b-1c2d3e4f5a6b", "1b7e6f3a-2c1d-4e5f-8a9b-1c2d3e4f5a6b");
+    let ok = {
+        let l = rig.srv.ledger.lock().unwrap();
+        l.start(&thalamus::ledger::Session { uuid, agent_name: "iris", agent_version: 1, actor: "user:alice-smith",
+            model_uri: "ollama-qwen" }).unwrap();
+        l.record(uuid, Kind::ApprovalRequest, Some("propose_row_edit"), &serde_json::json!({
+            "approval": approval, "table": "immune-verdicts", "row_id": "r1",
+            "cells": [{"key": "verdict", "old": "unsure", "new": "false-alarm"}]})).unwrap();
+        l.record(uuid, Kind::ApprovalDecision, Some("propose_row_edit"),
+            &serde_json::json!({"approval": approval, "decision": "approve"})).unwrap()
+    };
+    let err = rig.srv.commit(&who, ok).unwrap_err();
+    assert!(err.contains("operator's face edit"), "{err}");
+    assert!(posts(&rig).is_empty(), "a verdict was written");
 }
 
 // --- increment 7: the three controls, raised without the model ---
@@ -1752,7 +1779,7 @@ fn show_offers_every_chart_kind_and_axis() {
     let schema = serve::show_schema();
     let chart = schema["properties"]["component"]["oneOf"].as_array().unwrap().iter()
         .find(|b| b["properties"]["kind"]["const"] == "chart").unwrap()["properties"]["props"].clone();
-    let kinds = ["bar", "stacked_bar", "line", "area", "scatter", "pie"];
+    let kinds = ["bar", "stacked_bar", "line", "area", "scatter", "pie", "horizontal_bar", "radar", "radial"];
     assert_eq!(chart["properties"]["chart"]["enum"], serde_json::json!(kinds));
     assert_eq!(chart["properties"]["x"]["enum"], serde_json::json!(["category", "number", "time"]));
     assert!(chart["required"].as_array().unwrap().contains(&serde_json::json!("x")), "{chart}");
@@ -1761,7 +1788,9 @@ fn show_offers_every_chart_kind_and_axis() {
         assert!(shape.contains(word), "SHOW_SHAPE chart lacks {word:?}: {shape}");
     }
     for k in kinds {
-        let c = serde_json::json!({"kind": "chart", "props": {"chart": k, "x": "number", "series": [{"name": "a", "points": [["3", 5]]}]}});
+        // a radar needs three spokes; every other kind draws one point
+        let points = if k == "radar" { serde_json::json!([["1", 5], ["2", 5], ["3", 5]]) } else { serde_json::json!([["3", 5]]) };
+        let c = serde_json::json!({"kind": "chart", "props": {"chart": k, "x": "number", "series": [{"name": "a", "points": points}]}});
         let c: nos_contract::renderers::Component = serde_json::from_value(c).unwrap_or_else(|e| panic!("{k}: {e}"));
         assert_eq!(c.check(), Ok(()), "{k}");
     }
@@ -1963,7 +1992,7 @@ fn show_kinds_agree_everywhere() {
     assert_eq!(consts, kinds, "show_schema oneOf kind consts");
     let spec = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../contracts/thalamus-shell.yml")).unwrap();
     let spec: serde_yaml_ng::Value = serde_yaml_ng::from_str(&spec).unwrap();
-    let tool_chosen = ["table_results", "row_diff_approval", "table_schema_approval", "column_add_approval", "inbox_list", "approvals_list", "red_status", "markdown", "form", "dashboard", "action_approval", "knowledge_tree", "dendrogram"];
+    let tool_chosen = ["table_results", "row_diff_approval", "table_schema_approval", "column_add_approval", "inbox_list", "approvals_list", "red_status", "markdown", "form", "dashboard", "action_approval", "program_approval", "knowledge_tree", "dendrogram"];
     let mut vocab: Vec<String> = spec["components"]["vocabulary"].as_mapping().unwrap().keys()
         .map(|k| k.as_str().unwrap().to_string()).filter(|k| !tool_chosen.contains(&k.as_str())).collect();
     let mut want: Vec<String> = kinds.iter().map(|k| k.to_string()).collect();
@@ -7876,4 +7905,165 @@ fn a_read_hello_answers_approvals_only_and_leaves_the_live_tab() {
     (&live).write_all(encode(&ToThalamus::ApprovalsOpen).as_bytes()).unwrap();
     assert!(matches!(next(&mut live_r), Some(ToShell::ApprovalsOpen { .. })), "the live tab was taken over by a read hello");
     assert_eq!(session_count(&rig.ledger), 0, "a read hello opened a session");
+}
+
+/// v20 plan_evidence is a privacy boundary (rows cortex-plan-evidence-without-ledger, -contract):
+/// a session with no bench hello gets nothing on the wire, only a refusal in the ledger; a bench
+/// session gets its own last cortex plan and never another session's, and an unvalidated source never crosses.
+#[test]
+fn plan_evidence_is_a_bench_sessions_own() {
+    let rig = rig_n("planevidence", mapped(), vec![ROWS.into()], vec![answer("hi")]);
+    let open = |bench: bool| {
+        let s = connect(&rig.sock);
+        let mut r = BufReader::new(s.try_clone().unwrap());
+        if bench {
+            (&s).write_all(encode(&ToThalamus::Hello { bench: true }).as_bytes()).unwrap();
+        }
+        let session = session_of(&turn(&s, &mut r, None, "the person's own words"));
+        (s, r, session)
+    };
+    let (sa, mut ra, a) = open(true);
+    let (sb, mut rb, b) = open(true);
+    let (sc, mut rc, c) = open(false);
+    let db = rusqlite::Connection::open(&rig.ledger).unwrap();
+    let plan = |run: &str, kind: &str, body: serde_json::Value| {
+        db.execute("INSERT INTO events (ts, run_id, type, task, result_json, source) VALUES ('t', ?1, ?2, 'agent:iris/tool:cortex_plan', ?3, 'thalamus')",
+                   rusqlite::params![run, kind, body.to_string()]).unwrap();
+    };
+    let asked = |src: &str| serde_json::json!({"source": src, "engine": "llamacpp-gbnf", "constrained": true, "primer_sha256": "p",
+                                               "grammar_sha256": "g", "catalogue": "lean", "catalogue_digest": "d"});
+    plan(&a, "agent_tool_use", asked("get(db:a-table)"));
+    plan(&a, "agent_tool_result", serde_json::json!({"valid": true, "registry_hash": "cx1:a", "plan": [["query_rows", {}]],
+                                                    "table": {"said": "a-table", "id": "a-id", "title": "A"}}));
+    // B's model wrote a plan the organ refused twice: model text, which never crosses.
+    plan(&b, "agent_tool_use", asked("UNVALIDATED model text"));
+    plan(&b, "agent_tool_result", serde_json::json!({"valid": false, "errors": ["x"], "fallback": "refused twice", "fallback_kind": "model"}));
+    plan(&c, "agent_tool_use", asked("get(db:c-table)"));
+    plan(&c, "agent_tool_result", serde_json::json!({"valid": true, "registry_hash": "cx1:c", "plan": [["query_rows", {}]]}));
+    let ask = |s: &UnixStream| {
+        (&*s).write_all(encode(&ToThalamus::PlanEvidence {}).as_bytes()).unwrap();
+        (&*s).write_all(encode(&ToThalamus::ApprovalsOpen).as_bytes()).unwrap();
+    };
+    ask(&sa);
+    match next(&mut ra) {
+        Some(ToShell::PlanEvidence { session, pipeline, registry_hash, table, fallback, .. }) => {
+            assert_eq!((session.as_str(), pipeline.as_deref(), registry_hash.as_deref()), (a.as_str(), Some("get(db:a-table)"), Some("cx1:a")));
+            assert_eq!((table.map(|t| t.id), fallback), (Some("a-id".to_string()), None));
+        }
+        other => panic!("a bench session's own plan, got {other:?}"),
+    }
+    ask(&sb);
+    match next(&mut rb) {
+        Some(ToShell::PlanEvidence { session, pipeline, registry_hash, valid, fallback, .. }) => {
+            assert_eq!(session, b);
+            assert_eq!((pipeline, registry_hash, valid), (None, None, Some(false)), "B got another session's plan or model text");
+            assert_eq!(fallback, Some(nos_contract::wire::FallbackKind::Model));
+        }
+        other => panic!("a bench session's own plan, got {other:?}"),
+    }
+    // C opened without a bench hello: the next line is the sentinel's answer, nothing before it.
+    ask(&sc);
+    assert!(matches!(next(&mut rc), Some(ToShell::ApprovalsOpen { .. })), "a session without bench: true got a line");
+    let refused: i64 = db.query_row("SELECT count(*) FROM events WHERE run_id = ?1 AND task LIKE '%/tool:plan_evidence'
+                                     AND json_extract(result_json, '$.refused') IS NOT NULL", [&c], |r| r.get(0)).unwrap();
+    assert_eq!(refused, 1, "the refusal is not in the ledger");
+    // The browser writes through the relay, so a bench hello there is refused and its session is no bench's.
+    let (t, mut rt) = tab(relay(&rig), &hello("alice-smith", "Alice Smith", "tab-b1"));
+    (&t).write_all(encode(&ToThalamus::Hello { bench: true }).as_bytes()).unwrap();
+    assert!(matches!(next(&mut rt), Some(ToShell::Refused { reason, .. }) if reason.contains("socket's")));
+    (&t).write_all(encode(&ToThalamus::Turn { session: None, text: "x".into() }).as_bytes()).unwrap();
+    while !next(&mut rt).as_ref().is_some_and(ends) {}
+    (&t).write_all(encode(&ToThalamus::PlanEvidence {}).as_bytes()).unwrap();
+    (&t).write_all(encode(&ToThalamus::ApprovalsOpen).as_bytes()).unwrap();
+    assert!(matches!(next(&mut rt), Some(ToShell::ApprovalsOpen { .. })), "a relay tab got plan evidence");
+    drop((sa, sb, sc, t));
+}
+
+// ---- iris_turn_token_ceiling (row iris-turn-token-ceiling) ----
+
+/// `body` as the model answers it, reporting `n` prompt tokens (None: no usage at all).
+fn spending(body: String, n: Option<i64>) -> String {
+    let mut v: serde_json::Value = serde_json::from_str(&body).unwrap();
+    match n {
+        Some(n) => v["usage"] = serde_json::json!({"prompt_tokens": n, "completion_tokens": 0}),
+        None => { v.as_object_mut().unwrap().remove("usage"); }
+    }
+    v.to_string()
+}
+
+fn budget_rows(ledger: &std::path::Path, session: &str) -> Vec<serde_json::Value> {
+    let db = rusqlite::Connection::open(ledger).unwrap();
+    let mut q = db.prepare("SELECT result_json FROM events WHERE run_id = ?1 AND task LIKE '%/tool:turn_budget'").unwrap();
+    q.query_map([session], |r| r.get::<_, String>(0)).unwrap().map(|j| serde_json::from_str(&j.unwrap()).unwrap()).collect()
+}
+
+/// Journeys 1 and 3: 30 000 tokens a call under a 50 000 ceiling: the third request is never sent, the person
+/// hears the Stopped line, the card asked in the stopped turn stays open, and approving it writes.
+#[test]
+fn a_turn_over_its_token_ceiling_stops_and_its_card_still_writes() {
+    TURN_TOKENS.with(|c| c.set(50_000));
+    let model = edit_turn().into_iter().map(|b| spending(b, Some(30_000))).collect();
+    let rig = rig_n("ceiling", mapped(), shown_then(&[ROWS, ROWS, POSTED]), model);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    (&s).write_all(encode(&ToThalamus::Turn { session: None, text: "close alpha".into() }).as_bytes()).unwrap();
+    let Some(ToShell::Session { session, .. }) = next(&mut r) else { panic!("no session") };
+    assert!(matches!(next(&mut r), Some(ToShell::Render { .. })));
+    let Some(ToShell::ApprovalRequest { approval, .. }) = next(&mut r) else { panic!("the card is asked before the ceiling") };
+    match next(&mut r) {
+        Some(ToShell::Text { text, .. }) => assert_eq!(text, "Stopped: this turn used 60000 tokens (ceiling 50000)."),
+        other => panic!("the Stopped line, got {other:?}"),
+    }
+    assert_eq!(rig.model.lock().unwrap().len(), 2, "the third request is never sent");
+    assert_eq!(budget_rows(&rig.ledger, &session), vec![serde_json::json!({"spent": 60000, "ceiling": 50000, "counted": "usage"})]);
+    decide(&s, &approval, Decision::Approve);
+    assert!(matches!(next(&mut r), Some(ToShell::TableChanged { .. })), "an approved write is not a model call");
+    assert_eq!(posts(&rig).len(), 1);
+    assert!(matches!(next(&mut r), Some(ToShell::Text { .. })), "the person hears the write landed");
+    // The next turn starts its own spend: its model request is sent and answered.
+    (&s).write_all(encode(&ToThalamus::Turn { session: Some(session), text: "thanks".into() }).as_bytes()).unwrap();
+    loop {
+        match next(&mut r) {
+            Some(ToShell::Text { text, .. }) if text.starts_with("Stopped") => panic!("spend carried across turns: {text}"),
+            Some(ToShell::Text { .. }) => break,
+            Some(_) => {}
+            None => panic!("the next turn was not answered"),
+        }
+    }
+    assert_eq!(rig.model.lock().unwrap().len(), 3, "the next turn's request was sent");
+}
+
+/// Journey 2: a model that reports no usage still stops, counted by bytes, and the ledger says so.
+#[test]
+fn a_model_without_usage_is_counted_by_bytes_and_still_stops() {
+    TURN_TOKENS.with(|c| c.set(100));
+    let model = edit_turn().into_iter().map(|b| spending(b, None)).collect();
+    let rig = rig_n("ceiling-bytes", mapped(), shown_then(&[ROWS, ROWS, POSTED]), model);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    (&s).write_all(encode(&ToThalamus::Turn { session: None, text: "close alpha".into() }).as_bytes()).unwrap();
+    let Some(ToShell::Session { session, .. }) = next(&mut r) else { panic!("no session") };
+    let mut said = vec![];
+    while let Some(m) = next(&mut r) {
+        let end = matches!(m, ToShell::Text { .. } | ToShell::Refused { .. });
+        said.push(m);
+        if end {
+            break;
+        }
+    }
+    assert!(matches!(said.last(), Some(ToShell::Text { text, .. }) if text.starts_with("Stopped: this turn used ")), "{said:?}");
+    assert_eq!(rig.model.lock().unwrap().len(), 1, "one request's bytes are past 100 tokens");
+    let rows = budget_rows(&rig.ledger, &session);
+    assert_eq!(rows[0]["counted"], "bytes", "{rows:?}");
+    assert!(rows[0]["spent"].as_i64().unwrap() >= 100, "{rows:?}");
+}
+
+/// Journey 4: no client sets the ceiling: a turn carrying one is undecodable.
+#[test]
+fn a_turn_that_carries_a_ceiling_is_refused_by_the_contract() {
+    let line = encode(&ToThalamus::Turn { session: None, text: "hi".into() });
+    let mut v: serde_json::Value = serde_json::from_str(line.trim()).unwrap();
+    assert!(nos_contract::wire::decode_to_thalamus(&v.to_string()).is_ok(), "the plain turn decodes: {v}");
+    v["turn_tokens"] = serde_json::json!(1_000_000);
+    assert!(nos_contract::wire::decode_to_thalamus(&v.to_string()).is_err(), "{v}");
 }

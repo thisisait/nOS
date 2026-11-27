@@ -66,10 +66,10 @@
     from werkzeug.security import generate_password_hash
     db = sqlite3.connect('/config/app.db')
     pw = generate_password_hash('{{ calibreweb_admin_password | default(nos_derived_secrets.calibreweb) }}')
-    db.execute('UPDATE user SET password=? WHERE role & 32 = 32 OR id=1', (pw,))
+    n = db.execute('UPDATE user SET password=? WHERE role & 32 = 32 OR id=1', (pw,)).rowcount
     db.commit()
     db.close()
-    print('UPDATED')
+    print('UPDATED' if n else 'NO_ADMIN_ROW')
     "
   register: _cw_pw_update
   when: _cw_ready.status | default(0) in [200, 302]
@@ -82,6 +82,18 @@
   ansible.builtin.debug:
     msg: >-
       Calibre-Web admin pw: {{ 'updated' if ('UPDATED' in (_cw_pw_update.stdout | default(''))) else 'skipped (best-effort)' }}
+
+# Success is read from the legs' own statuses, never implied by attempting them
+# (n8n hid a never-created owner behind failed_when: false for months, 2026-09-21).
+- name: "[pazny.calibre_web Post] Admin credential must land (no silent green)"
+  ansible.builtin.assert:
+    that: "'UPDATED' in (_cw_pw_update.stdout | default(''))"
+    fail_msg: >-
+      Calibre-Web admin password was not set (rc {{ _cw_pw_update.rc | default('skipped') }},
+      {{ 'no admin row in app.db' if 'NO_ADMIN_ROW' in (_cw_pw_update.stdout | default('')) else 'exec failed' }}).
+  when:
+    - not ansible_check_mode
+    - _cw_ready.status | default(0) in [200, 302]
 
 # ── SSO forward_auth header-provision (Batch 6, sso-autologin-plan.md §forward_auth) ──
 # Calibre-Web has a real upstream "Allow Reverse Proxy Authentication" feature.

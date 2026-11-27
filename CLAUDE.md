@@ -69,7 +69,7 @@ ansible-playbook main.yml                       # full run (sudo prompt via vars
 ansible-playbook main.yml --tags "stacks,nginx" # one component by tag
 ansible-playbook main.yml --syntax-check
 nos --remove=data                               # dry run: inventory only
-nos --remove=data --confirm                     # wipe data and reinstall (= legacy blank=true)
+nos --remove=data --confirm                     # wipe data and reinstall
 nos -e @profiles/all-on.yml                     # every known-good service (test profile)
 tools/nos-stacks.sh [tag]                       # Docker stack layer only, no sudo (agent/CI dev)
 tools/ci-local.sh                               # pre-release gate: frozen CI toolchain, syntax-check

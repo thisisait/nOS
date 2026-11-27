@@ -31,12 +31,13 @@ services:
     healthcheck:
       # LSIO image ships curl. Root 302→/login is <400 so `curl -f` passes once
       # the server is up. Long start_period: the universal-calibre DOCKER_MOD
-      # downloads + installs the calibre binaries on first boot.
+      # installs the calibre binaries on first boot: 4m09s on the 11-15 blank, where
+      # 90s marked it unhealthy and stopped the run. A pass inside it is healthy at once.
       test: ["CMD-SHELL", "curl -fsS -o /dev/null http://localhost:8083/ || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 90s
+      start_period: 600s
     networks:
       # SEC-02: Traefik-only gated_net (was iiab_net + shared_net). No DB deps, so
       # nothing else needs to reach calibre-web — only Traefik (also on gated_net).

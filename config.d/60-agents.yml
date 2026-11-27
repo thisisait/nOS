@@ -252,3 +252,13 @@ paperclip_native_oidc_enabled: false
 #     {name: nos, path: /Users/<you>/projects/nos-agent, mode: ro, follow: dev}]   # follow: kept at origin/dev each converge
 paperclip_host_workspaces: []
 paperclip_drain_timeout_s: 900                     # a converge waits this long for agent runs to finish before a restart; 0 = restart now
+
+# ── Iris code mode (row iris-code-mode-reads) ───────────────────────────────
+# Who runs a cortex plan of reads only (iris_plan cortex|hybrid): "model" hands the mapped calls to the
+# model's loop, which reads the rows; "thalamus" runs them itself, draws for the person and ends the turn,
+# so the rows never reach the model (one model request per such turn). Writes keep the model's loop.
+iris_plan_run: "model"
+# The model tokens one Iris turn may spend (prompt + completion, every request of the turn); 0 = off.
+# Off until row iris-code-mode-bench measures the p99 turn and proposes a value (operator 2026-11-18).
+# A backend that reports no usage is counted as request + answer bytes / 4.
+iris_turn_token_ceiling: 0

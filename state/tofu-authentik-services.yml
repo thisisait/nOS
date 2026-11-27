@@ -23,6 +23,11 @@ tofu_authentik_services:
   mode: forward_auth
   enabled: '{{ install_calibreweb | default(false) }}'
   external_host: https://{{ calibreweb_domain }}
+- slug: chronos
+  name: Chronos Timeline
+  mode: forward_auth
+  enabled: '{{ (apps_runner_enabled | default(true) | bool) and "chronos" not in (apps_skip | default([])) }}'
+  external_host: https://chronos.apps.{{ tenant_domain | default('dev.local') }}
 - slug: code-server
   name: code-server
   mode: forward_auth

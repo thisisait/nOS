@@ -36,6 +36,8 @@ pub enum Component {
     Dashboard(Dashboard),
     Kpi(Kpi),
     ActionApproval(ActionApproval),
+    ProgramApproval(ProgramApproval),
+    FactCards(FactCards),
 }
 
 /// Model text as markdown; every consumer draws it as text nodes, never as HTML.
@@ -202,8 +204,18 @@ impl Component {
                             return Err(format!("a pie value is below 0: {x} {y}"));
                         }
                     }
-                    // A line, an area or a stack joins the same x in every series; a bar or a scatter may leave one out.
-                    ChartKind::Line | ChartKind::Area | ChartKind::StackedBar => {
+                    ChartKind::HorizontalBar if c.x == Axis::Time => return Err("a horizontal bar's x is category or number".into()),
+                    ChartKind::Radial if c.series.len() != 1 => return Err(format!("a radial is exactly 1 series, not {}", c.series.len())),
+                    // two spokes draw a line, not a shape
+                    ChartKind::Radar if xs.len() < 3 => return Err(format!("a radar has at least 3 x labels, not {}", xs.len())),
+                    ChartKind::Radar | ChartKind::Radial if xs.len() > 12 => {
+                        return Err(format!("a radar or radial has at most 12 x labels, not {}", xs.len()))
+                    }
+                    ChartKind::Radar | ChartKind::Radial if c.series.iter().any(|s| s.points.iter().any(|p| p.1 < 0.0)) => {
+                        return Err("a radar or radial value is below 0".into())
+                    }
+                    // A line, an area, a stack or a radar joins the same x in every series; a bar or a scatter may leave one out.
+                    ChartKind::Line | ChartKind::Area | ChartKind::StackedBar | ChartKind::Radar => {
                         let first: Vec<&String> = c.series[0].points.iter().map(|p| &p.0).collect();
                         if c.series.iter().any(|s| s.points.iter().map(|p| &p.0).ne(first.iter().copied())) {
                             let kind = serde_json::to_value(c.chart).ok().and_then(|v| v.as_str().map(str::to_string)).unwrap_or_default();
@@ -561,6 +573,19 @@ impl Component {
                 cap("an action's line", &a.says, 200)?;
                 crate::wire::check_flat(&a.params)
             }
+            Component::FactCards(f) => {
+                title(&f.title)?;
+                if !(1..=FACTS_MAX).contains(&f.items.len()) {
+                    return Err(format!("fact cards hold 1 to {FACTS_MAX} facts, not {}", f.items.len()));
+                }
+                f.items.iter().try_for_each(|x| {
+                    if x.label.trim().is_empty() || x.value.trim().is_empty() {
+                        return Err("a fact has a label and a value".to_string());
+                    }
+                    cap("a fact label", &x.label, 60)?;
+                    cap("a fact value", &x.value, 200)
+                })
+            }
             Component::Kpi(k) => {
                 if k.title.trim().is_empty() {
                     return Err("a kpi has no title".into());
@@ -573,6 +598,25 @@ impl Component {
                 }
                 k.delta_label.as_deref().map_or(Ok(()), |l| cap("a kpi delta label", l, 60))?;
                 k.source.as_deref().map_or(Ok(()), |s| cap("a kpi source", s, 200))
+            }
+            Component::ProgramApproval(p) => {
+                if p.source.trim().is_empty() {
+                    return Err("a program card shows its source".into());
+                }
+                cap("a program's source", &p.source, 4000)?;
+                if !(1..=PROGRAM_WRITES_MAX).contains(&p.writes.len()) {
+                    return Err(format!("a program writes 1 to {PROGRAM_WRITES_MAX} rows, not {}", p.writes.len()));
+                }
+                p.writes.iter().enumerate().try_for_each(|(i, w)| {
+                    let at = |e: String| format!("write {}: {e}", i + 1);
+                    if w.op == RowOp::InsertMany {
+                        return Err(at("a program writes insert, update or delete rows, never insert_many".into()));
+                    }
+                    if !w.read_from.is_empty() {
+                        return Err(at("read_from is the program's, not a write's".into()));
+                    }
+                    Component::RowDiffApproval(w.clone()).check().map_err(at)
+                })
             }
             Component::RowDiffApproval(d) => {
                 if d.cells.is_empty() {
@@ -733,6 +777,12 @@ pub enum ChartKind {
     Area,
     Scatter,
     Pie,
+    /// v21: bars along x, the labels down the side; category or number x.
+    HorizontalBar,
+    /// v21: one closed shape per series over 1-12 spokes, values >= 0.
+    Radar,
+    /// v21: one series as 1-12 concentric rings, values >= 0.
+    Radial,
 }
 
 /// category: labels in order; number: each x parses as a finite f64; time: each x is_date().
@@ -1043,6 +1093,22 @@ pub struct ActionApproval {
     pub says: String,
 }
 
+/// A cortex program's writes under ONE approval (v20, row iris-code-mode-write-card): the program as
+/// text, then every write as its own row diff. Approve writes exactly these, in order, or nothing.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ProgramApproval {
+    /// render() of the validated AST, never the model's own text; drawn as text.
+    pub source: String,
+    pub writes: Vec<RowDiffApproval>,
+    /// Tools whose free text the model read this turn; the card head says so.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub read_from: Vec<String>,
+}
+
+/// The most writes one program card holds (ruling 2026-11-18): more is refused, never "and N more".
+pub const PROGRAM_WRITES_MAX: usize = 20;
+
 /// One number serve computed from a table (show kpi with a source, or a kpi widget); never the model's.
 /// `source` says what was totalled over which rows; `delta` is a change the pupil says as an arrow and a sign.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1307,6 +1373,27 @@ pub enum Tone {
     Info,
     Warn,
     Bad,
+}
+
+/// v21: a grid of short facts the model fills (OpenUI's Overview/Snippet cards): text only, no
+/// click, no action, never in an approval or a widget.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FactCards {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    pub items: Vec<Fact>,
+}
+
+pub const FACTS_MAX: usize = 12;
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Fact {
+    pub label: String,
+    pub value: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tone: Option<Tone>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -24,6 +24,9 @@ proof of a working install:
        definite answer.
     4. unconsumed tolerance — a `status_code:` list admitting 4xx/5xx where the
        registered var is never branched on afterwards.
+    5. owner credential nobody reads — a file that sends an admin/owner
+       password where every leg is `failed_when: false` and no assert,
+       fail or failed_when reads any leg's register (n8n, 2026-09-21).
 
   CANNOT: whether any of it is TRUE on a live host. Whether `authentik` really
   is in `gitea admin auth list`, whether the admin row really exists, whether a
@@ -218,9 +221,7 @@ def test_no_probe_collapses_its_failure_into_a_meaningful_value():
 
 # Widened codes whose registered var IS branched on afterwards are correct and
 # stay out of this. These are the ones where nothing reads the result.
-UNCONSUMED_TOLERANCE_LEGACY = {
-    "roles/pazny.influxdb/tasks/post.yml",
-}
+UNCONSUMED_TOLERANCE_LEGACY: set[str] = set()  # influxdb left 2026-11-26: its assert reads the update
 
 
 def test_a_widened_status_code_must_be_branched_on():
@@ -303,3 +304,120 @@ def test_a_widened_status_code_must_be_branched_on():
         "a failure code counted as success and then never consulted:\n  "
         + "\n  ".join(sorted(set(offenders)))
     )
+
+
+# ── 5. An owner credential nobody reads ────────────────────────────────────
+# SECURITY GATE (operator 2026-11-23, session-gate-consent (a)): an owner
+# account that was never created is a security path. n8n POSTed a 404 owner
+# setup behind failed_when: false for months, converge green (2026-09-21).
+
+_URI = ("ansible.builtin.uri", "uri")
+_ASSERT = ("ansible.builtin.assert", "assert")
+_FAIL = ("ansible.builtin.fail", "fail")
+_PW_KEY = re.compile(r"(?i)^(password|pw|newpw|new_password)$")
+
+
+def _walk(tasks) -> list[dict]:
+    """Every task, blocks flattened (_tasks above stops at the top level)."""
+    out = []
+    for t in tasks or []:
+        if isinstance(t, dict):
+            out.append(t)
+            for k in ("block", "rescue", "always"):
+                out += _walk(t.get(k))
+    return out
+
+
+def _sends_a_credential(t: dict) -> bool:
+    uri = next((t[m] for m in _URI if isinstance(t.get(m), dict)), None)
+    if uri is None:
+        return False
+    body = uri.get("body")
+    nested = [body] + (list(body.values()) if isinstance(body, dict) else [])
+    return "password" in uri or any(
+        isinstance(d, dict) and any(_PW_KEY.match(str(k)) for k in d) for d in nested
+    )
+
+
+def _judged_text(tasks: list[dict]) -> str:
+    """What decides: assert `that`/`when`, fail `when`, any failed_when. Never a msg."""
+    out = []
+    for t in tasks:
+        a = next((t[m] for m in _ASSERT if m in t), None)
+        if a is not None:
+            out += [str(a.get("that") if isinstance(a, dict) else a), str(t.get("when", ""))]
+        if any(m in t for m in _FAIL):
+            out.append(str(t.get("when", "")))
+        if t.get("failed_when") not in (None, False, True):
+            out.append(str(t["failed_when"]))
+    return " ".join(out)
+
+
+def owner_legs_nobody_reads(path: pathlib.Path) -> list[str]:
+    """The legs of a file that sends a credential, when every leg swallows its
+    failure and no assert/fail/failed_when reads any leg's register."""
+    try:
+        tasks = _walk(yaml.safe_load(path.read_text()))
+    except yaml.YAMLError:
+        return []
+    if not any(_sends_a_credential(t) for t in tasks):
+        return []
+    legs = [
+        t for t in tasks
+        if t.get("register") and (
+            _sends_a_credential(t)
+            or (t.get("no_log") is True and any(m in t for m in CMD_MODULES))
+        )
+    ]
+    # Only a loud CREDENTIAL leg is loud about the credential (an HMAC shell is not).
+    if not legs or any(_sends_a_credential(t) and t.get("failed_when") is not False for t in legs):
+        return []
+    judged = _judged_text(tasks)
+    if any(re.search(rf"\b{re.escape(t['register'])}\b", judged) for t in legs):
+        return []
+    return [t["register"] for t in legs]
+
+
+# Not owner setup: the EspoCRM OIDC PUT (admin basic auth) only warns. Failing it
+# would abort apps_runner post for every later app; parked for an operator ruling.
+OWNER_LEG_LEGACY = {"roles/pazny.apps_runner/tasks/post.yml"}
+
+
+def test_an_owner_credential_is_read_by_an_assert():
+    """A post file that sends an owner/admin credential must let a reader judge
+    it: one terminal assert over the legs' statuses (n8n post.yml is the shape)."""
+    offenders = [
+        f"{_rel(p)}: legs {legs} all failed_when: false, nothing asserts them"
+        for p in POST_FILES
+        if _rel(p) not in OWNER_LEG_LEGACY and (legs := owner_legs_nobody_reads(p))
+    ]
+    assert not offenders, (
+        "owner/admin credential legs whose failure nobody reads — end the file in an "
+        "assert over their statuses (roles/pazny.n8n/tasks/post.yml):\n  "
+        + "\n  ".join(offenders)
+    )
+
+
+def test_the_owner_legacy_does_not_outlive_its_reason():
+    stale = [rel for rel in OWNER_LEG_LEGACY if not owner_legs_nobody_reads(REPO / rel)]
+    assert not stale, f"drop from OWNER_LEG_LEGACY (clean or gone now): {stale}"
+
+
+def test_the_owner_rule_catches_the_n8n_shape(tmp_path):
+    """Guard the guard: the pre-2026-09-21 n8n owner setup must be flagged."""
+    bad = tmp_path / "post.yml"
+    bad.write_text(
+        "- name: setup owner\n"
+        "  ansible.builtin.uri:\n"
+        "    url: http://127.0.0.1:5678/api/v1/owner/setup\n"
+        "    method: POST\n"
+        "    body: {email: a@b, password: x}\n"
+        "  register: _owner\n"
+        "  failed_when: false\n"
+        "- name: say so\n"
+        "  ansible.builtin.debug:\n"
+        "    msg: \"{{ _owner.status }}\"\n"
+    )
+    assert owner_legs_nobody_reads(bad) == ["_owner"]
+    bad.write_text(bad.read_text() + "- ansible.builtin.assert:\n    that: _owner.status == 200\n")
+    assert owner_legs_nobody_reads(bad) == []

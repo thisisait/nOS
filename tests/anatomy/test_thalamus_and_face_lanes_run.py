@@ -40,6 +40,29 @@ def test_every_cargo_target_runs(name):
     assert ran > 0, f"{name}: cargo test ran no test\n" + out[-2000:]
 
 
+
+# Named Rust tests whose count a gate reads (moved from test_thalamus_organ_journey.py and
+# test_workspace_layout_contract.py, row gate-diet-cargo-leftovers): the binding resolver reads
+# the real register (>= 13 cases), the ledger writer ran, the contract decodes the layout fixture.
+NAMED = {
+    "binding resolver": (["-p", "thalamus", "--test", "binding"], r"(\d+) passed", 13),
+    "ledger writer": (["-p", "thalamus", "ledger"], r"([1-9]\d*) passed", 1),
+    "workspace layout fixture": (["-p", "nos-contract", "workspace"], r"workspace::\S*fixture\S* \.\.\. (ok)", None),
+}
+
+
+@pytest.mark.skipif(not shutil.which("cargo"), reason="cargo runs the named Rust tests")
+@pytest.mark.parametrize("name", sorted(NAMED))
+def test_the_named_rust_tests_run(name):
+    args, pattern, floor = NAMED[name]
+    r = subprocess.run(["cargo", "test", "--locked", *args], cwd=ANATOMY / "thalamus",
+                       capture_output=True, text=True, timeout=1800, check=False)
+    out = r.stdout + r.stderr
+    assert r.returncode == 0, out[-6000:]
+    got = re.search(pattern, out)
+    assert got and (floor is None or int(got[1]) >= floor), f"{name}: {pattern} not met\n" + out[-2000:]
+
+
 def _vitest_runs_every_file(root: pathlib.Path) -> None:
     assert (root / "node_modules").is_dir(), f"run `npm ci --ignore-scripts` in {root.relative_to(REPO)} first"
     r = subprocess.run(["npx", "vitest", "run"], cwd=root, capture_output=True, text=True, timeout=900, check=False)

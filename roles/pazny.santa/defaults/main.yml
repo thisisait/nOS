@@ -1,0 +1,20 @@
+---
+# Version pin + sha256 live in default.config.yml (santa_version, santa_pkg_sha256).
+santa_app: /Applications/Santa.app
+santa_santactl: /usr/local/bin/santactl
+# Root-owned 0700: installer runs as root, so nothing the operator can write may
+# sit between the checksum and the install (a /tmp pkg was a TOCTOU to root).
+santa_pkg_dir: /Library/Caches/nos-santa
+santa_pkg_cache: "{{ santa_pkg_dir }}/santa-{{ santa_version }}.pkg"
+# The pkg's own launchd jobs, declared so the roster (anatomy graph, undeclared-status)
+# and the authored stop (install_santa: false) know them; nothing here renders a plist.
+# The stop fires only where nOS installed Santa: our root-only pkg dir is the marker,
+# so an MDM-managed Santa nOS never installed is never booted out.
+santa_launchd_marker: "/Library/Caches/nos-santa"                      # = santa_pkg_dir
+santa_launchd_label: "com.northpolesec.santa"                           # /Library/LaunchAgents
+santa_bundleservice_launchd_label: "com.northpolesec.santa.bundleservice"
+santa_bundleservice_launchd_domain: "system"
+santa_metricservice_launchd_label: "com.northpolesec.santa.metricservice"
+santa_metricservice_launchd_domain: "system"
+santa_syncservice_launchd_label: "com.northpolesec.santa.syncservice"
+santa_syncservice_launchd_domain: "system"

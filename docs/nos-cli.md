@@ -82,8 +82,8 @@ outranks config.yml; `nos` names each toggle it overrides.
 |---|---|
 | `none` | converge only (default; every ordinary run) |
 | `data` | today's blank scope: derived state (docker, dbs, service data, configs). SOURCE (`~/nos/tenants/**` user files) and images KEPT. |
-| `deep` | data + docker images/build cache + brew/npm/pip caches (today's `flush=deep` scope; `~/.ollama` still opt-in via `flush_ollama`) |
-| `all` | deep + user SOURCE: the full uninstall source set (`nos_data_root`, `~/.nos`, `~/bone`, `~/pulse`, `~/wing`, `~/keap`, hermes dirs, `~/.openclaw`, service registry). With `leave=false` this then REINSTALLS from zero. |
+| `deep` | data + docker images/build cache + brew/npm/pip caches (`~/.ollama` opt-in via `flush_ollama`) |
+| `all` | deep + user SOURCE: the full uninstall source set (`nos_data_root`, `~/.nos`, `~/bone`, `~/pulse`, `~/wing`, `~/keap`, `~/thalamus`, `~/receptor`, hermes dirs, `~/.openclaw`, service registry). With `leave=false` this then REINSTALLS from zero. |
 
 **A data-level removal touches only what nOS owns.** Every path `remove=data` would delete must lie
 under `nos_data_root`, `stacks_dir`, the external storage root (when configured) or a home declared in
@@ -260,7 +260,7 @@ backup passphrase waits for a rotation that reads its outgoing value from the pe
 
 | CLI | emits | note |
 |---|---|---|
-| *(no `--remove`)* | *(nothing)* | never emits `-e remove=none` — an explicit extra-var would outrank the shim's `set_fact` and silently neuter a passthrough legacy `-e blank=true` |
+| *(no `--remove`)* | *(nothing)* | never emits `-e remove=none` (it is the default) |
 | `--remove=data\|deep\|all` | `-e remove=<level>` | |
 | `--remove=none` | *(nothing)* | accepted for symmetry, emits nothing |
 | `--confirm` | `-e confirm=true` | |
@@ -348,8 +348,8 @@ remove-source pause; PREFIX = rotation prompt (ENTER = keep); SUDO =
 | `nos --remove=data` | `-e remove=data` | DRY RUN: prints data-level inventory (real post-override paths) + preserved list, `end_play`, exit 0. Nothing removed. SUDO still prompts (pre-phase). |
 | `nos --remove=deep` | `-e remove=deep` | DRY RUN, deep inventory |
 | `nos --remove=all` | `-e remove=all` | DRY RUN, all inventory incl. `~/nos/tenants/**` user files + GOV audit-chain warning |
-| `nos --remove=data --confirm` | `-e remove=data -e confirm=true` | interactive execute: SUDO → PREFIX (rotate or ENTER-keep) → ENTER → blank-reset → verify (R5) → reconverge. ≡ today's `blank=true`. |
-| `nos --remove=deep --confirm` | `-e remove=deep -e confirm=true` | as above + flush-deep before verify. ≡ today's `flush=deep`. |
+| `nos --remove=data --confirm` | `-e remove=data -e confirm=true` | interactive execute: SUDO → PREFIX (rotate or ENTER-keep) → ENTER → blank-reset → verify (R5) → reconverge. |
+| `nos --remove=deep --confirm` | `-e remove=deep -e confirm=true` | as above + flush-deep before verify. |
 | `nos --remove=all --confirm` | `-e remove=all -e confirm=true` | inventory print (EXECUTE header) → SUDO → PREFIX → ENTER → blank-reset → flush-deep → SRC-PAUSE → source removal → verify → **reconverge from data-zero**. The persist-and-reuse identity group (incl. the bluesky PLC rotation key) SURVIVES in memory and re-persists — only the 7 destructive keys regen. Full identity reset needs `--leave` + a later fresh run. |
 | `nos --remove=data -y` | `-e remove=data -e confirm=true -e assume_yes=true [-e nos_sudo_password='' if none passed]` `</dev/null` | non-interactive wipe+reconverge: no SUDO, no PREFIX (prefix NEVER changes), no ENTER. **Requires a sudo path** (above); without one the preflight REFUSES before any teardown. Fails before the removal phase on a fresh machine without an explicit prefix. |
 | `nos --remove=all -y --leave` | `+ -e leave=true` | non-interactive full teardown: data+deep+source → verify → end_play. Machine handoff in one command. Same sudo-path requirement. Full identity reset (nothing re-persists). |
@@ -393,21 +393,21 @@ By hand: `nos dtt export|import` (dry run unless `--confirm`).
 | `... -e leave=true` (alone) | **hard assert FAIL** (no green no-op) |
 | `... -e remove=all -e confirm=true -e leave=true` | interactive teardown then stop |
 
-### Legacy vocabulary — via the shim (transition window)
+### Retired vocabulary (operator 2026-11-23)
 
-| Invocation | Shimmed to | Behavior vs today |
-|---|---|---|
-| `ansible-playbook main.yml -e blank=true` | `remove=data confirm=true` | **identical**: SUDO, PREFIX prompt, ENTER gate, blank-reset, reconverge — plus the new R5 verify and the pre-teardown inventory print. **Named delta (O3):** `-e blank=true --tags X` / `--skip-tags stacks` flips from "tag-filtered blank executes" (today) to a hard R4 FAIL — run legacy removals without tag restriction. |
-| `... -e flush=true` | `remove=data confirm=true` | identical |
-| `... -e flush=deep` | `remove=deep confirm=true` | identical + verify; the banner names the level |
-| `... -e flush=deep -e flush_ollama=true` | + passthrough | identical |
-| `... -e blank=false` / `-e flush=false` / `-e uninstall=false` | *(no mapping)* | ordinary converge |
-| `... -e uninstall=true` | `remove=all leave=true confirm=true _compat_uninstall=true` | **the one locked delta:** was print-only dry run; now executes behind SUDO + PREFIX + ENTER + SRC-PAUSE. **Scope** identical to today's confirmed uninstall: blank-reset once + source removal, **no image prune**, end_play after verify. Consent-shape deltas: (a) the confirmed-run plan print is the inventory (EXECUTE header) — fires before any pause/teardown; (b) the SRC-PAUSE fires AFTER derived-state teardown, not before all destruction. Old dry-run: `-e uninstall=true -e confirm=false` (extra-var wins over the shim's set_fact). |
-| `... -e uninstall=true -e confirm_uninstall=true` | same (`confirm_uninstall` accepted-and-ignored; it does NOT force confirm against an explicit `-e confirm=false`, which stays a dry run) | today's execute path, one typed flag fewer |
-| `... -e blank=true -e remove=none` | — | **hard FAIL** (mixed vocabulary that disagrees) |
-| `... -e blank=false -e remove=data -e confirm=true` | — | **hard FAIL** (falsy-blank-mix assert — the extra-var `blank=false` would shadow the derived gate and a confirmed removal would complete green having removed nothing) |
-| `... -e destroy_state=true` (alone) | *(not a removal — untouched)* | 7-key regen only, as today |
-| `nos -e blank=true` | passthrough → shim | same as raw legacy row; works because the CLI never emits `remove=none` |
+`blank=`, `flush=` and `uninstall=` no longer map to anything. A truthy value stops the run at
+main.yml's first pre_task, before anything touches the host, and names the replacement. Nothing
+is removed. The gate is `tests/anatomy/test_run_mode_journey.py` (`retired_*`).
+
+| Invocation | Behavior |
+|---|---|
+| `ansible-playbook main.yml -e blank=true` (or `yes`, `1`, …) / `-e flush=true` | **FAIL**: `Retired, nothing was changed: blank=true -> nos --remove=data --confirm` |
+| `... -e flush=deep` | **FAIL**, names `nos --remove=deep --confirm` |
+| `... -e uninstall=true` | **FAIL**, names `nos --remove=all --leave --confirm` |
+| `... -e blank=false` / `-e flush=false` / `-e uninstall=false` | nothing: ordinary converge |
+| `... -e blank=false -e remove=data -e confirm=true` | **hard FAIL** (the extra-var `blank=false` would shadow the derived gate and a confirmed removal would complete green having removed nothing) |
+| `... -e destroy_state=true` (alone) | not a removal: 7-key regen only |
+| `nos -e blank=true` | passthrough, so the same FAIL |
 
 ### Guard surfaces
 

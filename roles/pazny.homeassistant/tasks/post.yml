@@ -73,6 +73,21 @@
   check_mode: false
   no_log: true
 
+# Success is read from the legs' own statuses, never implied by attempting them
+# (n8n hid a never-created owner behind failed_when: false for months, 2026-09-21).
+- name: "[pazny.homeassistant Post] Owner credential must land (no silent green)"
+  ansible.builtin.assert:
+    that: >-
+      _ha_user_create.status | default(0) == 200
+      or ((_ha_pw_update.rc | default(1)) == 0
+          and 'not found' not in (_ha_pw_update.stdout | default('') | lower))
+    fail_msg: >-
+      Home Assistant owner {{ homeassistant_admin_user }} is not provisioned: the onboarding
+      POST did not return 200 and `hass --script auth change_password` did not succeed
+      (onboarding read: {{ _ha_onboarding.status | default('none') }}). Check
+      `docker compose -p iiab logs homeassistant`.
+  when: not ansible_check_mode
+
 - name: "[pazny.homeassistant Post] Set core config (timezone, location)"
   no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
   ansible.builtin.uri:

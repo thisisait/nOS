@@ -13,6 +13,7 @@ Enablement — services AND manifest apps — is what the last converge ran
   tools/e2e-plan.py                 # JSON plan of the enabled services
   tools/e2e-plan.py --all           # include disabled ones (enabled: false)
   tools/e2e-plan.py --journeys      # one argv line per declared journey; prints, never runs
+  tools/e2e-plan.py --branding      # each enabled app's brand hook, its declared absence, or UNDECLARED
 
 A plugin's `e2e.journeys` names specs under tests/e2e/journeys (row iris-approvals-e2e-plan).
 A journey writes to the live estate, so running one stays the operator's act.
@@ -156,11 +157,25 @@ def identities(vars_: dict | None = None) -> list[dict]:
     return [_render(env, i) for i in ids]
 
 
+def _plugin_docs() -> dict:
+    return {p: yaml.safe_load(p.read_text(encoding="utf-8")) or {} for p in sorted(PLUGINS.glob("*/plugin.yml"))}
+
+
+def _branding(doc: dict) -> dict | None:
+    """How the app takes the estate brand (row estate-brand-plugin-blocks): its `branding:` block,
+    {kind: none, why} from `branding_none`, or None, which the listing names UNDECLARED."""
+    if isinstance(doc.get("branding"), dict):
+        return dict(doc["branding"])
+    if doc.get("branding_none"):
+        return {"kind": "none", "why": " ".join(str(doc["branding_none"]).split())}
+    return None
+
+
 def plan(vars_: dict | None = None, include_disabled: bool = False) -> list[dict]:
     vars_, env = _resolved(vars_)
     edge, domains = _edge_modes(), _manifest_domains()
     rows = []
-    docs = {p: yaml.safe_load(p.read_text(encoding="utf-8")) or {} for p in sorted(PLUGINS.glob("*/plugin.yml"))}
+    docs = _plugin_docs()
     plugins = {d.get("name"): d for d in docs.values()}
     for path, doc in docs.items():      # discovery, gitleaks carry no -base
         ak = doc.get("authentik") or {}
@@ -203,6 +218,7 @@ def plan(vars_: dict | None = None, include_disabled: bool = False) -> list[dict
             "journeys": journeys,
             "refused": refused,
             "app": bool(ak),     # e2e-only plugins (backup, alert-relay) have no URL to open
+            "branding": _branding(doc),
         })
     # Manifest apps (apps/*.yml) carry their own authentik: block and were
     # invisible to a plugin-only walk: documenso, twofauth, roundcube.
@@ -212,7 +228,8 @@ def plan(vars_: dict | None = None, include_disabled: bool = False) -> list[dict
     for path in sorted((REPO / "apps").glob("*.yml")):
         if path.name.startswith("_"):
             continue
-        ak = (yaml.safe_load(path.read_text(encoding="utf-8")) or {}).get("authentik") or {}
+        app_doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        ak = app_doc.get("authentik") or {}
         if not ak:
             continue
         r = _render(env, {k: v for k, v in ak.items() if k != "client_secret"})
@@ -229,7 +246,7 @@ def plan(vars_: dict | None = None, include_disabled: bool = False) -> list[dict
                      "client_id": r.get("client_id"), "redirect_uri": (r.get("redirect_uris") or [None])[0],
                      "launch_url": r.get("launch_url"), "first_login": r.get("first_login"),
                      "edge": "proxy", "enabled": enabled, "probes": [], "isolation": [], "journeys": [],
-                     "refused": [], "app": True})
+                     "refused": [], "app": True, "branding": _branding(app_doc)})
     for row in rows:
         row["unresolved"] = [k for k in ("launch_url", "redirect_uri")
                              if (row[k] is None and k == "launch_url" and row["app"]) or
@@ -237,10 +254,30 @@ def plan(vars_: dict | None = None, include_disabled: bool = False) -> list[dict
     return rows
 
 
+def brands(vars_: dict | None = None, include_disabled: bool = False) -> list[dict]:
+    """Every app a person opens (plan rows with a URL) plus any plugin that declares a brand hook
+    without being one (authentik-base: the login page itself)."""
+    vars_ = smoke.load_vars() if vars_ is None else vars_
+    rows = [{"plugin": r["plugin"], "slug": r["slug"], "enabled": r["enabled"], "branding": r["branding"]}
+            for r in plan(vars_, include_disabled) if r["app"]]
+    seen, resolved = {r["plugin"] for r in rows}, _resolved(vars_)[0]
+    docs = _plugin_docs()
+    plugins = {d.get("name"): d for d in docs.values()}
+    for path, doc in docs.items():
+        if path.parent.name in seen or _branding(doc) is None:
+            continue
+        enabled = plugin_installed(doc.get("name"), plugins, resolved)
+        if enabled or include_disabled:
+            rows.append({"plugin": path.parent.name, "slug": path.parent.name.removesuffix("-base"),
+                         "enabled": enabled, "branding": _branding(doc)})
+    return sorted(rows, key=lambda r: r["slug"])
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--all", action="store_true", help="include services the config disables")
     ap.add_argument("--journeys", action="store_true", help="print each journey's argv; runs nothing")
+    ap.add_argument("--branding", action="store_true", help="list each app's brand hook or its absence")
     a = ap.parse_args(argv)
     # What is enabled comes from what the last converge RAN (state.yml, -e
     # included); the layers only when no run is recorded. Say which, on stderr.
@@ -249,6 +286,14 @@ def main(argv: list[str] | None = None) -> int:
     if run.source == "state.yml" and run.apps() is None:
         print("apps: layers (this state.yml predates the apps record; the next converge writes it)",
               file=sys.stderr)
+    if a.branding:      # a listing, not a gate (operator 2026-11-23): undeclared is named, exit 0
+        listed = brands(include_disabled=a.all)
+        for r in listed:
+            b = r["branding"] or {"kind": "UNDECLARED"}
+            print(f"{r['slug']:<24} {b['kind']:<10} {b.get('hook') or b.get('why') or ''}")
+        bare = sum(1 for r in listed if r["branding"] is None)
+        print(f"branding: {len(listed) - bare} of {len(listed)} declared, {bare} UNDECLARED", file=sys.stderr)
+        return 0
     rows = plan(include_disabled=a.all)
     if a.journeys:      # exit 0 either way: a reader-shaped renderer; unresolved is the channel
         for r in rows:

@@ -11,7 +11,7 @@
 | **Node** | `nos.devops.gitlab` |
 | **Stack** | `devops` |
 | **Toggle** | `install_gitlab: false` |
-| **Image** | `gitlab/gitlab-ce:18.11.7-ce.0` |
+| **Image** | `gitlab/gitlab-ce:19.6.1-ce.0` (`gitlab_version`; from 18.11 walk the 19.2 and 19.5 stops, upgrades/gitlab.yml) |
 | **Domain** | `gitlab.<tenant_domain>` (pattern `gitlab{{ _host_alias_seg }}.{{ tenant_domain }}`, `external_url` over HTTPS) |
 | **HTTP port** | `8929` — published `127.0.0.1:8929` → container `80` |
 | **SSH port** | `2224` — published `127.0.0.1:2224` → container `22` (`gitlab_shell_ssh_port`) |

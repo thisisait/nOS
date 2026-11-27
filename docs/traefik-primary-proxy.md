@@ -290,10 +290,13 @@ and exactly one forward (`WAN:443 → <mac>:8443`).
   `sniStrict` hides it only for a missing or unknown SNI.
 - **Plain HTTP sent to the door gets a Traefik 404.** No router there accepts
   plain HTTP.
-- **`modern@file` on `websecure` is inert today.** Routers carry `tls: {}`, and
-  the entrypoint model applies only to a nil `tls`, so `:443` negotiates with
-  `default` (TLS 1.2+). This is a separate follow-up, because fixing it changes
-  `:443`.
+- **`modern@file` on `websecure` is inert; the floor lives in `default`.** Routers
+  carry `tls: {}`, and the entrypoint model applies only to a nil `tls`, so `:443`
+  negotiates with the file provider's `default` option. Its `minVersion` renders
+  from `traefik_tls_floor` (`config.d/30-edge.yml`, `VersionTLS13` since
+  operator ruling 2026-11-23). `--tags traefik` or `verify` probes it with two
+  handshakes on `127.0.0.1` (`roles/pazny.traefik/tasks/verify-tls.yml`). Way back
+  for an old client: `traefik_tls_floor: "VersionTLS12"` in `config.yml`.
 - **CA expiry:** Cloudflare's AOP CA expires on `2029-11-01`. The gate's
   `openssl -checkend 0` turns red once it has expired.
 

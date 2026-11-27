@@ -7,17 +7,17 @@
     "genome": 25,
     "cell": 17,
     "tissue": 1,
-    "organ": 83,
+    "organ": 84,
     "organ system": 13,
     "organism": 0,
     "habitat": 9,
     "sense": 90,
-    "limb": 136,
-    "memory": 52,
+    "limb": 137,
+    "memory": 53,
     "law": 57,
     "reflex": 54,
     "heartbeat": 1,
-    "internal": 81,
+    "internal": 82,
     "edges": 464
   },
   "nodes": {
@@ -210,6 +210,10 @@
       "kind": "authentik"
     },
     "authentik:calibre-web": {
+      "level": "internal",
+      "kind": "authentik"
+    },
+    "authentik:chronos": {
       "level": "internal",
       "kind": "authentik"
     },
@@ -842,6 +846,10 @@
       "kind": "effector"
     },
     "effector:loop-bench": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:loop-branch-guard": {
       "level": "limb",
       "kind": "effector"
     },
@@ -2041,6 +2049,10 @@
       "level": "organ",
       "kind": "service"
     },
+    "service:santa": {
+      "level": "organ",
+      "kind": "service"
+    },
     "service:smtp_stalwart": {
       "level": "organ",
       "kind": "service"
@@ -2250,6 +2262,10 @@
       "kind": "table"
     },
     "table:halyard-task": {
+      "level": "memory",
+      "kind": "table"
+    },
+    "table:immune-verdicts": {
       "level": "memory",
       "kind": "table"
     },

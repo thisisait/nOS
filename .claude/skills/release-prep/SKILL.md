@@ -103,7 +103,7 @@ decision for the operator, not a default.
    not checked.
 10. **The cut (operator).** Only with no BLOCKER left, per docs/git-and-release.md:
     verify `git merge-base origin/master origin/dev` equals the master tip, open the
-    PR dev → master, merge by rebase with admin bypass or `git push origin
+    PR dev → master, merge by rebase with admin bypass or `tools/nos-push origin
     origin/dev:master` at release size (memory `nos-release-flow`), tag
     `vX.Y-beta` on master, publish the GitHub release from the RELEASE.md section,
     re-sync dev to master, `tools/nos-push` for the Gitea mirror.

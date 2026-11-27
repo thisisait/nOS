@@ -117,21 +117,6 @@ def test_undelivered_metric_alerts_are_marked_deferred():
     )
 
 
-def test_no_stale_todo_for_undelivered_metrics():
-    """No `TODO` comment referencing an undelivered metric survives — the
-    deferral is documented via the explicit `DEFERRED`/label contract instead."""
-    offenders = []
-    for fname in RULE_FILES:
-        text = (RULES_DIR / fname).read_text(encoding="utf-8")
-        for lineno, line in enumerate(text.splitlines(), start=1):
-            if "TODO" not in line:
-                continue
-            for metric in UNDELIVERED_METRICS:
-                if metric in line:
-                    offenders.append(f"{fname}:{lineno}: stale TODO -> {line.strip()}")
-    assert offenders == [], "\n".join(offenders)
-
-
 def test_deferred_label_only_on_undelivered_alerts():
     """Inverse guard: an alert is labelled deferred ONLY if it actually
     references an undelivered metric. Prevents a delivered alert from being

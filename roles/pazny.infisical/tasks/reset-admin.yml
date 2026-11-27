@@ -9,7 +9,7 @@
 #   no admin token was persisted to `~/.nos/secrets.yml::infisical_admin_token`
 #   and the operator can't log in to mint a machine identity. The
 #   surface symptom is: seed.py returns "admin already bootstrapped but
-#   no token persisted; manually retrieve via UI or wipe with -e blank=true".
+#   no token persisted; manually retrieve via UI or wipe with nos --remove=data --confirm".
 #
 # What this task does:
 #   1. Pre-check: refuse to run if Infisical has non-empty projects OR

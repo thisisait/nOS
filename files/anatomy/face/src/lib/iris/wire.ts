@@ -87,7 +87,16 @@ export type Component =
 			kind: 'chart';
 			props: {
 				title?: string;
-				chart: 'bar' | 'stacked_bar' | 'line' | 'area' | 'scatter' | 'pie';
+				chart:
+					| 'bar'
+					| 'stacked_bar'
+					| 'line'
+					| 'area'
+					| 'scatter'
+					| 'pie'
+					| 'horizontal_bar'
+					| 'radar'
+					| 'radial';
 				x: 'category' | 'number' | 'time';
 				series: { name: string; points: [string, number][] }[];
 			};
@@ -153,7 +162,20 @@ export type Component =
 	| {
 			kind: 'action_approval';
 			props: { app: string; action: string; params: Record<string, Value>; says: string };
-	  };
+	  }
+	| { kind: 'program_approval'; props: ProgramProps }
+	| { kind: 'fact_cards'; props: FactCardsProps };
+
+/** Short facts side by side (renderers.rs FactCards, v21): the model's text, no link, no action. */
+export type FactCardsProps = {
+	title?: string;
+	items: { label: string; value: string; tone?: 'ok' | 'info' | 'warn' | 'bad' }[];
+};
+
+/** A cortex program's writes under one approval (renderers.rs ProgramApproval, v20): its source as text, 1-20 writes. */
+export type ProgramProps = { source: string; writes: RowDiffProps[]; read_from?: string[] };
+/** One row's proposed write (renderers.rs RowDiffApproval), alone or as a program's write. */
+export type RowDiffProps = Extract<Component, { kind: 'row_diff_approval' }>['props'];
 
 /** The ontology around one node of our knowledge (renderers.rs KnowledgeTree, v10); `hidden`: what the cap left out. */
 export type KnowledgeProps = {
@@ -305,7 +327,29 @@ export type ToShell =
 			why?: string;
 	  }
 	/** v17: this person's Iris cards asked and not yet decided, oldest first. */
-	| { t: 'approvals_open'; items: OpenApproval[] };
+	| { t: 'approvals_open'; items: OpenApproval[] }
+	/** v20: a bench session's own last cortex plan; the face sends no bench hello, so it never asks. */
+	| ({ t: 'plan_evidence'; session: string } & PlanEvidence);
+
+/** The plan a bench session asked for (wire.rs ToShell::PlanEvidence): never prompt text, cells or rows. */
+export type PlanEvidence = {
+	valid?: boolean;
+	registry_hash?: string;
+	pipeline?: string;
+	fallback?: 'infra' | 'model';
+	table?: { said: string; id: string; title?: string };
+	asked?: {
+		engine: string;
+		constrained: boolean;
+		primer_sha256: string;
+		grammar_sha256?: string;
+		catalogue: string;
+		catalogue_digest: string;
+	};
+	plan_run?: 'model' | 'thalamus';
+	model_calls?: number;
+	tokens?: number;
+};
 
 /** One Iris card waiting for its person (wire.rs OpenApproval, v17). */
 export type OpenApproval = { session: string; approval: string; tool: string; asked_at: string };
@@ -384,6 +428,9 @@ export type ToThalamus =
 	| { t: 'questions'; agent?: string }
 	| { t: 'answer'; uuid: string; answer: string }
 	| { t: 'approvals_open' }
+	/** v20: a bench's socket lines; the face never sends them (serve refuses bench: true through the relay). */
+	| { t: 'hello'; bench?: boolean }
+	| { t: 'plan_evidence' }
 	| { t: 'workspace_save'; doc: { [k: string]: unknown } }
 	| { t: 'catalogue' }
 	| { t: 'limbs'; limbs: Limb[] }

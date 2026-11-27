@@ -194,6 +194,10 @@ santa_dev_toolchain_trees:
   - .pyenv/versions/
   - .nvm/versions/
   - .local/share/claude/versions/
+  - .rustup/toolchains/          # rustc/cargo; pazny.medulla builds with them when present
+# The owner's own apps under $HOME (habitat), shown beside the toolchain, never red.
+# Machine-specific: declare yours in config.yml, e.g. ["Library/Application Support/Steam/"].
+santa_habitat_trees: []
 
 # ── HABITAT (undeclared-status) ──────────────────────────────────────────────
 # The owner's own software beside nOS (lexicon: habitat): a launchd label or an

@@ -81,6 +81,9 @@
         <!-- iris_knowledge_tree_max: the most nodes read_node's knowledge tree draws (src/serve.rs knowledge_tree). -->
         <key>NOS_IRIS_KNOWLEDGE_TREE_MAX</key>
         <string>{{ iris_knowledge_tree_max | default(50) }}</string>
+        <!-- iris_turn_token_ceiling: the model tokens one turn may spend, 0 = off (src/serve.rs chat). -->
+        <key>NOS_IRIS_TURN_TOKENS</key>
+        <string>{{ iris_turn_token_ceiling | default(0) | int }}</string>
 {% if thalamus_otel_spans | default(false) | bool %}
         <!-- thalamus_otel_spans: a turn's spans go to Alloy's OTLP/HTTP receiver on loopback (src/otel.rs). -->
         <key>NOS_OTLP_ENDPOINT</key>
@@ -93,6 +96,9 @@
 {% endif %}
         <key>NOS_CORTEX_CATALOGUE</key>
         <string>{{ thalamus_cortex_catalogue | default('lean') }}</string>
+        <!-- iris_plan_run: thalamus runs a plan of reads itself and ends the turn (src/serve.rs run_program). -->
+        <key>NOS_IRIS_PLAN_RUN</key>
+        <string>{{ iris_plan_run | default('model') }}</string>
         <key>NOS_CORTEX_URL</key>
         <string>http://127.0.0.1:{{ cortex_port | default(8098) }}</string>
         <!-- The organ's RO token (validate only); read once as nos:cortex_ro_token, then removed. -->

@@ -56,5 +56,5 @@ answer 7f3e2d1c-0b9a-4c8d-9e7f-6a5b4c3d2e1f: EXPIRED — the deadline passed, th
 agent took its default
 answer 7f3e2d1c-0b9a-4c8d-9e7f-6a5b4c3d2e1f: REFUSED — no wing_answer_token in /
 Users/alice/.nos/secrets.yml (a converge with --tags wing mints it)
-approve this edit (1 of 9)? y / n
+approve this edit (1 of 10)? y / n
 Enter send · F2 /inbox · F3 /approvals · F4 /red · Ctrl-C quit

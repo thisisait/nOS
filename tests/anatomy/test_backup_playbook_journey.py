@@ -157,8 +157,9 @@ def test_the_old_wal_does_not_outlive_its_database(tmp_path):
     assert (data / "keap.db").read_bytes() == b"restored", out[-3000:]
     assert not (data / "keap.db-wal").exists(), "the old WAL sits beside the restored DB"
     assert not (data / "keap.db-shm").exists(), "the old SHM sits beside the restored DB"
-    snap = data / "keap.db.pre-restore-2026-10-09"
-    assert (Path(f"{snap}-wal")).read_bytes() == b"old-wal", "the snapshot lost its WAL"
+    # the snapshot carries the run (restore-rerun-same-date): exactly one, holding the old WAL
+    snaps = sorted(data.glob("keap.db.pre-restore-2026-10-09-*-wal"))
+    assert len(snaps) == 1 and snaps[0].read_bytes() == b"old-wal", f"the snapshot lost its WAL: {snaps}"
 
 
 @needs_ansible
@@ -200,7 +201,8 @@ def test_the_iris_ledger_is_rebuilt_from_its_dump(tmp_path):
     assert r.returncode == 0, out[-3000:]
     assert sqlite3.connect(data / "ledger.db").execute("select x from events").fetchall() == [("turn",)]
     assert not (data / "ledger.db-wal").exists(), "the old WAL sits beside the restored ledger"
-    assert (data / "ledger.db.pre-restore-2026-10-25-wal").read_bytes() == b"old-wal"
+    snaps = sorted(data.glob("ledger.db.pre-restore-2026-10-25-*-wal"))   # one per run
+    assert len(snaps) == 1 and snaps[0].read_bytes() == b"old-wal", snaps
     calls = (tmp_path / "calls.log").read_text()
     assert "bootout" in calls and "bootstrap" in calls and "test-thalamus" in calls, calls
 

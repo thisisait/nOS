@@ -7,7 +7,7 @@ Harness plays run once each, concurrently, gathering only the fact subsets the
 layers read (env, user, platform, distribution); env-only fails _blank_dirs.
 
 Carried over (old file -> check names):
-  test_compat_shim_mapping     -> shim_*            (G-2, R7, F9, M4)
+  test_compat_shim_mapping     -> retired_*         (G-2, R7, F9, M4; shim retired 2026-11-23)
   test_run_mode_allowlist      -> allowlist_*, tuple_*, tags_removal_fails_R4,
                                   bare_leave_fails, derivation_is_filterless (G-1)
   test_removal_verify_closes_survivors -> verify_*  (G-4)
@@ -16,9 +16,8 @@ Carried over (old file -> check names):
   test_a_yes_removal_asks_for_sudo_first -> sudo_*  (D4)
 
 Harness notes kept from the originals:
-- mapped shim rows force confirm=false, so they stop at the R9 end_play; their
-  evidence is what prints BEFORE the stop (the notice and the REMOVE banner),
-  and the absence of the trailing TUPLE proves the stop fired.
+- retired rows (blank=/flush=/uninstall=) run main.yml's first pre_task before
+  run-mode.yml: they must fail naming the replacement, before any REMOVE banner.
 - removal rows pass confirm=true: unconfirmed they end_play inside the import.
   Safe: run-mode.yml holds asserts, stats, debug and end_play only.
 - the `"none "` allowlist row is unreachable (parse_kv strips it); G-5 owns it.
@@ -61,6 +60,7 @@ RUN_MODE_HARNESS = """\
   vars_files:
 {layers}
   tasks:
+    - import_tasks: {retire}
     - import_tasks: {repo}/tasks/run-mode.yml
     # blank via | bool: an explicit -e blank=<x> OUTRANKS the derived fact, and
     # every legacy read site is `blank | bool`.
@@ -83,13 +83,16 @@ VERIFY_HARNESS = """\
     - import_tasks: {repo}/tasks/removal-verify.yml
 """
 
-MAPPED_ROWS = [  # extra_vars -> (remove, leave) the shim must print
-    ({"blank": "true"}, ("data", "False")),
-    ({"blank": "yes"}, ("data", "False")),   # |bool parity
-    ({"flush": "true"}, ("data", "False")),
-    ({"flush": "deep"}, ("deep", "False")),
-    ({"uninstall": "true"}, ("all", "True")),
-    ({"uninstall": "true", "confirm_uninstall": "true"}, ("all", "True")),
+RETIRE = "[Run-mode] Refuse the retired removal switches"
+RETIRED_ROWS = [  # extra_vars -> the replacement the refusal must name (ruled 2026-11-23)
+    ({"blank": "true"}, "nos --remove=data --confirm"),
+    ({"blank": "yes"}, "nos --remove=data --confirm"),
+    ({"blank": "on"}, "nos --remove=data --confirm"),    # `blank | bool` reads these true too
+    ({"blank": "TRUE"}, "nos --remove=data --confirm"),
+    ({"flush": "true"}, "nos --remove=data --confirm"),
+    ({"flush": "deep"}, "nos --remove=deep --confirm"),
+    ({"uninstall": "true"}, "nos --remove=all --leave --confirm"),
+    ({"uninstall": "true", "confirm": "true"}, "nos --remove=all --leave --confirm"),
 ]
 FALSE_ROWS = [{"blank": "false"}, {"flush": "false"}, {"uninstall": "false"}]  # R7
 ALL_FALSE_TUPLE = "TUPLE [False, False, False, False, False, False]"
@@ -111,12 +114,14 @@ def _cmd(pb: Path, extra: dict, args=()) -> list[str]:
 
 def _plays(tmp: Path) -> dict[str, tuple[list[str], dict | None]]:
     """name -> (argv, env). One run-mode harness file serves every row."""
+    retire = tmp / "retire.yml"
+    retire.write_text(yaml.safe_dump([_retire_task()], sort_keys=False))
     pb = tmp / "harness.yml"
     pb.write_text(RUN_MODE_HARNESS.format(
-        facts=FACTS, repo=REPO, layers="\n".join(f"    - {p}" for p in ni.default_layers())))
+        facts=FACTS, repo=REPO, retire=retire, layers="\n".join(f"    - {p}" for p in ni.default_layers())))
     plays = {}
-    for i, (extra, _) in enumerate(MAPPED_ROWS):
-        plays[f"mapped{i}"] = (_cmd(pb, dict(extra, confirm="false")), None)
+    for i, (extra, _) in enumerate(RETIRED_ROWS):
+        plays[f"retired{i}"] = (_cmd(pb, extra), None)
     for i, extra in enumerate(FALSE_ROWS):
         plays[f"false{i}"] = (_cmd(pb, extra), None)
     plays["f9"] = (_cmd(pb, {"blank": "true", "remove": "none"}), None)
@@ -173,54 +178,45 @@ def _main_play() -> dict:
     return yaml.safe_load(_text(MAIN))[0]
 
 
-# ── shim (was test_compat_shim_mapping) ──────────────────────────────────────
-
-def shim_mapped_rows_print_the_mapping(r):
-    for i, (extra, (remove, leave)) in enumerate(MAPPED_ROWS):
-        run = r[f"mapped{i}"]
-        assert run.rc == 0, (extra, run.raw[-2000:])
-        assert f"Mapping applied: remove={remove} leave={leave}" in run.out, extra
-        assert f"REMOVE = {remove}" in run.out, extra
-        assert "TUPLE" not in run.raw, (extra, "dry-run stop did not fire")
+def _retire_task() -> dict:
+    return next(t for t in _main_play()["pre_tasks"] if t.get("name") == RETIRE)
 
 
-def shim_false_rows_map_to_nothing_R7(r):
+# ── retired vocabulary (was test_compat_shim_mapping; retired 2026-11-23) ────
+
+def retired_switches_fail_naming_the_replacement(r):
+    for i, (extra, replacement) in enumerate(RETIRED_ROWS):
+        run = r[f"retired{i}"]
+        assert run.rc != 0, (extra, "a retired switch must stop the run", run.raw[-2000:])
+        assert "Retired, nothing was changed" in run.out and replacement in run.out, extra
+        assert "REMOVE =" not in run.raw and "TUPLE" not in run.raw, (extra, "run went past the refusal")
+
+
+def retired_false_rows_map_to_nothing_R7(r):
     for i, extra in enumerate(FALSE_ROWS):
         run = r[f"false{i}"]
         assert run.rc == 0, (extra, run.raw[-2000:])
         assert ALL_FALSE_TUPLE in run.out.replace("'", ""), (extra, "false legacy switch must derive the all-False tuple")
-        assert "Mapping applied" not in run.raw, (extra, "shim fired on a false value")
+        assert "Retired" not in run.raw, (extra, "refusal fired on a false value")
 
 
-def shim_mixed_vocabulary_fails_F9(r):
+def retired_switch_with_remove_none_fails_F9(r):
     assert r["f9"].rc != 0, "-e blank=true -e remove=none must HARD-FAIL (F9)"
-    assert "Use ONE vocabulary" in r["f9"].out
+    assert "nos --remove=data --confirm" in r["f9"].out
 
 
-def shim_falsy_blank_with_removal_fails_M4(r):
+def retired_falsy_blank_with_removal_fails_M4(r):
     assert r["m4"].rc != 0, "-e blank=false -e remove=data would shadow X1's gate — must HARD-FAIL (M4)"
     assert "shadow the derived execution gate" in r["m4"].out
 
 
-def shim_setfact_payloads_are_value_gated(_r):
-    tasks = yaml.safe_load(_text(RUN_MODE))
-    by_name = {t["name"]: t for t in tasks if isinstance(t, dict) and "name" in t}
-
-    def _task(frag):
-        hits = [n for n in by_name if frag in n]
-        assert hits, f"compat mapping for {frag} MISSING from run-mode.yml (absence=failure)"
-        return by_name[hits[0]]
-
-    blank = _task("blank=true")["ansible.builtin.set_fact"]
-    assert blank["remove"] == "data" and blank["confirm"] is True
-    flush = _task("flush=true|deep")["ansible.builtin.set_fact"]
-    assert "'deep' if" in str(flush["remove"]) and flush["confirm"] is True
-    uni = _task("uninstall=true")["ansible.builtin.set_fact"]
-    assert uni["remove"] == "all" and uni["leave"] is True
-    assert uni["confirm"] is True and uni["_compat_uninstall"] is True
-    for frag in ("blank=true", "flush=true|deep", "uninstall=true"):
-        when = str(_task(frag)["when"])
-        assert ("in [true, 'true'" in when or "in ['true', 'deep']" in when), f"{frag} mapping is not VALUE-gated: {when}"
+def retired_refusal_is_the_first_pre_task(_r):
+    """Before the checkout preflight and _platform.yml (which writes a dir): nothing changes first."""
+    first = _main_play()["pre_tasks"][0]
+    assert first.get("name") == RETIRE, f"first pre_task is {first.get('name') or first}"
+    assert "always" in first.get("tags", []), "a --tags run would skip the refusal"
+    assert "ansible.builtin.fail" in first
+    assert not [t for t in yaml.safe_load(_text(RUN_MODE)) if "[Compat]" in t.get("name", "")], "shim tasks are back"
 
 
 # ── allowlist (was test_run_mode_allowlist, G-1) ─────────────────────────────
@@ -252,8 +248,7 @@ def derivation_is_filterless(_r):
     derive = next(t for t in tasks if "UNCONDITIONAL" in t["name"])
     env = jinja2.Environment()  # stock Jinja2, ZERO ansible filters
     for expr in derive["ansible.builtin.set_fact"].values():
-        env.from_string(str(expr)).render(
-            remove="data", confirm="true", assume_yes=False, leave=False, _compat_uninstall=False)
+        env.from_string(str(expr)).render(remove="data", confirm="true", assume_yes=False, leave=False)
 
 
 # ── removal-verify (was test_removal_verify_closes_survivors, G-4) ──────────
@@ -362,7 +357,7 @@ def dry_run_flag_is_derived_before_the_roles(_r):
              if "nos_dry_removal" in (t.get("ansible.builtin.set_fact") or t.get("set_fact") or {})]
     assert facts, "no pre_task derives nos_dry_removal"
     expr = facts[0]["ansible.builtin.set_fact"]["nos_dry_removal"]
-    for tok in ("remove", "blank", "confirm", "assume_yes"):
+    for tok in ("remove", "confirm", "assume_yes"):
         assert tok in expr, f"the derivation ignores `{tok}`"
     assert "always" in facts[0].get("tags", []), "a --tags run would lose the flag and sudo-die again"
 
@@ -411,7 +406,7 @@ def sudo_run_mode_carries_no_second_copy(_r):
 
 
 CHECKS = [v for k, v in dict(globals()).items()
-          if callable(v) and k.startswith(("shim_", "allowlist_", "tuple_", "tags_", "bare_", "derivation_",
+          if callable(v) and k.startswith(("retired_", "allowlist_", "tuple_", "tags_", "bare_", "derivation_",
                                            "verify_", "scope_", "dry_run_", "sudo_"))]
 
 

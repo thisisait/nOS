@@ -6,20 +6,20 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md). Release narrative →
 > [`RELEASE.md`](../RELEASE.md). Completed plans → [`docs/archive/`](archive/).
 >
-> Last updated: 2026-11-08.
+> Last updated: 2026-11-16.
 
 ## Now (current track)
 
-1. **v0.18-beta is tagged** (`51bbfece`, row `rel-018`); dev runs ahead of master.
-   Master's scheduled CI is red until the next cut: the Linux FrankenPHP digest
-   is fixed on dev (`895e5b29`); the macOS registry-ingest chdir and the
-   `loop:pipeline-exercise` 0/4 nights (intake's held code 10 read as
-   could-not-run) wait on `fix/registry-ingest-guard` (stacked on
-   `fix/pipeline-exercise-held-code`). State: `tools/red-status.py`.
-2. **Wing compat symlink** `state/llm-backends.yml` → `state/habitat/` stays until
+1. **v0.19-beta is tagged** (`f6e98346`, row `rel-019`; all four exits met 11-16, RELEASE.md).
+   Open from the cut: the `iris-face` journey file's three other tests and the panel overflow
+   (rows `iris-face-journey-workspaces`, `iris-claims-unperformed-action`,
+   `iris-stop-ends-the-turn`, `iris-panel-overflows-window`); 28 rows still wait for a live
+   check from the control review. State: `tools/red-status.py`.
+2. **Restart the roadmap loop** (`/loop /roadmap-loop` in nos-cc:0.2), paused for the cut. Its
+   ready work: the accepted specs and the control review's child rows
+   (`tools/roadmap-status.py --frontier ring`).
+3. **Wing compat symlink** `state/llm-backends.yml` → `state/habitat/` stays until
    every host has run `nos --tags wing`; then delete it and the two fallback reads.
-3. **Waiting on operator rulings:** `fix/gates-see-sibling-worktrees` (GATE
-   CHANGE), `feat/kiwix-library-stays-current`; n8n's advisory needs 3.x (major).
 4. **Datastore TLS is POSTPONED** by the operator. The research is kept in dtt
    (`sec-transport-enforce`, `sec-transport-study`) for when it resumes.
 5. **DGX (spark1):** cut-over in review (operator browser login + reboot test);

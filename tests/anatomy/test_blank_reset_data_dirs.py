@@ -204,3 +204,40 @@ def test_marked_resolvers_from_any_era_are_removed(tmp_path):
         dnsmasq_dev_domain="pazny.eu", bluesky_pds_hostname="bsky.pazny.eu",
         _nos_marked_resolvers={"stdout_lines": found})
     assert "dev.lan" in domains and "pazny.eu" in domains and "corp.example" not in domains
+
+
+HOST_ORGAN_HOMES = ("thalamus", "receptor")   # ~/thalamus (bin, log, target), ~/receptor
+
+
+def test_host_organ_homes_go_at_all_and_at_no_lower_level():
+    """Row host-organ-home-removal, ruled (a) 2026-11-23: remove=all deletes the two
+    program homes; data and deep keep them (a reinstall after deep keeps the build cache)."""
+    env = _jinja()
+    data, all_, _keep = _levels(env, _config_ctx(env))
+    deep = (REPO_ROOT / "tasks/flush-deep.yml").read_text()
+    for name in HOST_ORGAN_HOMES:
+        home = f"{managed.FAKE_HOME}/{name}"
+        assert home in all_, f"remove=all does not delete {home}"
+        assert not _covered(home, data), f"remove=data deletes {home}"
+        assert f"/{name}" not in deep, f"flush-deep.yml (remove=deep) names {name}"
+
+
+@pytest.mark.skipif(not __import__("shutil").which("ansible-playbook"), reason="runs the real inventory")
+@pytest.mark.parametrize("level,listed", [("all", True), ("deep", False), ("data", False)])
+def test_the_dry_run_inventory_names_the_homes_only_at_all(tmp_path, level, listed):
+    """The real run-mode dry run (no confirm: it stops at the inventory), HOME in tmp_path,
+    install_keap off so nothing reaches KEAP on 127.0.0.1."""
+    import os, subprocess
+    pb = tmp_path / "pb.yml"
+    pb.write_text(yaml.safe_dump([{
+        "hosts": "localhost", "connection": "local", "gather_facts": True,
+        "gather_subset": ["!all", "!min", "env", "user", "platform", "distribution"],
+        "vars_files": [str(p) for p in ni.default_layers()],
+        "tasks": [{"import_tasks": str(REMOVAL_SET_PATH.parent / "run-mode.yml")}]}]))
+    r = subprocess.run(["ansible-playbook", "-i", "localhost,", str(pb), "-e", f"remove={level}",
+                        "-e", "install_keap=false"], capture_output=True, text=True, timeout=300,
+                       cwd=tmp_path, env=dict(os.environ, HOME=str(tmp_path)))
+    assert r.returncode == 0, r.stdout[-2000:]
+    assert "DRY RUN" in r.stdout, r.stdout[-2000:]
+    for name in HOST_ORGAN_HOMES:
+        assert (f"- {tmp_path}/{name} " in r.stdout) == listed, f"{level}: ~/{name} should be listed={listed}"

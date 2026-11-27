@@ -120,7 +120,7 @@ def order(r: dict) -> tuple:
 
 #: The readiness judge (_LABEL, SPEC_STAMP, SPEC_PARTS, spec_ready) lives in roadmap_seed_lib since
 #: row dtt-capture-spec-shape, so the capture tool asks the same function; imported under the same names.
-from roadmap_seed_lib import SPEC_PARTS, SPEC_STAMP, _LABEL, spec_ready  # noqa: E402,F401
+from roadmap_seed_lib import SPEC_PARTS, SPEC_STAMP, _LABEL, not_loop_work, spec_ready  # noqa: E402,F401
 
 
 #: The statuses that open the frontier: `shipped`, and `active` — a branch the operator has allocated
@@ -160,6 +160,8 @@ def frontier(rows: list[dict], root: str) -> dict:
             if c.get("status") in OPEN:
                 if here is None:
                     item["ready"], item["missing"] = spec_ready(c.get("body"))
+                    if held := not_loop_work(c.get("body")):
+                        item["ready"], item["held"] = False, held
                     out.append((item, c))
                 else:
                     item.update(blocked_by=here.get("slug"), blocked_by_status=here.get("status"))
@@ -220,6 +222,7 @@ def row_view(rows: list[dict], slug: str) -> dict:
         seen.add(top.get("parent"))
         top = by_slug[top.get("parent")]
     ready, missing = spec_ready(r.get("body"))
+    held = not_loop_work(r.get("body"))
     verdict: dict = {"verdict": "not open", "status": r.get("status")}
     if r.get("status") in OPEN and top is not r:
         if top.get("slug") not in ring_order():
@@ -236,7 +239,7 @@ def row_view(rows: list[dict], slug: str) -> dict:
     return {"state": "ok", "slug": slug, "found": True,
             "columns": {k: v for k, v in r.items() if k != "body"}, "body": r.get("body") or "",
             "children": [{k: c.get(k) for k in ("slug", "title", "status")} for c in kids],
-            "spec": {"ready": ready, "missing": missing}, "frontier": verdict}
+            "spec": {"ready": ready and not held, "missing": missing, "held": held}, "frontier": verdict}
 
 
 def print_row(v: dict) -> None:
@@ -254,7 +257,8 @@ def print_row(v: dict) -> None:
     for c in v["children"]:
         print(f"  [{c['status'] or '?':6s}] {c['slug']}  {c['title'] or ''}")
     s = v["spec"]
-    print("spec: ready" if s["ready"] else "spec: needs-spec (" + ", ".join(f"no {m}" for m in s["missing"]) + ")")
+    print(f"spec: not loop work ({s['held']})" if s.get("held") else "spec: ready" if s["ready"]
+          else "spec: needs-spec (" + ", ".join(f"no {m}" for m in s["missing"]) + ")")
     f = v["frontier"]
     print({"buildable": f"frontier: buildable (under {f.get('system')})",
            "blocked": f"frontier: blocked by {f.get('by')} ({f.get('by_status')})",
@@ -269,11 +273,14 @@ def print_frontier(f: dict) -> None:
     ready = sum(1 for r in f["frontier"] if r["ready"])
     print(f"frontier under `{f['root']}` ({f['root_status']}) — "
           f"{len(f['frontier'])} buildable, {len(f['blocked'])} blocked")
-    print(f"  {ready} ready, {len(f['frontier']) - ready} needs-spec — the loop builds only `ready`; "
-          "a needs-spec row is an explore candidate (roadmap-loop skill, section 6)")
+    held = sum(1 for r in f["frontier"] if r.get("held"))
+    print(f"  {ready} ready, {len(f['frontier']) - ready - held} needs-spec, {held} not loop work (Builder:) — "
+          "the loop builds only `ready`; a needs-spec row is an explore candidate (roadmap-loop skill, section 6)")
     for r in f["frontier"]:
         where = f"{r['system']:10s} " if "system" in r else ""
         spec = "ready" if r["ready"] else "needs-spec (" + ", ".join(f"no {m}" for m in r["missing"]) + ")"
+        if r.get("held"):
+            spec = f"not loop work ({r['held']})"
         print(f"  d{r['depth']} [{r['status']:6s}] {where}{r['slug'] or '?':28s} {r['title'] or ''}  — {spec}")
     if f["blocked"]:
         print("\n  blocked — nearest unshipped ancestor:")

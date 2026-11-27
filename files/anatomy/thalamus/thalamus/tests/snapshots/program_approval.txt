@@ -1,0 +1,10 @@
+a program writes 3 row(s) — nothing is written unless you approve
+  contains text from query_rows
+  | get(db:invoices) | where("status eq overdue") | update(db:invoices, set="sta
+update Invoices (invoices) / inv-3 — nothing is written unless you approve
+  status: "overdue" -> "reminded"
+update Invoices (invoices) / inv-7 — nothing is written unless you approve
+  status: "overdue" -> "reminded"
+delete Invoices (invoices) / inv-9 — nothing is written unless you approve
+  approve deletes the whole row: every value below is gone
+  status: "void" -> (deleted)

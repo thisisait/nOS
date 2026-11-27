@@ -187,7 +187,7 @@ def main() -> int:
             if "already" in stderr or "exists" in stderr:
                 result["errors"].append(
                     "admin already bootstrapped but no token persisted; "
-                    "manually retrieve via UI or wipe with -e blank=true"
+                    "manually retrieve via UI or wipe with nos --remove=data --confirm"
                 )
             else:
                 result["errors"].append(f"bootstrap failed: {raw}")

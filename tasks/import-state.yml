@@ -94,15 +94,7 @@
     {{ docker_bin }} compose
     -f "{{ stacks_dir }}/{{ item }}/docker-compose.yml"
     -p {{ item }} down -t 30 2>&1 || true
-  loop:
-    - iiab
-    - observability
-    - infra
-    - devops
-    - b2b
-    - voip
-    - engineering
-    - data
+  loop: "{{ nos_stacks | reject('equalto', 'apps') | list }}"  # an import never stopped the apps stack
   failed_when: false
   changed_when: true
 

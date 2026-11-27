@@ -20,15 +20,17 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 123 (98 core services, 3 manifest apps)
-- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (111)
-- **Transfers outside the EU:** 12 activities
-- **Activities engaging a third-party processor:** 18
+- **Processing activities:** 126 (99 core services, 5 manifest apps)
+- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (113), public_task (1)
+- **Transfers outside the EU:** 14 activities
+- **Activities engaging a third-party processor:** 19
 
 ## Transfers & processors (audit-sensitive subset)
 
 | Service | Outside EU? | Processors |
 |---|---|---|
+| Chronos (`app_chronos`) | **Yes** | — |
+| Rodina (`app_rodina`) | **Yes** | `Google (Gmail SMTP): sends the login links` |
 | conductor (`agent_conductor`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this ceremony. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support.; **Anthropic, PBC** (US) — LLM inference when this ceremony is driven on the claude-CLI path rather than the bound backend (--print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.; **on-device (operator's own hardware)** (CZ — this host) — FALLBACK LLM inference on this host via ollama's OpenAI-compatible surface on loopback (model.fallback_backend), served only when the primary fails. No third party sees the prompt. · safeguard: Not applicable. No transfer occurs. |
 | curator (`agent_curator`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this ceremony. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support.; **Anthropic, PBC** (US) — LLM inference when this ceremony is driven on the claude-CLI path rather than the bound backend (--print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.; **on-device (operator's own hardware)** (CZ — this host) — FALLBACK LLM inference on this host via ollama's OpenAI-compatible surface on loopback (model.fallback_backend), served only when the primary fails. No third party sees the prompt. · safeguard: Not applicable. No transfer occurs. |
 | invoice-extract (`agent_invoice-extract`) | No | **on-device (operator's own hardware)** (CZ — this host) — LLM inference on this host via ollama's OpenAI-compatible surface on loopback, constrained to the ISDOC record schema. No third party. · safeguard: Not applicable. No transfer occurs. |
@@ -668,6 +670,58 @@ interests basis).
 
 ### apps stack
 
+#### Chronos — `app_chronos`
+- **Purpose:** Build a searchable causal timeline of events from general Czech news RSS
+feeds. The feeds are not filtered to politics, so ordinary news naming
+private individuals (crime, accidents, local stories) is stored too; the
+operator accepted that scope. Agents store article titles and summaries,
+the names and roles of persons, organisations and places mentioned in
+them, a local LLM impact score and text embeddings. Since 0.6.0 it also
+stores orange and red disaster alerts (GDACS) and weather warnings
+(MeteoAlarm); those carry no personal data and are scored from a table,
+without a model. MeteoAlarm warnings are kept as an archive record, not
+as operational redistribution, and say so where they are shown. Exports
+leave out anything whose licence does not clearly allow redistribution
+(news, MeteoAlarm). Since 0.7.0 the local model also proposes
+cause-and-effect links between stored events; a proposal is shown
+labelled as the model's proposal and counts as a link only after an
+operator approves it. Since 0.8.0 it also keeps three public number
+series (ČNB exchange rates, Eurostat inflation, GFZ Kp index; no personal
+data) and flags unusual days in them by arithmetic, again only as
+proposals. Since 0.9.0 it stores security news from NÚKIB and CESNET
+(titles and summaries; no names are extracted from them) and ENISA's
+list of exploited vulnerabilities. Since 0.10.0 articles about the same
+story are grouped by their embeddings and the local model sorts each
+news story into one topic from a fixed list (the lanes of the
+timeline) and says which word in the text tells when the reported
+thing happened; the date is then computed in code. Since 0.12.0 it
+also stores official press releases and statistics (European
+Commission, ČSÚ, ČNB, CERT-EU) and USGS earthquake records; these are
+scored from a table and no names are extracted from them. Since 0.13.0
+the same holds for press releases of Czech ministries, the EU Council,
+the ECB, UN News, WHO outbreak news, NASA, NOAA and Hacker News
+stories (titles and links; authors are not kept). Since 0.14.0
+operators can mark turning points and file stories under them; when an
+operator looks a historical event up, the name they type is sent to
+wikidata.org (Wikimedia Foundation, USA) and nothing else is; the
+typed text may name a person, so this is declared as a transfer
+outside the EU (operator 2026-11-18). WIKIDATA_LOOKUP=0 turns it off.
+Operators leave their Authentik username on agent runs, erasures and the decisions they make on proposals (audit).
+Events are a historical archive and are kept without an erasure horizon
+(retention -1). On request an admin erases an event or a named entity
+(with every event that names it) in the app; the erasure is audited by id
+and leaves a SHA-256 tombstone of the source URL or name so the crawler
+cannot re-add it. Processing stays on this host (local Ollama); apart
+from the Wikidata lookup nothing is shared, no profiling, no automated decisions about the people named.
+- **Legal basis (Art. 6):** `public_task`
+- **Data subjects:** `public_figures`; `private_individuals`; `operators`
+- **Data categories:** `name`; `public_role`; `political_opinions`; `news_content`; `username`
+- **Recipients / processors:** —
+- **Transfers outside EU:** **Yes**
+- **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
+- **Storage:** 'apps' compose stack on host (Docker volumes)
+- **Security measures:** platform baseline (see above)
+
 #### Documenso — `app_documenso`
 - **Purpose:** Allow the operator to send PDFs for legally-binding e-signature and
 retain the signed copy + signature audit log. Required to fulfil
@@ -678,6 +732,24 @@ contracts with counter-parties who agree to electronic execution.
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
+- **Storage:** 'apps' compose stack on host (Docker volumes)
+- **Security measures:** platform baseline (see above)
+
+#### Rodina — `app_rodina`
+- **Purpose:** A family history (genealogy) site shared only with the family. It shows records from digitised parish
+registers and what relatives told the operator, including names, dates and places of living relatives.
+Access is limited to a list of family email addresses: a listed person asks for a one-time login link,
+which is mailed through the operator's Gmail account (Google, USA) and then holds a signed session
+for 30 days. The gate stores only spent link ids and a mail counter; its log keeps a hash of the email,
+never the address or a token. This is a purely personal, household activity (GDPR Art. 2(2)(c), operator
+2026-11-21); the manifest records it under legitimate interests because the parser takes only Art. 6
+bases. It is the declared exception to the estate's SSO rule: family members are not estate users.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `family_members`; `end_users`
+- **Data categories:** `name`; `birth_and_death_dates`; `family_relations`; `places`; `email`
+- **Recipients / processors:** `Google (Gmail SMTP): sends the login links`
+- **Transfers outside EU:** **Yes**
+- **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
 - **Storage:** 'apps' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 
@@ -1787,6 +1859,19 @@ login, username, request line, duration) in ~/receptor/log.
 - **Retention:** transient (not persisted)
 - **Storage:** Host only: ~/.nos/identity-map.yml (0600) and ~/receptor/log.
 - **Security measures:** `Caller identified by the kernel (SO_PEERCRED / LOCAL_PEERCRED), never by a header`; `Socket 0600 under ~/.nos (0700); a login not in the map is refused`; `Client X-Authentik-* and x-keap-proxy-secret dropped before KEAP`; `Proxy secret only in the 0600 plist / unit env`
+
+#### Santa — `svc_santa`
+- **Purpose:** Security monitoring of this host: record every program that executes so
+the operator can see what ran outside the trees nOS declares
+(tools/santa-status.py). Nothing is blocked.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`; `local_accounts`
+- **Data categories:** `exec_telemetry`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** 1 days
+- **Storage:** Host only: /var/db/santa/santa.log and its rotations (rotated by the vendor's /etc/newsyslog.d/com.northpolesec.santa.newsyslog.conf), events.db and rules.db.
+- **Security measures:** `MONITOR mode only: no configuration profile, no rules (test_santa_is_monitor_only)`; `The pkg is downloaded and verified as root into a root-only 0700 dir (santa_pkg_sha256)`; `nOS renders no profile, so no sync server is configured; nothing is sent off the host`
 
 #### Thalamus — `svc_thalamus`
 - **Purpose:** Let one person find and change rows in a DataTable they can already read
