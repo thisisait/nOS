@@ -185,7 +185,7 @@ Plaintext is **never** stored in `agent_credentials.secret_ref`. The column is a
 - `proc_open` uses the **array form** (`proc_open([$bin, "secrets", "get", $name, "--path", $parent, "--plain", "--silent"], ...)`) — string form delegates to `/bin/sh -c` (A14.1 RCE class) and is forbidden.
 - `proc_open` env_vars allowlist: `PATH, HOME, LANG, LC_ALL, LC_CTYPE, TZ, PWD, TMPDIR, INFISICAL_TOKEN`. Nothing else — `ANTHROPIC_API_KEY`, `WING_API_TOKEN`, `BONE_SECRET`, `WING_EVENTS_HMAC_SECRET`, `OPENCLAW_API_KEY` are NEVER forwarded to the spawned CLI.
 - Resolved values are cached at `CredentialResolver` instance level for the SESSION lifetime only. `bindVault(null)` drops the cache. The cache is `private array` (not `static`) so sessions get isolated caches. Never persists to disk.
-- CLI not on `PATH`? `fetch()` returns `null` + logs once per process: "infisical CLI not on PATH; falling back to env". The caller (resolver) then walks the env-var fallback. Operators install via `brew install infisical/get-cli/infisical`; an `INFISICAL_BIN` env var overrides the Homebrew/usr-local probe order.
+- CLI not on `PATH`? `fetch()` returns `null` + logs once per process: "infisical CLI not on PATH; falling back to env". The caller (resolver) then walks the env-var fallback. Operators install via `brew install infisical/get-cli/infisical`. The CLI is looked up only at `/opt/homebrew/bin`, `/usr/local/bin` and `/usr/bin` (no env override: it is handed secret paths); installed elsewhere, symlink it into `/usr/local/bin`.
 
 ---
 
