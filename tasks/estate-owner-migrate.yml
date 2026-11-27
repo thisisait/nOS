@@ -1,0 +1,124 @@
+---
+# Row estate-service-login, slice 1 (ruled 2026-11-23, choice c): the MAP of what moves a Linux estate's
+# runtime ownership from the person's login to nos_system_user. Reached only by
+# `--tags estate-owner-migrate` (main.yml tags it `never`). Metadata only: no become, no file opened
+# under ~/.nos, the CA or a unit. It ends the play itself; the confirmed move waits on a ruling.
+
+- name: "[Estate owner] Refuse off Linux, before any stat"
+  ansible.builtin.set_fact:
+    _eo_refusal: "{{ 'Linux only: this host is ' ~ ansible_facts['system'] ~ '; nothing was read or changed' }}"
+  when: ansible_facts['system'] != 'Linux'
+
+- name: "[Estate owner] The service login exists"
+  ansible.builtin.command:
+    argv: [getent, passwd, "{{ nos_system_user }}"]
+  register: _eo_account
+  changed_when: false
+  failed_when: _eo_account.rc not in [0, 2]   # 2 = no such account
+  when:
+    - _eo_refusal is not defined
+    - nos_system_user | default('') | length > 0
+
+- name: "[Estate owner] Refuse without a service login"
+  ansible.builtin.set_fact:
+    _eo_refusal: >-
+      {{ 'nos_system_user is empty: set it in config.yml (the service login) before the map'
+         if (nos_system_user | default('') | length) == 0
+         else ('nos_system_user=' ~ nos_system_user ~ ' is the converging login itself: nothing to move'
+               if nos_system_user == ansible_facts['user_id']
+               else ('nos_system_user=' ~ nos_system_user ~ ': no such account (a converge creates it, roles/pazny.linux.users)'
+                     if _eo_account.rc == 2 else '')) }}
+  when: _eo_refusal is not defined
+
+- name: "[Estate owner] Owners of the roots (metadata only)"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+    get_checksum: false
+    get_mime: false
+    get_attributes: false
+  loop: "{{ _eo_paths }}"
+  register: _eo_stat
+  when: _eo_refusal | length == 0
+  vars:
+    _eo_paths: ["{{ stacks_dir }}", "{{ nos_data_root }}", "{{ ansible_facts['env']['HOME'] }}/.nos", "{{ nos_main_checkout }}"]
+
+# du exits 1 on a tree it can only partly read (container-owned dirs) and 124 at the timeout: UNKNOWN.
+- name: "[Estate owner] Sizes"
+  ansible.builtin.command:
+    argv: [timeout, '300', du, -sk, "{{ item }}"]
+  loop: ["{{ stacks_dir }}", "{{ nos_data_root }}", "{{ ansible_facts['env']['HOME'] }}/.nos", "{{ nos_main_checkout }}"]
+  register: _eo_du
+  changed_when: false
+  failed_when: _eo_du.rc not in [0, 1, 124]
+  when: _eo_refusal | length == 0
+
+- name: "[Estate owner] The person's user units (names only)"
+  ansible.builtin.find:
+    paths: "{{ ansible_facts['env']['HOME'] }}/.config/systemd/user"
+    patterns: ['*.service', '*.timer']
+    file_type: file
+  register: _eo_units
+  when: _eo_refusal | length == 0
+
+- name: "[Estate owner] Linger"
+  ansible.builtin.stat:
+    path: "/var/lib/systemd/linger/{{ ansible_facts['user_id'] }}"
+    get_checksum: false
+  register: _eo_linger
+  when: _eo_refusal | length == 0
+
+- name: "[Estate owner] The mkcert CA directory"
+  ansible.builtin.shell: command -v mkcert >/dev/null 2>&1 || exit 3; mkcert -CAROOT
+  register: _eo_caroot
+  changed_when: false
+  failed_when: _eo_caroot.rc not in [0, 3]   # 3 = mkcert not installed: UNKNOWN
+  when: _eo_refusal | length == 0
+
+- name: "[Estate owner] The map ({{ 'confirm REFUSED' if nos_confirmed | default(false) | bool else 'DRY RUN' }})"
+  ansible.builtin.debug:
+    msg: |-
+      ══════════════════════════════════════════════════════════════════════
+       ESTATE OWNER MAP · {{ 'confirm given: REFUSED below' if nos_confirmed | default(false) | bool else 'DRY RUN: nothing changed' }}
+       from {{ ansible_facts['user_id'] }} ({{ ansible_facts['user_uid'] }}:{{ ansible_facts['user_gid'] }})
+       to   {{ nos_system_user }} ({{ _eo_account.stdout.split(':')[2:4] | join(':') }})
+      ══════════════════════════════════════════════════════════════════════
+      {% set kinds = ['bind-mount root', 'bind-mount root', '~/.nos', 'checkout'] %}
+      {% for s in _eo_stat.results %}
+      {%   set du = _eo_du.results[loop.index0] %}
+      {%   set size = (((du.stdout.split() | first | int) / 1048576) | round(1) | string ~ ' GiB') if du.rc == 0 else 'UNKNOWN' %}
+      {%   set owner = (s.stat.pw_name ~ ':' ~ s.stat.gr_name) if s.stat.exists else 'absent' %}
+       {{ kinds[loop.index0] }}  {{ s.item }}  {{ owner }} -> {{ nos_system_user }}:{{ nos_system_user }}  {{ size }}
+         {{ 'chown + ACL for ' ~ ansible_facts['user_id'] ~ ': waits on a ruling' if loop.index0 < 2 else 'later (not in this slice)' }}
+      {% endfor %}
+       user units  {{ _eo_units.matched | default(0) }} in ~/.config/systemd/user -> system units  later (not in this slice)
+      {% for f in _eo_units.files | default([]) | map(attribute='path') | map('basename') | sort %}
+         - {{ f }}
+      {% endfor %}
+       linger      {{ 'on' if _eo_linger.stat.exists else 'off' }} for {{ ansible_facts['user_id'] }}  later (not in this slice)
+       mkcert CA   {{ (_eo_caroot.stdout | trim) if _eo_caroot.rc == 0 else 'UNKNOWN (mkcert not found)' }}  later (not in this slice)
+      {% if configure_external_storage | default(false) %}
+       external    {{ external_storage_root }}: service data outside the two roots, NOT in this map
+      {% endif %}
+  when: _eo_refusal | length == 0
+
+# The askpass helper is removed in post_tasks, which end_play and a refusal skip (as the Leave pair).
+- name: "[Estate owner] Remove the sudo askpass helper before the play ends"
+  ansible.builtin.file:
+    path: "{{ ansible_facts['env']['HOME'] }}/.ansible_askpass"
+    state: absent
+  changed_when: false
+
+- name: "[Estate owner] Refuse"
+  ansible.builtin.fail:
+    msg: >-
+      {{ _eo_refusal if (_eo_refusal | length > 0) else
+         'the confirmed move (chown of the two roots, the rollback record, estate_owner_rollback) is not built: it waits
+         on a ruling (row estate-service-login: the converge still runs as the person and writes 0600 files the service
+         uid cannot read). The map above is the whole of this slice.' }}
+  when: >-
+    (_eo_refusal | length > 0)
+    or (nos_confirmed | default(false) | bool)
+    or (estate_owner_rollback is defined)
+
+- name: "[Estate owner] Dry run: end the play (exit 0)"
+  ansible.builtin.meta: end_play
