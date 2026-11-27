@@ -1,4 +1,4 @@
-//! Pulse's stdout/stderr scrub, a port of pulse/redact.py scrub_text: six patterns in its order,
+//! Pulse's stdout/stderr scrub, a port of pulse/redact.py scrub_text: seven patterns in its order,
 //! each keeps the labelled prefix and puts <REDACTED> where the value was. No regex crate: each
 //! pattern is a matcher tried at every char, like re.sub. tests/fixtures/pulse_redact.json holds the
 //! pairs both suites must produce, generated from the Python.
@@ -188,6 +188,24 @@ fn jwt(t: &[char], p: usize) -> Option<(usize, usize)> {
     Some((keep, j))
 }
 
+/// `-----BEGIN (?P<label>[A-Z0-9 ]*PRIVATE KEY(?: BLOCK)?)-----(?!<REDACTED>)` then, DOTALL, through
+/// the first `-----END <label>-----`, else to the end. The label is the whole [A-Z0-9 ] run (`-` ends it).
+fn pem(t: &[char], p: usize) -> Option<(usize, usize)> {
+    if !exact(t, p, "-----BEGIN ") {
+        return None;
+    }
+    let start = p + 11;
+    let n = run(t, start, usize::MAX, |c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == ' ');
+    let label: String = t[start..start + n].iter().collect();
+    let keep = start + n + 5;
+    if !exact(t, start + n, "-----") || exact(t, keep, R) || !(label.ends_with("PRIVATE KEY") || label.ends_with("PRIVATE KEY BLOCK")) {
+        return None;
+    }
+    let end: Vec<char> = format!("-----END {label}-----").chars().collect();
+    let at = (keep..=t.len().saturating_sub(end.len())).find(|&k| t[k..].starts_with(&end));
+    Some((keep, at.map_or(t.len(), |k| k + end.len())))
+}
+
 /// A secret matcher: from position i, Some((keep, end)): keep t[i..keep], replace t[keep..end].
 type Matcher = fn(&[char], usize) -> Option<(usize, usize)>;
 
@@ -210,7 +228,7 @@ fn sub(t: Vec<char>, m: Matcher) -> Vec<char> {
 }
 
 pub fn redact(text: &str) -> String {
-    [env, cli, http, bearer, bare, jwt].into_iter().fold(text.chars().collect(), sub).into_iter().collect()
+    [pem, env, cli, http, bearer, bare, jwt].into_iter().fold(text.chars().collect(), sub).into_iter().collect()
 }
 
 #[cfg(test)]
