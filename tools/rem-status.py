@@ -195,7 +195,7 @@ def regrade(items: list[dict], report: dict | None, judged: dict | None = None, 
 
     def live(subject: str, m: dict) -> bool:
         j = judged.get((str(m.get("id")), subject))
-        return not (j and str(j.get("until")) >= today)
+        return not (j and str(j.get("until")) >= today and j.get("verdict") == "not-applicable")
 
     by_subject: dict[str, list[dict]] = {}
     for r in report.get("pins") or []:

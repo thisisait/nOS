@@ -30,6 +30,7 @@ import pathlib
 import re
 import subprocess
 import sys
+import zlib
 from datetime import datetime, timedelta, timezone
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
@@ -140,7 +141,7 @@ def _lines(since: datetime, missing: list[str]):
                     if first is None and (ev := parse(line)):
                         first = ev["ts"]
                     yield line
-        except (OSError, EOFError) as exc:
+        except (OSError, EOFError, zlib.error) as exc:
             missing.append(f"{path} ({getattr(exc, 'strerror', None) or exc})")
             return
         if first is not None and first < since:
