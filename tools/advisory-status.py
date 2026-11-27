@@ -485,7 +485,11 @@ def _match_tech(version: str, product: str | None, entries: list[dict]) -> tuple
     """cve.now entries -> (hits, unreadable ids), by affected[] vendor/product
     ranges. `product` (from the receptor) narrows affected[] to that product;
     an entry with no affected row for it is not about this pin. A bound of
-    "*" or one that names no release makes that entry UNKNOWN."""
+    "*" or one that names no release makes that entry UNKNOWN.
+
+    An open base range (nginx ">= 1.9.5", no fix) beside per-line fixes ("1.30.0 -> 1.30.7")
+    does not hold for a version at or past the fix of a line that starts inside it: apex 1.30.7
+    matched five such CVEs (2026-11-22), as _match_github's "own line has a patch" rule says."""
     hits, unreadable = [], []
     for e in entries:
         rows = [a for a in e.get("affected") or []
@@ -497,10 +501,15 @@ def _match_tech(version: str, product: str | None, entries: list[dict]) -> tuple
             for a in rows:
                 if version in (a.get("versions") or []):
                     found = {"range": f"= {version} (listed)", "fixed": None, "open": False}
+                closed = [(r["introduced"], r["fixed"]) for r in a.get("ranges") or [] if r.get("introduced") and r.get("fixed")]
                 for r in a.get("ranges") or []:
                     ev = {k: r.get(k) for k in ("introduced", "fixed", "last_affected") if r.get(k)}
                     if not ev:
                         raise ValueError("empty range")
+                    if set(ev) == {"introduced"} and any(
+                            parse_version(ci) >= parse_version(ev["introduced"]) and in_range(version, introduced=ci)
+                            and not in_range(version, introduced=ci, fixed=cf) for ci, cf in closed):
+                        continue  # our line is patched at or below us: the open base is another line's
                     if in_range(version, **ev) and found is None:
                         found = {"range": _fmt_range(ev.get("introduced"), ev.get("fixed"),
                                                      ev.get("last_affected")), "fixed": ev.get("fixed"),
