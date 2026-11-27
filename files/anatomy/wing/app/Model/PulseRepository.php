@@ -591,6 +591,7 @@ final class PulseRepository
 		// unfinished run (NULL exit_code) BREAKS the streak rather than
 		// extending it — it has not reported a result, so claiming it as a
 		// failure would be a marker written by something other than a reader.
+		// A declared findings code closes it too, as fails_window excludes it.
 		$recent = $this->db->query(
 			'SELECT job_id, exit_code, rn FROM (
 			   SELECT job_id, exit_code,
@@ -606,7 +607,8 @@ final class PulseRepository
 			if (($closed[$id] ?? false) === true) {
 				continue;
 			}
-			if ($row->exit_code === null || (int) $row->exit_code === 0) {
+			if ($row->exit_code === null || (int) $row->exit_code === 0
+				|| in_array((int) $row->exit_code, $this->findingsExitCodes($id), true)) {
 				$closed[$id] = true;
 				continue;
 			}
