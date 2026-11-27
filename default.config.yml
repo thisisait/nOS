@@ -901,7 +901,7 @@ qgis_version: "latest@sha256:f825a56109bea5a9b7bee50d43bdec472aa614276ea2fbd44e5
 #                    → Tempo (traces)         →
 # ==============================================================================
 
-tempo_version: "2.10.8"           # REM-232: head of 2.10. Prior REM-036 CVE-2026-28377 at 2.10.3. [swept 2.10.3 2026-09-17]
+tempo_version: "2.10.10"           # REM-313: 2.10 line patch. Prior 2.10.8: REM-232: head of 2.10. Prior REM-036 CVE-2026-28377 at 2.10.3. [swept 2.10.3 2026-09-17]
 nginx_prometheus_exporter_version: "1.4.1"  # github.com/nginxinc/nginx-prometheus-exporter/releases – no Homebrew formula
 # SHA256 from nginx-prometheus-exporter_1.4.1_checksums.txt on the same release.
 nginx_prometheus_exporter_checksums:
@@ -914,7 +914,7 @@ phpfpm_exporter_checksums:
   amd64: "42cec68addaf34c1303018b1426edb9cc4dea649dfe77d5359cdf832493eb83d"
 
 # ── Docker image versions (observability + devops) ───────────────────────────
-grafana_version: "12.4.14"              # CVE-2026-100105, -88858, -88967 (12.4.14). Prior REM-252 12.4.10. Prior REM-226 CVE-2026-17183 at 12.4.9. [swept 12.4.9 2026-09-17]
+grafana_version: "12.4.16"              # REM-356 (12.4.15) + CVE-2026-107561, -88943, -88960 (12.4.16): 12.4 head. Prior 12.4.14: CVE-2026-100105, -88858, -88967 (12.4.14). Prior REM-252 12.4.10. Prior REM-226 CVE-2026-17183 at 12.4.9. [swept 12.4.9 2026-09-17]
                                         # (v12.4.9 release body carries a literal `### Security`
                                         # section naming it; verified at the tag, not inferred from
                                         # the five-release 2026-08-18 wave). Same minor as the
@@ -926,7 +926,7 @@ loki_version: "3.7.10"          # grpc 1.83.2 (high), containerd, Go 1.26.10 reb
 # Gitea Docker
 gitea_version: "28.4.0"                 # 2026-11-16: 9 high (GHSA-frjx, -6m4f, -wmr3, -wgx7, -4p89, -w87g, -q3q9, -9vh6, -5mx6) fixed in 28.4.0; prior 28.3.0
 
-postgres_exporter_version: "v0.20.1"  # v0.21.x held: deprecates PG_EXPORTER_* env (grafana compose sets PG_EXPORTER_EXTEND_QUERY_PATH), wraps counters [2026-11-21]
+postgres_exporter_version: "v0.21.1"  # PG_EXPORTER_EXTEND_QUERY_PATH dropped from the grafana compose (REM-370); counters > 2^53 wrap (one-time rate spike). Prior v0.20.1: v0.21.x held: deprecates PG_EXPORTER_* env (grafana compose sets PG_EXPORTER_EXTEND_QUERY_PATH), wraps counters [2026-11-21]
 mysqld_exporter_version: "v0.20.0"  # v0.21.0 held: BREAKING metric-type change + $$ password escaping in config files [2026-11-21].
 # -alpine, and the suffix is load-bearing. Upstream's DEFAULT image is now
 # scratch — no wget, no shell, nothing but the binary — so the compose
@@ -977,7 +977,7 @@ openhuman_skills: [nos-datatables, nos-for-openhuman]  # copied into ~/.openhuma
 # 2.32.7 is the queue's number and sits above that floor, with six days of soak;
 # 2.34.2 shipped today and buys nothing — no advisory has been published since
 # 2026-07-22. Same-major, migrate-on-start. arm64 tag confirmed on the registry.
-n8n_version: "2.47.7"  # GHSA-q8rc-7m84-mfvj fixed in 2.47.6 (stable; 2.48.x is beta). One-way DB migrations: back up ~/n8n. Prior 2.45.7.
+n8n_version: "2.48.8"  # 2.48.x is stable since 2.48.4 (no prerelease); GHSA fixes on 2.47/2.48; one-way DB migrations: back up ~/n8n. Prior 2.47.7: GHSA-q8rc-7m84-mfvj fixed in 2.47.6 (stable; 2.48.x is beta). One-way DB migrations: back up ~/n8n. Prior 2.45.7.
 n8n_data_dir: "{{ ansible_facts['env']['HOME'] }}/n8n"
 
 # ==============================================================================
@@ -1419,7 +1419,7 @@ device_gateway_port: 8770              # loopback BFF; Traefik host:8770 when in
 mailpit_port: 8025                      # UI port (1025 is SMTP)
 
 # ── Home Assistant ─────────────────────────────────────────────────────────────
-homeassistant_version: "2026.8.1"     # CVE-2026-34205 (CVSS 9.7 Supervisor bypass) [swept 2026.8.0 2026-08-11]
+homeassistant_version: "2026.8.3"     # 2026.8 line patch. Prior 2026.8.1: CVE-2026-34205 (CVSS 9.7 Supervisor bypass) [swept 2026.8.0 2026-08-11]
 homeassistant_port: 8123
 homeassistant_domain: "home{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 homeassistant_timezone: "{{ nos_timezone }}"
@@ -1490,7 +1490,7 @@ rustfs_version: "1.0.6"                 # 1.0.4 CA distrust, 1.0.5 root-derived 
 # in this wave the result cannot be verified against `docker ps`. The tag and
 # its arm64 manifest are verified against the registry; that the service comes
 # up on it is not. First supervised `-e install_erpnext=true` run is the test.
-erpnext_version: "v15.124.5"              # top of v15 (2026-11-04): GHSA-m668-9q43-8g29 + GHSA-x267-fgf5-54q9 fixed by 15.124.2 [advisory-status 2026-11-08]. Prior GHSA-v38v-9h2p-hr8v (critical) fixed by 15.121.3. REM-208: GHSA-6w83-8777-v93q SSTI (CVSS 9.9), floor 15.119.1 — pinned above it so the fourth overtake has margin
+erpnext_version: "v15.127.0"              # v15 head (2026-11-25), notes name no breaking change. Prior v15.124.5: top of v15 (2026-11-04): GHSA-m668-9q43-8g29 + GHSA-x267-fgf5-54q9 fixed by 15.124.2 [advisory-status 2026-11-08]. Prior GHSA-v38v-9h2p-hr8v (critical) fixed by 15.121.3. REM-208: GHSA-6w83-8777-v93q SSTI (CVSS 9.9), floor 15.119.1 — pinned above it so the fourth overtake has margin
 # Bind-mount target for the ERPNext sites volume. The Docker named volume
 # `b2b_erpnext_sites` is the live storage; this var is referenced by
 # tasks/post.yml when reading site_config.json + bench migrate. Operators
