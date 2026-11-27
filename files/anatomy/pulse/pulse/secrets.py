@@ -1,7 +1,7 @@
 """THE `secret:` reference resolver — one implementation, every caller.
 
 `secret:<name>` in a job's env is a POINTER into ``~/.nos/secrets.yml``
-(0600), never a value (AgentKit's ``secret_ref`` rule, applied to the
+(0600; the scheme and master from machine custody first), never a value (AgentKit's ``secret_ref`` rule, applied to the
 runtime that actually runs the jobs — see ``discover-pulse-catalog.py``).
 
 Two kinds of caller share this module, and sharing is the point:
@@ -55,6 +55,22 @@ def secrets_path() -> pathlib.Path:
     return pathlib.Path.home() / ".nos/secrets.yml"
 
 
+def _derive():
+    """nos_secret_derive (files/anatomy/module_utils), the one custody reader: not part of this
+    package, so it is found beside it in the checkout the daemon and the shim run from."""
+    import importlib
+    import os
+    import sys
+
+    root = os.environ.get("NOS_REPO_ROOT")
+    dirs = [pathlib.Path(root, "files/anatomy/module_utils")] if root else []
+    dirs.append(pathlib.Path(__file__).resolve().parents[2] / "module_utils")
+    for d in dirs:
+        if (d / "nos_secret_derive.py").is_file() and str(d) not in sys.path:
+            sys.path.append(str(d))
+    return importlib.import_module("nos_secret_derive")
+
+
 def load_store() -> dict:
     """Read per resolution, not cached.
 
@@ -66,15 +82,31 @@ def load_store() -> dict:
     every reference unresolvable and refuses the job. Fail-closed: the
     2026-08-11 deployed-venv-without-PyYAML incident refused 25/25 jobs
     loudly rather than passing literals quietly, and that was correct.
+
+    The scheme and master then come from machine custody first
+    (nos_secret_derive.unlock, row secrets-at-rest). Custody and the file
+    disagreeing refuses (empty). A custody reader that cannot be imported
+    leaves the file alone, as before custody existed: it is the source the
+    converge persisted, and slice 1 keeps it.
     """
     path = secrets_path()
-    if not path.is_file():
-        return {}
+    store: dict = {}
+    if path.is_file():
+        try:
+            import yaml
+            store = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        except Exception as exc:                                  # noqa: BLE001
+            log.error("could not read %s: %s", path, exc)
+            return {}
     try:
-        import yaml
-        return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    except Exception as exc:                                      # noqa: BLE001
-        log.error("could not read %s: %s", path, exc)
+        derive = _derive()
+    except ImportError as exc:
+        log.error("custody reader not importable (%s): %s alone", exc, path)
+        return store
+    try:
+        return derive.unlock(path, store)
+    except derive.UnlockError as exc:
+        log.error("%s", exc)
         return {}
 
 

@@ -36,7 +36,8 @@ _PULSE_PKG_DIR="$(cd "${_PULSE_ENV_LIB_DIR}/../../files/anatomy/pulse" && pwd)" 
     || { echo "pulse-env.sh: cannot locate files/anatomy/pulse from ${_PULSE_ENV_LIB_DIR}" >&2; return 1; }
 
 # stdin: env JSON (object; `[]`/`null`/empty accepted as empty) → stdout: see
-# usage above. The store is ~/.nos/secrets.yml, read per call, never cached.
+# usage above. The store is ~/.nos/secrets.yml, read per call, never cached;
+# the scheme and master come from machine custody first (unlock(), via pulse.secrets).
 resolve_pulse_env_json() {
     PYTHONPATH="${_PULSE_PKG_DIR}${PYTHONPATH:+:$PYTHONPATH}" \
         python3 -m pulse.secrets "$@"
