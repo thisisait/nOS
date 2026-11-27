@@ -225,8 +225,8 @@ wire:
     carries registry_hash; a line with pipeline and no registry_hash is refused); fallback is its kind,
     never its words. No prompt text, cell text or table rows cross. Any other asker (no bench hello, or no
     session open) gets nothing on the wire: a plan_evidence refusal row in the ledger, or a log line when no
-    session is open. plan_run, model_calls and tokens are row iris-code-mode-bench's, absent until it is
-    built. Gate files/anatomy/thalamus/thalamus/tests/serve.rs plan_evidence_is_a_bench_sessions_own.
+    session is open. plan_run is who ran a valid plan (thalamus when plan_run: thalamus ran it, else model);
+    model_calls and tokens are the session's last turn's (every model request, the plan call too), beside a plan only. Gate files/anatomy/thalamus/thalamus/tests/serve.rs plan_evidence_is_a_bench_sessions_own.
   phase: [thinking, tool, writing, idle]   # activity.phase; tool is {tool: {name}}
   decision: [approve, reject]
   control_view: [inbox, approvals, red_status]

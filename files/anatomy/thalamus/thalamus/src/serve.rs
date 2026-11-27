@@ -11,7 +11,7 @@ use nos_contract::renderers::{is_date, ActionApproval, ApprovalsList, Axis, Cell
                                Dropped, FieldKind, Form, FormField, InboxItem, InboxList, KnowledgeNode, KnowledgeTree, need_node_id, Lens, LensOp, Lines, List, ListItem, Omitted, Parent, RedStatus,
                                ProgramApproval, Row, RowDiffApproval, SchemaColumn, ColumnAddApproval, ColumnKind, ExistingColumn, Series, Table, TableResults, TableSchemaApproval, Timeline, TimelineItem, Visibility};
 use nos_contract::wire::{check_params, check_spec, decode_to_thalamus, encode, CatalogueColumn, CatalogueTable, ChartSpec, EstateState, ControlView, Decision, FormSpec,
-                         FallbackKind, KnowledgeSpec, KpiSpec, Limb, ReaderName, Op, ParamKind, Phase, PlanAsked, PlanTable, Scope, ModelOption, OpenApproval, ToShell, ToThalamus, Trigger, WidgetChart, WidgetSpec, MAX_REPLAY};
+                         FallbackKind, PlanRun, KnowledgeSpec, KpiSpec, Limb, ReaderName, Op, ParamKind, Phase, PlanAsked, PlanTable, Scope, ModelOption, OpenApproval, ToShell, ToThalamus, Trigger, WidgetChart, WidgetSpec, MAX_REPLAY};
 use nos_contract::uid;
 use crate::store;
 use serde_json::{json, Map, Value};
@@ -369,6 +369,8 @@ struct Open {
     /// o.tokens when this turn began, and how its spend was counted (provider usage, bytes / 4, or both).
     turn_from: (i64, i64),
     counted: (bool, bool),
+    /// The model requests this turn sent, the plan call's too (plan_evidence model_calls, row iris-code-mode-bench).
+    calls: u32,
 }
 
 /// One run Iris started: (agent, Wing session uuid), when it started (unix seconds), the next time it is asked after,
@@ -1463,7 +1465,7 @@ impl Server {
         let rows = self.ledger.lock().map_err(|_| "ledger poisoned".to_string())
             .and_then(|l| l.plan_rows(&o.session).map_err(|e| e.to_string()));
         match rows {
-            Ok((asked, res)) => send(out, &plan_evidence(&o.session, asked.as_ref(), res.as_ref())),
+            Ok((asked, res)) => send(out, &plan_evidence(&o.session, asked.as_ref(), res.as_ref(), (o.calls, self.spent(o)))),
             // The bench is owed an answer it can tell from "never planned": UNKNOWN, never empty.
             Err(why) => refuse(out, &format!("plan evidence unreadable: the ledger said {why}")),
         }
@@ -1693,7 +1695,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             Err(why) => (Err(why), iris.clone()),
         };
         Ok((Open { session, model, iris, messages: vec![json!({"role": "system", "content": system})], moved: None, tokens,
-                  pending: HashMap::new(), shown: HashMap::new(), tables_seen: HashMap::new(), dates: HashMap::new(), names: HashMap::new(), read_free: vec![], forms: HashMap::new(), choices: HashMap::new(), last_group: None, trace: None, again: HashMap::new(), acting: HashMap::new(), tab: None, watching: vec![], bench: false, program: None, turn_from: tokens, counted: (false, false) },
+                  pending: HashMap::new(), shown: HashMap::new(), tables_seen: HashMap::new(), dates: HashMap::new(), names: HashMap::new(), read_free: vec![], forms: HashMap::new(), choices: HashMap::new(), last_group: None, trace: None, again: HashMap::new(), acting: HashMap::new(), tab: None, watching: vec![], bench: false, program: None, turn_from: tokens, counted: (false, false), calls: 0 },
             resumed.is_some()))
     }
 
@@ -2606,7 +2608,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
 
     /// One turn, wrapped in its spans: every return of turn_steps ends the trace here.
     fn turn(&self, who: &Person, out: &mut dyn Write, o: &mut Open, text: &str, face: &Face) {
-        (o.turn_from, o.counted) = (o.tokens, (false, false));
+        (o.turn_from, o.counted, o.calls) = (o.tokens, (false, false), 0);
         o.trace = crate::otel::Trace::start(&o.session, o.tokens);
         self.turn_steps(who, out, o, text, face);
         if let Some(t) = o.trace.take() {
@@ -3120,7 +3122,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
     /// The model's turn over the conversation so far, tool calls and all, until it says text.
     fn think(&self, who: &Person, out: &mut dyn Write, o: &mut Open, face: &Face) {
         // a choice reply, a decided report or an ended run starts its own turn: its own token spend
-        (o.turn_from, o.counted) = (o.tokens, (false, false));
+        (o.turn_from, o.counted, o.calls) = (o.tokens, (false, false), 0);
         self.think_from(who, out, o, None, face);
     }
 
@@ -3680,6 +3682,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
             return Err(OVER_CEILING.into());
         }
         let sent = body.to_string().len() as i64;
+        o.calls += 1;
         let v = match face {
             None => post_chat(model, body)?,
             // ponytail: ureq cannot abort, so the request finishes alone on its thread (its 300 s timeout bounds
@@ -5559,7 +5562,8 @@ to {draft}; nothing is scheduled by that.\n\n```yaml\n{yaml}```");
 /// The wire's plan evidence from a session's last cortex_plan tool_use and tool_result. The source
 /// crosses only once the organ validated it (the result names its registry_hash): an unvalidated one
 /// is model text. A fallback crosses as its kind, never its words, which may quote the model.
-pub fn plan_evidence(session: &str, asked: Option<&Value>, res: Option<&Value>) -> ToShell {
+/// `turn` is the last turn's (model requests, tokens), said only beside a plan; plan_run only for a plan that ran.
+pub fn plan_evidence(session: &str, asked: Option<&Value>, res: Option<&Value>, turn: (u32, i64)) -> ToShell {
     let s = |v: Option<&Value>, k: &str| v.and_then(|v| v.get(k)).and_then(Value::as_str).map(str::to_string);
     let registry_hash = s(res, "registry_hash");
     let fallback = res.filter(|r| r.get("plan").is_none()).map(|r| match r.get("fallback_kind").and_then(Value::as_str) {
@@ -5577,7 +5581,10 @@ pub fn plan_evidence(session: &str, asked: Option<&Value>, res: Option<&Value>) 
         valid: res.and_then(|r| r.get("valid")).and_then(Value::as_bool),
         pipeline: registry_hash.as_ref().and(s(asked, "source")),
         registry_hash, fallback, table, asked: asked_as,
-        plan_run: None, model_calls: None, tokens: None,
+        // plan() writes `program` on the plan row only when the thalamus runs it (iris_plan_run: thalamus)
+        plan_run: res.filter(|r| r.get("plan").is_some()).map(|r| if r.get("program").is_some() { PlanRun::Thalamus } else { PlanRun::Model }),
+        model_calls: res.map(|_| turn.0),
+        tokens: res.map(|_| turn.1.max(0) as u64),
     }
 }
 
