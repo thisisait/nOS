@@ -39,6 +39,7 @@ import json
 import os
 import re
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -167,19 +168,43 @@ def _grade(m: dict) -> str:
     return g
 
 
-def regrade(items: list[dict], report: dict | None) -> list[dict] | None:
+def _judgements() -> dict:
+    """The operator's advisory verdicts, read by advisory-status's own loader (one source). {} when it does
+    not load: then no judgement silences a regrade, so the answer errs red, never quiet."""
+    import importlib.util  # noqa: PLC0415 — sibling reader, not a package
+
+    try:
+        spec = importlib.util.spec_from_file_location("_advisory", Path(__file__).resolve().parent / "advisory-status.py")
+        adv = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(adv)
+        return adv.judgements()
+    except Exception:  # noqa: BLE001 — unreadable is the same answer: nothing judged
+        return {}
+
+
+def regrade(items: list[dict], report: dict | None, judged: dict | None = None, today: str | None = None) -> list[dict] | None:
     """Pending rows the advisory report grades worse than the queue does (row
     security-scan-staleness-missed-a-live-critical): the scanner filed WordPress LOW eight days before
-    it became a 9.2. A proposal for the operator, never a rewrite. None = the report is unreadable."""
+    it became a 9.2. A proposal for the operator, never a rewrite. None = the report is unreadable.
+    A match a judgement in force covers (id + subject, until >= today, advisory-judgements.yml) drives
+    nothing: all 24 regrades of 2026-11-22 were driven by advisories already judged n/a."""
     if not isinstance(report, dict):
         return None
+    judged = _judgements() if judged is None else judged
+    today = today or time.strftime("%Y-%m-%d", time.gmtime())
+
+    def live(subject: str, m: dict) -> bool:
+        j = judged.get((str(m.get("id")), subject))
+        return not (j and str(j.get("until")) >= today)
+
     by_subject: dict[str, list[dict]] = {}
     for r in report.get("pins") or []:
         stem = re.sub(r"_(version|image|tag)$", "", str(r.get("var") or ""))
-        by_subject.setdefault(_norm(stem), []).extend(r.get("matches") or [])
+        by_subject.setdefault(_norm(stem), []).extend(m for m in r.get("matches") or [] if live(str(r.get("var") or ""), m))
     for lf in report.get("lockfiles") or []:
         for m in lf.get("matches") or []:
-            by_subject.setdefault(_norm(str(m.get("package") or "")), []).append(m)
+            if live(f"{lf.get('organ')}:{m.get('package')}", m):
+                by_subject.setdefault(_norm(str(m.get("package") or "")), []).append(m)
     out = []
     for i in items:
         if i.get("status") != "pending" or i.get("severity") not in SEVERITY_ORDER:

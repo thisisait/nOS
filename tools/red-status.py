@@ -114,9 +114,6 @@ SCAN_STATE = pathlib.Path(
 #: What a fresh checkout would believe. Its lag is a real fact and a DIFFERENT
 #: one — reported separately, never as the scanner's age.
 SCAN_STATE_PROMOTED = REPO / "docs/llm/security/scan-state.json"
-#: Read to re-decide a `security-drift` notification's own claim — see
-#: `_still_holds`. A file, like every other source here.
-REMEDIATION_QUEUE = REPO / "docs/llm/security/remediation-queue.json"
 BACKUP_STATUS = pathlib.Path.home() / ".nos" / "backup-status.json"
 #: Written by backup-run.sh when copy #1 is off (restic takes the dumps directly).
 BACKUP_RESTIC_STATUS = pathlib.Path.home() / ".nos" / "backup-restic-status.json"
@@ -528,13 +525,22 @@ def pulse_daemon() -> dict:
 
 
 def _queue_pending() -> dict[str, int] | None:
-    """Pending counts by severity, from the queue file. None if unreadable."""
+    """Pending counts by severity, read to re-decide a `security-drift` claim (`_still_holds`): the LIVE
+    notebook joined with dispositions.json (nos_security.load_queue_items), the queue rem-status shows.
+    The git copy without the join counted 5 critical / 27 high against 0 / 10 (2026-11-22). None if unreadable."""
+    import importlib.util  # noqa: PLC0415 — sibling module, not a package
+
     try:
-        data = json.loads(REMEDIATION_QUEUE.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
+        spec = importlib.util.spec_from_file_location("_nos_security", REPO / "tools" / "nos_security.py")
+        sec = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(sec)
+        items = sec.load_queue_items()
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+    if items is None:
         return None
     counts: dict[str, int] = {}
-    for item in data.get("items", []):
+    for item in items:
         if item.get("status") == "pending":
             sev = str(item.get("severity", "")).lower()
             counts[sev] = counts.get(sev, 0) + 1
