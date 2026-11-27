@@ -62,7 +62,7 @@ smoke_endpoints:
 Default expect is `[200, 301, 302, 308]` — covers most HTTP front-door
 status codes (login redirects, HTTPS forwarders, etc.).
 
-Variables resolve from `default.config.yml` + `config.yml` (the same
+Variables resolve from the default layers + `config.yml` (the same
 files Ansible loads). The runner supports a Jinja-lite subset:
 
 - `{{ var }}` — direct lookup
@@ -70,7 +70,7 @@ files Ansible loads). The runner supports a Jinja-lite subset:
 
 Anything more complex (filters like `bool`, `length`, ternaries) is
 intentionally not supported — keep catalog entries simple. If you need
-heavier logic, push it into `default.config.yml` as a derived variable.
+heavier logic, push it into its default layer as a derived variable.
 
 ## Manifest auto-derivation
 

@@ -196,7 +196,7 @@ If no Authentik token is found, the `tester_identity` fixture calls `pytest.skip
 `tests/anatomy/test_tester_identity_lib.py` — 7 fast, no-network tests covering:
 
 * lib imports cleanly
-* `TIER_TO_GROUP` matches `default.config.yml::authentik_default_groups`
+* `TIER_TO_GROUP` matches `config.d/35-identity.yml::authentik_default_groups`
 * `USERNAME_PREFIX = "nos-tester-e2e-"` (orphan-sweep contract)
 * `WING_TOKEN_NAME_PREFIX = "tester:e2e:"` (audit-trail contract)
 * conftest still registers the atexit hook

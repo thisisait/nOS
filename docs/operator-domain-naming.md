@@ -184,7 +184,8 @@ With two or more other trees it lists them and does not guess. Removals (`--remo
 - Phase plan + commit log: see Track F entries in
   [`docs/roadmap-2026q2.md`](roadmap-2026q2.md)
 - Authoritative variable definitions:
-  [`default.config.yml`](../default.config.yml) lines 11–80
+  [`config.d/30-edge.yml`](../config.d/30-edge.yml) and `tenant_domain` at the head of
+  [`default.config.yml`](../default.config.yml)
 - Auto-promote pre-task:
   [`main.yml`](../main.yml) `[Track F compat]` block in `pre_tasks`
 - FQDN composition helpers:

@@ -145,7 +145,7 @@ ansible-playbook main.yml -K --tags restore \
 
 The backup writes `postgres-<db>.sql.gz` (a plain `pg_dump` of that one
 database) beside `postgres.sql.gz` for every entry in `backup_postgres_dbs`
-(default.config.yml; today: `paperclip`). `restore_postgres_dbs=<db>` replaces
+(config.d/40-data.yml; today: `paperclip`). `restore_postgres_dbs=<db>` replaces
 only that database: it stops the declared containers, renames the live db to
 `<db>_pre_restore_<YYYYMMDD>` (kept, never dropped), creates it again with the
 same owner, replays the dump, checks that the row counts of the declared tables

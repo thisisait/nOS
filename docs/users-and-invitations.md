@@ -104,7 +104,7 @@ just storing the Authentik `pk`.
 
 A single nOS install can host multiple logical tenants. Each tenant is a
 slug (`[a-z0-9-]{1,40}`) declared via `tenants_extra` in
-`default.config.yml`; Wing surfaces them in the invite form's tenant
+`config.yml` (no default layer declares it); Wing surfaces them in the invite form's tenant
 `<select>` (passed through as `TENANT_SLUGS` env on the wing daemon).
 
 When the operator picks a non-`default` tenant + a tier, the invitation
@@ -117,7 +117,7 @@ Example: tier `nos-managers` + tenant `acme-corp` →
 `nos-managers` + `nos-tenant-acme-corp-managers`.
 
 The base group keeps global RBAC policies (`authentik_rbac_tiers` in
-`default.config.yml`) authoritative; the tenant overlay is your hook
+`config.d/35-identity.yml`) authoritative; the tenant overlay is your hook
 point for per-tenant policy bindings (filtering applications, dashboards,
 quotas, etc.) — those are not auto-provisioned by this slice.
 
@@ -160,7 +160,7 @@ fix that surfaced this anti-pattern).
 ## Adding a new tenant slug
 
 ```yaml
-# config.yml (operator override of default.config.yml)
+# config.yml (operator override of the default layers)
 tenants_extra:
   - acme-corp
   - widgets-llc

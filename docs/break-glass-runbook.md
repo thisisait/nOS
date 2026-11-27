@@ -227,7 +227,7 @@ autologin:
 ```
 
 ```yaml
-# default.config.yml — operator toggle, default OFF (pure-SSO):
+# config.yml — operator toggle, default OFF (pure-SSO; declared in no default layer):
 enable_<svc>_local_login: false
 ```
 
