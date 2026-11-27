@@ -987,7 +987,7 @@ def rescore(path: Path) -> Path:
 # ── --compare: two saved runs paired case by case (docs/llm/evals-and-finetune.md) ──
 
 ALPHA = 0.05
-TOP = ("plan_path", "engine", "primer_sha256", "grammar_sha256", "registry_hash", "catalogue", "catalogue_digest")
+TOP = ("plan_path", "plan_run", "engine", "primer_sha256", "grammar_sha256", "registry_hash", "catalogue", "catalogue_digest")
 
 
 def mcnemar(a: int, b: int) -> float:
@@ -1051,11 +1051,23 @@ def compare(a: dict, b: dict) -> dict:
     for k in kinds:
         ao = sum(1 for i in a_only if (ca[i].get("kind") or "-") == k)
         bo = sum(1 for i in b_only if (ca[i].get("kind") or "-") == k)
-        by_kind[k] = {"paired": sum(1 for i in both if (ca[i].get("kind") or "-") == k),
-                      "a_only": ao, "b_only": bo, "p": mcnemar(ao, bo)}
+        ids = [i for i in both if (ca[i].get("kind") or "-") == k]
+        by_kind[k] = {"paired": len(ids), "a_only": ao, "b_only": bo, "p": mcnemar(ao, bo),
+                      "a_pass": sum(ca[i]["pass"] for i in ids), "b_pass": sum(cb[i]["pass"] for i in ids),
+                      **{f"{s}_{m}": _mean_cost([c[i] for i in ids], m) for s, c in (("a", ca), ("b", cb)) for m in COST}}
     return {"axes": diff, "unverified": blind, "by_kind": by_kind, "paired": len(both), "a_pass": sum(ca[i]["pass"] for i in both),
             "b_pass": sum(cb[i]["pass"] for i in both), "a_only": len(a_only), "b_only": len(b_only),
             "a_only_ids": a_only, "b_only_ids": b_only, "left_out": left_out, "p": p, "verdict": verdict}
+
+
+COST = ("model_calls", "tokens")
+
+
+def _mean_cost(cases: list[dict], key: str) -> float | None:
+    """The mean of a cost the thalamus said for the case's last turn (plan_evidence); None when no case said it
+    (a tools run plans nothing, so it says nothing: absent, never 0)."""
+    seen = [c["pipeline"][key] for c in cases if isinstance(c.get("pipeline"), dict) and isinstance(c["pipeline"].get(key), int)]
+    return sum(seen) / len(seen) if seen else None
 
 
 COMPARE_EXIT = {"B better": 0, "repeatable": 0, "A better": 1, "not repeatable": 1, "no measured difference": 1,
@@ -1068,9 +1080,11 @@ def print_compare(r: dict) -> None:
         print(f"unverified (not recorded): {', '.join(r['unverified'])}")
     print(f"paired {r['paired']} · A {r['a_pass']} · B {r['b_pass']} · only A {r['a_only']} · only B {r['b_only']} "
           f"· McNemar p={r['p']:.4f} · left out {len(r['left_out'])}")
+    said = lambda x, f: "-" if x is None else f % x  # noqa: E731
     for k, v in r["by_kind"].items():
-        if v["a_only"] or v["b_only"]:
-            print(f"  {k:<12} paired {v['paired']} · only A {v['a_only']} · only B {v['b_only']} · p={v['p']:.4f}")
+        cost = " · ".join(f"{m.replace('model_', '')}/turn A {said(v.get('a_' + m), '%.1f')} B {said(v.get('b_' + m), '%.1f')}" for m in COST)
+        flips = f" · only A {v['a_only']} · only B {v['b_only']} · p={v['p']:.4f}" if v["a_only"] or v["b_only"] else ""
+        print(f"  {k:<12} paired {v['paired']} · pass A {v.get('a_pass', '-')} B {v.get('b_pass', '-')}{flips} · {cost}")
     for side in ("a", "b"):
         if r[f"{side}_only_ids"]:
             print(f"  only {side.upper()}: {', '.join(r[f'{side}_only_ids'])}")
@@ -1457,7 +1471,7 @@ def bench(a, cases: list[dict], where: str, validate, opener=None, who: dict | N
         for r in results:
             k = run["route_by_kind"].setdefault(r.get("kind") or "-", {})
             k[r["route"] or "-"] = k.get(r["route"] or "-", 0) + 1
-    for k in ("engine", "grammar_sha256", "primer_sha256", "registry_hash", "catalogue", "catalogue_digest"):
+    for k in ("plan_run", "engine", "grammar_sha256", "primer_sha256", "registry_hash", "catalogue", "catalogue_digest"):
         seen = sorted({p[k] for p in plans if p.get(k)})
         run[k] = seen[0] if len(seen) == 1 else seen or None  # as the thalamus said them, never guessed
     out = Path(a.out)
