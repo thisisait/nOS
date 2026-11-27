@@ -153,3 +153,6 @@ compose:
 nginx:
   auth: "proxy"
   rbac_tier: 3
+
+# How the app takes the estate brand (row estate-brand-declare-plugins); tools/e2e-plan.py --branding.
+branding_none: "nOS writes no brand into Chronos yet: its manifest sets no title, logo or theme."

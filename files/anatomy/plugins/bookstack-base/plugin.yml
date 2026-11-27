@@ -131,3 +131,6 @@ e2e:
     - name: login-page-offers-authentik
       url: https://{{ bookstack_domain }}/login
       expect: {status: [200], contains: "/oidc/login"}
+
+# How the app takes the estate brand (row estate-brand-declare-plugins); tools/e2e-plan.py --branding.
+branding_none: "BookStack keeps its name, logo and colours in its own settings; nOS does not write them yet."

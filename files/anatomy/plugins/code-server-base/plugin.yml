@@ -165,3 +165,6 @@ e2e:
     - name: anonymous-is-sent-to-authentik
       url: https://{{ code_server_domain }}/
       expect: {status: [302], location_contains: "{{ authentik_domain }}/application/o/authorize"}
+
+# How the app takes the estate brand (row estate-brand-declare-plugins); tools/e2e-plan.py --branding.
+branding_none: "nOS writes no brand into code-server yet: its role sets no app name or login text."
