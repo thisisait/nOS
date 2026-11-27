@@ -325,6 +325,7 @@ not_indicators:
   ci-tier-status.py: CI lane freshness
   container-status.py: crash loops (health)
   cortex-status.py: the cortex organ's shape
+  dep-contract-status.py: a one-app trial (Gitea, row plat-dep-contracts); an indicator if the trial earns it
   docker-pressure-status.py: Docker VM memory pressure (health)
   e2e-status.py: the last e2e run
   elsewhere-status.py: work outside the control centre
