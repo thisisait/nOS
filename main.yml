@@ -1482,6 +1482,12 @@
       ansible.builtin.import_tasks: tasks/run-mode.yml
       tags: ['always']
 
+    # Row estate-service-login (ruled 2026-11-23): the map of a Linux estate's runtime owners, a dry run.
+    # `never`: only `--tags estate-owner-migrate` reaches it, and it ends the play (or refuses) itself.
+    - name: "[Estate owner] Map the runtime owners (opt-in, dry run)"
+      ansible.builtin.import_tasks: tasks/estate-owner-migrate.yml
+      tags: ['estate-owner-migrate', 'never']
+
     # ──────────────────────────────────────────────────────────────────────────
     # Prefix rotation (D3): every INTERACTIVE confirmed removal offers a new
     # prefix (ENTER = keep current). -y (assume_yes) never reaches the prompt
