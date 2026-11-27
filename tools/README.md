@@ -308,6 +308,7 @@ posts, restarts or renders something.
 Imported by the tools above; not run on their own, not graph nodes.
 
 - `_ledger_open.py` — One way to open the Wing ledger read-only, for readers that must not write.
+- `nos-panic.py` — `nos panic`: the edge sanctions a panic would arm now (unjudged KEV or CRITICAL advisory matches on routed apps, never the door); `--confirm`, the operator's, arms them through nos-sanction.py.
 - `nos-sanction.py` — EFFECTOR, operator-armed: sanction a symbiont through its symbiosome. `edge` narrows its routers' `sanction-<router>@file` to 127.0.0.1/32 (403, live at once), `stop` also stops its containers; data untouched; record `~/.nos/sanctions.yml` (the converge renders the same cut); plan without `--confirm`, `--lift` reverses; red-status shows each as a HOLD.
 - `advisory-patrol.py` — EFFECTOR (Pulse `advisory-patrol:nightly`): runs `advisory-status.py`, keeps the report in `~/.nos/advisory/last.json` (0600) for red-status, exits 0 clean / 10 unjudged HIGH/CRITICAL/KEV / 11 a source unreadable; judgements in `state/genome/advisory-judgements.yml`.
 - `immune-crawl.py` — CRAWLER (Pulse `immune-crawler:git-history`): walks git history a slice per tick from its cursor (`~/.nos/immune/crawl/`) for injection shapes and bidi controls in added lines, records commit/path/line/shape only (no text), retires after `--lifespan` commits; exits 0 / 10 findings / 11 git unreadable / 12 lifespan spent; tolerance in `state/immune/crawl-tolerance.yml`.

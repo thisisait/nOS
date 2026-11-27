@@ -168,6 +168,8 @@ case "${1:-}" in
   ca)     shift; exec "$NOS_SRC/tools/estate-status.py" --root-ca "$@" ;;
   # The one door for removing worktrees (row worktree-prune-only-door): dry run unless --confirm.
   worktrees) shift; exec "$NOS_SRC/tools/worktree-prune.py" "$@" ;;
+  # The immune system's panic (row immune-panic-mode): the plan unless --confirm; edge sanctions only.
+  panic)  shift; exec "$NOS_SRC/tools/nos-panic.py" "$@" ;;
 esac
 
 # ── `nos dtt <verb>` — DataTables ops, not a converge ────────────────────────
