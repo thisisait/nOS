@@ -1,8 +1,8 @@
 ---
 # ==============================================================================
-# macOS EXTENDED SETTINGS
-# Automates most of "Manual settings to automate someday" from full-mac-setup.md
-# + standard developer defaults
+# macOS EXTENDED SETTINGS + standard developer defaults.
+# Left manual (no task here sets them): Caps Lock -> Esc and Full Disk Access for Terminal (both
+# printed by the reminder at the end), Safari's status bar, Safari userscripts, and Dock folders.
 # ==============================================================================
 
 # ── FINDER ────────────────────────────────────────────────────────────────────
