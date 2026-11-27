@@ -131,6 +131,12 @@ def _cron_ok(expr) -> bool:
     return True
 
 
+#: Every key a manifest and a step may hold (top agent 2026-11-23, by precedent: a plan is model output at a
+#: trust boundary, so the unknown is refused, as pulse/secrets.py refuses an unknown name and the thalamus contract
+#: types deny unknown fields). Measured against the six committed manifests, the GOOD fixture and PROPOSE_LOOP.
+_MANIFEST_KEYS = ("id", "owner", "label", "blurb", "trigger", "steps", "params", "run", "args", "pulse")
+_STEP_KEYS = ("id", "runner", "label", "for_each", "graph_only", "writes",
+              "depends_on", "agent", "prompt", "tools", "limits")
 #: Wing's names for a run's limits (AgentKit/Runner.php validateLimits); its floors and ceilings stay Wing's.
 _LIMITS = ("max_calls", "wall_clock_s", "token_ceiling")
 
@@ -195,6 +201,9 @@ def validate_manifest(path: str, m: dict | None = None, root: str = REPO) -> lis
     if not isinstance(m, dict):
         return ["a manifest must be a map"]
     why = [f"missing required key `{k}`" for k in ("id", "label", "blurb", "trigger", "steps") if k not in m]
+    unknown = sorted(str(k) for k in m if k not in _MANIFEST_KEYS)
+    if unknown:
+        why.append(f"unknown key(s) {unknown}: a manifest holds only {', '.join(_MANIFEST_KEYS)}")
     if not (isinstance(m.get("id"), str) and _SLUG.match(m["id"])):
         why.append(f"id {m.get('id')!r} is not a slug ([a-z][a-z0-9-])")
     if m.get("id") == "sere":
@@ -225,6 +234,9 @@ def validate_manifest(path: str, m: dict | None = None, root: str = REPO) -> lis
             continue
         if s["id"] in seen:
             why.append(f"duplicate step id `{s['id']}`")
+        unknown = sorted(str(k) for k in s if k not in _STEP_KEYS)
+        if unknown:
+            why.append(f"step `{s['id']}` has unknown key(s) {unknown}: a step holds only {', '.join(_STEP_KEYS)}")
         earlier = set(seen)  # depends_on names EARLIER steps only: no self, no cycle, read top to bottom
         seen.add(s["id"])
         dep = s.get("depends_on")
