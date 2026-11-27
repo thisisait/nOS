@@ -554,6 +554,10 @@ an undeclared app.action or a param off its spec is refused.";
 
 /// A table's rows as serve reads them: (row id, values).
 type Rows = Vec<(String, Map<String, Value>)>;
+/// A sub-agent run that ended (run_ended): (status, stop_reason, the report or Null).
+type RunEnd = (String, String, Value);
+/// A rowRef column's parent rows (parents): (labels, ids).
+type Parents = (Vec<String>, Vec<String>);
 
 /// How many widget forms one session holds open.
 const MAX_FORMS: usize = 24;
@@ -2309,7 +2313,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         };
         let label = |a: &crate::ledger::Approved| a.row_id.clone().unwrap_or_else(|| format!("the new row of {}", a.table));
         let preflight = all.and_then(|all| {
-            let mut read: HashMap<String, Vec<(String, Map<String, Value>)>> = HashMap::new();
+            let mut read: HashMap<String, Rows> = HashMap::new();
             for a in &all {
                 if a.table == VERDICTS {
                     return Err(format!("{VERDICTS} is written only by the operator's face edit; nothing written"));
@@ -3080,10 +3084,10 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
     /// GET Wing /agent-sessions/<uuid>?parent=thalamus:<session> as the person: Some((status, stop_reason, report or Null))
     /// once it ended, None while it runs; Err((refused, why)), refused when Wing will not show it (401/403), which asking
     /// again does not change. Wing is the referee: it shows only the run THIS Iris session started, for this person.
-    fn run_ended(&self, who: &Person, o: &Open, uuid: &str) -> Result<Option<(String, String, Value)>, (bool, String)> {
+    fn run_ended(&self, who: &Person, o: &Open, uuid: &str) -> Result<Option<RunEnd>, (bool, String)> {
         let url = format!("{}/api/v1/agent-sessions/{}", self.wing.url.trim_end_matches('/'), enc(uuid));
         let mut r = agent(30).get(&url)
-            .query("parent", &format!("thalamus:{}", o.session))
+            .query("parent", format!("thalamus:{}", o.session))
             .header("authorization", &format!("Bearer {}", self.wing.token))
             .header("x-nos-user-uid", &who.uid())
             .header("x-nos-user-groups", &who.groups.join(","))
@@ -3405,7 +3409,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
     fn run_tool(&self, who: &Person, out: &mut dyn Write, o: &mut Open, face: &Face, name: &str, args: &Value,
                 shown: &Option<(Value, bool)>) -> Result<Value, String> {
         match name {
-            "query_rows" => self.query_rows(who, &args).map(|(t, answer, notes)| {
+            "query_rows" => self.query_rows(who, args).map(|(t, answer, notes)| {
                 let ids: Vec<&str> = t.rows.iter().map(|r| r.__id.as_str()).collect();
                 let _ = self.record(o, Kind::ToolResult, Some(name),
                                     json!({"rows": ids, "matched": t.matched, "total": t.total}));
@@ -3471,20 +3475,20 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
             "propose_row_edit" | "propose_row_insert" | "propose_row_delete" | "propose_table_create" | "propose_column_add"
                 if !o.pending.is_empty() =>
                 Err("an approval is already waiting".to_string()),
-            "propose_table_create" => self.propose_table_create(who, &args).and_then(|t| {
+            "propose_table_create" => self.propose_table_create(who, args).and_then(|t| {
                 let rec = serde_json::to_value(&t).map_err(|e| format!("unrecordable card: {e}"))?;
                 self.asking(o, out, "propose_table_create", rec, Component::TableSchemaApproval(t))
             }),
-            "propose_column_add" => self.propose_column_add(who, &args, &o.tables_seen).and_then(|t| {
+            "propose_column_add" => self.propose_column_add(who, args, &o.tables_seen).and_then(|t| {
                 let rec = serde_json::to_value(&t).map_err(|e| format!("unrecordable card: {e}"))?;
                 self.asking(o, out, "propose_column_add", rec, Component::ColumnAddApproval(t))
             }),
             "propose_row_edit" | "propose_row_insert" | "propose_row_delete" => {
                 let named = said_numbers(&o.messages).to_string();
                 let d = match name {
-                    "propose_row_edit" => self.propose_row_edit(who, &args, &o.shown, &o.dates, &o.names, &named),
-                    "propose_row_delete" => self.propose_row_delete(who, &args, &o.shown, &o.names, &named),
-                    _ => self.propose_row_insert(who, &args, &o.tables_seen, &o.shown, &named),
+                    "propose_row_edit" => self.propose_row_edit(who, args, &o.shown, &o.dates, &o.names, &named),
+                    "propose_row_delete" => self.propose_row_delete(who, args, &o.shown, &o.names, &named),
+                    _ => self.propose_row_insert(who, args, &o.tables_seen, &o.shown, &named),
                 };
                 // Operator ruling Q7: no refusal after a free-text read; the card head says it.
                 d.and_then(|d| {
@@ -3530,18 +3534,18 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                     send(out, &ToShell::Render { session: o.session.clone(), component: Component::RedStatus(r), pin: None });
                     v
                 }),
-            "read_run" => self.read_run(who, &args).map_err(|why| format!("{why}; the run is UNKNOWN, not empty"))
+            "read_run" => self.read_run(who, args).map_err(|why| format!("{why}; the run is UNKNOWN, not empty"))
                 .map(|(d, v)| {
                     let _ = self.record(o, Kind::ToolResult, Some(name), v.clone());
                     send(out, &ToShell::Render { session: o.session.clone(), component: Component::Dendrogram(d), pin: None });
                     v
                 }),
-            "estate_services" => self.services(who, &args).map(|(table, v)| {
+            "estate_services" => self.services(who, args).map(|(table, v)| {
                 let _ = self.record(o, Kind::ToolResult, Some(name), json!({"count": table.rows.len(), "truncated": v.get("truncated")}));
                 send(out, &ToShell::Render { session: o.session.clone(), component: Component::Table(table), pin: None });
                 v
             }),
-            "nos_guide" => self.guide(&args).map(|(list, v, rec)| {
+            "nos_guide" => self.guide(args).map(|(list, v, rec)| {
                 let _ = self.record(o, Kind::ToolResult, Some(name), rec);
                 if let Some(l) = list {
                     send(out, &ToShell::Render { session: o.session.clone(), component: Component::List(l), pin: None });
@@ -3568,14 +3572,14 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                 send(out, &ToShell::Render { session: o.session.clone(), component: Component::InboxList(i), pin: None });
                 Ok(v)
             }
-            "search_knowledge" | "search_memory" => self.search_knowledge(who, &args).map(|(list, v, rec)| {
+            "search_knowledge" | "search_memory" => self.search_knowledge(who, args).map(|(list, v, rec)| {
                 let _ = self.record(o, Kind::ToolResult, Some(name), rec);
                 if let Some(l) = list {
                     send(out, &ToShell::Render { session: o.session.clone(), component: Component::List(l), pin: None });
                 }
                 v
             }),
-            "read_node" => self.read_node(who, &args).map(|(tree, v, rec)| {
+            "read_node" => self.read_node(who, args).map(|(tree, v, rec)| {
                 let _ = self.record(o, Kind::ToolResult, Some(name), rec);
                 if let Some(t) = tree {
                     let pin = Some(WidgetSpec::Knowledge(KnowledgeSpec { node: t.focus.clone() }));
@@ -3583,13 +3587,13 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                 }
                 v
             }),
-            "app_slots" => self.app_slots(who, &args).inspect(|v| {
+            "app_slots" => self.app_slots(who, args).inspect(|v| {
                 let _ = self.record(o, Kind::ToolResult, Some(name), v.clone());
             }),
-            "scaffold_app" => self.scaffold_app(who, &args).inspect(|v| {
+            "scaffold_app" => self.scaffold_app(who, args).inspect(|v| {
                 let _ = self.record(o, Kind::ToolResult, Some(name), json!({"kind": v["kind"], "runtime": v["runtime"]}));
             }),
-            "read_loop_runs" => self.read_loop_runs(who, &args).map_err(|why| format!("{why}; the loop's record is UNKNOWN, not empty"))
+            "read_loop_runs" => self.read_loop_runs(who, args).map_err(|why| format!("{why}; the loop's record is UNKNOWN, not empty"))
                 .map(|(component, v)| {
                     let _ = self.record(o, Kind::ToolResult, Some(name), json!({"loop": v["loop"], "since": v["since"],
                         "registered": v["pulse"]["registered"], "drawn": v["drawn"]}));
@@ -3597,21 +3601,21 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                     v
                 }),
             "propose_loop" if !o.pending.is_empty() => Err("an approval is already waiting".to_string()),
-            "propose_loop" => self.propose_loop(who, &args).and_then(|(rec, card, draft)| {
+            "propose_loop" => self.propose_loop(who, args).and_then(|(rec, card, draft)| {
                 let mut v = self.asking(o, out, "propose_loop", rec, Component::Markdown(card))?;
                 v["draft"] = json!(draft);
                 v["schedule"] = json!("only the operator schedules it: copies it into files/anatomy/loops/ and converges; never say it runs");
                 Ok(v)
             }),
             "propose_app" if !o.pending.is_empty() =>Err("an approval is already waiting".to_string()),
-            "propose_app" => self.propose_app(who, &args).and_then(|(rec, card, draft)| {
+            "propose_app" => self.propose_app(who, args).and_then(|(rec, card, draft)| {
                 let mut v = self.asking(o, out, "propose_app", rec, Component::Markdown(card))?;
                 v["draft"] = json!(draft);
                 v["enable"] = json!("only the operator enables it: copies it into apps/ and converges; never say it is enabled");
                 Ok(v)
             }),
             // Checked as the person against the live schema only: no row is read and no widget runs.
-            "offer_dashboard" => self.offer_dashboard(who, &args).map(|d| {
+            "offer_dashboard" => self.offer_dashboard(who, args).map(|d| {
                 let kind = |s: &WidgetSpec| match s { WidgetSpec::Rows(_) => "rows", WidgetSpec::Chart(_) => "chart", WidgetSpec::Form(_) => "form", WidgetSpec::Kpi(_) => "kpi", WidgetSpec::Knowledge(_) => "knowledge", WidgetSpec::Reader(_) => "reader" };
                 let _ = self.record(o, Kind::ToolResult, Some(name), json!({"name": d.name, "dropped": d.dropped.len(),
                     "widgets": d.widgets.iter().map(|w| json!({"kind": kind(&w.spec), "table": spec_table(&w.spec)})).collect::<Vec<_>>()}));
@@ -3620,9 +3624,9 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                 send(out, &ToShell::Render { session: o.session.clone(), component: Component::Dashboard(d), pin: None });
                 v
             }),
-            "face_act" => self.face_act(out, o, face, &args),
-            "start_agent" => self.start_agent(who, out, o, &args),
-            "stop_agent" => self.stop_agent(who, o, &args).inspect(|v| { let _ = self.record(o, Kind::ToolResult, Some(name), v.clone()); }),
+            "face_act" => self.face_act(out, o, face, args),
+            "start_agent" => self.start_agent(who, out, o, args),
+            "stop_agent" => self.stop_agent(who, o, args).inspect(|v| { let _ = self.record(o, Kind::ToolResult, Some(name), v.clone()); }),
             _ => Err(format!("unknown tool {name:?}")),
         }
     }
@@ -4118,7 +4122,7 @@ impl Server {
             v.retain(|k, _| keys.contains(&k.as_str()));
         }
         let total = all.len();
-        let (hits, rest): (Vec<(String, Map<String, Value>)>, Vec<_>) = all.into_iter().partition(|(_, v)|
+        let (hits, rest): (Rows, Vec<_>) = all.into_iter().partition(|(_, v)|
             q.as_ref().is_none_or(|q| Value::Object(v.clone()).to_string().to_lowercase().contains(q))
             && wh.iter().all(|(k, op, vals, kind)| {
                 let cell = v.get(*k).unwrap_or(&Value::Null);
@@ -4148,7 +4152,7 @@ impl Server {
 
     /// Every row of one table the person may read: GET /api/tables/:id/rows, every page.
     /// The whole table or an Err: a row without an id, or more pages than MAX_PAGES, is refused.
-    fn rows(&self, who: &Person, table: &str) -> Result<Vec<(String, Map<String, Value>)>, String> {
+    fn rows(&self, who: &Person, table: &str) -> Result<Rows, String> {
         let (mut all, mut cursor) = (Vec::new(), None::<String>);
         for _ in 0..MAX_PAGES {
             let mut url = format!("{}/api/tables/{}/rows?limit=500", self.keap_url.trim_end_matches('/'), enc(table));
@@ -4175,7 +4179,7 @@ impl Server {
     /// other kind is listed in `omitted`; a required column the form cannot fill refuses the form.
     /// A rowRef column's parent rows as (labels, ids), read as the person: refDisplay, else the id.
     /// None over 50 rows or a label twice, where a label would not name one parent.
-    fn parents(&self, who: &Person, def: &Map<String, Value>, key: &str) -> Result<Option<(Vec<String>, Vec<String>)>, String> {
+    fn parents(&self, who: &Person, def: &Map<String, Value>, key: &str) -> Result<Option<Parents>, String> {
         let (table, display) = (def.get("refTable").and_then(Value::as_str).unwrap_or(""), def.get("refDisplay").and_then(Value::as_str).unwrap_or(""));
         let rows = self.rows(who, table).map_err(|e| format!("column {key} lists rows of {table}: {e}"))?;
         let labels: Vec<String> = rows.iter().map(|(id, v)| v.get(display).filter(|v| !v.is_null()).map_or(id.clone(), text)).collect();
@@ -6130,7 +6134,7 @@ pub fn normalized(args: &Value, grouped: Option<&Value>) -> (Value, bool) {
         });
         if let Some(p) = comp.get_mut("props").and_then(Value::as_object_mut) {
             p.retain(|k, _| k == "title" || k == "unit");
-            if !p.get("title").and_then(Value::as_str).is_some_and(|t| !t.trim().is_empty()) {
+            if p.get("title").and_then(Value::as_str).is_none_or(|t| t.trim().is_empty()) {
                 p.insert("title".into(), json!(title.unwrap_or_else(|| "total".into())));
             }
             p.insert("value".into(), json!(0));
@@ -6266,7 +6270,8 @@ fn axis_of(schema: &[Map<String, Value>], k: &str) -> Axis {
 /// past 60; time: the UTC day, oldest first, the last 60 days; number: ascending, the 60 smallest.
 /// The bool says rows were cut (time) or folded into "other" (category).
 pub fn aggregate(rows: &[(String, Map<String, Value>)], x: &str, axis: Axis, y: Option<&str>, op: Op) -> (Vec<(String, f64)>, bool) {
-    let (mut groups, mut at): (Vec<(String, f64, usize)>, HashMap<String, usize>) = Default::default();
+    let mut groups: Vec<(String, f64, usize)> = Vec::new();
+    let mut at: HashMap<String, usize> = HashMap::new();
     for (_, v) in rows {
         let cell = v.get(x).unwrap_or(&Value::Null);
         let label = match axis {

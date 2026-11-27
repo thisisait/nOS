@@ -188,7 +188,10 @@ fn jwt(t: &[char], p: usize) -> Option<(usize, usize)> {
     Some((keep, j))
 }
 
-fn sub(t: Vec<char>, m: fn(&[char], usize) -> Option<(usize, usize)>) -> Vec<char> {
+/// A secret matcher: from position i, Some((keep, end)): keep t[i..keep], replace t[keep..end].
+type Matcher = fn(&[char], usize) -> Option<(usize, usize)>;
+
+fn sub(t: Vec<char>, m: Matcher) -> Vec<char> {
     let (mut out, mut i) = (Vec::with_capacity(t.len()), 0);
     while i < t.len() {
         match m(&t, i) {

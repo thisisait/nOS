@@ -382,7 +382,7 @@ pub fn plan(source: Option<&str>, stages: &[Stage]) -> Result<Plan, String> {
             return Err(format!("{}() has no thalamus mapping", s.op));
         }
         let (own, write) = (takes(&s.op), matches!(s.op.as_str(), "insert" | "update" | "delete"));
-        if let Some(k) = s.params.keys().find(|k| !own.contains(k) && !(write && matches!(k.as_str(), "dry_run" | "commit" | "idempotency_key"))) {
+        if let Some(k) = s.params.keys().find(|k| !(own.contains(k) || write && matches!(k.as_str(), "dry_run" | "commit" | "idempotency_key"))) {
             let it = if own.is_empty() { "none".to_string() } else { own.join(", ") };
             return Err(format!("{}() takes no {k}=: it would be dropped, not run; it takes {it}", s.op));
         }

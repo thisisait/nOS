@@ -104,6 +104,9 @@ pub struct ApprovedLines {
     pub rows: Vec<Map<String, Value>>,
 }
 
+/// A session opened again by resume()/reopen(): (uuid, model_uri, (tokens_input, tokens_output)).
+pub type Reopened = (String, String, (i64, i64));
+
 pub struct Ledger {
     db: Connection,
 }
@@ -246,7 +249,7 @@ impl Ledger {
     /// The person's last session, opened again when its connection closed it (connection_closed): its row
     /// runs again and a second agent_session_start says so. Only a closed one is taken, so two live
     /// connections never share a session. (uuid, model_uri, tokens so far), or None.
-    pub fn resume(&self, actor: &str, agent: &str) -> rusqlite::Result<Option<(String, String, (i64, i64))>> {
+    pub fn resume(&self, actor: &str, agent: &str) -> rusqlite::Result<Option<Reopened>> {
         let last: Option<String> = self.db.query_row(
             "SELECT uuid FROM sessions
              WHERE id = (SELECT max(id) FROM sessions WHERE actor_id = ?1 AND agent_name = ?2) AND stop_reason = 'connection_closed'",
@@ -257,7 +260,7 @@ impl Ledger {
 
     /// resume() of one named session of this actor (a workspace tab's, v9): closed by its connection or
     /// switched away from; a cleared one never comes back. (uuid, model_uri, tokens so far), or None.
-    pub fn reopen(&self, actor: &str, agent: &str, uuid: &str) -> rusqlite::Result<Option<(String, String, (i64, i64))>> {
+    pub fn reopen(&self, actor: &str, agent: &str, uuid: &str) -> rusqlite::Result<Option<Reopened>> {
         let row: Option<(String, i64, i64)> = self.db.query_row(
             "SELECT model_uri, COALESCE(tokens_input, 0), COALESCE(tokens_output, 0) FROM sessions
              WHERE uuid = ?1 AND actor_id = ?2 AND agent_name = ?3 AND stop_reason IN ('connection_closed', 'switched')",
