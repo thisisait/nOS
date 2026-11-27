@@ -117,7 +117,6 @@ services:
       # verifying, so the role's self-signed cert is fine. Conditional so
       # Linux, where the server has no TLS, still connects.
       DATA_SOURCE_NAME: "postgresql://{{ postgresql_root_user | default('postgres') }}:{{ (postgresql_root_password | default(nos_derived_secrets.postgresql)) | urlencode }}@postgresql:5432/postgres?sslmode={{ 'require' if (postgresql_ssl_enabled | default(false)) else 'prefer' }}"
-      PG_EXPORTER_EXTEND_QUERY_PATH: ""
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:9187/metrics"]
       interval: 30s

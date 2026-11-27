@@ -17,7 +17,7 @@ notes: |
 recipes:
   - id: "erpnext-patch-or-minor"
     from_regex: "^v15\\."
-    to: "v15.98.1"
+    to: "v15.127.0"   # == the pin (was v15.98.1, older than the pin)
     severity: security
     changelog_url: "https://github.com/frappe/erpnext/releases"
     notes: |
