@@ -167,10 +167,10 @@ archetype even though it is closed. Full accounts per item: companion §7.
 
 0. **propose → drive** (`unjudged` fell between the steps) — **CLOSED
    2026-08-21** (`f3b34a19`), exercised the same afternoon.
-1. **`requires_operator` is stamped and consumed by nobody.** Neither
-   `loop-pr.py` nor `loop-review.py` reads the column (contract §5a: "never
-   auto-accepted"). **MISSING refusal edge**; cost = the loop's one
-   explicitly-forbidden automation, performed silently.
+1. **`requires_operator` was stamped and had no consumer** (contract §5a:
+   "never auto-accepted") — **CLOSED 2026-09-06** (`6a67056a`): `loop-pr.py`
+   returns before any judge re-runs or any branch is cut when the row carries
+   it (`tools/loop-pr.py:581`); pinned by `test_operator_required_holds_the_pin.py`.
 2. **landed → retired: the queue does not learn from a converge.** The
    scanner is the only retirement writer; twelve rows were already LIVE at
    their fix version, and REM-178 found a recorded fix *below* what runs.
@@ -214,7 +214,8 @@ pattern generalises.)
 Worth writing first, in order (fixtures and retro-verification: companion §8):
 
 1. **The unattended path refuses `requires_operator`** — closes 7.1, the
-   only edge whose absence violates an explicit contract clause.
+   only edge whose absence violated an explicit contract clause. **DONE
+   2026-09-06** (`6a67056a`).
 2. **Every ledger state has an owner** — the generalisation of `f3b34a19`:
    every producible state is consumed by a named actor or declared terminal
    with a reason.

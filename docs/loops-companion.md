@@ -264,14 +264,17 @@ flowchart LR
    2026-08-21** (`f3b34a19`), exercised the same afternoon: `813d458b` was
    picked up and judged `fail` on the `repo` set. Cost already paid: one
    silent night, plus the day of diagnosis.
-1. **`requires_operator` is stamped and consumed by nobody.** The ledger
-   marks every `gate-add` proposal `requires_operator=1` (contract §5a:
-   "never auto-accepted"), and — verified — neither `loop-pr.py` nor
-   `loop-review.py` reads the column. If a gate-add proposal ever passes a
-   judge set, the unattended night lands and merges a model-authored gate
-   with no operator anywhere in the chain: the "gate you can satisfy by
-   editing the gate" class, through the front door. **MISSING refusal edge**;
-   cost = the loop's one explicitly-forbidden automation, performed silently.
+1. **`requires_operator` was stamped and had no consumer** — **CLOSED
+   2026-09-06** (`6a67056a`). The ledger marks every `gate-add` proposal
+   `requires_operator=1` (contract §5a: "never auto-accepted"), and at the
+   time neither `loop-pr.py` nor `loop-review.py` read the column: a gate-add
+   proposal that passed a judge set would have landed a model-authored gate
+   with no operator anywhere in the chain, the "gate you can satisfy by
+   editing the gate" class, through the front door. Since `6a67056a` the
+   driver holds such a row before any judge re-runs or any branch is cut
+   (`tools/loop-pr.py:581`; the same commit also stamps the flag on a pin bump
+   that crosses a major, downgrades or names an unreadable pin), and
+   `tests/anatomy/test_operator_required_holds_the_pin.py` pins that refusal.
 2. **landed → retired: the queue does not learn from a converge.** The
    scanner is the only retirement writer, twelve rows were already LIVE at
    their fix version, and REM-178 found a recorded fix *below* what runs.
