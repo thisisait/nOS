@@ -348,6 +348,26 @@
     state: absent
   failed_when: false
 
+# Machine custody goes where the store goes (operator 2026-11-27, row secrets-at-rest): left behind,
+# unlock() served the OLD master silently until the persist, and --leave kept it on an uninstalled host.
+# rc 44 = no such item; a locked Keychain stops the blank instead of leaving the copy.
+- name: "[BLANK] Remove machine custody (macOS Keychain)"
+  ansible.builtin.command:
+    argv: [security, delete-generic-password, -a, nos, -s, "{{ item }}"]
+  loop: "{{ _custody_keychain_items }}"
+  register: _custody_kc_delete
+  changed_when: _custody_kc_delete.rc == 0
+  failed_when: _custody_kc_delete.rc not in [0, 44]
+  when: ansible_facts['system'] == 'Darwin'
+
+- name: "[BLANK] Remove machine custody (Linux /etc/nos)"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop: "{{ _custody_files }}"
+  become: true
+  when: ansible_facts['system'] == 'Linux'
+
 # The banner must describe THIS run, not the run this file was written for.
 # It used to hardcode the old level name and "Playbook now continues with clean
 # installation" — a lie in two directions under the ladder: it named blank for
