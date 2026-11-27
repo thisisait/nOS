@@ -319,13 +319,6 @@
 # ── 7/8. Auto-deps + _blank_dirs: MOVED to tasks/removal-set.yml (single
 # removal inventory — one list, consumed by dry-run, execution, and verify).
 
-# Row nos-owned-paths-recheck-before-rm: removal-set.yml asserted the owned roots at the start of the
-# run; this delete comes after the whole teardown, minutes later, time enough for a root or an ancestor
-# of one to be swapped for a symlink (file: absent lstats only the last component). Resolve and assert
-# the removal set again here (set_facts, a stat and the assert: no side effect), so check and rm touch.
-- name: "[BLANK] Re-check the removal set right before the delete (tasks/removal-set.yml)"
-  ansible.builtin.include_tasks: removal-set.yml
-
 # Machine custody goes where the store goes (operator 2026-11-27, row secrets-at-rest): left behind,
 # unlock() served the OLD master silently until the persist, and --leave kept it on an uninstalled host.
 # rc 44 = no such item; a locked Keychain stops the blank before the data directories and the store go.
@@ -345,6 +338,13 @@
   loop: "{{ _custody_files }}"
   become: true
   when: ansible_facts['system'] == 'Linux'
+
+# Row nos-owned-paths-recheck-before-rm: removal-set.yml asserted the owned roots at the start of the
+# run; this delete comes after the whole teardown, minutes later, time enough for a root or an ancestor
+# of one to be swapped for a symlink (file: absent lstats only the last component). Resolve and assert
+# the removal set again here (set_facts, a stat and the assert: no side effect), so check and rm touch.
+- name: "[BLANK] Re-check the removal set right before the delete (tasks/removal-set.yml)"
+  ansible.builtin.include_tasks: removal-set.yml
 
 - name: "[BLANK] Remove data directories (sudo - Docker creates files as www-data)"
   ansible.builtin.file:
