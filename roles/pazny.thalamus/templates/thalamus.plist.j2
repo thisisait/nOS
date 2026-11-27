@@ -117,6 +117,9 @@
         <string>{{ thalamus_wing_api_token }}</string>
         <key>NOS_IRIS_STARTABLE_AGENTS</key>
         <string>{{ iris_startable_agents | default([]) | join(',') }}</string>
+        <!-- What each may do, for start_agent's card only (tasks/main.yml renders it from the profiles). -->
+        <key>NOS_IRIS_AGENT_LIMITS</key>
+        <string>{{ thalamus_agent_limits | default('') }}</string>
 {% endif %}
         <!-- The binding env (defaults thalamus_binding_env, also the preflight's); iris binds one of its allowed rows. -->
 {% for name, value in thalamus_binding_env.items() %}

@@ -56,6 +56,23 @@
       - thalamus_decider_exes | select('string') | reject('match', '^/[^:]+$') | list | length == 0
     fail_msg: "thalamus_decider_exes must be a list of absolute paths without ':', e.g. [\"{{ thalamus_bin }}\", \"{{ thalamus_nos_app_exe }}\"]."
 
+# What each startable agent may do, for start_agent's card (row iris-subagent-limits-card, ruled 1(b)): read
+# from the same agent.yml Wing loads (AgentLoader: outcomes.max_iterations, default 3; tools[].id; model.primary).
+# One `name|iterations|tool,tool|model` per agent, `;`-joined; a profile that will not read is left out, and the
+# card then says its limits are unknown. A text line, never a limit Wing applies.
+- name: "[pazny.thalamus] The startable agents' limits, from their profiles"
+  ansible.builtin.set_fact:
+    thalamus_agent_limits: >-
+      {%- set out = [] -%}
+      {%- for n in iris_startable_agents | default([]) if n is string and n is match('^[a-z0-9][a-z0-9-]*$') -%}
+      {%- set raw = lookup('ansible.builtin.file', playbook_dir ~ '/files/anatomy/agents/' ~ n ~ '/agent.yml', errors='ignore') -%}
+      {%- if raw -%}
+      {%- set a = raw | from_yaml -%}
+      {%- set _ = out.append(n ~ '|' ~ ((a.outcomes | default({}, true)).max_iterations | default(3)) ~ '|'
+          ~ ((a.tools | default([], true)) | map(attribute='id') | join(',')) ~ '|' ~ ((a.model | default({}, true)).primary | default(''))) -%}
+      {%- endif -%}
+      {%- endfor -%}{{ out | join(';') }}
+
 # One daemon per host: launchd on macOS (macos.yml, plus nOS.app), the
 # operator's systemd --user unit on Linux with a socket every login shares (linux.yml).
 - ansible.builtin.import_tasks: macos.yml
