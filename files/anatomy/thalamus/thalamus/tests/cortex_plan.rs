@@ -3,7 +3,8 @@
 //! carry falls back to plain tool calling with "[thalamus] cortex plan refused: ...".
 //! Cases: state/fixtures/cortex-plan/cases.yml.
 
-use nos_contract::wire::{decode_to_shell, encode, Scope, ToShell, ToThalamus};
+use nos_contract::renderers::Component;
+use nos_contract::wire::{decode_to_shell, encode, Decision, Scope, ToShell, ToThalamus};
 use serde_json::{json, Value};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpListener;
@@ -179,6 +180,11 @@ fn rig(name: &str, b: Binding, models: Vec<String>, cortex: Option<String>) -> R
 
 /// A rig whose KEAP holds `extra` tables after the fixture's three.
 fn rig_cx(name: &str, b: Binding, models: Vec<String>, cortex: Option<Cortex>, extra: Vec<(Value, Value)>) -> Rig {
+    rig_keap(name, b, models, cortex, keap(extra))
+}
+
+/// rig_cx over a KEAP already listening at (url, seen): the read-only fixture or keap_rw.
+fn rig_keap(name: &str, b: Binding, models: Vec<String>, cortex: Option<Cortex>, (keap_url, keap): (String, Seen)) -> Rig {
     let d = PathBuf::from(format!("/tmp/thc-{}-{name}", std::process::id()));
     let _ = std::fs::remove_dir_all(&d);
     for p in [d.clone(), d.join("state"), d.join("state/keap-tables")] {
@@ -195,7 +201,6 @@ fn rig_cx(name: &str, b: Binding, models: Vec<String>, cortex: Option<Cortex>, e
     let map = d.join("identity-map.yml");
     std::fs::write(&map, json!({"logins": {me(): {"username": "Alice Smith", "groups": ["nos-users"]}}}).to_string()).unwrap();
     let (model_url, model) = model(models);
-    let (keap_url, keap) = keap(extra);
     let ledger = d.join("ledger.db");
     let srv = Server {
         map,
@@ -1107,4 +1112,375 @@ fn program_every_read_fixture_runs_in_the_thalamus() {
         assert_eq!(json!(ran), json!(calls), "{name}");
         assert!(matches!(got.last(), Some(ToShell::Text { text, .. }) if text.starts_with("The thalamus ran the plan")), "{name}: {got:?}");
     }
+}
+
+// ---- a write program: one card of 1 to 20 writes (row iris-code-mode-write-card) ----
+// Operator 2026-11-27: these journeys before the write path lands. KEAP here is keap_rw (writable, in memory).
+
+type Held = Arc<Mutex<Vec<(Value, Vec<Value>)>>>;
+/// Called on every rows GET with (n-th rows GET of the rig, table id, its rows): a row that moves mid-turn.
+type Hook = Box<dyn Fn(usize, &str, &mut Vec<Value>) + Send>;
+
+/// A writable KEAP over `tables`: GET as keap(), POST rows upserts by id, DELETE rows/<id> removes.
+fn keap_rw(tables: Vec<(Value, Vec<Value>)>, hook: Hook) -> (String, Seen, Held) {
+    let held: Held = Arc::new(Mutex::new(tables));
+    let h = held.clone();
+    let gets = Arc::new(Mutex::new(0usize));
+    let (url, seen) = listen(Box::new(move |method, path, body, _| {
+        let ok = |d: Value| (200, json!({"success": true, "data": d}).to_string());
+        let mut tables = h.lock().unwrap();
+        if (method, path) == ("GET", "/api/tables") {
+            return ok(json!(tables.iter().map(|(t, _)| json!({"id": t["id"], "title": t["title"]})).collect::<Vec<_>>()));
+        }
+        for (t, rows) in tables.iter_mut() {
+            let base = format!("/api/tables/{}", t["id"].as_str().unwrap());
+            match (method, path.strip_prefix(&base)) {
+                ("GET", Some("")) => return ok(t.clone()),
+                ("GET", Some("/rows")) => {
+                    let mut n = gets.lock().unwrap();
+                    hook(*n, t["id"].as_str().unwrap(), rows);
+                    *n += 1;
+                    return ok(json!({"rows": rows, "nextCursor": null}));
+                }
+                ("POST", Some("/rows")) => {
+                    let b: Value = serde_json::from_str(body).unwrap();
+                    let id = b["id"].as_str().map_or(format!("n{}", rows.len() + 1), str::to_string);
+                    match rows.iter_mut().find(|r| r["id"] == id) {
+                        Some(r) => b["values"].as_object().unwrap().iter().for_each(|(k, v)| r["values"][k] = v.clone()),
+                        None => rows.push(json!({"id": id, "values": b["values"]})),
+                    }
+                    return ok(json!({"id": id}));
+                }
+                ("DELETE", Some(rest)) if rest.starts_with("/rows/") => {
+                    rows.retain(|r| r["id"] != rest["/rows/".len()..]);
+                    return ok(json!({}));
+                }
+                _ => {}
+            }
+        }
+        (404, r#"{"success": false, "error": "no such table"}"#.into())
+    }));
+    (url, seen, held)
+}
+
+fn todo_tables() -> Vec<(Value, Vec<Value>)> {
+    vec![
+        (table("todos", "Todos", json!([{"key": "title", "label": "Title", "kind": "text"},
+            {"key": "status", "label": "Status", "kind": "select", "options": ["open", "done"]},
+            {"key": "amount", "label": "Amount", "kind": "number"}])),
+         vec![json!({"id": "t1", "values": {"title": "Write spec", "status": "open", "amount": 3}}),
+              json!({"id": "t2", "values": {"title": "Ship it", "status": "done", "amount": 5}}),
+              json!({"id": "t3", "values": {"title": "Review", "status": "open", "amount": 2}})]),
+        (table("party", "Parties", json!([{"key": "slug", "label": "Slug", "kind": "text"},
+            {"key": "legal_name", "label": "Legal name", "kind": "text"}, {"key": "role", "label": "Role", "kind": "text"}])),
+         vec![json!({"id": "acme", "values": {"slug": "acme", "legal_name": "ACME s.r.o.", "role": "client"}}),
+              json!({"id": "beta", "values": {"slug": "beta", "legal_name": "Beta a.s.", "role": "client"}})]),
+    ]
+}
+
+/// A plan of `stages` the organ knows; `intents` None plans every turn; the thalamus runs it (plan_run: thalamus).
+fn write_rig(name: &str, models: Vec<String>, intents: Option<&[&str]>, tables: Vec<(Value, Vec<Value>)>, hook: Hook,
+             stages: &[&Value]) -> (Rig, Held) {
+    let mut k = known(&cases());
+    k.extend(stages.iter().map(|s| (stages_source(s), (*s).clone(), cortex_plan::REGISTRY_HASH.to_string(), vec![])));
+    let (organ_url, _) = organ(k);
+    let (url, seen, held) = keap_rw(tables, hook);
+    let cx = Cortex { url: organ_url, token: "cx-ro-token".into(), rich_catalogue: false,
+                      intents: intents.map(|i| i.iter().map(|s| s.to_string()).collect()), run_program: true };
+    (rig_keap(name, binding("ollama", true), models, Some(cx), (url, seen)), held)
+}
+
+fn no_hook() -> Hook {
+    Box::new(|_, _, _| {})
+}
+
+fn plan_of(stages: &Value) -> String {
+    say(&json!({"stages": stages}).to_string())
+}
+
+/// get(db:todos) | filter(status eq open) | <write>: t1 and t3 match.
+fn open_todos(write: Value) -> Value {
+    json!([{"op": "get", "operand": "db:todos", "params": {}}, {"op": "filter", "params": {"where": "status eq open"}}, write])
+}
+
+fn close_open() -> Value {
+    open_todos(json!({"op": "update", "operand": "db:todos", "params": {"set": "status=done"}}))
+}
+
+fn delete_open() -> Value {
+    open_todos(json!({"op": "delete", "operand": "db:todos", "params": {}}))
+}
+
+/// One connection kept open: a card waits on the connection that asked it.
+struct Conn {
+    s: UnixStream,
+    r: BufReader<UnixStream>,
+    session: Option<String>,
+}
+
+fn conn(rig: &Rig, working_for: Option<&str>) -> Conn {
+    let s = UnixStream::connect(&rig.sock).unwrap();
+    s.set_read_timeout(Some(std::time::Duration::from_secs(10))).unwrap();
+    let mut c = Conn { r: BufReader::new(s.try_clone().unwrap()), s, session: None };
+    if let Some(w) = working_for {
+        (&c.s).write_all(encode(&ToThalamus::WorkingFor { scope: Scope::Client(w.into()) }).as_bytes()).unwrap();
+        loop {
+            match next(&mut c.r) {
+                Some(ToShell::Session { session, .. }) => c.session = Some(session),
+                Some(ToShell::WorkingFor { .. }) => break,
+                other => panic!("working_for was not set: {other:?}"),
+            }
+        }
+    }
+    c
+}
+
+/// What the thalamus said until a Text or a Refused.
+fn until_end(c: &mut Conn) -> Vec<ToShell> {
+    let mut got = vec![];
+    while let Some(m) = next(&mut c.r) {
+        if let ToShell::Session { session, .. } = &m {
+            c.session = Some(session.clone());
+        }
+        let end = matches!(m, ToShell::Text { .. } | ToShell::Refused { .. });
+        got.push(m);
+        if end {
+            break;
+        }
+    }
+    got
+}
+
+fn say_turn(c: &mut Conn, text: &str) -> Vec<ToShell> {
+    (&c.s).write_all(encode(&ToThalamus::Turn { session: c.session.clone(), text: text.into() }).as_bytes()).unwrap();
+    until_end(c)
+}
+
+fn decide(c: &mut Conn, approval: &str, decision: Decision) -> Vec<ToShell> {
+    (&c.s).write_all(encode(&ToThalamus::ApprovalDecision { approval: approval.into(), decision, note: None }).as_bytes()).unwrap();
+    until_end(c)
+}
+
+/// Every program card said: (approval id, the row id of each write).
+fn cards(got: &[ToShell]) -> Vec<(String, Vec<String>)> {
+    got.iter().filter_map(|m| match m {
+        ToShell::ApprovalRequest { approval, component: Component::ProgramApproval(p), .. } =>
+            Some((approval.clone(), p.writes.iter().map(|w| w.row_id.clone().unwrap_or_default()).collect())),
+        ToShell::ApprovalRequest { component, .. } => panic!("an approval other than a program card: {component:?}"),
+        _ => None,
+    }).collect()
+}
+
+fn last_text(got: &[ToShell]) -> String {
+    match got.last() {
+        Some(ToShell::Text { text, .. }) => text.clone(),
+        other => panic!("the exchange ends in a Text: {other:?}"),
+    }
+}
+
+/// The KEAP writes the rig saw: POST or DELETE on a table's rows.
+fn writes(rig: &Rig) -> Vec<String> {
+    rig.keap.lock().unwrap().iter().map(|(h, _)| h.lines().next().unwrap_or("").to_string())
+        .filter(|l| l.starts_with("POST /api/tables/") || l.starts_with("DELETE ")).collect()
+}
+
+fn rows_of(held: &Held, table: &str) -> Vec<Value> {
+    held.lock().unwrap().iter().find(|(t, _)| t["id"] == table).unwrap().1.clone()
+}
+
+/// The control the refusals below lean on: an untouched approve writes exactly the card, in order.
+#[test]
+fn program_an_approved_card_writes_each_matched_row_once() {
+    let st = close_open();
+    let (rig, held) = write_rig("pw-ok", vec![plan_of(&st), say("a second call is a defect")], None, todo_tables(), no_hook(), &[&st]);
+    let mut c = conn(&rig, None);
+    let got = say_turn(&mut c, "close the open todos");
+    let card = cards(&got);
+    assert_eq!(card.iter().map(|c| &c.1).collect::<Vec<_>>(), vec![&vec!["t1".to_string(), "t3".to_string()]], "{got:?}");
+    assert!(writes(&rig).is_empty(), "a card writes nothing before the person decides");
+    let done = decide(&mut c, &card[0].0, Decision::Approve);
+    assert_eq!(last_text(&done), "Approved: the program's 2 writes done: t1, t3.");
+    assert_eq!(writes(&rig), vec!["POST /api/tables/todos/rows HTTP/1.1".to_string(); 2]);
+    assert!(rows_of(&held, "todos").iter().all(|r| r["values"]["status"] == "done"));
+    assert_eq!(models_said(&rig).len(), 1, "the person decided; the model was asked only for the plan");
+}
+
+/// Reject: nothing is written, and the ledger's result says so.
+#[test]
+fn program_a_rejected_card_writes_nothing() {
+    let st = close_open();
+    let (rig, held) = write_rig("pw-no", vec![plan_of(&st), say("defect")], None, todo_tables(), no_hook(), &[&st]);
+    let before = rows_of(&held, "todos");
+    let mut c = conn(&rig, None);
+    let card = cards(&say_turn(&mut c, "close the open todos"));
+    assert_eq!(card.len(), 1);
+    let done = decide(&mut c, &card[0].0, Decision::Reject);
+    assert_eq!(last_text(&done), "Rejected: nothing was written.");
+    assert!(writes(&rig).is_empty(), "{:?}", writes(&rig));
+    assert_eq!(rows_of(&held, "todos"), before);
+    let ev = tools(&rig, c.session.as_deref().unwrap());
+    let res = &ev.iter().rfind(|(t, _)| t == "agent_tool_result:cortex_program").unwrap().1;
+    assert_eq!(res["written"], json!(false), "{res}");
+}
+
+/// Race: the second target's card cell moves between the card and the approve. The preflight reads every
+/// target before the first write, so nothing is written, the first row included, and the cell is named.
+#[test]
+fn program_a_row_changed_since_the_card_writes_nothing() {
+    let st = close_open();
+    let (rig, held) = write_rig("pw-race", vec![plan_of(&st), say("defect")], None, todo_tables(), no_hook(), &[&st]);
+    let mut c = conn(&rig, None);
+    let card = cards(&say_turn(&mut c, "close the open todos"));
+    assert_eq!(card.len(), 1);
+    held.lock().unwrap().iter_mut().find(|(t, _)| t["id"] == "todos").unwrap().1[2]["values"]["status"] = json!("done");
+    let done = decide(&mut c, &card[0].0, Decision::Approve);
+    assert_eq!(last_text(&done), "Approved, but nothing was written: cell status of row t3 changed since the card; nothing written");
+    assert!(writes(&rig).is_empty(), "nothing partial: {:?}", writes(&rig));
+    assert_eq!(rows_of(&held, "todos")[0]["values"]["status"], "open", "t1 is not written either");
+    let ev = tools(&rig, c.session.as_deref().unwrap());
+    let res = &ev.iter().rfind(|(t, _)| t == "agent_tool_result:cortex_program").unwrap().1;
+    assert_eq!((&res["written"], &res["rows"]), (&json!(false), &json!([])), "{res}");
+}
+
+/// A target the program's own read did not render (a new matching row came first, the read's limit is
+/// the target count) refuses the program, though the row was shown in an earlier turn.
+#[test]
+fn program_a_target_its_own_read_did_not_render_refuses_the_program() {
+    let show = open_todos(json!({"op": "show", "params": {"kind": "table"}}));
+    let st = close_open();
+    // rows GETs: turn 1's one read (#0), turn 2's plan check (#1); its program's read (#2) sees t0 first
+    let hook: Hook = Box::new(|n, t, rows| if t == "todos" && n == 2 {
+        rows.insert(0, json!({"id": "t0", "values": {"title": "New one", "status": "open", "amount": 1}}));
+    });
+    let (rig, _) = write_rig("pw-unread", vec![plan_of(&show), plan_of(&st), say("defect")], None, todo_tables(), hook, &[&show, &st]);
+    let mut c = conn(&rig, None);
+    let first = say_turn(&mut c, "show the open todos");
+    assert!(renders(&first) >= 1 && cards(&first).is_empty(), "{first:?}");
+    let got = say_turn(&mut c, "close the open todos");
+    let drawn: Vec<String> = got.iter().filter_map(|m| match m {
+        ToShell::Render { component: Component::TableResults(t), .. } => Some(t.rows.iter().map(|r| r.__id.clone())),
+        _ => None,
+    }).flatten().collect();
+    assert_eq!(drawn, ["t0", "t1"], "the program's read drew t0 in t3's place: {got:?}");
+    assert!(cards(&got).is_empty(), "no card: {got:?}");
+    let text = last_text(&got);
+    assert!(text.contains("row t3 was not in the rows the program just showed; nothing is asked"), "{text}");
+    assert!(writes(&rig).is_empty());
+}
+
+/// Working for ACME, an update that would move a row to Beta refuses the whole program before any card.
+#[test]
+fn program_a_write_outside_whom_you_work_for_refuses_the_program() {
+    let mut tables = todo_tables();
+    tables.push((table("deals", "Deals", json!([{"key": "title", "label": "Title", "kind": "text"},
+        {"key": "book_owner", "label": "Book owner", "kind": "text"}])),
+        vec![json!({"id": "d1", "values": {"title": "One", "book_owner": "acme"}}),
+             json!({"id": "d2", "values": {"title": "Two", "book_owner": "acme"}})]));
+    let st = json!([{"op": "get", "operand": "db:deals", "params": {}}, {"op": "update", "operand": "db:deals", "params": {"set": "book_owner=beta"}}]);
+    let (rig, _) = write_rig("pw-out", vec![plan_of(&st), say("defect")], None, tables, no_hook(), &[&st]);
+    std::fs::write(rig.ledger.parent().unwrap().join("state/keap-tables/deals.table.yml"), "client_scope: book_owner\n").unwrap();
+    let mut c = conn(&rig, Some("acme"));
+    let got = say_turn(&mut c, "move the deals to beta");
+    assert!(cards(&got).is_empty(), "no card: {got:?}");
+    let text = last_text(&got);
+    assert!(text.contains("row d1 is Beta a.s.'s row, while you work for ACME s.r.o.: the program is refused before any card"), "{text}");
+    assert!(writes(&rig).is_empty());
+    let ev = tools(&rig, c.session.as_deref().unwrap());
+    assert!(ev.iter().all(|(t, _)| !t.starts_with("agent_approval_request")), "{ev:?}");
+}
+
+/// The cap: 20 matched rows are one card of 20 writes; 21 are the mapper's refusal (a repair round, then
+/// the tools path), before any row is rendered and with no card.
+#[test]
+fn program_twenty_rows_card_and_twenty_one_are_refused() {
+    let st = json!([{"op": "get", "operand": "db:bulk", "params": {}}, {"op": "filter", "params": {"where": "status eq open"}},
+                    {"op": "update", "operand": "db:bulk", "params": {"set": "status=done"}}]);
+    for n in [20, 21] {
+        let mut tables = todo_tables();
+        tables.push((table("bulk", "Bulk", json!([{"key": "title", "label": "Title", "kind": "text"},
+            {"key": "status", "label": "Status", "kind": "select", "options": ["open", "done"]}])),
+            (1..=n).map(|i| json!({"id": format!("b{i}"), "values": {"title": format!("row {i}"), "status": "open"}})).collect()));
+        let (rig, _) = write_rig(&format!("pw-cap{n}"), vec![plan_of(&st), plan_of(&st), say("done")], None, tables, no_hook(), &[&st]);
+        let mut c = conn(&rig, None);
+        let got = say_turn(&mut c, "close the open bulk rows");
+        let ev = tools(&rig, c.session.as_deref().unwrap());
+        if n == 20 {
+            assert_eq!(cards(&got).iter().map(|c| c.1.len()).collect::<Vec<_>>(), vec![20], "{got:?}");
+            continue;
+        }
+        assert!(cards(&got).is_empty() && renders(&got) == 0, "21: no card, no rows drawn: {got:?}");
+        let want = "update acts on 1 to 20 rows; the pipeline matched 21 rows of Bulk";
+        let plan_rows: Vec<&Value> = ev.iter().filter(|(t, _)| t == "agent_tool_result:cortex_plan").map(|e| &e.1).collect();
+        assert!(plan_rows.len() == 2 && plan_rows[0]["mapped"] == false && plan_rows[0]["errors"][0].as_str().is_some_and(|e| e.starts_with(want)),
+                "a repair round first: {plan_rows:?}");
+        assert!(plan_rows[1]["fallback"].as_str().is_some_and(|f| f.starts_with(want)), "then refused: {plan_rows:?}");
+        assert!(writes(&rig).is_empty());
+    }
+}
+
+/// One card at a time: a second write program while a card waits runs none of its calls.
+#[test]
+fn program_a_second_program_while_a_card_waits_runs_no_call() {
+    let st = close_open();
+    let (rig, _) = write_rig("pw-two", vec![plan_of(&st), plan_of(&st), say("defect")], None, todo_tables(), no_hook(), &[&st]);
+    let mut c = conn(&rig, None);
+    let first = say_turn(&mut c, "close the open todos");
+    assert_eq!(cards(&first).len(), 1, "{first:?}");
+    let second = say_turn(&mut c, "close the open todos");
+    assert!(cards(&second).is_empty(), "{second:?}");
+    assert_eq!(last_text(&second), "Stopped: an approval is already waiting; nothing ran.");
+    let ev = tools(&rig, c.session.as_deref().unwrap());
+    let closings: Vec<usize> = ev.iter().enumerate().filter(|(_, (t, v))| t == "agent_tool_result:cortex_program" && v.get("ran").is_some())
+        .map(|(i, _)| i).collect();
+    assert_eq!(closings.len(), 2, "{ev:?}");
+    assert_eq!(ev[closings[1]].1["ran"], json!(0), "{}", ev[closings[1]].1);
+    let ran: Vec<&String> = ev[closings[0] + 1..].iter().map(|(t, _)| t).filter(|t| t.starts_with("agent_tool_use:") && !t.ends_with(":cortex_plan")).collect();
+    assert!(ran.is_empty(), "turn 2 ran a call: {ran:?}");
+    assert!(writes(&rig).is_empty());
+}
+
+/// propose_program runs only inside a program: the model naming it hears "unknown tool", and is never offered it.
+#[test]
+fn program_the_model_calling_propose_program_gets_unknown_tool() {
+    let args = json!({"table": "todos", "op": "delete", "row_ids": ["t1", "t2", "t3"], "values": {}, "source": "x"});
+    let mut listed = INTENTS.to_vec();
+    listed.push("write-rows");
+    let (rig, _) = write_rig("pw-tool", vec![call("propose_program", args), say("done")], Some(&listed), todo_tables(), no_hook(), &[]);
+    let mut c = conn(&rig, None);
+    let got = say_turn(&mut c, "hello, what can you do?");
+    assert!(cards(&got).is_empty(), "{got:?}");
+    let said = models_said(&rig);
+    assert_eq!(said.len(), 2, "{said:?}");
+    assert!(said[0]["tools"].as_array().unwrap().iter().all(|t| t["function"]["name"] != "propose_program"), "never offered");
+    let heard: Vec<&Value> = said[1]["messages"].as_array().unwrap().iter().filter(|m| m["role"] == "tool").collect();
+    assert!(heard.len() == 1 && heard[0]["content"].as_str().unwrap().contains("unknown tool \\\"propose_program\\\""), "{heard:?}");
+    assert!(writes(&rig).is_empty());
+}
+
+/// The intent gate: an insert-row turn's delete over two rows is refused (it was one card of two deletes),
+/// write-rows listed or not; a turn routed write-rows cards both.
+#[test]
+fn program_a_many_row_write_needs_the_write_rows_intent() {
+    let st = delete_open();
+    let mut listed = INTENTS.to_vec();
+    listed.push("write-rows");
+    for (i, intents) in [&INTENTS[..], &listed].into_iter().enumerate() {
+        let (rig, held) = write_rig(&format!("pw-gate{i}"), vec![plan_of(&st), plan_of(&st), say("done")], Some(intents), todo_tables(), no_hook(), &[&st]);
+        let mut c = conn(&rig, None);
+        let got = say_turn(&mut c, "Add a row to todos");
+        let ev = tools(&rig, c.session.as_deref().unwrap());
+        let route = &ev.iter().find(|(t, _)| t == "agent_tool_result:route").unwrap().1;
+        assert_eq!((&route["route"], &route["intent"]), (&json!("cortex"), &json!("insert-row")), "{i}: {route}");
+        assert!(cards(&got).is_empty(), "{i}: an insert-row turn cards no two deletes: {got:?}");
+        let want = "delete acts on exactly one row; the pipeline matched 2 rows of Todos";
+        assert!(ev.iter().any(|(t, v)| t == "agent_tool_result:cortex_plan" && v["fallback"].as_str().is_some_and(|f| f.starts_with(want))), "{i}: {ev:?}");
+        assert!(writes(&rig).is_empty() && rows_of(&held, "todos").len() == 3);
+    }
+    let (rig, _) = write_rig("pw-gate2", vec![plan_of(&st), say("defect")], Some(&listed), todo_tables(), no_hook(), &[&st]);
+    let mut c = conn(&rig, None);
+    let got = say_turn(&mut c, "Delete the open todos");
+    let ev = tools(&rig, c.session.as_deref().unwrap());
+    let route = &ev.iter().find(|(t, _)| t == "agent_tool_result:route").unwrap().1;
+    assert_eq!((&route["route"], &route["intent"]), (&json!("cortex"), &json!("write-rows")), "{route}");
+    assert_eq!(cards(&got).iter().map(|c| &c.1).collect::<Vec<_>>(), vec![&vec!["t1".to_string(), "t3".to_string()]], "{got:?}");
 }
