@@ -119,6 +119,9 @@ pub enum Engine {
     JsonSchema,
     /// Everything else (Ollama MLX 501s on any format): free text and one repair round.
     Free,
+    /// A cloud row the host accepted after its probe (iris_plan_tool_rows): one forced `cortex_program`
+    /// call whose parameters are ast_schema(). A 4xx downgrades to Free; the organ still decides.
+    Tool,
 }
 
 impl Engine {
@@ -134,11 +137,17 @@ impl Engine {
         }
     }
 
+    /// of(), except a non-local row the host listed in iris_plan_tool_rows (NOS_IRIS_PLAN_TOOL) is Tool.
+    pub fn chosen(backend: &str, local: bool, tool_rows: &[String]) -> Engine {
+        if !local && tool_rows.iter().any(|r| r == backend) { Engine::Tool } else { Engine::of(backend) }
+    }
+
     pub fn name(self) -> &'static str {
         match self {
             Engine::Gbnf => "llamacpp-gbnf",
             Engine::JsonSchema => "ollama-json-schema",
             Engine::Free => "unconstrained",
+            Engine::Tool => "openai-tool-call",
         }
     }
 }
@@ -230,10 +239,37 @@ pub fn ast_schema() -> Value {
                            "properties": PARAMS.iter().map(|(k, t)| (k.to_string(), json!({"type": t}))).collect::<Map<String, Value>>()}}}}}})
 }
 
+/// The one function a Tool plan request forces; static, no catalogue or row text in it.
+pub fn tool_def() -> Value {
+    json!({"type": "function", "function": {"name": "cortex_program",
+        "description": "The person's request as ONE cortex-lang pipeline, one stage per opcode.", "parameters": ast_schema()}})
+}
+
+/// A Tool plan answer's stages: exactly one call, of cortex_program, with JSON arguments; anything else
+/// (prose, another function, two calls) is the model's failure, never read as free text.
+pub fn tool_stages(answer: &Value) -> Result<Vec<Stage>, String> {
+    let calls = answer.get("tool_calls").and_then(Value::as_array).map(Vec::as_slice).unwrap_or_default();
+    let [call] = calls else { return Err(format!("{} calls, not one cortex_program call", calls.len())) };
+    let name = call.pointer("/function/name").and_then(Value::as_str).unwrap_or("");
+    if name != "cortex_program" {
+        return Err(format!("it called {name:?}, not cortex_program"));
+    }
+    let args = call.pointer("/function/arguments").and_then(Value::as_str).unwrap_or("");
+    serde_json::from_str::<Value>(args).map_err(|e| format!("its arguments are not JSON ({e})")).and_then(|v| stages_of(&v))
+}
+
+/// Whether a failed Tool request downgrades to free text: a 4xx the row gave the forced call, never a dead
+/// key (401, 403) or a rate limit post_chat already waited out (429).
+pub fn tool_refused(why: &str) -> bool {
+    why.strip_prefix("model answered ").and_then(|r| r.get(..3)).and_then(|c| c.parse::<u16>().ok())
+        .is_some_and(|c| (400..500).contains(&c) && ![401, 403, 429].contains(&c))
+}
+
 /// The plan call's system prompt: the v3 lines the mapper carries, the mini-syntaxes, the tables.
 pub fn primer(engine: Engine, catalogue: &str) -> String {
     let answer = match engine {
         Engine::JsonSchema => "Answer as JSON {\"stages\": [{\"op\", \"operand\", \"params\"}]}: one stage per opcode; operand is \"db:<table id>\" (never a param) or \"\" when the stage takes none.",
+        Engine::Tool => "Answer with one cortex_program call, {\"stages\": [{\"op\", \"operand\", \"params\"}]}: one stage per opcode; operand is \"db:<table id>\" (never a param) or \"\" when the stage takes none.",
         _ => "Answer with the pipeline only: one line, no prose, no code fence.",
     };
     format!("You plan the person's request as ONE cortex-lang pipeline. {answer}
@@ -260,6 +296,7 @@ pub fn fingerprint(engine: Engine, gbnf: Option<&str>) -> (String, Option<String
     let grammar = match engine {
         Engine::Gbnf => gbnf.map(sha256_hex),
         Engine::JsonSchema => Some(sha256_hex(&ast_schema().to_string())),
+        Engine::Tool => Some(sha256_hex(&tool_def().to_string())),
         Engine::Free => None,
     };
     (sha256_hex(&primer(engine, "")), grammar)
