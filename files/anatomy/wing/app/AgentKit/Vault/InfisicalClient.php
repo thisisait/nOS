@@ -170,20 +170,16 @@ final class InfisicalClient
 	 * Returns the absolute path to the `infisical` binary if it exists
 	 * in one of the standard install locations, otherwise null. We do
 	 * NOT shell out to `which` / `command -v` — that re-enters /bin/sh.
+	 * No env var can repoint it: whoever set one would pick the binary
+	 * that is handed secret paths and whose output is trusted as the secret.
 	 *
 	 * Resolution order:
-	 *   1. INFISICAL_BIN env var (operator escape hatch)
-	 *   2. Homebrew Apple Silicon prefix
-	 *   3. Homebrew Intel prefix
-	 *   4. /usr/local/bin
-	 *   5. /usr/bin
+	 *   1. Homebrew Apple Silicon prefix
+	 *   2. /usr/local/bin (Homebrew Intel prefix)
+	 *   3. /usr/bin
 	 */
 	private function locateBinary(): ?string
 	{
-		$override = getenv('INFISICAL_BIN');
-		if (is_string($override) && $override !== '' && is_executable($override)) {
-			return $override;
-		}
 		$candidates = [
 			'/opt/homebrew/bin/infisical',
 			'/usr/local/bin/infisical',
