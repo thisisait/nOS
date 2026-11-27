@@ -292,8 +292,9 @@ def unlock(store_path=None):
 
     Custody is consulted only for the login's own store (its passwd home, not $HOME), so a
     HOME override (a test, a sandbox) never reads the real Keychain. Both holding a value
-    that differ raise UnlockError (a blank re-mints the file before the converge refreshes
-    custody): never a guess. Read per call, never cached; a value never enters a message."""
+    that differ raise UnlockError (custody not refreshed after a re-mint): never a guess.
+    A blank removes custody beside the file (tasks/blank-reset.yml), so an absent file never
+    serves an old master. Read per call, never cached; a value never enters a message."""
     import os
     import pwd
     from pathlib import Path
