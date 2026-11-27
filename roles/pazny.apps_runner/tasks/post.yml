@@ -606,3 +606,20 @@
           {% for app in _apps_render.apps %}
             · {{ app.id }} → https://{{ app.fqdn }}/  (auth={{ app.auth_mode }})
           {% endfor %}
+
+    # Hook 3.5's PUT stays tolerant so every later app's hooks run; this reads its result LAST
+    # (operator 2026-11-26: fail at the end of the step, not at once). SSO is mandatory
+    # (ssot/doctrine/sso.md), so an EspoCRM without its OIDC config has no working login.
+    - name: "[Apps Post] EspoCRM OIDC must land (no silent green)"
+      ansible.builtin.assert:
+        that:
+          - (_espocrm_oidc_put.status | default(0)) == 200
+        fail_msg: >-
+          EspoCRM's OIDC config did not land: PUT /api/v1/Settings answered
+          {{ _espocrm_oidc_put.status | default('n/a') }} after 5 tries, so EspoCRM has no SSO login
+          until it does. Every other app's hooks ran. Check the EspoCRM admin password in the app's
+          generated secrets, then re-run `nos --tags apps`.
+      when:
+        - (_apps_espocrm.id | default('')) == 'espocrm'
+        - (_apps_espocrm.auth_mode | default('')) == 'oidc'
+        - install_authentik | default(false) | bool
