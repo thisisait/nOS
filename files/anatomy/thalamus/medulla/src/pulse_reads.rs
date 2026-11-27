@@ -244,7 +244,7 @@ fn summaries(db: &Connection, now: i64) -> rusqlite::Result<Value> {
             }
         }
     }
-    // Newest first until the first success; an unfinished run (NULL) breaks the streak.
+    // Newest first until the first success; an unfinished run (NULL) or a declared findings code breaks the streak.
     let mut st = db.prepare("SELECT job_id, exit_code, rn FROM (
            SELECT job_id, exit_code, ROW_NUMBER() OVER (PARTITION BY job_id ORDER BY fired_at DESC) AS rn FROM pulse_runs
          ) WHERE rn <= 20 ORDER BY job_id, rn")?;
@@ -254,8 +254,15 @@ fn summaries(db: &Connection, now: i64) -> rusqlite::Result<Value> {
         if closed.contains(&id) {
             continue;
         }
+        let found = match code {
+            Some(c) if c != 0 => findings(db, &id)?.contains(&c),
+            _ => false,
+        };
         match (code, out.get_mut(&id)) {
             (None | Some(0), _) => {
+                closed.insert(id);
+            }
+            (Some(_), _) if found => {
                 closed.insert(id);
             }
             (Some(_), Some(Value::Object(s))) => s["consecutive_failures"] = (s["consecutive_failures"].as_i64().unwrap_or(0) + 1).into(),
