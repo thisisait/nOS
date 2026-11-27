@@ -82,12 +82,20 @@ BASE = f"{KEAP}/api/tables/{TABLE}"
 from keap_api import human_headers, paged  # noqa: E402 — sibling helper in tools/
 
 #: X-Authentik-* admin identity + the SEC-02 x-keap-proxy-secret (resolved once
-#: by keap_api). Without the secret every /api call here 401s since KEAP P1.
-HEADERS = human_headers()
+#: by keap_api, on the first KEAP call). Without the secret every /api call here 401s since KEAP P1.
+#: Not at import: tools/rem-retire.py imports this module for probe B and never talks to KEAP.
+_HEADERS: dict | None = None
+
+
+def _headers() -> dict:
+    global _HEADERS
+    if _HEADERS is None:
+        _HEADERS = human_headers()
+    return _HEADERS
 
 
 def _get_json(url: str) -> dict:
-    with urllib.request.urlopen(urllib.request.Request(url, headers=HEADERS), timeout=30) as resp:
+    with urllib.request.urlopen(urllib.request.Request(url, headers=_headers()), timeout=30) as resp:
         return json.loads(resp.read())
 
 
@@ -524,6 +532,61 @@ def probe_pin_vs_running(images: dict[str, str], res: ScanResult) -> None:
 # Probe B — what the security queue CLAIMS vs what is running
 # ---------------------------------------------------------------------------
 
+@dataclass(frozen=True)
+class QueueReading:
+    """A queue row read against its running container. `fix` is the load-bearing field
+    (security_floor when set, else fix_version); `verdict` is compare(live, fix)."""
+    name: str
+    image: str
+    tag: str
+    fix: str
+    verdict: int
+
+
+def read_queue_row(item: dict, images: dict[str, str], res) -> "QueueReading | None":
+    """Probe B's reading of one row; None after `res.skip(<why>)` when it cannot be judged. One
+    implementation: probe_queue_vs_running and tools/rem-retire.py (row loop-queue-retires) read through it."""
+    status = item.get("status")
+    component, fix = item.get("component"), item.get("fix_version")
+    if status not in ("resolved", "pending") or not component or not fix:
+        res.skip("queue row lacks component or fix_version")
+        return None
+    hit = container_for(component, images)
+    if hit is None:
+        res.skip("no running container for the queue component")
+        return None
+    name, image = hit
+    tag = image_tag(image)
+    if _DIGEST_SHAPED.search(str(fix)):
+        res.skip("row wants a digest comparison, not a version — not judged")
+        return None
+    # `security_floor` is the machine-comparable half of a prose
+    # `fix_version`. REM-159 is why it exists: one field carried a security
+    # floor AND a regression floor ("19.2.2-ce.0 (or 18.11.9-ce.0 for the
+    # non-security regression fixes only)"), and the closing pass picked the
+    # branch the row's own text disclaims. When the writer has said which
+    # version is load-bearing, read that and nothing else.
+    floor_field = item.get("security_floor")
+    if floor_field is not None:
+        parsed = read_fix(str(floor_field))
+        if parsed is None:
+            res.skip("security_floor present but not strictly readable")
+            return None
+    else:
+        parsed = read_fix(str(fix))
+    fix = floor_field if floor_field is not None else fix
+    have = read_tag(tag or "")
+    if tag is None or parsed is None or have is None:
+        res.skip("queue or image version not strictly numeric")
+        return None
+    want, _is_floor = parsed
+    verdict = compare(have, want)
+    if verdict is None:
+        res.skip("prerelease suffix not comparable to the other side")
+        return None
+    return QueueReading(name, image, tag, str(fix), verdict)
+
+
 def probe_queue_vs_running(images: dict[str, str], res: ScanResult) -> None:
     """A `resolved` row whose fix never reached the estate.
 
@@ -535,44 +598,12 @@ def probe_queue_vs_running(images: dict[str, str], res: ScanResult) -> None:
     comparison.
     """
     for item in queue_items():
+        reading = read_queue_row(item, images, res)
+        if reading is None:
+            continue
         status = item.get("status")
-        component, fix = item.get("component"), item.get("fix_version")
-        if status not in ("resolved", "pending") or not component or not fix:
-            res.skip("queue row lacks component or fix_version")
-            continue
-        hit = container_for(component, images)
-        if hit is None:
-            res.skip("no running container for the queue component")
-            continue
-        name, image = hit
-        tag = image_tag(image)
-        if _DIGEST_SHAPED.search(str(fix)):
-            res.skip("row wants a digest comparison, not a version — not judged")
-            continue
-        # `security_floor` is the machine-comparable half of a prose
-        # `fix_version`. REM-159 is why it exists: one field carried a security
-        # floor AND a regression floor ("19.2.2-ce.0 (or 18.11.9-ce.0 for the
-        # non-security regression fixes only)"), and the closing pass picked the
-        # branch the row's own text disclaims. When the writer has said which
-        # version is load-bearing, read that and nothing else.
-        floor_field = item.get("security_floor")
-        if floor_field is not None:
-            parsed = read_fix(str(floor_field))
-            if parsed is None:
-                res.skip("security_floor present but not strictly readable")
-                continue
-        else:
-            parsed = read_fix(str(fix))
-        fix = floor_field if floor_field is not None else fix
-        have = read_tag(tag or "")
-        if tag is None or parsed is None or have is None:
-            res.skip("queue or image version not strictly numeric")
-            continue
-        want, is_floor = parsed
-        verdict = compare(have, want)
-        if verdict is None:
-            res.skip("prerelease suffix not comparable to the other side")
-            continue
+        component = item.get("component")
+        name, image, tag, fix, verdict = reading.name, reading.image, reading.tag, reading.fix, reading.verdict
         res.judge(f"{OBS_PREFIX}queue-{item['id'].lower()}")
 
         # A FLOOR NEEDS NO SPECIAL CASE, and the first cut of this got it wrong
@@ -583,8 +614,7 @@ def probe_queue_vs_running(images: dict[str, str], res: ScanResult) -> None:
         # floor was never reported. The guard written here first also suppressed
         # `resolved` + below-floor, which is a real contradiction: the fix never
         # reached the estate. `is_floor` is therefore read, recorded and
-        # deliberately not branched on.
-        _ = is_floor
+        # deliberately not branched on (read_queue_row drops it).
 
         if status == "resolved" and verdict < 0:
             res.findings.append(Finding(
@@ -850,7 +880,7 @@ def file_rows(findings: list[Finding]) -> int:
         else:
             r = urllib.request.Request(BASE + "/rows",
                                        data=json.dumps({"values": values}).encode(),
-                                       headers=HEADERS, method="POST")
+                                       headers=_headers(), method="POST")
         try:
             with urllib.request.urlopen(r, timeout=30):
                 filed += 1

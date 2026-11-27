@@ -12,7 +12,7 @@
     "organism": 0,
     "habitat": 9,
     "sense": 90,
-    "limb": 137,
+    "limb": 138,
     "memory": 53,
     "law": 57,
     "reflex": 54,
@@ -1010,6 +1010,10 @@
       "kind": "effector"
     },
     "effector:rem-dispose": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:rem-retire": {
       "level": "limb",
       "kind": "effector"
     },
