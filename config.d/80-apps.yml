@@ -150,10 +150,7 @@ gitea_ssh_port: 2222
 # this file) — never directly from the OS username. The registry is the one
 # place that says who the local forge admin IS.
 gitea_admin_user: "{{ nos_primary_admin }}"
-gitea_admin_password: "{{ nos_derived_secrets.gitea }}"
 gitea_admin_email: ""                          # FILL IN!
-gitea_secret_key: "{{ nos_derived_secrets.gitea_secret }}"
-gitea_metrics_token: "{{ nos_derived_secrets.gitea_metrics }}"   # bearer token guarding /metrics (Alloy scrape sends it)
 gitea_disable_registration: false              # true = only admin can add users (also blocks OIDC auto-create)
 # Pure-SSO: hide the local self-registration form but still let OAuth2/OIDC
 # first-login auto-create users (Authentik onboarding). true = external-only.
@@ -181,9 +178,6 @@ gitlab_sidekiq_concurrency: 10  # Background job threads
 woodpecker_domain: "ci{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 woodpecker_port: 8060            # Web UI
 woodpecker_grpc_port: 9060       # gRPC for agents (internal)
-woodpecker_agent_secret: "{{ nos_derived_secrets.woodpecker }}"
-woodpecker_gitea_client: ""      # auto-provisioned on first run (post-oauth.yml); leave empty
-woodpecker_gitea_secret: ""      # auto-provisioned on first run (post-oauth.yml); leave empty
 # Hosts Gitea webhooks may POST to. Gitea denies private addresses by default
 # (SSRF); the CI host resolves to the LAN through the public edge, so without
 # this every Woodpecker delivery is refused while the hook still reports

@@ -73,11 +73,8 @@ authentik_engine: "blueprint"
 # OpenTofu state is runtime data, so it lives in ~/.nos (0700), never in the checkout:
 # a second clone started stateless there and planned 13 live providers anew (2026-10-23).
 tofu_authentik_state_dir: "{{ ansible_facts['env']['HOME'] }}/.nos/tofu/authentik"
-authentik_secret_key: "{{ global_password_prefix }}_pw_authentik_secret"
 authentik_db_name: "authentik"
 authentik_db_user: "authentik"
-authentik_db_password: "{{ nos_derived_secrets.authentik_db }}"
-authentik_bootstrap_password: "{{ nos_derived_secrets.authentik_admin }}"
 authentik_bootstrap_email: "{{ default_admin_email }}"
 
 # ── Tester identity (Track G) ───────────────────────────────────────────────
@@ -444,11 +441,8 @@ authentik_oidc_issuer: "https://{{ authentik_domain | default('auth' ~ (_host_al
 
 infisical_domain: "vault{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 infisical_port: 8075
-infisical_encryption_key: "{{ global_password_prefix }}_pw_infisical_enc"
-infisical_auth_secret: "{{ global_password_prefix }}_pw_infisical_auth"
 infisical_db_name: "infisical"
 infisical_db_user: "infisical"
-infisical_db_password: "{{ nos_derived_secrets.infisical_db }}"
 
 # ── Seed: org + projects + secrets (pazny.infisical/tasks/seed.yml) ──────────
 # After Infisical is healthy, `seed.yml` bootstraps an admin user + organization
@@ -561,7 +555,6 @@ nos_infisical_projects:
 vaultwarden_domain: "pass{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 vaultwarden_port: 8062
 vaultwarden_signups_allowed: false                 # Admin creates accounts
-vaultwarden_admin_token: "{{ global_password_prefix }}_pw_vaultwarden_admin"
 # SSO_ONLY hides the email+master-password login form → only "Continue with SSO"
 # (Authentik). Native SSO is official since 1.35.0. NOTE: the master password is
 # STILL required to UNLOCK the vault afterwards (it derives the E2E decryption key
