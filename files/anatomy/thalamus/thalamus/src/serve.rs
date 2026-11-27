@@ -2925,8 +2925,9 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
             return Err("an approval is already waiting".into());
         }
         let params = Map::from_iter([("agent".to_string(), json!(name)), ("prompt".to_string(), json!(prompt))]);
-        let card = ActionApproval { app: "wing".into(), action: "start_agent".into(), params: params.clone(),
-            says: format!("Start the Wing agent {name} under this conversation, as you, with this prompt.") };
+        let start = format!("Start the Wing agent {name} under this conversation, as you, with this prompt.");
+        let limits = agent_limits(&std::env::var("NOS_IRIS_AGENT_LIMITS").unwrap_or_default(), &name, 200usize.saturating_sub(start.chars().count()));
+        let card = ActionApproval { app: "wing".into(), action: "start_agent".into(), params: params.clone(), says: start + &limits };
         let v = self.asking(o, out, "start_agent", json!({"agent": name, "prompt_chars": n}), Component::ActionApproval(card))?;
         o.acting.insert(text(&v["approval"]), Value::Object(params));
         // No id reaches the model before the approval: it quoted the card's as a run (iris-subagent-journey-gaps).
@@ -6595,3 +6596,28 @@ fn a_relative_day_counts_from_the_hosts_calendar() {
     assert_eq!(relative("today", local_day(t, -5 * 3600)).map(|r| r.0).as_deref(), Some("2026-10-31"));
     assert_eq!(local_day(t, 0), day_epoch("2026-10-31").unwrap() / 86_400);
 }
+
+/// start_agent's limits sentence from NOS_IRIS_AGENT_LIMITS (`name|iterations|tool,tool|model;…`, rendered by the
+/// thalamus role from the agent's profile): text for the card, never a limit sent to Wing. A missing or malformed
+/// entry says the limits are unknown; tools that do not fit `room` chars are counted, not dropped silently.
+pub fn agent_limits(env: &str, name: &str, room: usize) -> String {
+    let id = |s: &str, extra: &str| !s.is_empty() && s.len() <= 96 && s.chars().all(|c| c.is_ascii_alphanumeric() || "._-".contains(c) || extra.contains(c));
+    let entry = env.split(';').find_map(|e| e.strip_prefix(name).and_then(|r| r.strip_prefix('|')));
+    let fields: Vec<&str> = entry.map(|e| e.split('|').collect()).unwrap_or_default();
+    let n = fields.first().and_then(|n| n.parse::<u32>().ok()).filter(|n| (1..=10).contains(n));
+    let tools: Vec<&str> = fields.get(1).map(|t| t.split(',').filter(|t| !t.is_empty()).collect()).unwrap_or_default();
+    let (Some(n), true, Some(model)) = (n, fields.len() == 3 && tools.iter().all(|t| id(t, "")), fields.get(2).filter(|m| id(m, ":/"))) else {
+        return " Its limits are unknown.".into();
+    };
+    let line = |k: usize| {
+        let with = match (k, tools.len()) {
+            (_, 0) => "no tools".to_string(),
+            (0, all) => format!("{all} tools"),
+            (k, all) if k == all => format!("tools: {}", tools.join(", ")),
+            (k, all) => format!("tools: {} and {} more", tools[..k].join(", "), all - k),
+        };
+        format!(" Up to {n} iterations on {model}; {with}.")
+    };
+    (0..=tools.len()).rev().map(line).find(|l| l.chars().count() <= room).unwrap_or_else(|| " Its limits are too long to show here.".into())
+}
+
