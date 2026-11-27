@@ -135,8 +135,24 @@
       register: _wing_pentest_ingest
       # Idempotent: keyed on the writer's "changed=N" (targets+findings real diffs;
       # the keyless area rows are rebuilt content-stable and excluded from the count).
-      changed_when: "'changed=0' not in (_wing_pentest_ingest.stdout | default('changed=0'))"
+      changed_when: "_wing_pentest_ingest.rc == 0 and 'changed=0' not in (_wing_pentest_ingest.stdout | default('changed=0'))"
+      # rc 2 from the medulla = a binary older than `ingest` (rebuilt only later, by pazny.thalamus): it
+      # exits at usage, before opening wing.db, so PHP below is still the one writer (review 11-27).
+      failed_when: >-
+        _wing_pentest_ingest.rc != 0
+        and not (_wing_medulla_bin.stat.executable | default(false) and _wing_pentest_ingest.rc == 2)
       when: _wing_pentest_json.stat.exists | default(false)
+
+    - name: "[pazny.wing] Re-sync with PHP when the medulla binary predates ingest"
+      ansible.builtin.command:
+        argv: [ "{{ wing_php_cli }}", bin/ingest-pentest.php, "--json={{ _journal }}" ]
+        chdir: "{{ wing_app_dir }}"
+      register: _wing_pentest_ingest_php
+      changed_when: "'changed=0' not in (_wing_pentest_ingest_php.stdout | default('changed=0'))"
+      when:
+        - _wing_pentest_json.stat.exists | default(false)
+        - _wing_medulla_bin.stat.executable | default(false)
+        - _wing_pentest_ingest.rc | default(0) == 2
 
 # Surface historical pulse / claude-CLI agent runs in /agents (W5-A1): those
 # runs emit agent_run_* events but never created agent_sessions rows, so they
