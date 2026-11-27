@@ -67,6 +67,15 @@ _BARE_TOKEN = re.compile(
 	r"(?<![A-Za-z0-9_])(?P<prefix>gh[pousr]_|github_pat_|glpat-|xox[abprs]-|sk-ant-|sk-|AKIA)(?P<value>[A-Za-z0-9_\-]{16,})"
 )
 
+# A PEM private key block: the BEGIN header stays, the body through its matching END line hides. A BEGIN with
+# no END (a cut tail) hides to the end of the text. A header already followed by the marker is left alone, or
+# a second pass would read it as a cut tail and eat what follows. Certificates and public keys never match.
+_PEM_PRIVATE = re.compile(
+	r"(?P<prefix>-----BEGIN (?P<label>[A-Z0-9 ]*PRIVATE KEY(?: BLOCK)?)-----)(?!<REDACTED>)"
+	r"(?:.*?-----END (?P=label)-----|.*\Z)",
+	re.DOTALL,
+)
+
 # A JWT: eyJ then three dot-separated base64url segments of 8+.
 _JWT = re.compile(
 	r"(?<![A-Za-z0-9_\-])(?P<prefix>eyJ)(?P<value>[A-Za-z0-9_\-]{8,}\.[A-Za-z0-9_\-]{8,}\.[A-Za-z0-9_\-]{8,})"
@@ -86,6 +95,7 @@ def scrub_text(s: str | None) -> str:
 	# Apply patterns in deterministic order. Each pattern preserves
 	# the labeled prefix so the operator still sees WHICH key was
 	# redacted (e.g. "WING_API_TOKEN=<REDACTED>" vs just <REDACTED>).
+	text = _PEM_PRIVATE.sub(lambda m: m.group("prefix") + "<REDACTED>", text)  # first: a block spans lines
 	text = _ENV_ASSIGNMENT.sub(lambda m: m.group("prefix") + "<REDACTED>", text)
 	text = _CLI_PASSWORD_FLAG.sub(lambda m: m.group(1) + "<REDACTED>", text)
 	text = _HTTP_AUTH_HEADER.sub(lambda m: m.group("prefix") + "<REDACTED>", text)
