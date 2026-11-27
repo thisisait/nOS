@@ -108,15 +108,35 @@
   register: _wing_pentest_json
   changed_when: false
 
-- name: "[pazny.wing] Re-sync pentest-journal.json → pentest_* tables (idempotent upsert)"
-  ansible.builtin.command:
-    cmd: "{{ wing_php_cli }} bin/ingest-pentest.php --json={{ wing_json_source }}/pentest-journal.json"
-    chdir: "{{ wing_app_dir }}"
-  register: _wing_pentest_ingest
-  # Idempotent: keyed on the script's "changed=N" (targets+findings real diffs;
-  # the keyless area rows are rebuilt content-stable and excluded from the count).
-  changed_when: "'changed=0' not in (_wing_pentest_ingest.stdout | default('changed=0'))"
-  when: _wing_pentest_json.stat.exists | default(false)
+# One writer per run (row medulla-long-tail-tables, ssot/doctrine/medulla.md §4): the medulla when the
+# thalamus is installed and its binary is on disk, else the PHP script (a first converge builds the
+# binary only after the stacks). Same statements, same "changed=N". The binary is pazny.medulla's
+# medulla_bin; thalamus_home stays role-private (test_thalamus_role reads it there), and the fallback
+# below IS its declaration, as tasks/removal-set.yml reads it.
+- name: "[pazny.wing] The pentest re-sync, one writer"
+  vars:
+    _wing_medulla: "{{ thalamus_home | default(ansible_facts['env']['HOME'] ~ '/thalamus') }}/bin/medulla"
+    _journal: "{{ wing_json_source }}/pentest-journal.json"
+  block:
+    - name: "[pazny.wing] Is the medulla binary there (the pentest re-sync writer)"
+      ansible.builtin.stat:
+        path: "{{ _wing_medulla }}"
+        get_checksum: false
+      register: _wing_medulla_bin
+      when: install_thalamus | default(false) | bool
+
+    - name: "[pazny.wing] Re-sync pentest-journal.json → pentest_* tables (idempotent upsert)"
+      ansible.builtin.command:
+        argv: >-
+          {{ [_wing_medulla, 'wing', 'ingest', 'pentest', '--db', wing_data_dir ~ '/wing.db', '--json', _journal]
+             if (_wing_medulla_bin.stat.executable | default(false))
+             else [wing_php_cli, 'bin/ingest-pentest.php', '--json=' ~ _journal] }}
+        chdir: "{{ wing_app_dir }}"
+      register: _wing_pentest_ingest
+      # Idempotent: keyed on the writer's "changed=N" (targets+findings real diffs;
+      # the keyless area rows are rebuilt content-stable and excluded from the count).
+      changed_when: "'changed=0' not in (_wing_pentest_ingest.stdout | default('changed=0'))"
+      when: _wing_pentest_json.stat.exists | default(false)
 
 # Surface historical pulse / claude-CLI agent runs in /agents (W5-A1): those
 # runs emit agent_run_* events but never created agent_sessions rows, so they
