@@ -6,6 +6,9 @@
 # ============================================================================
 # shellcheck disable=SC2034,SC2155
 set -u -o pipefail
+# Every file this run creates (log, status, staged dumps, .part, .prev) is 0600 from birth:
+# nos-state is secrets.yml in plaintext (measured 11-13: staged dumps were 0644).
+umask 077
 
 # ---- Configuration (baked in by Ansible template) --------------------------
 export AWS_ACCESS_KEY_ID="{{ backup_target_access_key }}"
@@ -965,7 +968,8 @@ run_nos_state() {
     log "nos-state: tar-gz of ${NOS_STATE_DIR} (${present# })"
     start=$(now_ms)
     # shellcheck disable=SC2086  # intentional word-split of the file list
-    tar -czf - -C "${NOS_STATE_DIR}" ${present} \
+    # tar | gzip, not tar -z: bsdtar pads its compressed stream to 10240 bytes on a pipe (gzip -t: trailing garbage)
+    tar -cf - -C "${NOS_STATE_DIR}" ${present} | gzip -c \
       | encrypt_stream "${key}" \
       | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
     rc=$?
@@ -1015,7 +1019,7 @@ run_tofu_state() {
     log "tofu-state: tar-gz of ${TOFU_STATE_DIR} (${present# }) ${tfv[*]+and the tfvars}"
     start=$(now_ms)
     # shellcheck disable=SC2086  # intentional word-split of the file list
-    tar -czf - -C "${TOFU_STATE_DIR}" ${present} "${tfv[@]+"${tfv[@]}"}" \
+    tar -cf - -C "${TOFU_STATE_DIR}" ${present} "${tfv[@]+"${tfv[@]}"}" | gzip -c \
       | encrypt_stream "${key}" \
       | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
     rc=$?
