@@ -28,7 +28,7 @@
 # Keychain items are not paths: rc 0 = the item survived, 44 = gone, anything else = unreadable (fails).
 - name: "[Verify] Look up every custody Keychain item (macOS)"
   ansible.builtin.command:
-    argv: [security, find-generic-password, -a, nos, -s, "{{ item }}"]
+    argv: [/usr/bin/security, find-generic-password, -a, nos, -s, "{{ item }}"]
   loop: "{{ _custody_keychain_items | default([]) }}"  # set by removal-set.yml; blank-reset uses it bare
   register: _removal_verify_kc
   changed_when: false
