@@ -161,10 +161,12 @@
       {{ _verify_slug_of.values() | difference(_verify_declared | map('split', ' ') | map('first')) | sort | join(', ') | default('none', true) }}.
   vars:
     _verify_rendered: "{{ lookup('ansible.builtin.file', stacks_dir ~ '/infra/authentik/blueprints/20-rbac-policies.yaml', errors='ignore') | default('', true) }}"
-    # "slug policy" per binding entry of the rendered file ([[] = a literal bracket, no backslashes to escape).
+    # "slug policy" per binding entry of the rendered file. `\[` is a literal bracket: Ansible doubles a backslash
+    # in a YAML-sourced template, Jinja halves it (`\\[` reached re as `\\[`, unbalanced; `[[]` warned as a possible
+    # nested set on every converge, 2026-11-15). Measured on ansible-core 2.20.5 and 2.21.6.
     _verify_declared: >-
       {{ _verify_rendered
-         | regex_findall('[[]slug, "([^"]+)"[]][]][\n ]+order: 0[\n ]+attrs:[\n ]+policy: !Find [[][a-z_.]+, [[]name, "([^"]+)"[]][]]')
+         | regex_findall('\[slug, "([^"]+)"[]][]][\n ]+order: 0[\n ]+attrs:[\n ]+policy: !Find \[[a-z_.]+, \[name, "([^"]+)"[]][]]')
          | map('join', ' ') | list }}
     _verify_slug_of: >-
       {{ dict((_verify_ak_apps.json.results | default([])) | map(attribute='pk')

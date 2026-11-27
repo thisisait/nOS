@@ -412,6 +412,11 @@
         - _tofu_destroy_split.unexplained | length == 0
         - _tofu_bad_updates | length == 0
 
+  # always: a tofu apply that fails midway still pins the state file it rewrote (0644, provider secrets)
+  # and still binds the applications it did create (row tofu-tier-binding-hardening, item 3). `rc is
+  # defined` = the apply ran, green or red; a skipped or never-reached apply leaves both alone. A red
+  # apply stays red: always does not rescue.
+  always:
     # Apply rewrites terraform.tfstate* at umask 0644. Live disk was chmod'd
     # 2026-09-13; this task keeps the pin on the next apply (tfstate holds
     # Authentik provider secrets).
@@ -422,8 +427,7 @@
       loop: "{{ query('fileglob', tofu_authentik_state_dir ~ '/terraform.tfstate*') }}"
       when:
         - (authentik_engine | default('blueprint')) == 'tofu'
-        - _tofu_destroy_split.unexplained | length == 0
-        - _tofu_bad_updates | length == 0
+        - _tofu_apply.rc is defined
 
     # Blueprint 20 is the ONE owner of the tier binding under both engines (operator 2026-11-14). It ran
     # before this apply created the applications, so a new one was open to every signed-in user until a
@@ -435,5 +439,4 @@
       changed_when: false
       when:
         - (authentik_engine | default('blueprint')) == 'tofu'
-        - _tofu_destroy_split.unexplained | length == 0
-        - _tofu_bad_updates | length == 0
+        - _tofu_apply.rc is defined
