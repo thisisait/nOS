@@ -12,6 +12,7 @@ mod intents;
 mod metrics;
 mod notification_reads;
 mod patch_reads;
+mod pentest_ingest;
 mod pentest_reads;
 mod pulse;
 mod pulse_reads;
@@ -48,7 +49,7 @@ fn main() -> ExitCode {
 }
 
 fn usage() -> ExitCode {
-    eprintln!("usage: medulla thalamus [serve --data-dir <dir>] | medulla wing serve --db <wing.db> --port <n> | medulla pulse plan --db <wing.db> | medulla state [--json] | medulla halt [--reason <text>] | medulla resume | medulla pause <job> [--reason <text>] | medulla unpause <job> | medulla questions [--agent <name>] | medulla answer <uuid> <answer> | medulla intents tick | medulla --version");
+    eprintln!("usage: medulla thalamus [serve --data-dir <dir>] | medulla wing serve --db <wing.db> --port <n> | medulla wing ingest pentest --db <wing.db> --json <pentest-journal.json> | medulla pulse plan --db <wing.db> | medulla state [--json] | medulla halt [--reason <text>] | medulla resume | medulla pause <job> [--reason <text>] | medulla unpause <job> | medulla questions [--agent <name>] | medulla answer <uuid> <answer> | medulla intents tick | medulla --version");
     ExitCode::from(2)
 }
 
@@ -177,6 +178,11 @@ fn wing(args: &[String]) -> ExitCode {
                 eprintln!("medulla wing: {e}");
                 ExitCode::FAILURE
             }
+        },
+        // The converge's writer for the four pentest tables (row medulla-long-tail-tables); never a route.
+        (Some("ingest"), Some(db), _) if args.get(1).map(String::as_str) == Some("pentest") => match flag("--json") {
+            Some(json) => pentest_ingest::cli(std::path::Path::new(db), std::path::Path::new(json)),
+            None => usage(),
         },
         _ => usage(),
     }
