@@ -26,6 +26,38 @@ description: |
   collapse into this manifest's `lifecycle.post_compose` once the loader's
   api_calls runner ships (Phase 2 C5).
 upstream: https://about.gitea.com/
+
+# What nOS stands on in Gitea's API (row plat-dep-contracts, ruled 2026-11-23 (a): a trial on one app, GET only).
+# tools/dep-contract-status.py asks the running Gitea on loopback and checks every field nOS reads against the
+# saved answer's shape (FAKE_ values). The answers were written from nOS's code for the pin below, not captured
+# live: the operator's first run is the verification. `used_by` is where nOS reads each answer.
+relies_on:
+  verified: "28.4.0"
+  endpoints:
+    - name: version
+      get: /api/v1/version
+      auth: none
+      reads: [version]
+      answer: state/fixtures/dep-contracts/gitea/version.json
+      used_by: this plugin's health_check and wait_health
+    - name: repo
+      get: /api/v1/repos/{owner}/{repo}
+      auth: token
+      reads: [mirror]
+      answer: state/fixtures/dep-contracts/gitea/repo.json
+      used_by: roles/pazny.gitea/tasks/post-forge.yml (_forge_repo.json.mirror), post-repo.yml (200 / 404)
+    - name: pulls
+      get: /api/v1/repos/{owner}/{repo}/pulls?state=all&limit=1
+      auth: token
+      reads: ["[].number", "[].head.ref", "[].head.sha", "[].base.ref"]
+      answer: state/fixtures/dep-contracts/gitea/pulls.json
+      used_by: tools/loop-review.py (the open review list), tools/loop-pr.py (POST of the same resource)
+    - name: admin-users
+      get: /api/v1/admin/users?limit=1
+      auth: token
+      reads: ["[].login"]
+      answer: state/fixtures/dep-contracts/gitea/admin-users.json
+      used_by: tools/identity-status.py (the Gitea realm's accounts)
 license: MIT
 
 type:
