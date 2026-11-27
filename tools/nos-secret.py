@@ -28,7 +28,8 @@ Post-blank UX (docs/secrets-p1-hkdf.md §10): credentials are 43-char random
 strings; this is where the operator reads e.g. their akadmin login:
 `tools/nos-secret.py authentik_admin` (the leaf akadmin boots with).
 
-STRICTLY A READER of ~/.nos/secrets.yml + the committed registry. It writes
+STRICTLY A READER of ~/.nos/secrets.yml, its custody copy (derive.unlock) and
+the committed registry. It writes
 nothing and derives locally — the master never leaves this host.
 """
 
@@ -44,15 +45,6 @@ import nos_secret_derive as derive  # noqa: E402
 
 STORE = Path.home() / ".nos" / "secrets.yml"
 REGISTRY = REPO / "files/anatomy/secrets/registry.yml"
-
-
-def _store() -> dict:
-    if not STORE.is_file():
-        return {}
-    import yaml
-
-    data = yaml.safe_load(STORE.read_text()) or {}
-    return data if isinstance(data, dict) else {}
 
 
 OVERRIDDEN = "OVERRIDDEN in credentials.yml — the derived key is not this login's password"
@@ -133,14 +125,18 @@ def main(argv: list[str]) -> int:
         return 2
 
     registry = derive.load_registry(str(REGISTRY))
-    store = _store()
+    try:
+        store = derive.unlock(STORE)   # custody first, the plain file second (row secrets-at-rest)
+    except derive.UnlockError as exc:
+        print(f"refusing: {exc}", file=sys.stderr)
+        return 1
     recorded = str(store.get("nos_secret_scheme", "") or "")
     master = str(store.get("nos_secret_master", "") or "")
 
-    if not STORE.is_file():
+    if not STORE.is_file() and not store:
         scheme, detail = "?", "no ~/.nos/secrets.yml — never converged, or a fresh host (first converge starts v2)"
     elif recorded:
-        detail = "recorded in ~/.nos/secrets.yml"
+        detail = "recorded in " + ("~/.nos/secrets.yml" if STORE.is_file() else "machine custody")
         scheme = recorded
     else:
         scheme, detail = "v1", "implicit — no marker recorded; a pre-P1 converged host"

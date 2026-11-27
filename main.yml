@@ -2375,6 +2375,59 @@
       diff: false
       tags: ['always']
 
+    # Custody of the scheme + master (row secrets-at-rest, ruled 2026-11-23): copied from the store
+    # just persisted, read back first by nos_secret_derive.unlock(). The plain file stays (slice 1).
+    # v1 hosts hold no master: nothing is copied. Same shape as tasks/medulla-custody.yml.
+    - name: "[Secrets custody] Read the Keychain items (macOS)"
+      ansible.builtin.command:
+        argv: [security, find-generic-password, -a, nos, -s, "nos.secrets.{{ item }}", -w]
+      loop: [scheme, master]
+      register: _secret_custody_kc
+      changed_when: false
+      # rc 44 = not held; a locked or unreachable Keychain stops, never writes blind
+      failed_when: _secret_custody_kc.rc not in [0, 44]
+      no_log: true
+      when:
+        - ansible_facts['system'] == 'Darwin'
+        - nos_secret_master | default('') | length > 0
+      tags: ['always']
+
+    # ponytail: `security add-generic-password -w <value>` puts the master in this process's argv for
+    # its lifetime (same-user `ps`, who can read the store anyway); upgrade = row custody-keychain-write-off-argv.
+    - name: "[Secrets custody] Write the Keychain items (macOS)"
+      ansible.builtin.command:
+        argv: [security, add-generic-password, -U, -a, nos, -s, "nos.secrets.{{ item.0 }}", -w, "{{ item.1 }}"]
+      loop: "{{ [['scheme', nos_secret_scheme], ['master', nos_secret_master]] }}"
+      loop_control:
+        index_var: _i
+        label: "nos.secrets.{{ item.0 }}"
+      when:
+        - ansible_facts['system'] == 'Darwin'
+        - nos_secret_master | default('') | length > 0
+        - (_secret_custody_kc.results[_i].stdout | default('') | trim) != item.1
+      changed_when: true
+      no_log: true
+      tags: ['always']
+
+    # Group: the service login (nos_system_user) when set, else the operator's primary group, as medulla.env.
+    - name: "[Secrets custody] Write /etc/nos/secrets.env (Linux)"
+      ansible.builtin.copy:
+        dest: /etc/nos/secrets.env
+        content: |
+          # GENERATED from ~/.nos/secrets.yml by main.yml (row secrets-at-rest). Root-owned; read via unlock().
+          NOS_SECRET_SCHEME={{ nos_secret_scheme }}
+          NOS_SECRET_MASTER={{ nos_secret_master }}
+        owner: root
+        group: "{{ nos_system_user if (nos_system_user | default('') | length) else ansible_facts['user_gid'] }}"
+        mode: '0640'
+      become: true
+      no_log: true
+      diff: false
+      when:
+        - ansible_facts['system'] == 'Linux'
+        - nos_secret_master | default('') | length > 0
+      tags: ['always']
+
     # Batch 4 break-glass: generate + persist the offline recovery-key INPUT
     # (NOT a blueprint seed — recovery keys are CLI-only). Imported AFTER the
     # secrets.yml.j2 render above so the template can't clobber the appended

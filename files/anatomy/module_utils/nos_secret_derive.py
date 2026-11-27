@@ -7,7 +7,8 @@ credential contains the master in clear, so one leaked value yields the estate
 32 random bytes that reveal nothing about the master or any sibling.
 
 Pure functions, stdlib only (hashlib/hmac/base64/unicodedata) — no new
-dependency for a mechanism the whole estate boots through. Consumed by
+dependency for a mechanism the whole estate boots through. One reader is not
+pure: `unlock()`, the store with the master taken from machine custody. Consumed by
 `files/anatomy/library/nos_secret_map.py` (the Ansible module),
 `tools/nos-secret.py` (the operator reader) and the anatomy gates, so the rule
 exists exactly once.
@@ -244,3 +245,72 @@ def resolve_scheme(recorded, requested, blanking, store_exists, estate_converged
         )
     # Genuinely fresh host (or CI runner): start life on v2.
     return SCHEME_V2, True
+
+
+# ── Custody: the one unlock (row secrets-at-rest, ruled 2026-11-23) ─────────
+#: The converge (main.yml, after the store persist) copies the scheme and the master
+#: into machine custody: login-Keychain items `-a nos -s nos.secrets.<item>` on macOS,
+#: a root-owned 0640 env file on Linux. The plain store stays until its own ruled step.
+CUSTODY = {"nos_secret_scheme": "scheme", "nos_secret_master": "master"}
+CUSTODY_FILE = "/etc/nos/secrets.env"
+
+
+class UnlockError(RuntimeError):
+    """Custody and ~/.nos/secrets.yml both hold a scheme or master, and they differ."""
+
+
+def _custody():
+    """The custody copy as {key: value}, or {} when not held, partial or unreadable."""
+    import subprocess
+    import sys
+
+    if sys.platform == "darwin":
+        held = {}
+        for key, item in CUSTODY.items():
+            try:
+                r = subprocess.run(["/usr/bin/security", "find-generic-password", "-a", "nos",
+                                    "-s", "nos.secrets." + item, "-w"],
+                                   capture_output=True, text=True, timeout=10)
+            except (OSError, subprocess.TimeoutExpired):
+                return {}
+            if r.returncode != 0:          # 44 = not held; a locked Keychain reads as not held
+                return {}
+            held[key] = r.stdout.strip()
+    else:
+        try:
+            with open(CUSTODY_FILE, "r", encoding="utf-8") as fh:
+                lines = fh.read().splitlines()
+        except OSError:
+            return {}
+        env = dict(ln.split("=", 1) for ln in lines if "=" in ln and not ln.startswith("#"))
+        held = {key: env.get(key.upper(), "").strip() for key in CUSTODY}
+    return held if all(held.values()) else {}
+
+
+def unlock(store_path=None):
+    """THE secret store: ~/.nos/secrets.yml with the scheme and master read from custody first.
+
+    Custody is consulted only for the login's own store (its passwd home, not $HOME), so a
+    HOME override (a test, a sandbox) never reads the real Keychain. Both holding a value
+    that differ raise UnlockError (a blank re-mints the file before the converge refreshes
+    custody): never a guess. Read per call, never cached; a value never enters a message."""
+    import os
+    import pwd
+    from pathlib import Path
+
+    path = Path(store_path) if store_path else Path.home() / ".nos" / "secrets.yml"
+    store = {}
+    if path.is_file():
+        import yaml
+
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        store = data if isinstance(data, dict) else {}
+    own = Path(pwd.getpwuid(os.getuid()).pw_dir, ".nos", "secrets.yml")
+    held = _custody() if path.resolve() == own.resolve() else {}
+    clash = sorted(k for k, v in held.items() if str(store.get(k) or "") not in ("", v))
+    if clash:
+        raise UnlockError(
+            "machine custody and %s disagree on %s; a converge refreshes custody from the "
+            "store (after a blank, finish the converge first)" % (path, ", ".join(clash)))
+    store.update(held)
+    return store
