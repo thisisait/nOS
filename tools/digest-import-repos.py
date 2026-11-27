@@ -14,9 +14,10 @@ not exercise).
   tools/digest-import-repos.py state/fixtures/repos-fixture --fixture-mode   # the fixture, staged
 
 Each repo is an immediate subdirectory carrying a `nos-repo.yml` sidecar
-(owner{ico|name}, remote, head) + dependency manifests. The sidecar is the parse
-stage's git-metadata source; a live run would read `git -C <dir>` instead — a
-one-line swap in _repo_meta(). Owners that do not resolve to a KNOWN party go to
+(owner{ico|name}, remote, head) + dependency manifests. The owner comes only from the
+sidecar (git cannot know it). For a real checkout (its own `.git`) head and remote are
+what `git -C <dir>` says today (rev-parse HEAD, remote.origin.url), else the sidecar's
+(the fixtures); a remote never keeps its userinfo, and a repo git refuses is skipped. Owners that do not resolve to a KNOWN party go to
 review (repos are not an authoritative party registry — they never mint a party).
 
 DRY by default. --absorb upserts by slug, skipping present. Tear down with
@@ -31,9 +32,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import pathlib
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
 import tomllib
@@ -145,6 +148,39 @@ _MANIFESTS = {"package.json": _parse_package_json,
 _VENDORED = {"vendor", "node_modules"}
 
 
+_HEAD = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
+_USERINFO = re.compile(r"(://)[^/@\s]+@")
+
+
+def _no_userinfo(text: str) -> str:
+    """`https://user:token@host/x.git` -> `https://host/x.git`: a remote's credential never reaches a record or a log."""
+    return _USERINFO.sub(r"\1", text or "")
+
+
+def _git_meta(repo_dir: pathlib.Path) -> dict | str:
+    """head and remote as git says them today, or why git refused. Two reads only: no shell, no prompt,
+    no fetch, no index lock (GIT_TERMINAL_PROMPT=0, GIT_OPTIONAL_LOCKS=0). GIT_CEILING_DIRECTORIES stops
+    discovery at the repo: a broken .git inside another checkout answered with that checkout's head (measured)."""
+    env = {**os.environ, "GIT_TERMINAL_PROMPT": "0", "GIT_OPTIONAL_LOCKS": "0",
+           "GIT_CEILING_DIRECTORIES": str(repo_dir.resolve().parent)}
+
+    def git(*args: str) -> subprocess.CompletedProcess:
+        return subprocess.run(["git", "-C", str(repo_dir), *args], capture_output=True, text=True,
+                              timeout=10, env=env, check=False)
+    try:
+        head = git("rev-parse", "HEAD")
+        remote = git("config", "--get", "remote.origin.url")
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return f"git unreadable ({type(exc).__name__})"
+    sha = head.stdout.strip()
+    if head.returncode != 0 or not _HEAD.match(sha):
+        return "git refused: " + _no_userinfo((head.stderr.strip().splitlines() or ["no HEAD"])[0])
+    meta = {"head": sha}
+    if remote.returncode == 0 and remote.stdout.strip():
+        meta["remote"] = _no_userinfo(remote.stdout.strip())
+    return meta
+
+
 class RepoImporter:
     """A directory of repos → repo/application/package rows, owners resolved to
     the shared party table. Format knowledge only; the harness owns the gate."""
@@ -162,11 +198,22 @@ class RepoImporter:
         self.skipped: list[str] = []
         self.party_reviews: list[dict] = []
 
-    def _repo_meta(self, repo_dir: pathlib.Path) -> dict | None:
+    def _repo_meta(self, repo_dir: pathlib.Path) -> dict | str | None:
+        """The sidecar, with head and remote from git for a real checkout (git wins: a hand-written head is
+        stale after the next commit). Its OWN .git only: a fixture inside the nOS checkout would answer with
+        nOS's head. None = no sidecar; a str = why git refused (the repo is skipped)."""
         sidecar = repo_dir / "nos-repo.yml"
         if not sidecar.exists():
-            return None   # a live run would read `git -C` here instead
-        return yaml.safe_load(sidecar.read_text(encoding="utf-8")) or {}
+            return None
+        meta = yaml.safe_load(sidecar.read_text(encoding="utf-8")) or {}
+        if (repo_dir / ".git").exists():
+            got = _git_meta(repo_dir)
+            if isinstance(got, str):
+                return got
+            meta = {**meta, **got}
+        if meta.get("remote"):
+            meta["remote"] = _no_userinfo(str(meta["remote"]))
+        return meta
 
     def parse(self, root) -> list[dict]:
         root = pathlib.Path(root)
@@ -175,6 +222,9 @@ class RepoImporter:
             meta = self._repo_meta(repo_dir)
             if meta is None:
                 self.skipped.append(f"{repo_dir.name}: no nos-repo.yml sidecar")
+                continue
+            if isinstance(meta, str):
+                self.skipped.append(f"{repo_dir.name}: {meta}")
                 continue
             apps = []
             for manifest in sorted(repo_dir.rglob("*")):
