@@ -16,7 +16,7 @@
   parent: ''
   track: security
 - slug: advisory-matcher-all-tbd
-  parent: advisory-matcher-open-base-range
+  parent: watch
   track: security
 - slug: advisory-matcher-open-base-range
   parent: watch
@@ -202,7 +202,7 @@
   parent: end-user-tool-bakeoff
   track: agents
 - slug: batch-1127-review-tail
-  parent: security-readers-false-reds
+  parent: watch
   track: platform
 - slug: bff-table-read-tier-gate
   parent: consulting-firm-deployment
@@ -1513,13 +1513,13 @@
   parent: iris-code-mode
   track: agents
 - slug: iris-code-mode-bench-decision
-  parent: iris-code-mode-bench
+  parent: iris-code-mode
   track: agents
 - slug: iris-code-mode-bench-evidence-every-turn
-  parent: iris-code-mode-bench
+  parent: iris-code-mode
   track: agents
 - slug: iris-code-mode-bench-render-checks
-  parent: iris-code-mode-bench
+  parent: iris-code-mode
   track: agents
 - slug: iris-code-mode-engines
   parent: iris-code-mode
@@ -1627,7 +1627,7 @@
   parent: iris-genui
   track: agents
 - slug: iris-plan-tool-rows-in-cortex
-  parent: iris-code-mode-engines
+  parent: iris-code-mode
   track: agents
 - slug: iris-reads-red-status
   parent: iris-genui
@@ -1672,7 +1672,7 @@
   parent: pupil-web-remote
   track: agents
 - slug: iris-write-program-journeys-rest
-  parent: iris-code-mode-write-card
+  parent: iris-code-mode
   track: agents
 - slug: isdoc-vision-crosscheck
   parent: consulting-firm-deployment
@@ -2572,7 +2572,7 @@
   parent: ''
   track: platform
 - slug: prometheus-runbook-urls
-  parent: security-readers-false-reds
+  parent: watch
   track: platform
 - slug: prompt-echoes-password-prefix
   parent: ''
@@ -2908,10 +2908,10 @@
   parent: watch
   track: platform
 - slug: security-readers-join-by-cve
-  parent: security-readers-false-reds
+  parent: watch
   track: platform
 - slug: security-readers-report-supersede
-  parent: security-readers-false-reds
+  parent: watch
   track: platform
 - slug: security-review-1103
   parent: watch
