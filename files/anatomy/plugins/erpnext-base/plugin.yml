@@ -173,3 +173,6 @@ e2e:
     - name: login-page-offers-authentik
       url: https://{{ erpnext_domain | default('erp' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/login
       expect: {status: [200], contains: "{{ authentik_domain }}/application/o/authorize"}
+
+# How the app takes the estate brand (row estate-brand-declare-plugins); tools/e2e-plan.py --branding.
+branding_none: "nOS writes no brand into ERPNext yet: its role and hooks set no app name, logo or theme."

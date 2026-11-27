@@ -126,3 +126,8 @@ e2e:
     - name: login-page-offers-authentik
       url: https://{{ dolibarr_domain | default('doli' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/
       expect: {status: [200], contains: "{{ authentik_domain }}/application/o/authorize"}
+
+# How the app takes the estate brand (row estate-brand-declare-plugins); tools/e2e-plan.py --branding.
+branding:
+  kind: env
+  hook: "DOLI_COMPANY_NAME = instance_org (roles/pazny.dolibarr/templates/compose.yml.j2:38): the company name; no logo yet"

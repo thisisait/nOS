@@ -150,3 +150,6 @@ nginx:
   # (signing parties get magic-link emails, only managers + admins
   # initiate signing flows from the UI).
   rbac_tier: 2
+
+# How the app takes the estate brand (row estate-brand-declare-plugins); tools/e2e-plan.py --branding.
+branding_none: "nOS writes no brand into Documenso yet: its manifest sets no logo or brand details."
