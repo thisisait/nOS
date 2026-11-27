@@ -2627,7 +2627,8 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
         // hybrid: the turn's own words route it before any model call; the ledger says which way and why.
         // A follow-up stays on tools: the plan sees this turn only (multi-step 2/29 cortex vs 6/29 tools, 10-18/19).
         let first = o.messages.iter().filter(|m| m["role"] == "user").count() == 1;
-        let routed = |o: &mut Open, c: &Cortex| c.intents.as_ref().is_none_or(|intents| {
+        // Some(wide) plans the turn; wide: a write may act on many rows (every turn plans, or it routed write-rows)
+        let routed = |o: &mut Open, c: &Cortex| c.intents.as_ref().map_or(Some(true), |intents| {
             let (mut route, intent, matched) = cortex_plan::route(text, intents);
             let mut row = json!({"route": route, "intent": intent, "matched": matched});
             if route == "cortex" && !first {
@@ -2636,13 +2637,13 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                 row["held"] = json!("a follow-up: the plan sees one turn");
             }
             let _ = self.record(o, Kind::ToolResult, Some("route"), row);
-            route == "cortex"
+            (route == "cortex").then_some(intent == Some("write-rows"))
         });
         let planned = match (&self.cortex, o.model.clone()) {
-            (Some(c), Ok(m)) if routed(o, c) => {
+            (Some(c), Ok(m)) => routed(o, c).and_then(|wide| {
                 activity(out, o, Phase::Thinking);
-                self.plan(who, o, &m, c, text)
-            }
+                self.plan(who, o, &m, c, text, wide)
+            }),
             _ => None,
         };
         // iris_plan_run: thalamus: a plan of reads runs here and ends the turn (plan() mints its id only then).
@@ -2663,7 +2664,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
     }
 
     /// The cortex plan as one assistant message of mapped tool calls; None after the model heard why not.
-    fn plan(&self, who: &Person, o: &mut Open, model: &Binding, c: &Cortex, text: &str) -> Option<Planned> {
+    fn plan(&self, who: &Person, o: &mut Open, model: &Binding, c: &Cortex, text: &str, wide: bool) -> Option<Planned> {
         let tool = Some("cortex_plan");
         // kind: "infra" (the estate failed: no verdict on the model) or "model" (its plan does not run)
         let refused = |o: &mut Open, why: String, kind: &str, rec: Value| {
@@ -2758,7 +2759,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                     return refused(o, why, "model", json!({"errors": [], "registry_hash": hash}));
                 }
                 Ok(Ok((stages, src, hash))) => {
-                    let mapped = cortex_plan::plan(src.as_deref(), &stages).and_then(|p| cortex_plan::calls(&p, c.run_program,
+                    let mapped = cortex_plan::plan(src.as_deref(), &stages).and_then(|p| cortex_plan::calls(&p, c.run_program, wide,
                         |t| self.table_info(who, t),
                         |args, read| self.matched(who, args, read).map(|m| m.hits.into_iter().map(|h| h.0).collect()))
                         .map(|c| (p.table, c)));
