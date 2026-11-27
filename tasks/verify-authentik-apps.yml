@@ -189,17 +189,18 @@
       {{ _verify_app_binds | map(attribute='target') | map('extract', _verify_slug_of)
          | zip(_verify_app_binds | map(attribute='policy_obj.name')) | map('join', ' ') | list }}
     _verify_unbound: "{{ _verify_declared | difference(_verify_held) }}"
-    # Ruled 2026-11-23, item 1: every enabled, non-negated binding on an application, of any kind and at any
-    # order, must be a declared one. A group or user binding is never declared by blueprint 20.
+    # Ruled 2026-11-23, item 1: every enabled binding on an application, of any kind and at any order, must be a
+    # declared one. A group or user binding is never declared by blueprint 20; a negated one never equals one.
     _verify_app_any: >-
       {{ (_verify_ak_bindings.json.results | default([]))
-         | selectattr('enabled') | rejectattr('negate')
+         | selectattr('enabled')
          | selectattr('target', 'in', _verify_slug_of.keys() | list) | list }}
     _verify_held_all: >-
       {%- set out = [] -%}
       {%- for b in _verify_app_any -%}
         {%- set _ = out.append(_verify_slug_of[b.target] ~ ' ' ~ (b.policy_obj.name if b.policy_obj
-              else ('group:' ~ b.group_obj.name if b.group_obj else 'user:' ~ b.user))) -%}
+              else ('group:' ~ b.group_obj.name if b.group_obj else 'user:' ~ b.user))
+              ~ (' (negated)' if b.negate else '')) -%}
       {%- endfor -%}{{ out }}
     _verify_extra: "{{ _verify_held_all | difference(_verify_declared) }}"
     # Item 2: an application with no declared tier, unless a machine client or authentik_untiered_apps.
