@@ -508,7 +508,8 @@ def _match_tech(version: str, product: str | None, entries: list[dict]) -> tuple
                         raise ValueError("empty range")
                     if set(ev) == {"introduced"} and any(
                             parse_version(ci) >= parse_version(ev["introduced"]) and in_range(version, introduced=ci)
-                            and not in_range(version, introduced=ci, fixed=cf) for ci, cf in closed):
+                            and not in_range(version, introduced=ci, fixed=cf)
+                            and parse_version(cf)[0][:2] == parse_version(version)[0][:2] for ci, cf in closed):
                         continue  # our line is patched at or below us: the open base is another line's
                     if in_range(version, **ev) and found is None:
                         found = {"range": _fmt_range(ev.get("introduced"), ev.get("fixed"),

@@ -65,7 +65,8 @@ pub fn route(text: &str, intents: &[String]) -> (&'static str, Option<&'static s
     let writes = hits(WRITE);
     if !writes.is_empty() {
         // not listed: today's tools turn, its route row too (intent null)
-        return if intents.iter().any(|i| i == "write-rows") { ("cortex", Some("write-rows"), writes) } else { ("tools", None, writes) };
+        let listed = intents.iter().any(|i| i == "write-rows") && hits(COLUMN).is_empty(); // a column edit is not a row write
+        return if listed { ("cortex", Some("write-rows"), writes) } else { ("tools", None, writes) };
     }
     for (intent, stems) in INTENT_WORDS {
         let m = hits(stems);
@@ -430,8 +431,9 @@ pub fn plan(source: Option<&str>, stages: &[Stage]) -> Result<Plan, String> {
 
 /// The plan as tool calls: `info` is serve's table_info (id, then title; the septum), `check(args,
 /// read)` its matched() over query_rows args, giving the matched row ids when `read`. `many`
-/// (iris_plan_run: thalamus): a write is one `propose_program` call over 1 to 20 matched rows.
-pub fn calls(p: &Plan, many: bool, info: impl Fn(&str) -> Result<(String, Value), String>,
+/// (iris_plan_run: thalamus): a write is one `propose_program` call over 1 to 20 matched rows when
+/// `wide` (the turn routed write-rows, or every turn plans), else over exactly one.
+pub fn calls(p: &Plan, many: bool, wide: bool, info: impl Fn(&str) -> Result<(String, Value), String>,
              check: impl Fn(&Value, bool) -> Result<Vec<String>, String>) -> Result<Vec<(String, Value)>, String> {
     let (table, info) = info(&p.table)?;
     let title = info.pointer("/data/title").and_then(Value::as_str).unwrap_or(&table).to_string();
@@ -558,6 +560,10 @@ pub fn calls(p: &Plan, many: bool, info: impl Fn(&str) -> Result<(String, Value)
             }
             if !(1..=PROGRAM_WRITES_MAX).contains(&rows.len()) {
                 return Err(format!("{w} acts on 1 to {PROGRAM_WRITES_MAX} rows; the pipeline matched {} rows of {title}: filter until 1 to {PROGRAM_WRITES_MAX} are left", rows.len()));
+            }
+            // more than one row is write-rows' alone: an insert-row turn's delete program is one row, as without a program
+            if rows.len() > 1 && !wide {
+                return Err(format!("{w} acts on exactly one row; the pipeline matched {} rows of {title}: filter until one is left", rows.len()));
             }
             // the read renders every target, so each is a row the person was shown before the card
             let mut look = q.clone();
