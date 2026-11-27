@@ -144,6 +144,8 @@ level. The manifest row says `joint:` (the spec) or `joint_pending:` (why
 not yet). Gate: `tests/anatomy/test_appendage_is_detachable.py`.
 Counter-example: KEAP has a contract and is not an appendage, because the
 core depends on it.
+The face is the same: a core organ with a contract (`files/anatomy/contracts/face-wing.yml`),
+not an appendage (operator ruling I-12, 2026-10-07; [`face.md`](face.md) §8).
 
 ### 4.3 Symbiosome and transporter
 
