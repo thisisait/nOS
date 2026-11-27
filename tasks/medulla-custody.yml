@@ -19,7 +19,7 @@
 
 - name: "[Medulla custody] Read the Keychain items (macOS)"
   ansible.builtin.command:
-    argv: [security, find-generic-password, -a, nos, -s, "nos.medulla.{{ item }}", -w]
+    argv: [/usr/bin/security, find-generic-password, -a, nos, -s, "nos.medulla.{{ item }}", -w]
   loop: [bone-client-secret, wing-intents-token]
   register: _medulla_keychain
   changed_when: false
@@ -81,7 +81,7 @@
 # lifetime (same-user `ps`); upgrade = a Keychain write through stdin (no flag for it today).
 - name: "[Medulla custody] Write the Keychain items (macOS)"
   ansible.builtin.command:
-    argv: [security, add-generic-password, -U, -a, nos, -s, "nos.medulla.{{ item.name }}", -w, "{{ item.value }}"]
+    argv: [/usr/bin/security, add-generic-password, -U, -a, nos, -s, "nos.medulla.{{ item.name }}", -w, "{{ item.value }}"]
   loop:
     - { name: bone-client-secret, value: "{{ medulla_bone_client_secret }}", held: "{{ _medulla_custody_had.MEDULLA_BONE_CLIENT_SECRET | default('') }}" }
     - { name: wing-intents-token, value: "{{ wing_intents_token }}", held: "{{ _medulla_custody_had.WING_INTENTS_TOKEN | default('') }}" }

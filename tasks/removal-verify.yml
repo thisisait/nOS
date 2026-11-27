@@ -12,6 +12,7 @@
       {{ _blank_dirs
          + [ansible_facts['env']['HOME'] + '/projects/default/service-registry.json']
          + [ansible_facts['env']['HOME'] + '/.nos/secrets.yml']
+         + ((ansible_facts['system'] == 'Linux') | ternary(_custody_files | default([]), []))
          + ((nos_remove_deep and (flush_ollama | default(false) in [true, 'true', 'True', 'yes', 'y', '1', 1]))
             | ternary([ansible_facts['env']['HOME'] + '/.ollama'], []))
          + (nos_remove_source | ternary(_uninstall_source, [])) }}
@@ -24,11 +25,23 @@
     label: "{{ item }}"
   register: _removal_verify_stat
 
+# Keychain items are not paths: rc 0 = the item survived, 44 = gone, anything else = unreadable (fails).
+- name: "[Verify] Look up every custody Keychain item (macOS)"
+  ansible.builtin.command:
+    argv: [/usr/bin/security, find-generic-password, -a, nos, -s, "{{ item }}"]
+  loop: "{{ _custody_keychain_items | default([]) }}"  # set by removal-set.yml; blank-reset uses it bare
+  register: _removal_verify_kc
+  changed_when: false
+  failed_when: _removal_verify_kc.rc not in [0, 44]
+  when: ansible_facts['system'] == 'Darwin'
+
 - name: "[Verify] Collect survivors"
   ansible.builtin.set_fact:
     _removal_survivors: >-
       {{ _removal_verify_stat.results
-         | selectattr('stat.exists') | map(attribute='item') | list }}
+         | selectattr('stat.exists') | map(attribute='item') | list
+         + (_removal_verify_kc.results | default([]) | selectattr('rc', 'defined') | selectattr('rc', 'equalto', 0)
+            | map(attribute='item') | map('regex_replace', '^', 'keychain: ') | list) }}
 
 # Docker must be REACHABLE during a data+ removal — the volume prune in
 # blank-reset.yml is failed_when:false best-effort, so an unreachable

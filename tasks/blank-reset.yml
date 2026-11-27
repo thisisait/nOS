@@ -319,6 +319,26 @@
 # ── 7/8. Auto-deps + _blank_dirs: MOVED to tasks/removal-set.yml (single
 # removal inventory — one list, consumed by dry-run, execution, and verify).
 
+# Machine custody goes where the store goes (operator 2026-11-27, row secrets-at-rest): left behind,
+# unlock() served the OLD master silently until the persist, and --leave kept it on an uninstalled host.
+# rc 44 = no such item; a locked Keychain stops the blank before the data directories and the store go.
+- name: "[BLANK] Remove machine custody (macOS Keychain)"
+  ansible.builtin.command:
+    argv: [/usr/bin/security, delete-generic-password, -a, nos, -s, "{{ item }}"]
+  loop: "{{ _custody_keychain_items }}"
+  register: _custody_kc_delete
+  changed_when: _custody_kc_delete.rc == 0
+  failed_when: _custody_kc_delete.rc not in [0, 44]
+  when: ansible_facts['system'] == 'Darwin'
+
+- name: "[BLANK] Remove machine custody (Linux /etc/nos)"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop: "{{ _custody_files }}"
+  become: true
+  when: ansible_facts['system'] == 'Linux'
+
 # Row nos-owned-paths-recheck-before-rm: removal-set.yml asserted the owned roots at the start of the
 # run; this delete comes after the whole teardown, minutes later, time enough for a root or an ancestor
 # of one to be swapped for a symlink (file: absent lstats only the last component). Resolve and assert

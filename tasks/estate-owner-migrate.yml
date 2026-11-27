@@ -89,7 +89,7 @@
       {%   set size = (((du.stdout.split() | first | int) / 1048576) | round(1) | string ~ ' GiB') if du.rc == 0 else 'UNKNOWN' %}
       {%   set owner = (s.stat.pw_name ~ ':' ~ s.stat.gr_name) if s.stat.exists else 'absent' %}
        {{ kinds[loop.index0] }}  {{ s.item }}  {{ owner }} -> {{ nos_system_user }}:{{ nos_system_user }}  {{ size }}
-         {{ 'chown + ACL for ' ~ ansible_facts['user_id'] ~ ': waits on a ruling' if loop.index0 < 2 else 'later (not in this slice)' }}
+         {{ 'chown: waits for the converge to run as ' ~ nos_system_user ~ ' (ruled 2026-11-27 (b))' if loop.index0 < 2 else 'later (not in this slice)' }}
       {% endfor %}
        user units  {{ _eo_units.matched | default(0) }} in ~/.config/systemd/user -> system units  later (not in this slice)
       {% for f in _eo_units.files | default([]) | map(attribute='path') | map('basename') | sort %}

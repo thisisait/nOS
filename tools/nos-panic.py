@@ -65,6 +65,8 @@ def report(now: datetime) -> tuple[dict | None, str | None]:
     except ValueError:
         return None, f"advisory report {SNAPSHOT} has no time it was read"
     at = at if at.tzinfo else at.replace(tzinfo=timezone.utc)
+    if at > now:
+        return None, f"advisory report {SNAPSHOT} is stamped in the future ({at:%Y-%m-%d %H:%M} UTC)"
     if now - at > MAX_AGE:
         return None, f"advisory report read {at:%Y-%m-%d %H:%M} UTC is older than 48 h (tools/advisory-patrol.py)"
     return rep, None

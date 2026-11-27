@@ -204,6 +204,9 @@
 - slug: batch-1127-review-tail
   parent: watch
   track: platform
+- slug: batch-1127b-review-tail
+  parent: watch
+  track: security
 - slug: bff-table-read-tier-gate
   parent: consulting-firm-deployment
   track: security
@@ -2085,6 +2088,9 @@
 - slug: medulla-scheduler
   parent: medulla
   track: platform
+- slug: medulla-secrets-systemd-creds
+  parent: vault
+  track: security
 - slug: medulla-settings
   parent: medulla
   track: platform

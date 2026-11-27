@@ -81,7 +81,7 @@ outranks config.yml; `nos` names each toggle it overrides.
 | Level | Scope |
 |---|---|
 | `none` | converge only (default; every ordinary run) |
-| `data` | today's blank scope: derived state (docker, dbs, service data, configs). SOURCE (`~/nos/tenants/**` user files) and images KEPT. |
+| `data` | today's blank scope: derived state (docker, dbs, service data, configs), `~/.nos/secrets.yml` and its machine custody (Keychain `nos.secrets.*` / `nos.medulla.*`, `/etc/nos/*.env`). SOURCE (`~/nos/tenants/**` user files) and images KEPT. |
 | `deep` | data + docker images/build cache + brew/npm/pip caches (`~/.ollama` opt-in via `flush_ollama`) |
 | `all` | deep + user SOURCE: the full uninstall source set (`nos_data_root`, `~/.nos`, `~/bone`, `~/pulse`, `~/wing`, `~/keap`, `~/thalamus`, `~/receptor`, hermes dirs, `~/.openclaw`, service registry). With `leave=false` this then REINSTALLS from zero. |
 
@@ -334,7 +334,7 @@ prefix; a fresh machine with no prefix and no interactive terminal is refused.
 ## Verify scope — honesty note
 
 The post-removal verify (R5) stats the CONTRACTED path set: `_blank_dirs` +
-service registry + secrets + the ollama opt-in + the `remove=all` source set,
+service registry + secrets + machine custody (Linux files; macOS Keychain items by lookup) + the ollama opt-in + the `remove=all` source set,
 plus a docker named-volume probe. Non-path teardown steps that are
 `failed_when: false` by design (e.g. the `/etc/resolver/dev.local` removal in
 `blank-reset.yml`) are OUTSIDE the verify and can silently survive under `-y`.

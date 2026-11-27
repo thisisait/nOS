@@ -2386,7 +2386,7 @@
     # v1 hosts hold no master: nothing is copied. Same shape as tasks/medulla-custody.yml.
     - name: "[Secrets custody] Read the Keychain items (macOS)"
       ansible.builtin.command:
-        argv: [security, find-generic-password, -a, nos, -s, "nos.secrets.{{ item }}", -w]
+        argv: [/usr/bin/security, find-generic-password, -a, nos, -s, "nos.secrets.{{ item }}", -w]
       loop: [scheme, master]
       register: _secret_custody_kc
       changed_when: false
@@ -2402,7 +2402,7 @@
     # its lifetime (same-user `ps`, who can read the store anyway); upgrade = row custody-keychain-write-off-argv.
     - name: "[Secrets custody] Write the Keychain items (macOS)"
       ansible.builtin.command:
-        argv: [security, add-generic-password, -U, -a, nos, -s, "nos.secrets.{{ item.0 }}", -w, "{{ item.1 }}"]
+        argv: [/usr/bin/security, add-generic-password, -U, -a, nos, -s, "nos.secrets.{{ item.0 }}", -w, "{{ item.1 }}"]
       loop: "{{ [['scheme', nos_secret_scheme], ['master', nos_secret_master]] }}"
       loop_control:
         index_var: _i
