@@ -29,7 +29,7 @@ install_nginx: false            # Traefik is the edge since C1; nginx is the
                                 # opt-in fallback and doubles the surface
 install_gitea: true             # L1. The forge Woodpecker actually clones from
 install_keap: true              # L1. The cortex — the knowledge layer agents query
-install_infisical: true         # secrets vault; agent credentials resolve here
+install_infisical: false        # retiring: OpenBao is the machine vault (row one-vault)
 
 # ── The development loop ─────────────────────────────────────────────────────
 install_woodpecker: true        # CI. Mandatory: the deploy pipeline IS the loop

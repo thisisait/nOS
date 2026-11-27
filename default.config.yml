@@ -634,7 +634,7 @@ install_code_server: false        # code-server – VS Code in the browser [Dock
 
 # ── IAM & Secrets ─────────────────────────────────────────────────────────────
 install_authentik: true          # Authentik – SSO/IdP (OIDC/SAML/LDAP) for all services [requires: PostgreSQL, Redis]
-install_infisical: true          # Infisical CE – central secrets vault with REST API + CLI [requires: PostgreSQL, Redis]
+install_infisical: false         # Infisical CE – retiring: OpenBao is the machine vault (row one-vault, ruled 2026-11-23) [requires: PostgreSQL, Redis]
 install_vaultwarden: true        # Vaultwarden – Bitwarden-compatible personal password vault [Docker]
 
 # ── Identity / federation ─────────────────────────────────────────────────────

@@ -134,7 +134,7 @@ test the Authentik invitation + Infisical credential push WITHOUT
 ever touching the Stalwart admin wizard.
 
 Prereqs:
-- `install_infisical: true` in your config (already on by default)
+- `install_infisical: true` in your config (off by default since 2026-11-23, row `one-vault`)
 - Wing + Bone + Authentik live (verify: `curl -sf http://127.0.0.1:9000/` returns 200)
 
 ### One-time: machine identity for the seeder (only if pre-existing Infisical)
