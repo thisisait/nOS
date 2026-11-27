@@ -287,8 +287,11 @@ def _custody():
     return held if all(held.values()) else {}
 
 
-def unlock(store_path=None):
+def unlock(store_path=None, store=None):
     """THE secret store: ~/.nos/secrets.yml with the scheme and master read from custody first.
+
+    `store` is the file already parsed by the caller (Pulse keeps its own fail-closed parse);
+    None reads it here.
 
     Custody is consulted only for the login's own store (its passwd home, not $HOME), so a
     HOME override (a test, a sandbox) never reads the real Keychain. Both holding a value
@@ -299,14 +302,18 @@ def unlock(store_path=None):
     from pathlib import Path
 
     path = Path(store_path) if store_path else Path.home() / ".nos" / "secrets.yml"
-    store = {}
-    if path.is_file():
-        import yaml
+    if store is None:
+        store = {}
+        if path.is_file():
+            import yaml
 
-        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-        store = data if isinstance(data, dict) else {}
-    own = Path(pwd.getpwuid(os.getuid()).pw_dir, ".nos", "secrets.yml")
-    held = _custody() if path.resolve() == own.resolve() else {}
+            store = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    store = dict(store) if isinstance(store, dict) else {}
+    try:
+        own = Path(pwd.getpwuid(os.getuid()).pw_dir, ".nos", "secrets.yml")
+    except KeyError:                       # a uid with no passwd entry (a container): no custody
+        own = None
+    held = _custody() if own and path.resolve() == own.resolve() else {}
     clash = sorted(k for k, v in held.items() if str(store.get(k) or "") not in ("", v))
     if clash:
         raise UnlockError(
