@@ -2,7 +2,8 @@
 # Row estate-service-login, slice 1 (ruled 2026-11-23, choice c): the MAP of what moves a Linux estate's
 # runtime ownership from the person's login to nos_system_user. Reached only by
 # `--tags estate-owner-migrate` (main.yml tags it `never`). Metadata only: no become, no file opened
-# under ~/.nos, the CA or a unit. It ends the play itself; the confirmed move waits on a ruling.
+# under ~/.nos, the CA or a unit. It ends the play itself. The confirmed move waits for the converge
+# to run as nos (ruled 2026-11-27, choice b): no chown, containers stay on the person's uid.
 
 - name: "[Estate owner] Refuse off Linux, before any stat"
   ansible.builtin.set_fact:
@@ -113,8 +114,8 @@
     msg: >-
       {{ _eo_refusal if (_eo_refusal | length > 0) else
          'the confirmed move (chown of the two roots, the rollback record, estate_owner_rollback) is not built: it waits
-         on a ruling (row estate-service-login: the converge still runs as the person and writes 0600 files the service
-         uid cannot read). The map above is the whole of this slice.' }}
+         for the converge to run as the service login (row estate-service-login, ruled 2026-11-27); until then the
+         containers stay on your uid. The map above is the whole of this row for now.' }}
   when: >-
     (_eo_refusal | length > 0)
     or (nos_confirmed | default(false) | bool)
