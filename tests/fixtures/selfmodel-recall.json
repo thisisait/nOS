@@ -135,17 +135,6 @@
       ]
     },
     {
-      "q": "add secret",
-      "expect": [
-        "node:nos.infra.infisical",
-        "title:create-secret"
-      ],
-      "forbid": [
-        "node:nos",
-        "node:nos.infra"
-      ]
-    },
-    {
       "q": "add to the preservation queue",
       "expect": [
         "node:nos.iiab.keap",
@@ -796,17 +785,6 @@
       ]
     },
     {
-      "q": "create secret",
-      "expect": [
-        "node:nos.infra.infisical",
-        "title:create-secret"
-      ],
-      "forbid": [
-        "node:nos",
-        "node:nos.infra"
-      ]
-    },
-    {
       "q": "create share link",
       "expect": [
         "node:nos.iiab.nextcloud",
@@ -1376,17 +1354,6 @@
       "forbid": [
         "node:nos",
         "node:nos.iiab"
-      ]
-    },
-    {
-      "q": "get secret",
-      "expect": [
-        "node:nos.infra.infisical",
-        "title:get-secret"
-      ],
-      "forbid": [
-        "node:nos",
-        "node:nos.infra"
       ]
     },
     {
@@ -2055,17 +2022,6 @@
       ]
     },
     {
-      "q": "list projects",
-      "expect": [
-        "node:nos.infra.infisical",
-        "title:list-projects"
-      ],
-      "forbid": [
-        "node:nos",
-        "node:nos.infra"
-      ]
-    },
-    {
       "q": "list recent posts",
       "expect": [
         "node:nos.infra.bluesky-pds",
@@ -2140,17 +2096,6 @@
       "forbid": [
         "node:nos",
         "node:nos.observability"
-      ]
-    },
-    {
-      "q": "list secrets",
-      "expect": [
-        "node:nos.infra.infisical",
-        "title:list-secrets"
-      ],
-      "forbid": [
-        "node:nos",
-        "node:nos.infra"
       ]
     },
     {
@@ -3546,17 +3491,6 @@
       ]
     },
     {
-      "q": "show all secrets",
-      "expect": [
-        "node:nos.infra.infisical",
-        "title:list-secrets"
-      ],
-      "forbid": [
-        "node:nos",
-        "node:nos.infra"
-      ]
-    },
-    {
       "q": "show all users",
       "expect": [
         "node:nos.infra.authentik",
@@ -3858,17 +3792,6 @@
       ]
     },
     {
-      "q": "show password for",
-      "expect": [
-        "node:nos.infra.infisical",
-        "title:get-secret"
-      ],
-      "forbid": [
-        "node:nos",
-        "node:nos.infra"
-      ]
-    },
-    {
       "q": "show pending alerts",
       "expect": [
         "node:nos.observability.prometheus",
@@ -4067,17 +3990,6 @@
       ]
     },
     {
-      "q": "show workspaces",
-      "expect": [
-        "node:nos.infra.infisical",
-        "title:list-projects"
-      ],
-      "forbid": [
-        "node:nos",
-        "node:nos.infra"
-      ]
-    },
-    {
       "q": "start tailscale",
       "expect": [
         "node:nos.host.tailscale",
@@ -4130,17 +4042,6 @@
       "forbid": [
         "node:nos",
         "node:nos.iiab"
-      ]
-    },
-    {
-      "q": "store password",
-      "expect": [
-        "node:nos.infra.infisical",
-        "title:create-secret"
-      ],
-      "forbid": [
-        "node:nos",
-        "node:nos.infra"
       ]
     },
     {
@@ -4641,17 +4542,6 @@
       ]
     },
     {
-      "q": "what is the secret",
-      "expect": [
-        "node:nos.infra.infisical",
-        "title:get-secret"
-      ],
-      "forbid": [
-        "node:nos",
-        "node:nos.infra"
-      ]
-    },
-    {
       "q": "what jobs are registered",
       "expect": [
         "node:nos.host.pulse",
@@ -4740,17 +4630,6 @@
       ]
     },
     {
-      "q": "what projects exist",
-      "expect": [
-        "node:nos.infra.infisical",
-        "title:list-projects"
-      ],
-      "forbid": [
-        "node:nos",
-        "node:nos.infra"
-      ]
-    },
-    {
       "q": "what pulse jobs are due",
       "expect": [
         "node:nos.host.wing",
@@ -4792,17 +4671,6 @@
       "forbid": [
         "node:nos",
         "node:nos.observability"
-      ]
-    },
-    {
-      "q": "what secrets exist",
-      "expect": [
-        "node:nos.infra.infisical",
-        "title:list-secrets"
-      ],
-      "forbid": [
-        "node:nos",
-        "node:nos.infra"
       ]
     },
     {

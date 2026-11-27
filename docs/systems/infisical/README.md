@@ -13,7 +13,7 @@
 | **Port** | `8075` (`infisical_port`; loopback publish `127.0.0.1:8075` → container `8080`) |
 | **Stack** | `infra` |
 | **Node id** | `nos.infra.infisical` |
-| **Toggle** | `install_infisical: true` |
+| **Toggle** | `install_infisical: true` (default `false` since 2026-11-23: retiring, row `one-vault`) |
 | **Image** | `infisical/infisical:v0.160.4` (`infisical_version`) |
 | **Compose** | `~/stacks/infra/docker-compose.yml` (+ override `~/stacks/infra/overrides/infisical.yml`) |
 | **Data** | `{{ nos_data_root }}/platform/services/infisical/data` → `/app/data` (default `~/nos/platform/services/infisical/data`) |

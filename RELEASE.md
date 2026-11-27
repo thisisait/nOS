@@ -6,6 +6,14 @@ Versioning is by git tag `v<semver>` cut from `master`. The latest tag is `v0.19
 
 ---
 
+## v0.20-beta (unreleased)
+
+- **Default change:** `install_infisical` defaults to `false` (operator ruling 2026-11-23, row `one-vault`:
+  OpenBao becomes the machine vault, Infisical retires). An estate that relied on the default sets
+  `install_infisical: true` in its `config.yml` to keep it; a disabled Infisical is stopped and its data stays.
+
+---
+
 ## v0.19-beta (2026-11-03 … 2026-11-16)
 
 > **The face becomes the endpoint, and the night writes down what it saw.**
