@@ -127,7 +127,7 @@
 - name: "[Verify] Read the policy bindings Authentik holds"
   no_log: true  # carries a secret (test_a_secret_bearing_task_is_no_log)
   ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ authentik_port | default(9003) }}/api/v3/policies/bindings/?order=0&page_size=1000"
+    url: "http://127.0.0.1:{{ authentik_port | default(9003) }}/api/v3/policies/bindings/?page_size=1000"
     headers:
       Authorization: "Bearer {{ authentik_bootstrap_token | default('') }}"
     validate_certs: false
@@ -145,20 +145,30 @@
       - _verify_rendered | length > 0  # no rendered 20 = nothing compared, never "every one held"
       - _verify_declared | length == _verify_rendered | regex_findall('authentik_policies[.]policybinding') | length
       - (_verify_ak_bindings.json.pagination.next | default(0) | int) == 0
+      - (_verify_ak_apps.json.pagination.next | default(0) | int) == 0
       - _verify_unbound | length == 0
+      - _verify_extra | length == 0
+      - _verify_untiered_bad | length == 0
     fail_msg: |
       {{ _verify_unbound | length }} application(s) do NOT carry the tier policy blueprint 20 declares
       (application, policy) — until bound, every signed-in user reaches them:
-        {{ _verify_unbound | join(', ') }}
+        {{ _verify_unbound | join(', ') | default('none', true) }}
+      {{ _verify_extra | length }} binding(s) Authentik holds that blueprint 20 does not declare (application,
+      policy | group: | user:<pk>) — the policy engine is `any`, so each one widens access; remove it in Authentik:
+        {{ _verify_extra | join(', ') | default('none', true) }}
+      {{ _verify_untiered_bad | length }} application(s) with no declared tier that are not a machine client or
+      authentik_untiered_apps — open to every signed-in user:
+        {{ _verify_untiered_bad | join(', ') | default('none', true) }}
       (Or the check could not read its inputs: {{ _verify_declared | length }} bindings parsed from the
-      rendered blueprint, next page of held bindings: {{ _verify_ak_bindings.json.pagination.next | default(0) }}.)
+      rendered blueprint, next page of held bindings: {{ _verify_ak_bindings.json.pagination.next | default(0) }},
+      of applications: {{ _verify_ak_apps.json.pagination.next | default(0) }}.)
       Re-run and read the output (it may print entry attributes; do not paste it anywhere):
         {{ docker_bin | default('docker') }} compose -p infra exec -u root authentik-worker \
           ak apply_blueprint /blueprints/custom/20-rbac-policies.yaml
     success_msg: >-
-      {{ _verify_declared | length }} declared tier binding(s), every one held.
-      No declared tier (machine clients, device gateway):
-      {{ _verify_slug_of.values() | difference(_verify_declared | map('split', ' ') | map('first')) | sort | join(', ') | default('none', true) }}.
+      {{ _verify_declared | length }} declared tier binding(s), every one held, none extra.
+      No declared tier, each a declared exception (machine clients, authentik_untiered_apps):
+      {{ _verify_untiered | join(', ') | default('none', true) }}.
   vars:
     _verify_rendered: "{{ lookup('ansible.builtin.file', stacks_dir ~ '/infra/authentik/blueprints/20-rbac-policies.yaml', errors='ignore') | default('', true) }}"
     # "slug policy" per binding entry of the rendered file. `\[` is a literal bracket: Ansible doubles a backslash
@@ -179,6 +189,24 @@
       {{ _verify_app_binds | map(attribute='target') | map('extract', _verify_slug_of)
          | zip(_verify_app_binds | map(attribute='policy_obj.name')) | map('join', ' ') | list }}
     _verify_unbound: "{{ _verify_declared | difference(_verify_held) }}"
+    # Ruled 2026-11-23, item 1: every enabled, non-negated binding on an application, of any kind and at any
+    # order, must be a declared one. A group or user binding is never declared by blueprint 20.
+    _verify_app_any: >-
+      {{ (_verify_ak_bindings.json.results | default([]))
+         | selectattr('enabled') | rejectattr('negate')
+         | selectattr('target', 'in', _verify_slug_of.keys() | list) | list }}
+    _verify_held_all: >-
+      {%- set out = [] -%}
+      {%- for b in _verify_app_any -%}
+        {%- set _ = out.append(_verify_slug_of[b.target] ~ ' ' ~ (b.policy_obj.name if b.policy_obj
+              else ('group:' ~ b.group_obj.name if b.group_obj else 'user:' ~ b.user))) -%}
+      {%- endfor -%}{{ out }}
+    _verify_extra: "{{ _verify_held_all | difference(_verify_declared) }}"
+    # Item 2: an application with no declared tier, unless a machine client or authentik_untiered_apps.
+    _verify_untiered: "{{ _verify_slug_of.values() | difference(_verify_declared | map('split', ' ') | map('first')) | sort }}"
+    _verify_untiered_bad: >-
+      {{ _verify_untiered | difference((authentik_agent_clients | default([]) | map(attribute='slug') | list)
+                                       + (authentik_untiered_apps | default([]))) }}
   when:
     - install_authentik | default(false) | bool
     - nos_docker_ready | default(true)

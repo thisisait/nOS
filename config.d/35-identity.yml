@@ -184,6 +184,13 @@ authentik_app_tiers:
   bookstack: 3
   onlyoffice: 3
 
+# Applications that carry NO tier binding by design (operator 2026-11-23, row tofu-tier-binding-hardening):
+# verify fails on any other untiered application, since it is open to every signed-in user. The machine
+# clients join from authentik_agent_clients; this lists the rest. device-gateway is the RFC 8628 public
+# client (terraform/authentik/device_gateway.tf slug). Only a machine client or the device gateway belongs here.
+authentik_untiered_apps:
+  - device-gateway
+
 # ── OIDC Service Registry — REPLACED (D1.3, 2026-05-05) ──────────────────
 # Pre-D1.3: 35-row static central authentik_oidc_apps list. Source-of-truth
 # now lives in per-plugin authentik: blocks harvested into
