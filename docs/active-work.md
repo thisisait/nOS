@@ -35,7 +35,6 @@ The general fix for the class below — a per-service `verify.yml` hook plus the
 loader change that lets it fail — is in
 [the genome plan (archived)](archive/nos-genome-and-organelles.md) §Thread D.
 
-- **`genome-codegen.py` emits 2 of B1's 4.**
 - **Euro-office: full role swap after first stable** — pilot via `onlyoffice_image`
   flip; rename role+plugin+manifest once stable lands. Documenso stays.
 - **D1 `{{ vars }}` retirement flip** — design LOCKED (O25); the flip needs a
