@@ -1006,27 +1006,30 @@
       # failed_when intentionally NOT set — A17 surfaces dead daemons
       # via non-zero exit; pre-A17 `failed_when: false` was the bug.
 
+    # `compose -p <stack>` finds the service by its labels; `-f <stack>/docker-compose.yml` did not:
+    # the base file holds no services (they are in overrides/), so 15 restarts were
+    # "no such service" no-ops hidden by failed_when: false (found 2026-11-27).
     - name: Restart mariadb
       ansible.builtin.shell: >
-        {{ docker_bin }} compose -f "{{ stacks_dir }}/infra/docker-compose.yml" -p infra
+        {{ docker_bin }} compose -p infra
         restart mariadb
       failed_when: false
 
     - name: Restart traefik
       ansible.builtin.shell: >
-        {{ docker_bin }} compose -f "{{ stacks_dir }}/infra/docker-compose.yml" -p infra
+        {{ docker_bin }} compose -p infra
         restart traefik
       failed_when: false
 
     - name: Restart homeassistant
       ansible.builtin.shell: >
-        {{ docker_bin }} compose -f "{{ stacks_dir }}/iiab/docker-compose.yml" -p iiab
+        {{ docker_bin }} compose -p iiab
         restart homeassistant
       failed_when: false
 
     - name: Restart grafana
       ansible.builtin.shell: >
-        {{ docker_bin }} compose -f "{{ stacks_dir }}/observability/docker-compose.yml" -p observability
+        {{ docker_bin }} compose -p observability
         restart grafana
       failed_when: false
 
@@ -1043,7 +1046,7 @@
 
     - name: Restart prometheus
       ansible.builtin.shell: >
-        {{ docker_bin }} compose -f "{{ stacks_dir }}/observability/docker-compose.yml" -p observability
+        {{ docker_bin }} compose -p observability
         restart prometheus
       failed_when: false
 
@@ -1079,55 +1082,55 @@
 
     - name: Restart authentik
       ansible.builtin.shell: >
-        {{ docker_bin }} compose -f "{{ stacks_dir }}/infra/docker-compose.yml" -p infra
+        {{ docker_bin }} compose -p infra
         restart authentik-server authentik-worker
       failed_when: false
 
     - name: Restart infisical
       ansible.builtin.shell: >
-        {{ docker_bin }} compose -f "{{ stacks_dir }}/infra/docker-compose.yml" -p infra
+        {{ docker_bin }} compose -p infra
         restart infisical
       failed_when: false
 
     - name: Restart postgresql
       ansible.builtin.shell: >
-        {{ docker_bin }} compose -f "{{ stacks_dir }}/infra/docker-compose.yml" -p infra
+        {{ docker_bin }} compose -p infra
         restart postgresql
       failed_when: false
 
     - name: Restart redis
       ansible.builtin.shell: >
-        {{ docker_bin }} compose -f "{{ stacks_dir }}/infra/docker-compose.yml" -p infra
+        {{ docker_bin }} compose -p infra
         restart redis
       failed_when: false
 
     - name: Restart gitea
       ansible.builtin.shell: >
-        {{ docker_bin }} compose -f "{{ stacks_dir }}/devops/docker-compose.yml" -p devops
+        {{ docker_bin }} compose -p devops
         restart gitea
       failed_when: false
 
     - name: Restart nextcloud
       ansible.builtin.shell: >
-        {{ docker_bin }} compose -f "{{ stacks_dir }}/iiab/docker-compose.yml" -p iiab
+        {{ docker_bin }} compose -p iiab
         restart nextcloud
       failed_when: false
 
     - name: Restart n8n
       ansible.builtin.shell: >
-        {{ docker_bin }} compose -f "{{ stacks_dir }}/iiab/docker-compose.yml" -p iiab
+        {{ docker_bin }} compose -p iiab
         restart n8n
       failed_when: false
 
     - name: Restart openwebui
       ansible.builtin.shell: >
-        {{ docker_bin }} compose -f "{{ stacks_dir }}/iiab/docker-compose.yml" -p iiab
+        {{ docker_bin }} compose -p iiab
         restart openwebui
       failed_when: false
 
     - name: Restart portainer
       ansible.builtin.shell: >
-        {{ docker_bin }} compose -f "{{ stacks_dir }}/infra/docker-compose.yml" -p infra
+        {{ docker_bin }} compose -p infra
         restart portainer
       failed_when: false
 
@@ -1152,7 +1155,7 @@
 
     - name: Restart bluesky-pds
       ansible.builtin.shell: >
-        {{ docker_bin }} compose -f "{{ stacks_dir }}/infra/docker-compose.yml" -p infra
+        {{ docker_bin }} compose -p infra
         restart bluesky-pds
       failed_when: false
 
