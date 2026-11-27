@@ -172,7 +172,7 @@
 						→ {it.until}{/if}</span
 				>
 				<span>{it.title}</span>
-				{#if it.note}<span class="muted"> — {it.note}</span>{/if}
+				{#if it.note}<span class="muted">{' — '}{it.note}</span>{/if}
 				{#if it.hi}<span class="hi">hi</span>{/if}
 				{#if it.lane}<span class="muted">[{it.lane}]</span>{/if}
 			</li>
