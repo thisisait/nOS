@@ -128,11 +128,21 @@ def traffic() -> dict:
             "SELECT n, COUNT(*) c FROM (SELECT COUNT(*) n FROM events "
             "WHERE type='cortex_stage_begin' AND ts > date('now','-7 days') "
             "GROUP BY actor_action_id) GROUP BY n ORDER BY n").fetchall()
+        # Who still calls Wing's PHP executor, and with what (row wing-tenants, ruled 2026-11-23: it retires
+        # on evidence). Counts, caller ids and opcode names only; never a payload.
+        callers = conn.execute(
+            "SELECT COALESCE(actor_id, '(none)') a, COUNT(DISTINCT actor_action_id) n FROM events "
+            "WHERE type='cortex_stage_begin' AND ts > date('now','-30 days') GROUP BY a ORDER BY n DESC, a").fetchall()
+        opcodes = conn.execute(
+            "SELECT COALESCE(task, '(none)') o, COUNT(*) n FROM events "
+            "WHERE type='cortex_stage_begin' AND ts > date('now','-30 days') GROUP BY o ORDER BY n DESC, o").fetchall()
         return {
             "readable": True,
             "stages_7d": rows["n"],
             "chains_7d": rows["chains"],
             "by_length": {str(r["n"]): r["c"] for r in lengths},
+            "calls_by_caller_30d": {r["a"]: r["n"] for r in callers},
+            "stages_by_opcode_30d": {r["o"]: r["n"] for r in opcodes},
         }
     except sqlite3.OperationalError as exc:
         return {"readable": False, "detail": str(exc)}
@@ -189,6 +199,10 @@ def render(r: dict) -> int:
         shape = ", ".join(f"{n}-stage×{c}" for n, c in sorted(t["by_length"].items()))
         print(f"\n  traffic    {t['stages_7d']} stage(s) in {t['chains_7d']} chain(s), 7d"
               f"{'  (' + shape + ')' if shape else ''}")
+        calls = ", ".join(f"{a} {n}" for a, n in t["calls_by_caller_30d"].items())
+        ops = ", ".join(f"{o} {n}" for o, n in t["stages_by_opcode_30d"].items())
+        print(f"  callers    {calls or 'none'}  (calls to the PHP executor, 30d)")
+        print(f"  opcodes    {ops or 'none'}  (stages, 30d)")
     else:
         print(f"\n  traffic    UNKNOWN — {t.get('detail','')[:70]}")
 
