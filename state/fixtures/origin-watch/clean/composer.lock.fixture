@@ -1,0 +1,33 @@
+{
+    "_readme": [
+        "Synthetic fixture for tools/origin-lock-report.py (row git-origin-watcher). Not a real project; the .fixture suffix keeps Dependabot off it."
+    ],
+    "content-hash": "FAKE_content_hash",
+    "packages": [
+        {
+            "name": "acme-fixture/alpha",
+            "version": "1.2.0",
+            "require": {
+                "php": ">=8.2",
+                "acme-fixture/beta": "^2.0"
+            }
+        },
+        {
+            "name": "acme-fixture/beta",
+            "version": "2.1.0",
+            "require": {
+                "php": ">=8.2",
+                "ext-json": "*"
+            }
+        }
+    ],
+    "packages-dev": [
+        {
+            "name": "acme-fixture/gamma-dev",
+            "version": "0.3.0",
+            "require": {
+                "acme-fixture/alpha": "^1.2"
+            }
+        }
+    ]
+}
