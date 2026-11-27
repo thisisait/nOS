@@ -22,47 +22,28 @@ use App\Model\SystemRepository;
  * client able to reach 127.0.0.1:9000 could forge registry rows
  * (subverting actionHealth's "URL must be in DB" SSRF guard) and write
  * any column via mass-assignment. Both holes closed:
- *   1. `systems` removed from $publicActions — POST now hits
- *      requireTokenAuth via BaseApiPresenter::startup(). GETs are
- *      restored to "public" via the runtime branch below.
+ *   1. POST /systems hits requireTokenAuth: since 2026-11-27 declared, not
+ *      overridden — `systems` is public for GET only ($publicMethods), which
+ *      BaseApiPresenter::startup() and bin/export-openapi.php both read.
  *   2. SystemRepository::upsert whitelists WRITABLE_FIELDS — clients
  *      can't write health_status, audit columns, or unknown columns.
  */
 final class HubPresenter extends BaseApiPresenter
 {
 	/**
-	 * `health` stays public (read-only probe surface).
-	 *
-	 * `systems` is intentionally NOT in this list anymore — the action
-	 * itself handles read-vs-write differently. GET paths short-circuit
-	 * to public; POST hits requireTokenAuth via parent startup BEFORE
-	 * the action runs (because we keep `systems` out of $publicActions).
+	 * GET /health and GET /systems[/<id>] are public; any other method on
+	 * them needs the bearer (BaseApiPresenter::startup, before the action).
+	 * A non-GET to /health without a bearer is 401, not 405 (ruled 2026-11-15).
 	 */
-	protected array $publicActions = ['health'];
+	protected array $publicActions = ['health', 'systems'];
+
+	protected array $publicMethods = ['GET'];
 
 	/** @inject */
 	public SystemRepository $systems;
 
 	/** @inject */
 	public HubCardRepository $cards;
-
-	public function startup(): void
-	{
-		// SEC-7: for GET on /systems, bypass requireTokenAuth (read is
-		// public). For POST, fall through to BaseApiPresenter::startup
-		// which runs requireTokenAuth. The action name `systems` is
-		// not in $publicActions; the read-public behavior is recovered
-		// by this method-aware override.
-		$method = $this->getHttpRequest()->getMethod();
-		if ($this->getAction() === 'systems' && $method === 'GET') {
-			// Mirror BaseApiPresenter's content-type setting; skip the
-			// token check entirely (read is public).
-			$this->getHttpResponse()->setContentType('application/json', 'utf-8');
-			\Nette\Application\UI\Presenter::startup();
-			return;
-		}
-		parent::startup();
-	}
 
 	public function actionSystems(?string $id = null): void
 	{

@@ -1046,12 +1046,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
-        '403':
-          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
-      security:
-        - BearerAuth: []
     post:
       summary: upsert a system [BEARER required]
       operationId: Hub_systems_post
@@ -1083,12 +1079,8 @@ paths:
           description: Bad request
         '401':
           description: Authentication required
-        '403':
-          description: 'The token''s scopes do not permit this call'
         '404':
           description: Not found
-      security:
-        - BearerAuth: []
       parameters:
         - name: id
           in: path
