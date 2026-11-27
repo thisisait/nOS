@@ -15,6 +15,12 @@
 - slug: advisory-covers-hosts-and-browsers
   parent: ''
   track: security
+- slug: advisory-matcher-all-tbd
+  parent: advisory-matcher-open-base-range
+  track: security
+- slug: advisory-matcher-open-base-range
+  parent: watch
+  track: security
 - slug: advisory-patrol
   parent: rel-018
   track: security
@@ -195,6 +201,9 @@
 - slug: bakeoff-scorecard-reader
   parent: end-user-tool-bakeoff
   track: agents
+- slug: batch-1127-review-tail
+  parent: security-readers-false-reds
+  track: platform
 - slug: bff-table-read-tier-gate
   parent: consulting-firm-deployment
   track: security
@@ -242,6 +251,9 @@
   track: platform
 - slug: body-tissue
   parent: body-plan
+  track: platform
+- slug: bonus-lanes-infra-cms-red
+  parent: forge
   track: platform
 - slug: bootstrap-fresh-linux
   parent: ''
@@ -840,6 +852,9 @@
 - slug: e2e-results-miss-setup-skips
   parent: forge
   track: platform
+- slug: e2e-row-edit-journey-names-the-decider-guard
+  parent: forge
+  track: agents
 - slug: ears-app-bundle
   parent: local-llm
   track: platform
@@ -906,6 +921,9 @@
 - slug: espocrm-autowiring-organelle
   parent: consulting-firm-deployment
   track: platform
+- slug: espocrm-oidc-fails-at-end
+  parent: spine-converge
+  track: platform
 - slug: espocrm-oidc-hands-off
   parent: consulting-firm-deployment
   track: platform
@@ -914,6 +932,9 @@
   track: platform
 - slug: estate-brand
   parent: gatehouse
+  track: face
+- slug: estate-brand-declare-plugins
+  parent: estate-brand
   track: face
 - slug: estate-brand-jellyfin
   parent: estate-brand
@@ -1036,7 +1057,7 @@
   parent: face-limbs
   track: face
 - slug: face-list-detail-space
-  parent: genui-vocabulary-from-openui
+  parent: iris-genui
   track: face
 - slug: face-loop-view
   parent: face
@@ -1278,6 +1299,9 @@
 - slug: gitlab-18-11-13-upgrade
   parent: forge
   track: security
+- slug: gitlab-trusted-certs-erofs-in-ci
+  parent: forge
+  track: platform
 - slug: grafana-check-trend-panel
   parent: grafana-check-trend-view
   track: agents
@@ -1380,7 +1404,13 @@
 - slug: immune-system
   parent: watch
   track: security
+- slug: immune-verdicts-door-gaps
+  parent: immune-apoptosis-regulator
+  track: security
 - slug: immune-verdicts-record
+  parent: immune-apoptosis-regulator
+  track: security
+- slug: immune-verdicts-write-path
   parent: immune-apoptosis-regulator
   track: security
 - slug: importer-isdoc
@@ -1476,6 +1506,33 @@
 - slug: iris-claims-unperformed-action
   parent: iris-subagents-finish
   track: agents
+- slug: iris-code-mode
+  parent: iris-speaks-cortex-lang
+  track: agents
+- slug: iris-code-mode-bench
+  parent: iris-code-mode
+  track: agents
+- slug: iris-code-mode-bench-decision
+  parent: iris-code-mode-bench
+  track: agents
+- slug: iris-code-mode-bench-evidence-every-turn
+  parent: iris-code-mode-bench
+  track: agents
+- slug: iris-code-mode-bench-render-checks
+  parent: iris-code-mode-bench
+  track: agents
+- slug: iris-code-mode-engines
+  parent: iris-code-mode
+  track: agents
+- slug: iris-code-mode-programs
+  parent: iris-code-mode
+  track: cortex
+- slug: iris-code-mode-reads
+  parent: iris-code-mode
+  track: agents
+- slug: iris-code-mode-write-card
+  parent: iris-code-mode
+  track: agents
 - slug: iris-dashboards-in-keap
   parent: iris-genui-workspace-poc
   track: face
@@ -1569,6 +1626,9 @@
 - slug: iris-place-here-or-new-tab
   parent: iris-genui
   track: agents
+- slug: iris-plan-tool-rows-in-cortex
+  parent: iris-code-mode-engines
+  track: agents
 - slug: iris-reads-red-status
   parent: iris-genui
   track: agents
@@ -1602,11 +1662,17 @@
 - slug: iris-transport-seam
   parent: pupil-web-remote
   track: agents
+- slug: iris-turn-token-ceiling
+  parent: iris-code-mode
+  track: agents
 - slug: iris-workspace-grows
   parent: wits-thalamus
   track: face
 - slug: iris-workspace-survives-restart
   parent: pupil-web-remote
+  track: agents
+- slug: iris-write-program-journeys-rest
+  parent: iris-code-mode-write-card
   track: agents
 - slug: isdoc-vision-crosscheck
   parent: consulting-firm-deployment
@@ -1698,6 +1764,9 @@
 - slug: keychain-asks-only-when-signing
   parent: keychain-asks-first
   track: platform
+- slug: kin-recognition-gate
+  parent: gatehouse
+  track: security
 - slug: kiwix-init-zim-fails-silently
   parent: ''
   track: platform
@@ -2024,6 +2093,9 @@
   track: platform
 - slug: medulla-thins-ansible
   parent: medulla
+  track: platform
+- slug: medulla-token-stale-after-blank
+  parent: e2e-lifecycle
   track: platform
 - slug: memory-direction
   parent: body-plan
@@ -2355,6 +2427,9 @@
 - slug: phenotype-not-organism-type
   parent: phenotype
   track: platform
+- slug: pins-line-patches-2026-11
+  parent: watch
+  track: security
 - slug: piped-converge-hides-prompts
   parent: ''
   track: release
@@ -2495,6 +2570,9 @@
   track: platform
 - slug: prom-rules-never-reload
   parent: ''
+  track: platform
+- slug: prometheus-runbook-urls
+  parent: security-readers-false-reds
   track: platform
 - slug: prompt-echoes-password-prefix
   parent: ''
@@ -2640,9 +2718,15 @@
 - slug: remote-inference-weak-host
   parent: wits-habitat
   track: cortex
+- slug: removal-import-start-and-system-units
+  parent: spine-converge
+  track: platform
 - slug: repo-body-plan
   parent: spine-law
   track: platform
+- slug: repo-importer-reads-git-head
+  parent: repos-importer
+  track: digest
 - slug: repo-mirror-knowledge
   parent: shared-workstation
   track: cortex
@@ -2709,11 +2793,17 @@
 - slug: rustfs-1-0-3-upgrade
   parent: rel-018
   track: security
+- slug: rustfs-root-403-after-1-0-6
+  parent: keel
+  track: platform
 - slug: santa-is-an-organ
   parent: workload-allowlist
   track: security
 - slug: santa-monitor
   parent: workload-allowlist
+  track: security
+- slug: santa-status-reads-rotated-logs
+  parent: watch
   track: security
 - slug: scan-dispositions-sidecar
   parent: sec-queue-authorship
@@ -2814,6 +2904,15 @@
 - slug: secrets-at-rest
   parent: vault
   track: security
+- slug: security-readers-false-reds
+  parent: watch
+  track: platform
+- slug: security-readers-join-by-cve
+  parent: security-readers-false-reds
+  track: platform
+- slug: security-readers-report-supersede
+  parent: security-readers-false-reds
+  track: platform
 - slug: security-review-1103
   parent: watch
   track: security
@@ -2865,6 +2964,9 @@
 - slug: smoke-strict-default-is-200
   parent: ''
   track: platform
+- slug: spacetimedb-rem-333-upgrade
+  parent: watch
+  track: security
 - slug: specialization-packs
   parent: rel-017
   track: agents
@@ -3150,6 +3252,9 @@
 - slug: unknown-tag-is-refused
   parent: ''
   track: platform
+- slug: upgrade-stops-guarded-at-converge
+  parent: keel
+  track: security
 - slug: v0-1
   parent: ''
   track: release
@@ -3287,6 +3392,9 @@
   track: platform
 - slug: wing-events-ts-unvalidated
   parent: ''
+  track: security
+- slug: wing-hmac-suite-calls-checkhmac
+  parent: suite-prune-one-site-tests
   track: security
 - slug: wing-hub-honesty
   parent: ''
