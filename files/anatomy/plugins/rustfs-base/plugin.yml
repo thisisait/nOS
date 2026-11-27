@@ -11,6 +11,7 @@
 # restore, Outline) speaks to the loopback API port (rustfs_api_port). So the console sits
 # behind forward-auth, Tier 1 (row lan-rustfs-spacetimedb-sso), and RustFS's own
 # access-key login stays behind it. Native OIDC (upstream alpha.91+) is queued.
+# The edge sends `/` to `/rustfs/console/` (RustFS answers 403 at the bare root).
 # =============================================================================
 
 name: rustfs-base

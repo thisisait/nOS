@@ -6,7 +6,7 @@
 
 | | |
 |---|---|
-| **URL** | `https://fs.dev.local` — the **console** only (`rustfs_domain`). The S3 API has no public route; it is on `127.0.0.1:9010`. |
+| **URL** | `https://fs.dev.local` — the **console** only (`rustfs_domain`); the edge sends `/` to `/rustfs/console/`. The S3 API has no public route; it is on `127.0.0.1:9010`. |
 | **Port** | `9010` (S3 API on host → `9000` in container), `9001` (console). Both published on `127.0.0.1` only. |
 | **Stack** | `iiab` |
 | **Toggle** | `install_rustfs: true` |

@@ -128,6 +128,19 @@ http:
         permanent: false
 {% endif %}
 
+{% if install_rustfs | default(false) | bool %}
+    # ── RustFS: the bare root to the console (row rustfs-root-403-after-1-0-6) ──
+    # RustFS answers 403 at / and serves the console SPA under /rustfs/console/;
+    # the nginx door redirects `location = /` the same way. The root only: every
+    # other path passes. Attached after authentik@file (services.yml.j2), so an
+    # anonymous request still meets Authentik first.
+    rustfs-console-root:
+      redirectRegex:
+        regex: "^https?://([^/]+)/?$"
+        replacement: "https://${1}/rustfs/console/"
+        permanent: false
+{% endif %}
+
   # ── Servers transports ────────────────────────────────────────────────
   serversTransports:
     # Skip cert verify for upstream HTTPS — used when reaching Authentik,
