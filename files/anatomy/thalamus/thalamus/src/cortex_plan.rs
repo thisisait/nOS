@@ -65,7 +65,8 @@ pub fn route(text: &str, intents: &[String]) -> (&'static str, Option<&'static s
     let writes = hits(WRITE);
     if !writes.is_empty() {
         // not listed: today's tools turn, its route row too (intent null)
-        return if intents.iter().any(|i| i == "write-rows") { ("cortex", Some("write-rows"), writes) } else { ("tools", None, writes) };
+        let listed = intents.iter().any(|i| i == "write-rows") && hits(COLUMN).is_empty(); // a column edit is not a row write
+        return if listed { ("cortex", Some("write-rows"), writes) } else { ("tools", None, writes) };
     }
     for (intent, stems) in INTENT_WORDS {
         let m = hits(stems);
