@@ -113,6 +113,15 @@ by patch (`git cherry`): branches land here by cherry-pick. It never removes the
 it runs from, a parent of a kept worktree, or a branch ref; an unreadable base exits 2 and removes nothing.
 Never `git worktree remove` by hand: it deletes every worktree nested inside the one removed.
 
+## `nos panic` — cut the edge of what a critical advisory hits
+
+`nos panic` (or `--plan`) reads the advisory patrol's kept report (`~/.nos/advisory/last.json`) and lists every
+KEV-listed or CRITICAL match no judgement covers, on an app with a manifest router: the app, the advisory, the
+fixed version, the sanction plan and its lift line. It writes nothing. `nos panic --confirm` arms
+`tools/nos-sanction.py <id> --level edge` for each (the app's routers answer 403; data untouched) and prints the
+sanctions in force. A missing, broken, blind or 48 h old report is UNKNOWN and arms nothing. The door (Authentik,
+Traefik, Wing, the face) is never cut. Lift one with `tools/nos-sanction.py <id> --lift --confirm`.
+
 ## `nos push` — push this checkout (not a converge)
 
 `nos push [git push args]` runs `tools/nos-push` from `$NOS_SRC` on the checkout you stand in: the push,
