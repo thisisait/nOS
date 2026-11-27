@@ -151,6 +151,7 @@ posts, restarts or renders something.
 - `workload-digest-record.py` — main.yml post_task: writes the record workload-digest-status.py reads (image ref, ID, repo digests, source commit of local builds).
 - `operator-tasks.py` — Pulse job: ring the operator once (Wing inbox, HIGH to ntfy) when a task in `state/operator-tasks.yml` has its condition reader turn true; `--apply` writes, default dry run.
 - `rem-dispose.py` — Write a REM disposition into the operator's `~/.nos/security` notebook; never touches the scanner's queue.
+- `rem-retire.py` — List the pending REM rows whose recorded fix already runs (discovery-scan's probe B); `--confirm`, the operator's, resolves them through rem-dispose.py with the evidence. Never from a converge, Pulse or the loop.
 - `task-types-render.py` — Render AGENTS.md (the task-type contract) from state/genome/task-types.yml.
 - `vendor-keap-contracts.py` — Re-vendor KEAP's table schema (pinned to keap_repo_ref) for the schema-pin gate.
 - `raw-archive-probe.py` — Does the S3 endpoint honor Object Lock COMPLIANCE, or only accept the headers? The live run PUTs one locked object that cannot be deleted before it expires.
