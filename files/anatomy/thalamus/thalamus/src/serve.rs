@@ -596,7 +596,8 @@ thread_local! {
 }
 
 /// The tools that ask an approval of the person, as `pending` names them.
-const ASKING: [&str; 10] = ["propose_row_edit", "propose_row_insert", "propose_row_delete", "propose_table_create", "propose_column_add", "face_act", "start_agent", "propose_app", "show_report", "propose_loop"];
+const ASKING: [&str; 11] = ["propose_row_edit", "propose_row_insert", "propose_row_delete", "propose_table_create", "propose_column_add", "face_act", "start_agent", "propose_app", "show_report", "propose_loop",
+    "cortex_program"];
 /// The conversation file's byte cap: a replay of it rides one line of at most 1 MiB.
 const REPLAY_BYTES: usize = 768 << 10;
 /// How many of a resumed session's messages its model hears again.
@@ -1726,6 +1727,9 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             }
             if *tool == "face_act" {
                 o.acting.insert(id.clone(), rec);
+            } else if *tool == "cortex_program" {
+                // its decision and result carry the program id, as the request does
+                o.acting.insert(id.clone(), json!({"program": rec["program"]}));
             }
             // start_agent's ledger row holds no prompt: the card the person was shown is the start. show_report's names the run.
             if let (&"start_agent" | &"show_report", Component::ActionApproval(a)) = (tool, &component) {
@@ -2056,8 +2060,12 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         let tool = Some(o.pending.remove(approval).unwrap_or("propose_row_edit"));
         let acting = o.acting.remove(approval);
         let said = if d == Decision::Approve { "approve" } else { "reject" };
-        let id = match self.record(o, Kind::ApprovalDecision, tool,
-                                   json!({"approval": approval, "decision": said, "note": note, "peer": peer})) {
+        let program = acting.as_ref().filter(|_| tool == Some("cortex_program")).map(|a| a["program"].clone());
+        let mut asked = json!({"approval": approval, "decision": said, "note": note, "peer": peer});
+        if let Some(p) = &program {
+            asked["program"] = p.clone();
+        }
+        let id = match self.record(o, Kind::ApprovalDecision, tool, asked) {
             Ok(id) => id,
             Err(why) => return refuse(out, &format!("the decision was not recorded, so nothing is written: {why}")),
         };
@@ -2183,6 +2191,21 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                 Err(why) => (format!("Approved, but no column was added: {why}"), json!({"approval": approval, "error": why}),
                              format!("approved, but no column was added: {why}")),
             },
+            Decision::Approve if tool == Some("cortex_program") => {
+                let (done, failed, rest) = self.commit_program(who, id);
+                let ids = |rows: &Written| rows.iter().map(|r| r.1.clone()).collect::<Vec<_>>();
+                let rec = json!({"approval": approval, "written": ids(&done), "failed": failed.as_ref().map(|f| &f.0),
+                                 "error": failed.as_ref().map(|f| &f.1), "not_attempted": rest});
+                let said = match &failed {
+                    None => format!("Approved: {} rows written: {}.", done.len(), ids(&done).join(", ")),
+                    Some((_, why)) if done.is_empty() && rest.is_empty() => format!("Approved, but nothing was written: {why}"),
+                    Some((at, why)) => format!("Approved, but the program stopped at {at}: {why}. Written: {}; failed: {at}; not attempted: {}.",
+                                               if done.is_empty() { "none".into() } else { ids(&done).join(", ") },
+                                               if rest.is_empty() { "none".into() } else { rest.join(", ") }),
+                };
+                written = done;
+                (said.clone(), rec, said)
+            }
             Decision::Approve => match self.commit_rows(who, id) {
                 Ok(rows) if rows.len() == 1 => {
                     let row = rows[0].1.clone();
@@ -2207,6 +2230,10 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                 }
             },
         };
+        let mut result = result;
+        if let Some(p) = program {
+            result["program"] = p;
+        }
         let _ = self.record(o, Kind::ToolResult, tool, result);
         for (table, row) in written {
             changed(out, o, &table, &row);
@@ -2276,6 +2303,66 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             (RowOp::Delete, Some(row), None) => self.delete(who, &a.table, &row, a.old).map(|r| vec![(a.table, r)]).map_err(none),
             _ => Err(none("the approval is of no write shape; nothing written".into())),
         }
+    }
+
+    /// A program card's writes (row iris-code-mode-write-card): exactly the request row the thalamus recorded,
+    /// nothing evaluated again. Preflight first: each table still shown, each target row's old cells as the card
+    /// showed them; any difference writes nothing. Then in card order, stopping at the first failure with no undo.
+    /// (written, the write that failed and why, the writes not attempted); a preflight refusal fails the first.
+    fn commit_program(&self, who: &Person, decision: i64) -> (Written, Option<(String, String)>, Vec<String>) {
+        let all = match self.ledger.lock().map_err(|_| "ledger poisoned".to_string()).and_then(|l| l.approved_program(decision)) {
+            Ok((actor, _)) if actor != format!("user:{}", who.uid()) => Err("the approval belongs to another person".to_string()),
+            Ok((_, all)) => Ok(all),
+            Err(e) => Err(e),
+        };
+        let label = |a: &crate::ledger::Approved| a.row_id.clone().unwrap_or_else(|| format!("the new row of {}", a.table));
+        let preflight = all.and_then(|all| {
+            let mut read: HashMap<String, Vec<(String, Map<String, Value>)>> = HashMap::new();
+            for a in &all {
+                if a.table == VERDICTS {
+                    return Err(format!("{VERDICTS} is written only by the operator's face edit; nothing written"));
+                }
+                if !read.contains_key(&a.table) {
+                    // the septum and KEAP's tier, as the person, now: a table no longer shown is not written
+                    self.table_info(who, &a.table).map_err(|e| format!("{e}; nothing written"))?;
+                    read.insert(a.table.clone(), self.rows(who, &a.table)?);
+                }
+                let Some(id) = &a.row_id else { continue };
+                let now = read[&a.table].iter().find(|(r, _)| r == id).map(|(_, v)| v)
+                    .ok_or(format!("row {id} is gone since the card; nothing written"))?;
+                let moved = if a.op == RowOp::Delete {
+                    let now = shown_values(now.clone());
+                    now.keys().chain(a.old.keys()).find(|k| now.get(*k) != a.old.get(*k)).cloned()
+                } else {
+                    a.old.iter().find(|(k, v)| now.get(*k).unwrap_or(&Value::Null) != *v).map(|(k, _)| k.clone())
+                };
+                if let Some(k) = moved {
+                    return Err(format!("cell {k} of row {id} changed since the card; nothing written"));
+                }
+            }
+            Ok(all)
+        });
+        let all = match preflight {
+            Ok(all) => all,
+            Err(why) => return (vec![], Some(("the preflight".into(), why)), vec![]),
+        };
+        let mut done = vec![];
+        let labels: Vec<String> = all.iter().map(label).collect();
+        for (i, a) in all.into_iter().enumerate() {
+            let at = labels[i].clone();
+            let table = a.table.clone();
+            let r = match (a.op, a.row_id) {
+                (RowOp::Update, Some(row)) => self.update(who, &a.table, &row, a.values, a.old),
+                (RowOp::Delete, Some(row)) => self.delete(who, &a.table, &row, a.old),
+                (RowOp::Insert, None) => self.insert(who, &a.table, a.values),
+                _ => Err("the write is of no program shape".into()),
+            };
+            match r {
+                Ok(row) => done.push((table, row)),
+                Err(why) => return (done, Some((at, why)), labels[i + 1..].to_vec()),
+            }
+        }
+        (done, None, vec![])
     }
 
     /// One new row; KEAP mints the id. A body with one would overwrite that row (routes.ts upsert).
