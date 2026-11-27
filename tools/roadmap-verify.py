@@ -62,9 +62,9 @@ REPO = Path(__file__).resolve().parents[1]
 PROBES = REPO / "state/roadmap-probes.yml"
 #: NOS_ROADMAP_TABLE_ID overrides for an estate whose roadmap table was minted
 #: through the agent door (id == slug, e.g. "roadmap"); KEAP_API_URL for a
-#: non-default loopback publish. Defaults are the operator estate's values.
-TABLE = os.environ.get("NOS_ROADMAP_TABLE_ID", "2d498264-bc9a-4324-9935-489e5e4d92f3")
-from keap_api import human_base, human_headers, paged, write_row  # noqa: E402 — sibling helper in tools/
+#: non-default loopback publish. Else the config layers' keap_roadmap_table_id (keap_api.roadmap_table).
+from keap_api import ROADMAP_UNNAMED, human_base, human_headers, paged, roadmap_table, write_row  # noqa: E402 — sibling helper in tools/
+TABLE = roadmap_table()
 
 KEAP = human_base()   # the identity outpost when configured, else the loopback publish
 
@@ -174,6 +174,9 @@ def main() -> int:
     ap.add_argument("--timeout", type=int, default=120)
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
+    if not TABLE:
+        print(ROADMAP_UNNAMED, file=sys.stderr)
+        return 2
 
     if args.all:
         if args.slug or args.by or args.unverifiable:

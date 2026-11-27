@@ -52,8 +52,8 @@ import urllib.error
 import urllib.request
 
 KEAP = "http://127.0.0.1:8091"
-ROADMAP = "2d498264-bc9a-4324-9935-489e5e4d92f3"
-from keap_api import human_headers, paged  # noqa: E402 — sibling helper in tools/
+from keap_api import ROADMAP_UNNAMED, human_headers, paged, roadmap_table  # noqa: E402 — sibling helper in tools/
+ROADMAP = roadmap_table()  # "" when nothing names it: --table is then required
 
 #: X-Authentik-* admin identity + the SEC-02 x-keap-proxy-secret (resolved once
 #: by keap_api). Without the secret every /api call here 401s since KEAP P1.
@@ -98,6 +98,9 @@ def main() -> int:
     ap.add_argument("--key", default="slug", help="column holding the business key")
     ap.add_argument("--apply", action="store_true", help="write (default: dry run)")
     args = ap.parse_args()
+    if not args.table:
+        print(ROADMAP_UNNAMED + " (or pass --table)", file=sys.stderr)
+        return 2
 
     human = f"{KEAP}/api/tables/{args.table}"
     agent = f"{KEAP}/agent/v1/tables/{args.table}"
