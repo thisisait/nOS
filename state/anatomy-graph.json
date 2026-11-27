@@ -8678,7 +8678,7 @@
       "from": "reader:red-status",
       "to": "doctrine:ssot/doctrine/immune-system.md#4.1",
       "kind": "governed_by",
-      "via": "cited at tools/red-status.py:444",
+      "via": "cited at tools/red-status.py:445",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"
@@ -8687,7 +8687,7 @@
       "from": "reader:red-status",
       "to": "doctrine:ssot/doctrine/immune-system.md#7",
       "kind": "governed_by",
-      "via": "cited at tools/red-status.py:931",
+      "via": "cited at tools/red-status.py:932",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"

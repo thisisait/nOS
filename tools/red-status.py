@@ -49,6 +49,7 @@ import hashlib
 import json
 import os
 import pathlib
+import re
 import sqlite3
 import subprocess
 import sys
@@ -1339,17 +1340,40 @@ def collect() -> dict:
     return report
 
 
-def reds(report: dict) -> list[str]:
-    """One line per red. The order is the order to act in."""
+def _rid(*parts: object) -> str:
+    """A red's id part: lower case, a path reduced to its name (no $HOME), anything else to `-`; at most 120."""
+    out = []
+    for part in parts:
+        words = [w.rsplit("/", 1)[-1] for w in str(part).split()]
+        out.append(re.sub(r"[^a-z0-9._-]+", "-", "-".join(words).lower()).strip("-"))
+    return ":".join(out)[:120]
+
+
+def reds(report: dict, ids: list[str] | None = None) -> list[str]:
+    """One line per red. The order is the order to act in. With `ids`, one id per line in the same order
+    (row red-status-red-ids): `<source>[:<subject>]`, never an age, count or free text, the same on every run
+    while the same thing is red; a repeated id gets `~<n>`."""
     out: list[str] = []
-    # First: a starved VM is the cause of every timeout below it.
-    out.extend(report.get("docker_pressure") or [])
-    out.extend(report.get("crash_loops") or [])
-    out.extend(report.get("stray_set_points") or [])
+    seen: dict[str, int] = {}
+
+    def add(rid: str, line: str) -> None:
+        n = seen[rid] = seen.get(rid, 0) + 1
+        out.append(line)
+        if ids is not None:
+            ids.append(rid if n == 1 else f"{rid}~{n}")
+
+    # First: a starved VM is the cause of every timeout below it. Sibling readers' lines carry no id of their
+    # own, so each takes its source's.
+    for line in report.get("docker_pressure") or []:
+        add("docker-pressure", line)
+    for line in report.get("crash_loops") or []:
+        add("crash-loop", line)
+    for line in report.get("stray_set_points") or []:
+        add("set-point", line)
     chain = report.get("audit_chain")
     chain_broken = bool(chain and chain.get("ok") is False)
     if chain_broken:
-        out.append(
+        add("audit-chain",
             f"audit chain BROKEN — {chain.get('unsigned')} unsigned of "
             f"{chain.get('checked')} (verified {chain['age']})"
         )
@@ -1370,7 +1394,7 @@ def reds(report: dict) -> list[str]:
             job_when = _parse_iso(job.get("fired_at"))
             newer = drill_when and job_when and drill_when > job_when
             if newer and not drill.get("failed") and not drill.get("stale"):
-                out.append(
+                add(_rid("job", job["job"]),
                     f"{job['job']} last SCHEDULED run failed ({job['age']}) but the "
                     f"drill has passed since — backup-verify.json says "
                     f"{drill['artifacts']}/{drill['artifacts']} ok for backup set "
@@ -1378,25 +1402,25 @@ def reds(report: dict) -> list[str]:
                     f"scheduled run will clear the row."
                 )
                 continue
-        out.append(
+        add(_rid("job", job["job"]),
             f"{job['job']} failing rc={job['exit_code']} ({job['age']}) — {job['last_line']}"
-        )
+            )
     for job in (report.get("schedulers") or {}).get("both", []):
-        out.append(f"{job} fired by both schedulers in 24 h (Python Pulse and the medulla) — "
+        add(_rid("scheduler-both", job), f"{job} fired by both schedulers in 24 h (Python Pulse and the medulla) — "
                    "the split (pulse_medulla_jobs) did not hold, or a manual `medulla pulse run` fired it")
     for need, jobs in (report.get("held_needs") or {}).items():
-        out.append(f"{len(jobs)} job(s) held: {need} — {', '.join(jobs)} "
+        add(_rid("held", need), f"{len(jobs)} job(s) held: {need} — {', '.join(jobs)} "
                    "(tools/job_readiness.py)")
     scan = report.get("security_scan")
     if scan and scan.get("scan_failed"):
-        out.append(
+        add("scan-failed",
             f"security scan: {len(scan['scan_failed'])} component(s) scan_failed "
             f"({', '.join(scan['scan_failed'])}); last full scan {scan['age']}"
         )
     elif scan and scan.get("stale"):
-        out.append(f"security scan stale — last full scan {scan['age']}")
+        add("security-scan-stale", f"security scan stale — last full scan {scan['age']}")
     if scan and scan.get("promotion_behind"):
-        out.append(
+        add("security-notebook-unpromoted",
             f"security notebook not promoted — the scanner is at cycle {scan['cycle']} "
             f"({scan['age']}), the committed copy at {scan['promoted_cycle']} "
             f"({scan['promoted_age']}); a fresh checkout reads the older one"
@@ -1405,43 +1429,44 @@ def reds(report: dict) -> list[str]:
     if ad and ad["unjudged"]:
         shown = "; ".join(f"{u['subject']} {u['id']} (fixed {u['fixed'] or 'none'})" for u in ad["unjudged"][:6])
         more = f" +{len(ad['unjudged']) - 6}" if len(ad["unjudged"]) > 6 else ""
-        out.append(f"advisories: {len(ad['unjudged'])} unjudged HIGH/CRITICAL/KEV — {shown}{more} "
+        add("advisories-unjudged", f"advisories: {len(ad['unjudged'])} unjudged HIGH/CRITICAL/KEV — {shown}{more} "
                    "(tools/advisory-status.py; judge in state/genome/advisory-judgements.yml)")
     if ad and ad["stale"]:
-        out.append(f"advisory patrol stale — last run {ad['age']}")
+        add("advisory-patrol-stale", f"advisory patrol stale — last run {ad['age']}")
     for c in report.get("unreviewed_cells") or []:
         if "unreadable" in c:
-            out.append(f"immune cell {c['cell']}: {c['unreadable']} unreadable record(s) in the last 26 h of prepush-scores.jsonl")
+            add(_rid("unreviewed-cell", c["cell"], "unreadable"), f"immune cell {c['cell']}: {c['unreadable']} unreadable record(s) in the last 26 h of prepush-scores.jsonl")
         elif c["state"] == "UNKNOWN":
-            out.append(f"immune cell {c['cell']} ran without its {c['file']} ({c['runs']} run(s), last {c['last_ts']})")
+            add(_rid("unreviewed-cell", c["cell"], "no-file"), f"immune cell {c['cell']} ran without its {c['file']} ({c['runs']} run(s), last {c['last_ts']})")
         else:
-            out.append(f"immune cell {c['cell']} ran an unreviewed {c['file']} (sha256 {c['sha256'][:12]}…, "
+            add(_rid("unreviewed-cell", c["cell"], c["sha256"][:7]), f"immune cell {c['cell']} ran an unreviewed {c['file']} (sha256 {c['sha256'][:12]}…, "
                        f"{c['runs']} run(s), last {c['last_ts']}): its scores are not evidence until it is committed")
     rg = report.get("regrades")
     if rg:
         shown = "; ".join(f"{r['id']} {r['from']}->{r['to']} by {r['by']}" for r in rg[:4])
         more = f" +{len(rg) - 4}" if len(rg) > 4 else ""
-        out.append(f"remediation: {len(rg)} REGRADE — {shown}{more} "
+        add("regrade", f"remediation: {len(rg)} REGRADE — {shown}{more} "
                    "(tools/rem-status.py; a proposal: apply it in the queue)")
-    out.extend(f"host: {line} — tools/host-patch-status.py" for line in report.get("host_patch") or [])
+    for line in report.get("host_patch") or []:
+        add("host-patch", f"host: {line} — tools/host-patch-status.py")
     bk = report.get("backups")
     absent = (bk or {}).get("absent")
     if absent == "backrest":
-        out.append("Backrest without copy #1 is unsupported — its nos-dumps plan reads copy #1's staging "
+        add("backup:backrest-without-copy1", "Backrest without copy #1 is unsupported — its nos-dumps plan reads copy #1's staging "
                    "(empty here); set install_backrest: false and use configure_backup")
     elif absent == "none":
-        out.append("no backup at all — copy #1 not installed (no RustFS) and configure_backup is off")
+        add("backup:none", "no backup at all — copy #1 not installed (no RustFS) and configure_backup is off")
     elif absent == "never-ran":
-        out.append(f"no direct restic backup recorded — {BACKUP_RESTIC_STATUS} absent (run a converge with configure_backup)")
+        add("backup:restic-never-ran", f"no direct restic backup recorded — {BACKUP_RESTIC_STATUS} absent (run a converge with configure_backup)")
     if bk and bk.get("failed"):
-        out.append(f"backup sources failed: {', '.join(str(f) for f in bk['failed'])}")
+        add("backup:failed", f"backup sources failed: {', '.join(str(f) for f in bk['failed'])}")
     elif bk and bk.get("stale"):
-        out.append(f"backup stale — newest source {bk['age']}")
+        add("backup:stale", f"backup stale — newest source {bk['age']}")
     if bk and bk.get("shrank"):
-        out.append(f"backup dump shrank to under a tenth (previous kept as <name>.prev): {'; '.join(bk['shrank'])}")
+        add("backup:shrank", f"backup dump shrank to under a tenth (previous kept as <name>.prev): {'; '.join(bk['shrank'])}")
     drift = (report.get("digest_drift") or {}).get("drift") or []
     if drift:
-        out.append(
+        add("digest-drift",
             f"{len(drift)} container(s) run an image the last converge did not record "
             f"({report['digest_drift'].get('recorded_at')}): "
             + ", ".join(f"{d['container']} {d['recorded_id'][7:19]}→{d['live_id'][7:19]}"
@@ -1449,18 +1474,18 @@ def reds(report: dict) -> list[str]:
             + " — tools/workload-digest-status.py"
         )
     for frag in report.get("orphan_extensions") or []:
-        out.append(f"compose extension without its service, left out of `up`: {frag}")
+        add(_rid("orphan-extension", frag), f"compose extension without its service, left out of `up`: {frag}")
     if report.get("undeclared"):
         items = report["undeclared"]
-        out.append(f"{len(items)} running/persisted on the host and declared nowhere "
+        add("undeclared", f"{len(items)} running/persisted on the host and declared nowhere "
                    f"(tools/undeclared-status.py): " + ", ".join(items[:8])
                    + (" …" if len(items) > 8 else ""))
     if report.get("santa"):
-        out.append("Santa: " + "; ".join(report["santa"]) + " — tools/santa-status.py")
+        add("santa", "Santa: " + "; ".join(report["santa"]) + " — tools/santa-status.py")
     if report.get("e2e"):
-        out.append("e2e: " + "; ".join(report["e2e"]) + " — tools/e2e-status.py")
+        add("e2e", "e2e: " + "; ".join(report["e2e"]) + " — tools/e2e-status.py")
     for doc in report.get("doctrine_reviews") or []:
-        out.append(f"doctrine review overdue: ssot/doctrine/{doc['doc']} last reviewed "
+        add(_rid("doctrine-review", doc["doc"]), f"doctrine review overdue: ssot/doctrine/{doc['doc']} last reviewed "
                    f"{doc['last_reviewed']}, due {doc['due']} — review it, then move last_reviewed")
     pulse = report.get("pulse") or {}
     overdue = report.get("overdue_jobs") or []
@@ -1468,11 +1493,11 @@ def reds(report: dict) -> list[str]:
     silent = [c for c in report.get("silent_cells") or [] if c["job"] not in {j["job"] for j in overdue}]
     if pulse.get("running") is False and (overdue or silent):
         # One cause, one line; the per-job lines return once Pulse runs.
-        out.append(f"Pulse is not running ({pulse['how']}) — {len(overdue)} job(s) due "
+        add("pulse-down", f"Pulse is not running ({pulse['how']}) — {len(overdue)} job(s) due "
                    f"and not fired, {len(silent)} more immune cell(s) silent; each is listed again once it runs")
         overdue, silent = [], []
     for job in overdue:
-        out.append(
+        add(_rid("overdue", job["job"]),
             f"{job['job']} was due {job['due_at']} and did not fire "
             f"(overdue {job['overdue_by']}, schedule `{job['schedule']}`)"
         )
@@ -1488,19 +1513,19 @@ def reds(report: dict) -> list[str]:
         passed = [r for r in rows
                   if r["state"] not in ("unjudged", "indeterminate")]
         if passed:
-            out.append(
+            add("loop-unlanded:passed",
                 f"{len(passed)} loop proposal(s) passed the judges and never "
                 f"reached the tree: "
                 + ", ".join(f"{r['weakness_id']} [{r['state']}]" for r in passed[:4])
             )
         if declined:
-            out.append(
+            add("loop-unlanded:indeterminate",
                 f"{len(declined)} loop proposal(s) judged indeterminate on a "
                 f"tree that has since moved — the driver's to re-judge: "
                 + ", ".join(r["weakness_id"] for r in declined[:4])
             )
         if unjudged:
-            out.append(
+            add("loop-unlanded:unjudged",
                 f"{len(unjudged)} loop proposal(s) filed and never judged: "
                 + ", ".join(r["weakness_id"]
                             + (" [operator: the driver holds it]" if r.get("requires_operator") else "")
@@ -1531,12 +1556,12 @@ def reds(report: dict) -> list[str]:
                 f". A further {stale} were true when sent and are provably not "
                 "now — nothing marks them read, so they will sit here for ever"
             )
-        out.append(line)
+        add("inbox-critical-high", line)
     for orphan in report.get("orphaned_sessions", []):
         # Name the model_uri: an orphan on `cli:unrecorded` cannot even say
         # which backend was answering when it stopped, which is a second fact
         # the operator needs and the first one hides.
-        out.append(
+        add(_rid("orphan-session", orphan["uuid"][:8]),
             f"agent session {orphan['agent']} {orphan['uuid'][:8]} still "
             f"'running' after {orphan['hours']} h ({orphan['age']}) — "
             f"trigger={orphan['trigger']}, model={orphan['model_uri'] or 'unrecorded'}; "
@@ -1546,7 +1571,7 @@ def reds(report: dict) -> list[str]:
         for f in failures:
             streak = (f" ×{f['streak']} since {f['red_since'][:10]}"
                       if f.get("streak", 0) > 1 else "")
-            out.append(
+            add(_rid("ci", branch, f["workflow"]),
                 f"CI {f['workflow']} on {branch} is {f['conclusion']}{streak} "
                 f"({f['sha']}, {_age(_parse_iso(f['at']))}) — newest run of that "
                 "workflow, so this is the branch's state, not one bad run"
@@ -1562,14 +1587,14 @@ def reds(report: dict) -> list[str]:
         if dep.get("fixture_alerts"):
             line += (f" (+{dep['fixture_alerts']} against {FIXTURE_MANIFEST_PREFIX}"
                      "** — test input, not shipped)")
-        out.append(line)
+        add("dependabot", line)
     for c in silent:
-        out.append(f"immune cell {c['cell']} silent past its {c['every_hours']} h heartbeat "
+        add(_rid("silent-cell", c["cell"]), f"immune cell {c['cell']} silent past its {c['every_hours']} h heartbeat "
                    f"(last report {c['age']}) — a killed or rewritten cell reads exactly like this")
     for c in report.get("held_cells", []):
-        out.append(f"immune cell {c['cell']} is paused ({c['reason']}) — it reports nothing while held")
+        add(_rid("held-cell", c["cell"]), f"immune cell {c['cell']} is paused ({c['reason']}) — it reports nothing while held")
     for missing in report.get("sources_missing", []):
-        out.append(f"source unreadable, so its state is UNKNOWN not green: {missing}")
+        add(_rid("source-unreadable", missing.split(" (")[0]), f"source unreadable, so its state is UNKNOWN not green: {missing}")
     return out
 
 
@@ -1618,10 +1643,12 @@ def main() -> int:
     args = ap.parse_args()
 
     report = collect()
-    lines = reds(report)
+    red_ids: list[str] = []
+    lines = reds(report, red_ids)
     holds = hold_lines(report)
     report["red_count"] = len(lines)
     report["reds"] = lines
+    report["red_ids"] = red_ids
     report["hold_count"] = len(holds)
     report["holds"] = holds
     report["verdict"], report["why"], report["counts"] = verdict(report, lines)

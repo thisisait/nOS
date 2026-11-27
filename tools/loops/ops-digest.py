@@ -24,7 +24,6 @@ import calendar
 import importlib.util
 import json
 import os
-import re
 import subprocess
 import sys
 import time
@@ -67,14 +66,6 @@ def ask(argv: tuple[str, ...], tools: Path = REPO / "tools", timeout: int = TIME
     return {"state": "OK", "exit_code": r.returncode, "doc": doc}
 
 
-def red_keys(lines: list) -> list[str]:
-    """One stable key per red line: its subject, numbers masked.
-    ponytail: red-status has no id per red, and its lines carry ages ("(3 h)") that move every run. The subject
-    before the first " (" with digits masked is the heuristic; a count that changes inside one subject is not a
-    new red. Upgrade: red-status emits an id per red."""
-    return sorted({re.sub(r"\d+", "#", str(line).split(" (")[0]).strip() for line in lines})
-
-
 def digest(now: str, replies: dict, prev: dict | None) -> dict:
     readers, unknown = {}, []
     for rid, argv, lists in READERS:
@@ -97,12 +88,18 @@ def digest(now: str, replies: dict, prev: dict | None) -> dict:
         # red-status lists its unreadable sources last in `reds`; they are UNKNOWN, not red (its own verdict()).
         d["reds"] = red["reds"][:len(red["reds"]) - len(missing)] if missing else red["reds"]
         d["unreadable_sources"] = missing
-        d["red_keys"] = red_keys(d["reds"])
+        # red_ids: one id per red, same order and length as `reds`, no age or count (row red-status-red-ids).
+        # A red-status without them (older than that row) leaves the set uncompared, never guessed.
+        ids = red.get("red_ids")
+        if isinstance(ids, list) and len(ids) == len(red["reds"]):
+            d["red_keys"] = sorted(set(ids[:len(ids) - len(missing)] if missing else ids))
     before = (prev or {}).get("red_keys")
     if unknown:
         d["no_comparison"] = f"UNKNOWN reader(s): {', '.join(unknown)}"
     elif d.get("unreadable_sources"):
         d["no_comparison"] = f"red-status could not read {len(d['unreadable_sources'])} source(s)"
+    elif "red_keys" not in d:
+        d["no_comparison"] = "red-status gave no red_ids"
     elif not isinstance(before, list):
         d["no_comparison"] = "no earlier comparable digest"
     else:
@@ -137,7 +134,7 @@ def markdown(d: dict) -> str:
 
 
 def note(d: dict) -> bool:
-    """One A9 note through grafana-check's signed post. It carries the masked subjects, never a raw red line."""
+    """One A9 note through grafana-check's signed post. It carries the red ids (no age, count or free text), never a raw red line."""
     spec = importlib.util.spec_from_file_location("grafana_check", Path(__file__).with_name("grafana-check.py"))
     gc = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(gc)
@@ -204,7 +201,8 @@ def selftest() -> int:
     ok = lambda doc, code=0: {"state": "OK", "exit_code": code, "doc": doc}  # noqa: E731
     reds = ["pulse:x failing rc=1 (3 h) — boom", "audit chain BROKEN — 3 unsigned of 500 (verified 2 h)"]
     base = {
-        "red-status": ok({"verdict": "RED", "why": "2 red", "counts": {"red": 2, "unreadable": 0, "holds": 1}, "reds": reds, "sources_missing": []}),
+        "red-status": ok({"verdict": "RED", "why": "2 red", "counts": {"red": 2, "unreadable": 0, "holds": 1}, "reds": reds,
+                          "red_ids": ["job:pulse-x", "audit-chain"], "sources_missing": []}),
         "rem-status": ok({"verdict": "RED", "why": "w", "counts": {"act_now": 2, "regrade": 0, "blocked_severe": 1, "pending": 7}}),
         "loop-status": ok({"rows": [{}, {}, {}], "unlanded": [{}], "fixture_rows": []}),
         "estate-status": ok({"verdict": "UNKNOWN", "why": "w", "counts": {"lines": 9, "disagree": 0, "unreadable": 1, "uncomparable": 2}}, 2),
@@ -219,19 +217,25 @@ def selftest() -> int:
                  "verdict: (the reader gives none)", f"- {reds[0]}"):
         assert line in md, (line, md)
     # the same reds an hour later (ages and counts moved): the same set, no note
-    aged = dict(base, **{"red-status": ok({"reds": ["pulse:x failing rc=1 (4 h) — boom again", "audit chain BROKEN — 9 unsigned of 512 (verified 1 min)"], "sources_missing": []})})
+    aged = dict(base, **{"red-status": ok({"reds": ["pulse:x failing rc=1 (4 h) — boom again", "audit chain BROKEN — 9 unsigned of 512 (verified 1 min)"],
+                                           "red_ids": ["job:pulse-x", "audit-chain"], "sources_missing": []})})
     same = digest("t2", aged, first)
     assert same["changed"] is False and same["started"] == same["stopped"] == [], same
-    moved = dict(base, **{"red-status": ok({"reds": [reds[0], "restic repository unreachable (since 2 d)"], "sources_missing": []})})
+    moved = dict(base, **{"red-status": ok({"reds": [reds[0], "restic repository unreachable (since 2 d)"],
+                                            "red_ids": ["job:pulse-x", "backup:restic-unreachable"], "sources_missing": []})})
     m = digest("t3", moved, first)
-    assert m["changed"] and m["started"] == ["restic repository unreachable"] and m["stopped"] == ["audit chain BROKEN — # unsigned of #"], m
+    assert m["changed"] and m["started"] == ["backup:restic-unreachable"] and m["stopped"] == ["audit-chain"], m
+    # a red-status without red_ids (older than row red-status-red-ids): the set is not compared, never guessed from prose
+    legacy = digest("t3", dict(base, **{"red-status": ok({"reds": reds, "sources_missing": []})}), first)
+    assert legacy["changed"] is False and legacy["no_comparison"] == "red-status gave no red_ids", legacy
     # a reader that did not answer is UNKNOWN and holds the note back, whatever the reds say
     down = dict(moved, **{"agent-status": {"state": "UNKNOWN", "error": "no answer in 60 s"}})
     u = digest("t3", down, first)
     assert u["changed"] is False and u["unknown"] == ["agent-status"] and "UNKNOWN: no answer in 60 s" in markdown(u), u
     assert digest("t3", {k: v for k, v in moved.items() if k != "rem-status"}, first)["unknown"] == ["rem-status"]
     # red-status with an unreadable source: its trailing lines are not red, and nothing is compared
-    blind = dict(base, **{"red-status": ok({"reds": [reds[0], "wing.db unreadable"], "sources_missing": ["wing.db unreadable"]})})
+    blind = dict(base, **{"red-status": ok({"reds": [reds[0], "wing.db unreadable"], "red_ids": ["job:pulse-x", "source-unreadable:wing.db"],
+                                            "sources_missing": ["wing.db unreadable"]})})
     b = digest("t3", blind, first)
     assert b["reds"] == [reds[0]] and b["changed"] is False and "could not read 1 source" in b["no_comparison"], b
     with tempfile.TemporaryDirectory() as t:
@@ -256,7 +260,7 @@ def selftest() -> int:
         assert previous(d)["red_keys"] == first["red_keys"]
         assert prune(d, now, 30) == 1 and len(_stamped(d)) == 1 and len(list(d.glob("*.md"))) == 2 and (d / "notes.json").exists()
         assert prune(d, now + 400 * 86400, 30) == 0 and len(_stamped(d)) == 1   # the newest always stays
-    print("selftest OK: fields copied by name, ages do not move the set, UNKNOWN and unreadable sources hold the note, "
+    print("selftest OK: fields copied by name, red ids (not ages) decide the set, UNKNOWN and unreadable sources hold the note, "
           "first run quiet, exit codes carried, prune keeps the newest")
     return 0
 
