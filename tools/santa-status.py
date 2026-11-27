@@ -22,6 +22,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import gzip
 import importlib.util
 import json
 import os
@@ -44,7 +45,9 @@ OS_TREES = ("/System/", "/usr/bin/", "/usr/sbin/", "/usr/libexec/", "/bin/", "/s
 #: Host-native organ binaries the roles install under $HOME (pazny.medulla medulla_bin_dir):
 #: self, not a Pulse command, so not in the runner's trees. 2026-11-22: medulla ×1125 in 19h, red.
 ESTATE_HOME_TREES = ("thalamus/bin/",)
-TAIL_BYTES = 16 * 1024 * 1024
+#: newsyslog keeps santa.log.0.gz (newest) .. santa.log.N.gz and rotates hourly past 25 MB, so the live
+#: file alone was "since the last rotation", not 24 h (41 outside paths, an hour later 5: 2026-11-22).
+ROTATIONS_MAX = 50
 LINE_RE = re.compile(r"^\[(?P<ts>[^\]]+)\] \w santad: (?P<body>action=EXEC\|.*)$")
 
 
@@ -118,10 +121,30 @@ def judge(lines, trees: tuple[str, ...], since: datetime, dev: tuple[str, ...] =
             "dev_toolchain": [{"path": p, "count": c} for p, c in sorted(toolchain.items(), key=lambda x: -x[1])]}
 
 
-def _tail(path: pathlib.Path) -> list[str]:
-    with path.open("rb") as fh:
-        fh.seek(max(0, path.stat().st_size - TAIL_BYTES))
-        return fh.read().decode("utf-8", "replace").splitlines()
+def _lines(since: datetime, missing: list[str]):
+    """The live log, then each rotation newest first (santa.log.N or .N.gz), streamed line by line,
+    until one starts before `since`. An unreadable rotation is named in `missing` (UNKNOWN past it)
+    and ends the walk; the live log's error is raised, as before."""
+    with LOG.open("r", encoding="utf-8", errors="replace") as fh:
+        yield from fh
+    for n in range(ROTATIONS_MAX):
+        plain, gz = LOG.with_name(f"{LOG.name}.{n}"), LOG.with_name(f"{LOG.name}.{n}.gz")
+        path = gz if gz.exists() else plain if plain.exists() else None
+        if path is None:
+            return
+        first = None
+        try:
+            with (gzip.open(path, "rt", encoding="utf-8", errors="replace") if path is gz
+                  else path.open("r", encoding="utf-8", errors="replace")) as fh:
+                for line in fh:
+                    if first is None and (ev := parse(line)):
+                        first = ev["ts"]
+                    yield line
+        except (OSError, EOFError) as exc:
+            missing.append(f"{path} ({getattr(exc, 'strerror', None) or exc})")
+            return
+        if first is not None and first < since:
+            return
 
 
 def collect(hours: int = 24, now: datetime | None = None) -> dict:
@@ -138,8 +161,9 @@ def collect(hours: int = 24, now: datetime | None = None) -> dict:
         report["mode"] = json.loads(out.stdout)["daemon"]["mode"]
     except (OSError, subprocess.SubprocessError, ValueError, KeyError, TypeError):
         report["sources_missing"].append(f"{SANTACTL} status --json")
+    since = now - timedelta(hours=hours)
     try:
-        report.update(judge(_tail(LOG), declared_trees(), now - timedelta(hours=hours), dev_trees()))
+        report.update(judge(_lines(since, report["sources_missing"]), declared_trees(), since, dev_trees()))
     except OSError as exc:
         report["sources_missing"].append(f"{LOG} ({exc.strerror or exc})")
     return report
