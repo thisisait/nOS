@@ -270,7 +270,7 @@ pub fn param(query: &str, key: &str) -> Option<String> {
     query.split('&').filter_map(|kv| {
         let (k, v) = kv.split_once('=').unwrap_or((kv, ""));
         (decode(k, true) == key).then(|| decode(v, true))
-    }).last()
+    }).next_back()
 }
 
 pub fn decode(s: &str, plus: bool) -> String {

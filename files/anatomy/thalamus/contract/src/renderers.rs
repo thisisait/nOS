@@ -630,7 +630,7 @@ impl Component {
                     (_, None) => {}
                 }
                 match (d.op, d.row_id.as_deref()) {
-                    (RowOp::InsertMany, Some(id)) if id.is_empty() => Err("an existing parent names its row".into()),
+                    (RowOp::InsertMany, Some("")) => Err("an existing parent names its row".into()),
                     (RowOp::InsertMany, Some(_)) if d.cells.iter().any(|c| c.old != c.new) => Err("an existing parent is not changed here".into()),
                     (RowOp::InsertMany, Some(_)) => Ok(()),
                     (RowOp::InsertMany, None) if d.cells.iter().any(|c| !c.old.is_null()) => Err("an insert has no old value".into()),
