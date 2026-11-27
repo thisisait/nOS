@@ -1,0 +1,66 @@
+# =============================================================================
+# Kolben IT fixture — answer key (row fixture-kolben-expected).
+#
+# Never seeded and never shown to the model that is asked: a judge reads it.
+# Every answer is derived from state/fixtures/kolben-it.seed.yml alone.
+# AS-OF is the fixed moment 1773500000 (epoch seconds; 2026-03-14T14:53:20Z):
+# date questions are read against it, never against the clock. "Open" means a
+# kolben-ticket whose status is not done. A ticket's client is its project's
+# client; a time entry's project is its ticket's project.
+#
+#   exact:  id -> question, the tables a correct answer joins, and the one
+#           answer (a number, a slug or a sorted list of slugs).
+#   recall: id -> question, tables, `must` (every slug a correct answer names)
+#           and `decoys` (rows that share the question's words but fail its
+#           condition; they sit below the floor, so an answer naming one is
+#           wrong however many `must` rows it also names).
+# =============================================================================
+
+exact:
+  open-tickets-past-due:
+    question: "Which open tickets were due before the as-of moment?"
+    tables: [kolben-ticket]
+    answer: [tkt-eshop-checkout-bug, tkt-eshop-tls-expiry]
+  engineer-most-billable-hours:
+    question: "Which engineer logged the most billable hours?"
+    tables: [kolben-time-entry, kolben-engineer]
+    answer: eng-cerna
+  client-most-open-tickets:
+    question: "Which client has the most open tickets?"
+    tables: [kolben-ticket, kolben-project, party]
+    answer: synthetic-pekarna-novak
+  hours-on-pekarna-eshop:
+    question: "How many hours in total, billable or not, were logged on the Pekarna e-shop project?"
+    tables: [kolben-time-entry, kolben-ticket, kolben-project]
+    answer: 6
+  blocked-or-in-review:
+    question: "How many tickets are blocked or in review?"
+    tables: [kolben-ticket]
+    answer: 2
+
+recall:
+  overdue-open-tickets:
+    question: "Which tickets are overdue at the as-of moment and still not done?"
+    tables: [kolben-ticket]
+    must: [tkt-eshop-checkout-bug, tkt-eshop-tls-expiry]
+    decoys: [tkt-svoboda-contact-form]
+  horak-billable-entries:
+    question: "Which of Tomas Horak's time entries are billable?"
+    tables: [kolben-time-entry, kolben-engineer]
+    must: [te-erp-eta-1]
+    decoys: [te-tls-1]
+  active-projects:
+    question: "Which projects are active?"
+    tables: [kolben-project]
+    must: [proj-autodily-erp, proj-pekarna-eshop]
+    decoys: [proj-mesto-portal, proj-svoboda-web]
+  urgent-open-tickets:
+    question: "Which open tickets are high or critical priority?"
+    tables: [kolben-ticket]
+    must: [tkt-erp-invoice-sync, tkt-eshop-checkout-bug, tkt-eshop-tls-expiry]
+    decoys: [tkt-erp-nightly-eta, tkt-eshop-perf]
+  open-work-on-active-projects:
+    question: "Which open tickets belong to an active project?"
+    tables: [kolben-ticket, kolben-project]
+    must: [tkt-erp-invoice-sync, tkt-erp-nightly-eta, tkt-eshop-checkout-bug, tkt-eshop-perf, tkt-eshop-tls-expiry]
+    decoys: [tkt-portal-a11y-audit, tkt-portal-login-federation, tkt-svoboda-contact-form]
