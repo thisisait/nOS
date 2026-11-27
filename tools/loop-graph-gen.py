@@ -131,6 +131,58 @@ def _cron_ok(expr) -> bool:
     return True
 
 
+#: Wing's names for a run's limits (AgentKit/Runner.php validateLimits); its floors and ceilings stay Wing's.
+_LIMITS = ("max_calls", "wall_clock_s", "token_ceiling")
+
+
+def _agent_step(s: dict, root: str, cache: dict) -> list[str]:
+    """A plan's `runner: agent` step (row iris-orchestrator): `agent` names an agent under root, `prompt` is text,
+    `tools` narrows that agent's own tools (never widens them), `limits` holds Wing's three positive integers."""
+    sid, why, agent = s["id"], [], s.get("agent")
+    if "agent" in s:
+        if not (isinstance(agent, str) and _SLUG.match(agent)):  # before any path: `../x` is never opened
+            why.append(f"step `{sid}` agent {agent!r} is not a slug ([a-z][a-z0-9-])")
+            agent = None
+        else:
+            if agent not in cache:
+                try:
+                    with open(os.path.join(root, "files", "anatomy", "agents", agent, "agent.yml"), encoding="utf-8") as fh:
+                        doc = yaml.safe_load(fh) or {}
+                    cache[agent] = doc if isinstance(doc, dict) else {}
+                except (OSError, yaml.YAMLError):
+                    cache[agent] = None
+            if cache[agent] is None:
+                why.append(f"step `{sid}` agent `{agent}` has no files/anatomy/agents/{agent}/agent.yml")
+                agent = None
+    if "prompt" in s and not (isinstance(s["prompt"], str) and s["prompt"].strip()):
+        why.append(f"step `{sid}` prompt must be a non-empty string")
+    if "tools" in s:
+        tl = s["tools"]
+        if not (isinstance(tl, list) and tl and all(isinstance(t, str) and t for t in tl)):
+            why.append(f"step `{sid}` tools must be a non-empty list of tool ids")
+        elif "agent" not in s:
+            why.append(f"step `{sid}` tools needs an `agent`: a plan narrows that agent's own tools")
+        elif agent:
+            own = [t.get("id") if isinstance(t, dict) else t for t in (cache[agent].get("tools") or [])]
+            wide = [t for t in tl if t not in own]
+            if not own:
+                why.append(f"step `{sid}` agent `{agent}` declares no tools list, so a plan cannot narrow it")
+            elif wide:
+                why.append(f"step `{sid}` tools {wide} are not agent `{agent}`'s (its tools: {own}); "
+                           "a plan narrows an agent's tools, never widens them")
+    if "limits" in s:
+        lim = s["limits"]
+        if not isinstance(lim, dict):
+            why.append(f"step `{sid}` limits must be a map of {', '.join(_LIMITS)}")
+        else:
+            for k, v in lim.items():
+                if k not in _LIMITS:
+                    why.append(f"step `{sid}` limits.{k} is not one of {', '.join(_LIMITS)}")
+                elif not (isinstance(v, int) and not isinstance(v, bool) and v > 0):
+                    why.append(f"step `{sid}` limits.{k} must be a positive integer")
+    return why
+
+
 def validate_manifest(path: str, m: dict | None = None, root: str = REPO) -> list[str]:
     """Every reason a loop manifest is refused; [] = valid. One function for
     --validate, the graph build and discover-pulse-catalog.py (refused = not scheduled).
@@ -166,13 +218,28 @@ def validate_manifest(path: str, m: dict | None = None, root: str = REPO) -> lis
     pulse = m.get("pulse") if isinstance(m.get("pulse"), dict) else {}
     writes = list(pulse.get("writes") or [])
     seen: set[str] = set()
+    agents: dict = {}
     for s in steps:
         if not (isinstance(s, dict) and isinstance(s.get("id"), str)):
             why.append("each step needs a string `id`")
             continue
         if s["id"] in seen:
             why.append(f"duplicate step id `{s['id']}`")
+        earlier = set(seen)  # depends_on names EARLIER steps only: no self, no cycle, read top to bottom
         seen.add(s["id"])
+        dep = s.get("depends_on")
+        if dep is not None and not (isinstance(dep, list) and all(isinstance(d, str) for d in dep)):
+            why.append(f"step `{s['id']}` depends_on must be a list of step ids")
+        elif dep:
+            for d in dep:
+                if d not in earlier:
+                    why.append(f"step `{s['id']}` depends_on `{d}` is not a step declared before it "
+                               f"(earlier steps: {sorted(earlier) or 'none'})")
+        agent_keys = [k for k in ("agent", "prompt", "tools", "limits") if k in s]
+        if agent_keys and s.get("runner") != "agent":
+            why.append(f"step `{s['id']}` has {', '.join(agent_keys)}: only a `runner: agent` step takes them")
+        elif agent_keys:
+            why += _agent_step(s, root, agents)
         if s.get("runner") not in _STEP_RUNNERS:
             why.append(f"step `{s['id']}` runner must be one of {sorted(_STEP_RUNNERS)}")
         if "graph_only" in s and not isinstance(s["graph_only"], bool):
