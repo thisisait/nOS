@@ -3,6 +3,7 @@
 //! maps it to the thalamus's own tool calls. What the table below does not carry is refused, and
 //! serve falls back to plain tool calling. ?commit and dry_run are ignored: the card is the gate.
 
+use nos_contract::renderers::PROGRAM_WRITES_MAX;
 use serde_json::{json, Map, Value};
 
 /// The opcode registry this mapper was written against (contract v3); any other is refused.
@@ -34,9 +35,11 @@ pub struct Cortex {
 pub const MAX_STAGES: usize = 8;
 
 /// Folded word stems (a trailing * is a prefix): a turn with any of HOLD stays on tools whatever else it
-/// says (a write other than insert, a choice, a dashboard); else the first intent whose stems it has.
-const HOLD: &[&str] = &["uprav*", "zmen*", "nastav*", "prepis*", "smaz*", "odstran*", "edit*", "change*", "set", "update*",
-    "delete*", "remove*", "rename*", "moznost*", "nabidn*", "offer*", "option*", "choice*", "dashboard*", "nastenk*", "formular*", "form"];
+/// says (a choice, a dashboard, a form); then WRITE (intent write-rows); else the first intent whose stems it has.
+const HOLD: &[&str] = &["moznost*", "nabidn*", "offer*", "option*", "choice*", "dashboard*", "nastenk*", "formular*", "form"];
+/// A write other than insert: intent write-rows, planned only when listed (row iris-code-mode-write-card).
+const WRITE: &[&str] = &["uprav*", "zmen*", "nastav*", "prepis*", "smaz*", "odstran*", "edit*", "change*", "set", "update*",
+    "delete*", "remove*", "rename*"];
 const INTENT_WORDS: [(&str, &[&str]); 4] = [
     ("kpi", &["kpi*", "dlazdic*", "tile*"]),
     ("chart", &["graf", "grafu", "grafy", "grafem", "chart*", "nakresl*", "vykresl*", "draw*", "plot*", "kolac*", "histogram*"]),
@@ -58,6 +61,11 @@ pub fn route(text: &str, intents: &[String]) -> (&'static str, Option<&'static s
     let held = hits(HOLD);
     if !held.is_empty() {
         return ("tools", None, held);
+    }
+    let writes = hits(WRITE);
+    if !writes.is_empty() {
+        // not listed: today's tools turn, its route row too (intent null)
+        return if intents.iter().any(|i| i == "write-rows") { ("cortex", Some("write-rows"), writes) } else { ("tools", None, writes) };
     }
     for (intent, stems) in INTENT_WORDS {
         let m = hits(stems);
@@ -235,7 +243,7 @@ filter(where=\"<column> <op> <value>\", q=\"text\")  one condition per filter, c
 rank(by=\"col\", dir=\"desc\", limit=N)  order and cut
 aggregate(op=\"count\"|\"sum\"|\"avg\", by=\"col\", y=\"col\")  count rows, or sum or avg the number column y; by groups
 show(kind=\"chart\"|\"kpi\"|\"table\", chart=\"bar\"|\"line\"|\"pie\", x=\"col\", title=\"...\", unit=\"...\")  a chart needs aggregate by, x is that column; a kpi is one total
-insert(db:T, set=\"col=value;col=value\")  update(db:T, set=\"col=value\")  delete(db:T)  a write acts on exactly one row the filters find; the person approves it
+insert(db:T, set=\"col=value;col=value\")  update(db:T, set=\"col=value\")  delete(db:T)  insert adds one row; update and delete act on the rows the filters find; the person approves the writes
 Example: open todos per status as a bar chart -> get(db:todos) | filter(where=\"status eq open\") | aggregate(op=\"count\", by=\"status\") | show(kind=\"chart\", chart=\"bar\", x=\"status\")
 Tables:
 {catalogue}")
@@ -384,8 +392,9 @@ pub fn plan(source: Option<&str>, stages: &[Stage]) -> Result<Plan, String> {
 }
 
 /// The plan as tool calls: `info` is serve's table_info (id, then title; the septum), `check(args,
-/// read)` its matched() over query_rows args, giving the matched row ids when `read`.
-pub fn calls(p: &Plan, info: impl Fn(&str) -> Result<(String, Value), String>,
+/// read)` its matched() over query_rows args, giving the matched row ids when `read`. `many`
+/// (iris_plan_run: thalamus): a write is one `propose_program` call over 1 to 20 matched rows.
+pub fn calls(p: &Plan, many: bool, info: impl Fn(&str) -> Result<(String, Value), String>,
              check: impl Fn(&Value, bool) -> Result<Vec<String>, String>) -> Result<Vec<(String, Value)>, String> {
     let (table, info) = info(&p.table)?;
     let title = info.pointer("/data/title").and_then(Value::as_str).unwrap_or(&table).to_string();
@@ -501,6 +510,26 @@ pub fn calls(p: &Plan, info: impl Fn(&str) -> Result<(String, Value), String>,
         };
         Ok((key, typed))
     }).collect::<Result<Map<String, Value>, String>>()?;
+    if many {
+        // check() reads every match whatever the limit: a rank or a limit would pick no rows for the write
+        if p.order.is_some() || p.limit.is_some() {
+            return Err(format!("{w} acts on every row the filters find; rank and limit pick no rows for it: filter instead"));
+        }
+        let (look, rows) = if w == "insert" {
+            (json!({"table": table, "limit": 0}), vec![])
+        } else {
+            let rows = check(&q, true)?;
+            if !(1..=PROGRAM_WRITES_MAX).contains(&rows.len()) {
+                return Err(format!("{w} acts on 1 to {PROGRAM_WRITES_MAX} rows; the pipeline matched {} rows of {title}: filter until 1 to {PROGRAM_WRITES_MAX} are left", rows.len()));
+            }
+            // the read renders every target, so each is a row the person was shown before the card
+            let mut look = q.clone();
+            look["limit"] = json!(rows.len());
+            (look, rows)
+        };
+        check(&look, false)?;
+        return Ok(vec![("query_rows".into(), look), ("propose_program".into(), json!({"table": table, "op": w, "row_ids": rows, "values": values}))]);
+    }
     if w == "insert" {
         let look = json!({"table": table, "limit": 0});
         check(&look, false)?;

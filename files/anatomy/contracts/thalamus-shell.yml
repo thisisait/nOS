@@ -355,8 +355,8 @@ components:
       checks it (never insert_many, never its own read_from: the program's says it). Asked only as an approval,
       never a render or a widget. Both shells draw the source, then every write with the row diff view; the face Iris
       keeps approve disabled until the last write was in view (ApprovalCard's `whole` sentinel). Approve writes
-      exactly the card, in order, or nothing past the first failure. v20 is the contract and the face only: no
-      thalamus route emits one yet (route write-rows, mapper, decide preflight, ASKING entry are the row's next slice)
+      exactly the card, in order, or nothing past the first failure. Serve emits one only under iris_plan_run:
+      thalamus, for a planned insert, update or delete (intent write-rows routes only when listed); the ledger request is the card
     # Crosses the wire only inside a `widget` message: a render or approval_request carrying one is
     # refused (wire.rs not_a_form).
     form: >-
