@@ -47,7 +47,8 @@ judge cannot answer (validator, evidence) makes the case NO-DATA. --validate-url
 --as goes through the face, which never sends a bench hello: it takes --plan tools only.
 Two plans are equal when the thalamus runs the same query for them (meaning()), not when they read alike.
 A single-prompt case whose plan ran in the thalamus (plan_run thalamus) closes on serve's line, not the model's:
-its prose checks read what was shown (THALAMUS_EQUIVALENT); answers_in and the like are unjudged, never pass or fail.
+its prose checks read what was shown (THALAMUS_EQUIVALENT); answers_in and the like are unjudged, listed apart in
+`unjudged`, and the case's verdict is the judged checks' (none judged = NO-DATA).
 
 `--rescore run.json ...` re-judges pipeline_equals_expected on saved runs offline (the cases come from
 the run's own argv; --domain needs NOS_ASSAY_DIR) and writes run.rescored.json; other verdicts are kept.
@@ -954,9 +955,14 @@ def judge(case: dict, got: dict, now: float) -> tuple[list[str], list[dict]]:
         else:
             own = _failed(t.get("checks") or {} if isinstance(t, dict) else {}, per[i], per[:i], now)
             whole = _failed(case.get("checks", {}), got, per, now) if i == len(raw) - 1 else []
+            # a prose check a thalamus-run plan left unjudged is listed apart; with no check judged the case stays NO-DATA
+            apart = [f for f in whole if f.endswith(f": {THALAMUS_RUN}")]
+            ran = [n for n, a in case.get("checks", {}).items() if a is not False or n == "pipeline_fell_back"]
+            whole = whole if len(apart) == len(ran) else [f for f in whole if f not in apart]
             bad = whole + own
             failed += whole + [f"turn {i}: {x}" for x in own]
-        turns.append({"index": i, "status": "fail" if bad else "pass", "failed": bad})
+        turns.append({"index": i, "status": "fail" if bad else "pass", "failed": bad,
+                      **({"unjudged": apart} if apart and apart[0] not in bad else {})})
     if got.get("error") and f"error: {got['error']}" not in failed:
         failed.append(f"error: {got['error']}")  # the wire broke after a turn that already failed
     return failed, turns
@@ -1503,7 +1509,7 @@ def bench(a, cases: list[dict], where: str, validate, opener=None, who: dict | N
                         "seconds": round(sum(r[2] for r in runs) / n, 2), "model_uri": got["model_uri"], "tools": got["tools"],
                         "approvals_rejected": sum(len(r[0]["approvals"]) for r in runs), "refused": got["refused"],
                         "queries": queries(got), "text": got["text"], "pipeline": got.get("plan"),
-                        "judged_as": judged_as(case, got),
+                        "judged_as": judged_as(case, got), "unjudged": [u for t in turns for u in t.get("unjudged", [])],
                         "plan_checks": sorted(plan_checks(case, (got.get("route") or "tools") if a.plan == "hybrid" else a.plan)),
                         **({"route": got.get("route")} if a.plan == "hybrid" else {}),
                         # Why an offered widget was left out (round 2: the model only paraphrased it).
@@ -1530,7 +1536,8 @@ def bench(a, cases: list[dict], where: str, validate, opener=None, who: dict | N
     out.write_text(json.dumps(run, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     for r in results:
         word = "PASS" if r["pass"] else "NO-DATA" if r["no_data"] else "FAIL"
-        print(f"{word:<7} {r['id']:<18} {r['passes']}/{r['runs']} {r['seconds']:>7.2f}s  {', '.join(r['failed'])}")
+        print(f"{word:<7} {r['id']:<18} {r['passes']}/{r['runs']} {r['seconds']:>7.2f}s  {', '.join(r['failed'])}"
+              + (f"  (unjudged: {', '.join(r['unjudged'])})" if r.get("unjudged") else ""))
     if "route_by_kind" in run:  # before the summary: the last line stays the pass count
         print("route by kind: " + "; ".join(f"{k} {v}" for k, v in sorted(run["route_by_kind"].items())))
     judged = [r for r in results if not r["no_data"]]
