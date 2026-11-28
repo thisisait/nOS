@@ -796,6 +796,12 @@ def judgements(path: pathlib.Path = JUDGEMENTS) -> dict[tuple[str, str], dict]:
     return {(str(j["id"]), str(j["subject"])): j for j in (doc or {}).get("judgements") or []}
 
 
+def in_force(j: dict | None, today) -> bool:
+    """A judgement covers its match while `until` is today or later, whatever its verdict: the one test every
+    reader uses (rem-status's regrade adds that only not-applicable silences it)."""
+    return bool(j) and str(j.get("until")) >= str(today)
+
+
 def unjudged(rep: dict, judged: dict, today) -> list[dict]:
     """HIGH / CRITICAL / KEV matches no judgement in force covers (until >= today)."""
     out = []
@@ -804,7 +810,7 @@ def unjudged(rep: dict, judged: dict, today) -> list[dict]:
              for lf in rep["lockfiles"] for m in lf.get("matches") or []]
     for subject, version, m in rows:
         j = judged.get((str(m["id"]), subject))
-        if not _serious(m) or (j and str(j.get("until")) >= str(today)):
+        if not _serious(m) or in_force(j, today):
             continue
         out.append({"subject": subject, "version": version, "id": m["id"], "severity": m.get("severity"),
                     "fixed": m.get("fixed"), "kev": m.get("kev"),
