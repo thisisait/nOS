@@ -371,27 +371,21 @@ def test_systemrepo_upsert_filters_via_array_intersect():
     assert "->update($filtered)" in body, "upsert() must update FILTERED data, not raw $data"
 
 
-def test_hubpresenter_drops_systems_from_public_actions():
-    """`systems` must NOT be in $publicActions; GET is recovered via startup()."""
+def test_hubpresenter_systems_is_public_for_get_only():
+    """`systems` and `health` are public for GET only ($publicMethods): POST /systems needs the bearer
+    (SEC-7). Declared, not overridden, so bin/export-openapi.php sees it (ruled 2026-11-15, 1(a))."""
     src = HUB_API.read_text()
-    m = re.search(r"\$publicActions\s*=\s*\[(.*?)\]", src)
-    assert m, "publicActions array not found"
-    allowed = m.group(1)
-    assert "'systems'" not in allowed, \
-        "HubPresenter must NOT include 'systems' in publicActions (POST = unauthenticated write surface)"
-    assert "'health'" in allowed
+    acts = re.search(r"\$publicActions\s*=\s*\[(.*?)\]", src)
+    meths = re.search(r"\$publicMethods\s*=\s*\[(.*?)\]", src)
+    assert acts and meths, "publicActions / publicMethods not declared"
+    assert "'systems'" in acts.group(1) and "'health'" in acts.group(1)
+    assert [m.strip() for m in meths.group(1).split(",")] == ["'GET'"], \
+        "a method other than GET on /hub/systems would be an unauthenticated write surface (SEC-7)"
 
 
-def test_hubpresenter_startup_bypasses_auth_only_for_get():
-    """GET /systems is public; everything else falls through to BaseApiPresenter."""
-    src = HUB_API.read_text()
-    assert "public function startup(): void" in src
-    m = re.search(r"public function startup\(\): void\s*\{(.*?)\n\t\}", src, re.DOTALL)
-    assert m
-    body = m.group(1)
-    assert "'GET'" in body
-    assert "parent::startup()" in body, \
-        "non-GET requests must fall through to BaseApiPresenter::startup (requireTokenAuth)"
+def test_hubpresenter_has_no_auth_override():
+    """BaseApiPresenter::startup() is the one place that decides; no override skips requireTokenAuth."""
+    assert "public function startup(): void" not in HUB_API.read_text()
 
 
 # ── test_client_body_suppression ────────────────────────────────────────────
