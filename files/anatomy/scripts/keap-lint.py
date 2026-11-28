@@ -96,11 +96,11 @@ def main() -> int:
             notify("high", "KEAP lint: new high findings", body, "wing-inbox,ntfy")
         else:
             notify("medium", "KEAP lint: new findings", body, "wing-inbox")
-    else:
-        # A run with nothing new is the current answer under the same key: it retires the last red row (a failed
-        # run, or new findings), which nothing else ever would. Info, inbox only, never pushed (row
-        # security-readers-report-supersede, ruled (a)); the standing counts stay in the body.
-        notify("info", "KEAP lint: no new findings", f"Knowledge lint: {summary}", "wing-inbox")
+    elif not (counts.get("critical", 0) or counts.get("high", 0) or counts.get("medium", 0)):
+        # Clean, not just "nothing new": this row retires the last red one under the same key (row
+        # security-readers-report-supersede, ruled (a)). Findings still open keep the red row the current
+        # word, so an unread HIGH is never retired while it stands (review 11-28). Info, never pushed.
+        notify("info", "KEAP lint: clean", f"Knowledge lint: {summary}", "wing-inbox")
     return 0
 
 

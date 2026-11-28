@@ -698,7 +698,7 @@ def test_the_range_forms_of_2026_10_31_match(adv, payload, version, affected):
     assert pin["state"] == ("affected" if affected else "clear"), pin
 
 
-@pytest.mark.parametrize("vuln", [("x.63.10", "63.10"), ("<= 7.4.0", "TBD")])
+@pytest.mark.parametrize("vuln", [("x.63.10", "63.10"), ("<= 7.4.0", "1.2.3, TBD")])  # a TBD beside a real patch stays unreadable (ruled 2026-11-27 (a), strict)
 def test_an_unreadable_form_is_unknown_never_a_silent_miss(adv, vuln):
     payload = [_adv("GHSA-open", (">= 1.0", "")), _adv("GHSA-bad", vuln)]
     _, pin = _github_pin(adv, "o/r", None, "7.3.0", payload)

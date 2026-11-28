@@ -524,6 +524,38 @@
   [
    "gitlab glpat-FAKEabcdefghij1234567 x",
    "gitlab glpat-<REDACTED> x"
+  ],
+  [
+   "job started\n-----BEGIN RSA PRIVATE KEY-----\nFAKE_MIIEowIBAAKCAQEAxyz\nFAKE_qwerty0123456789\n-----END RSA PRIVATE KEY-----\njob done rc=0",
+   "job started\n-----BEGIN RSA PRIVATE KEY-----<REDACTED>\njob done rc=0"
+  ],
+  [
+   "a\n-----BEGIN OPENSSH PRIVATE KEY-----\nFAKE_b3BlbnNzaC1rZXktdjEAAAAA\n-----END OPENSSH PRIVATE KEY-----\nb",
+   "a\n-----BEGIN OPENSSH PRIVATE KEY-----<REDACTED>\nb"
+  ],
+  [
+   "-----BEGIN EC PRIVATE KEY-----\nFAKE_MHcCAQEEIOw\n-----END EC PRIVATE KEY-----\ntrailing",
+   "-----BEGIN EC PRIVATE KEY-----<REDACTED>\ntrailing"
+  ],
+  [
+   "tail cut here\n-----BEGIN PRIVATE KEY-----\nFAKE_MIIEvQIBADANBgkqhkiG9w0B\nFAKE_AQEFAASC",
+   "tail cut here\n-----BEGIN PRIVATE KEY-----<REDACTED>"
+  ],
+  [
+   "-----BEGIN CERTIFICATE-----\nFAKE_MIIDdzCCAl+gAwIBAgIE\n-----END CERTIFICATE-----",
+   "-----BEGIN CERTIFICATE-----\nFAKE_MIIDdzCCAl+gAwIBAgIE\n-----END CERTIFICATE-----"
+  ],
+  [
+   "-----BEGIN PUBLIC KEY-----\nFAKE_MIIBIjANBgkqhkiG9w0BAQEF\n-----END PUBLIC KEY-----",
+   "-----BEGIN PUBLIC KEY-----\nFAKE_MIIBIjANBgkqhkiG9w0BAQEF\n-----END PUBLIC KEY-----"
+  ],
+  [
+   "first\n-----BEGIN RSA PRIVATE KEY-----\nFAKE_MIIEowIBAAKCAQEAxyz\nFAKE_qwerty0123456789\n-----END RSA PRIVATE KEY-----\nbetween the two\n-----BEGIN RSA PRIVATE KEY-----\nFAKE_MIIEowIBAAKCAQEAxyz\nFAKE_qwerty0123456789\n-----END RSA PRIVATE KEY-----\nlast",
+   "first\n-----BEGIN RSA PRIVATE KEY-----<REDACTED>\nbetween the two\n-----BEGIN RSA PRIVATE KEY-----<REDACTED>\nlast"
+  ],
+  [
+   "job started\n-----BEGIN RSA PRIVATE KEY-----<REDACTED>\njob done rc=0",
+   "job started\n-----BEGIN RSA PRIVATE KEY-----<REDACTED>\njob done rc=0"
   ]
  ]
 }

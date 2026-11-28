@@ -378,9 +378,9 @@ def owner_legs_nobody_reads(path: pathlib.Path) -> list[str]:
     return [t["register"] for t in legs]
 
 
-# Not owner setup: the EspoCRM OIDC PUT (admin basic auth) only warns. Failing it
-# would abort apps_runner post for every later app; parked for an operator ruling.
-OWNER_LEG_LEGACY = {"roles/pazny.apps_runner/tasks/post.yml"}
+# Empty: the EspoCRM OIDC PUT is read by a terminal assert at the end of apps_runner post
+# (operator 2026-11-26: fail at the end of the step, not at once; row espocrm-oidc-fails-at-end).
+OWNER_LEG_LEGACY: set[str] = set()
 
 
 def test_an_owner_credential_is_read_by_an_assert():

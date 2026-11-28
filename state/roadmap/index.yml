@@ -207,6 +207,9 @@
 - slug: batch-1127b-review-tail
   parent: watch
   track: security
+- slug: batch-1128-review-tail
+  parent: watch
+  track: platform
 - slug: bff-table-read-tier-gate
   parent: consulting-firm-deployment
   track: security
@@ -365,6 +368,9 @@
   track: security
 - slug: codexis-authentik-oidc
   parent: consulting-firm-deployment
+  track: platform
+- slug: comments-1127-tidy
+  parent: batch-1127-review-tail
   track: platform
 - slug: commons
   parent: ''
@@ -1305,6 +1311,9 @@
 - slug: gitlab-trusted-certs-erofs-in-ci
   parent: forge
   track: platform
+- slug: gitleaks-report-supersede
+  parent: security-readers-report-supersede
+  track: security
 - slug: grafana-check-trend-panel
   parent: grafana-check-trend-view
   track: agents
@@ -1628,6 +1637,9 @@
   track: face
 - slug: iris-place-here-or-new-tab
   parent: iris-genui
+  track: agents
+- slug: iris-plan-evidence-own-row
+  parent: batch-1127-review-tail
   track: agents
 - slug: iris-plan-tool-rows-in-cortex
   parent: iris-code-mode
@@ -3141,6 +3153,9 @@
 - slug: thalamus-clippy-lane
   parent: forge
   track: platform
+- slug: thalamus-commit-program-reads
+  parent: batch-1127-review-tail
+  track: agents
 - slug: thalamus-decider-guard-followups
   parent: thalamus-pupil-peer-exe
   track: security

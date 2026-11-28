@@ -107,16 +107,18 @@ def report(base: str | None) -> dict:
         block = (yaml.safe_load(PLUGIN.read_text(encoding="utf-8")) or {}).get("relies_on") or {}
     except (OSError, yaml.YAMLError) as exc:
         return {"app": "gitea", "error": f"{PLUGIN.name} unreadable ({type(exc).__name__})", "endpoints": []}
-    if not base:
+    own = not base  # the estate's token goes only to the estate's own loopback Gitea (review 11-28)
+    if own:
         port = ni.resolved(["gitea_port"]).get("gitea_port") or 3003
         base = f"http://127.0.0.1:{port}"
-    forge = _forge()
+    forge = _forge() if own else None
     out = []
     for e in block.get("endpoints") or []:
         row = {"name": e["name"], "get": e["get"]}
         needs_token = e.get("auth") == "token"
         if needs_token and not forge:
-            out.append({**row, "state": "UNKNOWN", "why": "no Gitea token (gitea_api_token): not asked"})
+            why = "no Gitea token (gitea_api_token): not asked" if own else "--base gets no estate token: not asked"
+            out.append({**row, "state": "UNKNOWN", "why": why})
             continue
         path = e["get"]
         if "{owner}" in path or "{repo}" in path:
