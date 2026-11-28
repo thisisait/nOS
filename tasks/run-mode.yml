@@ -165,6 +165,12 @@
       {% for r in _removal_stat_data.results %}
          - {{ r.item }}{{ '  [exists]' if r.stat.exists else '  [absent]' }}
       {% endfor %}
+      {% for r in (_removal_custody_kc | default({})).results | default([]) if r.rc is defined %}
+         - Keychain {{ r.item }}{{ '  [exists]' if r.rc == 0 else '  [absent]' }}
+      {% endfor %}
+      {% for r in (_removal_custody_files | default({})).results | default([]) if r.stat is defined %}
+         - {{ r.item }}{{ '  [exists]' if r.stat.exists else '  [absent]' }}
+      {% endfor %}
          - docker: compose down -v per stack ({{ nos_stacks | join(' ') }})
            + volume/network prune
          - regenerates exactly 7 keys: infisical_encryption_key,

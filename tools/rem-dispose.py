@@ -94,6 +94,10 @@ def main() -> int:
         for k in DISPOSITION_KEYS:
             if k != "status":
                 row.pop(k, None)
+        # A re-open is the operator's word: rem-retire lists the row `reopened` and never closes it again.
+        row["reopened_at"] = _now()
+    else:
+        row.pop("reopened_at", None)
     disp[args.rem_id] = row
     path = _save(disp)
     print(f"{path}: {args.rem_id} -> {args.status}")

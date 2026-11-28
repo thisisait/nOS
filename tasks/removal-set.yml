@@ -411,6 +411,26 @@
     label: "{{ item }}"
   register: _removal_stat_data
 
+# The report names the custody a data-level removal deletes (row batch-1127b-review-tail): existence only.
+# No -w: the lookup reads the item's attributes, never its value, so it neither prompts nor prints a secret.
+# rc 0 = present, 44 = absent, anything else is unreadable and stops the run (removal-verify.yml's rule).
+- name: "[Removal-set] Look up the custody Keychain items (existence for the report)"
+  ansible.builtin.command:
+    argv: [/usr/bin/security, find-generic-password, -a, nos, -s, "{{ item }}"]
+  loop: "{{ _custody_keychain_items }}"
+  register: _removal_custody_kc
+  changed_when: false
+  failed_when: _removal_custody_kc.rc not in [0, 44]
+  when: ansible_facts['system'] == 'Darwin'
+
+- name: "[Removal-set] Stat the custody files (existence for the report)"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop: "{{ _custody_files }}"
+  register: _removal_custody_files
+  become: true
+  when: ansible_facts['system'] == 'Linux'
+
 - name: "[Removal-set] Stat source-level paths"
   ansible.builtin.stat:
     path: "{{ item }}"
