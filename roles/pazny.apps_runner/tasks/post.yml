@@ -620,6 +620,7 @@
           until it does. Every other app's hooks ran. Check the EspoCRM admin password in the app's
           generated secrets, then re-run `nos --tags apps`.
       when:
+        - not ansible_check_mode  # --check skips the PUT, so no status exists to judge
         - (_apps_espocrm.id | default('')) == 'espocrm'
         - (_apps_espocrm.auth_mode | default('')) == 'oidc'
         - install_authentik | default(false) | bool
