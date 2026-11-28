@@ -261,8 +261,11 @@ REQUIRED = ["current-state", "party", "party-tax-identity", "account", "invoice"
 
 
 def _roadmap_id() -> str:
-    m = re.search(r'NOS_ROADMAP_TABLE_ID", "([^"]+)"', (REPO / "tools/roadmap-seed.py").read_text())
-    return m.group(1)
+    """The id the default tools address: keap_api.roadmap_table() reads keap_roadmap_table_id from the
+    committed layers when no env names it (row batch-1128-review-tail moved the tools off a literal)."""
+    sys.path.insert(0, str(REPO / "tools"))
+    import nos_identity as ni  # noqa: PLC0415
+    return ni.resolved(["keap_roadmap_table_id"], paths=ni.default_layers())["keap_roadmap_table_id"]
 
 
 def _seeded_on_keap_alone() -> set[str]:
