@@ -259,7 +259,29 @@
 	const exported = async (name: string, csv: string) =>
 		transport ? `saved to ${await transport.exportCsv(name, csv)}` : 'not saved: no desktop bridge';
 
-	const viewport = () => ({ w: window.innerWidth, h: window.innerHeight });
+	// The floating chat is position: fixed, so its box is its CONTAINING BLOCK: the nearest ancestor with contain,
+	// transform or a filter (in a face window, IrisApp's `.iris`, contain: layout paint), else the browser. Fitting
+	// it to window.inner* put it past a face window's edge at 1280 px (row iris-panel-overflows-window).
+	let main = $state<HTMLElement>();
+	function frame(): HTMLElement | null {
+		for (let el = main?.parentElement; el && el !== document.body; el = el.parentElement) {
+			const cs = getComputedStyle(el);
+			if (
+				/layout|paint|strict|content/.test(cs.contain) ||
+				cs.transform !== 'none' ||
+				cs.filter !== 'none' ||
+				(cs.backdropFilter ?? 'none') !== 'none'
+			)
+				return el;
+		}
+		return null;
+	}
+	const viewport = () => {
+		const f = frame();
+		return f
+			? { w: f.clientWidth, h: f.clientHeight }
+			: { w: window.innerWidth, h: window.innerHeight };
+	};
 	const setChat = (c: ws.Chat) => (layout = { ...layout, chat: ws.clampChat(c, viewport()) });
 
 	function showTab(tab: string, prev = layout.active) {
@@ -493,13 +515,18 @@
 		const tickAge = setInterval(() => (now = Date.now()), 1000);
 		const onResize = () => setChat(layout.chat);
 		window.addEventListener('resize', onResize);
+		// A face window resized or snapped fires no window resize: watch the frame itself.
+		const watch = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(onResize);
+		const f = frame();
+		if (f) watch?.observe(f);
+		const unwatch = () => (window.removeEventListener('resize', onResize), watch?.disconnect());
 		if (!transport) {
 			link = {
 				state: 'closed',
 				reason: 'no bridge to the thalamus (opened outside the pupil app)'
 			};
 			loaded = true;
-			return () => (clearInterval(tickAge), window.removeEventListener('resize', onResize));
+			return () => (clearInterval(tickAge), unwatch());
 		}
 		const off = [
 			transport.onShell((payload) => {
@@ -598,14 +625,14 @@
 			.then(connect);
 		return () => {
 			clearInterval(tickAge);
-			window.removeEventListener('resize', onResize);
+			unwatch();
 			off.forEach((p) => p.then((f) => f()));
 		};
 	});
 </script>
 
 <svelte:window onkeydown={escape} />
-<main>
+<main bind:this={main}>
 	<div class="bar">
 		<nav class="crumbs" aria-label="workspace path" title={ws.pathOf(layout, space.id)}>
 			<details>
