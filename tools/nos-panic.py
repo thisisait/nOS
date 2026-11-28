@@ -73,14 +73,24 @@ def report(now: datetime) -> tuple[dict | None, str | None]:
 
 
 def rendered(sanction) -> set[str] | None:
-    """The sanction-<router> middlewares pazny.traefik rendered (one per deployed router), or None if unreadable."""
+    """The sanction-<router> middlewares a cut can land on: defined in sanctions.yml AND used by a router in
+    services.yml beside it, or None if either is unreadable. sanctions.yml defines one per manifest row, installed
+    or not; pazny.traefik renders a router into services.yml only for an installed app (row batch-1127b-review-tail)."""
     import yaml
+
+    def http(name: str) -> dict | None:
+        doc = yaml.safe_load((sanction.dynamic_file().parent / name).read_text(encoding="utf-8"))
+        return (doc or {}).get("http") if isinstance(doc, dict) else None
+
     try:
-        doc = yaml.safe_load(sanction.dynamic_file().read_text(encoding="utf-8"))
+        defined, routes = (http("sanctions.yml") or {}).get("middlewares"), (http("services.yml") or {}).get("routers")
     except (OSError, ValueError):
         return None
-    mw = ((doc or {}).get("http") or {}).get("middlewares")
-    return set(mw) if isinstance(mw, dict) else None
+    if not isinstance(defined, dict) or not isinstance(routes, dict):
+        return None
+    used = {m.split("@", 1)[0] for r in routes.values() if isinstance(r, dict)
+            for m in r.get("middlewares") or [] if isinstance(m, str) and m.startswith("sanction-")}
+    return set(defined) & used
 
 
 def targets(rep: dict, now: datetime, routers: set[str], router) -> tuple[dict, list[str]]:
@@ -103,7 +113,7 @@ def targets(rep: dict, now: datetime, routers: set[str], router) -> tuple[dict, 
         elif not (row.get("domain_var") and row.get("port_var")):
             held.append(f"not cut   {what}: {row['id']} has no router")
         elif f"sanction-{router(row['id'])}" not in routers:
-            held.append(f"not cut   {what}: {row['id']} has no rendered router (not installed, or traefik not converged)")
+            held.append(f"not cut   {what}: {row['id']} has no router on this host (not installed, or traefik not converged)")
         else:
             cut.setdefault(row["id"], []).append(u)
     order = sorted(cut, key=lambda a: (not any(m.get("kev") is True for m in cut[a]), a))
@@ -124,7 +134,8 @@ def main(argv: list[str] | None = None) -> int:
     sanction = _load("nos_sanction", "nos-sanction.py")
     routers = rendered(sanction)
     if routers is None:
-        print(f"UNKNOWN: {sanction.dynamic_file()} is not rendered (nos --tags traefik); nothing armed")
+        print(f"UNKNOWN: sanctions.yml or services.yml in {sanction.dynamic_file().parent} is not rendered "
+              "(nos --tags traefik); nothing armed")
         return 0 if not a.confirm else 1
     cut, held = targets(rep, now, routers, sanction.router)
     in_force = sanction.load_record()
