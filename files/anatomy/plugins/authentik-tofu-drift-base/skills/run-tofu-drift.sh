@@ -134,6 +134,7 @@ notify() {
         --arg tofu_dir "$TOFU_DIR" \
         --argjson ctx "$context_json" \
         '{severity: $sev, template: $tpl, context: $ctx,
+          supersede_key: "authentik-tofu-drift",
           origin_plugin: "authentik-tofu-drift",
           actor_id: "plugin:authentik-tofu-drift",
           actor_action_id: $run_id,
@@ -198,6 +199,9 @@ set -e
 
 if [[ "$PLAN_RC" -eq 0 ]]; then
     echo "INFO: no drift — live Authentik tenant matches OpenTofu state"
+    # The current answer under the job's one key retires the last drift / plan-error row (row
+    # security-readers-report-supersede): info, the inbox only, never pushed.
+    notify "info" "in_sync" "$(jq -n --arg tofu_dir "$TOFU_DIR" '{tofu_dir: $tofu_dir}')"
     exit 0
 fi
 
