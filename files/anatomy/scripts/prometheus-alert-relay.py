@@ -10,7 +10,7 @@ MEASURED 2026-08-05, and it is the reason this file exists:
 
 Five `NosWarningServiceDegraded` alerts had been FIRING since 2026-07-26 — ten
 days — for qdrant, gitea, firefly and two exporters. Six rule files evaluate on
-schedule, complete with `runbook_url` annotations and severity labels, and
+schedule, complete with severity labels, and
 Prometheus has no `alerting:` block, so there is no Alertmanager and nothing
 downstream of the evaluation. A curated alert corpus whose last link was never
 connected.

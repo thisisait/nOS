@@ -23,7 +23,6 @@ groups:
             New connections will start failing imminently; applications will error out.
             Immediate action: identify leaking client, bump max_connections, or restart
             the offending service.
-          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosCriticalPgConnectionExhaustion.md"
 
       - alert: NosWarningPgConnectionHigh
         expr: sum(pg_stat_activity_count) / on() max(pg_settings_max_connections) > 0.80
@@ -36,7 +35,6 @@ groups:
           description: |
             PostgreSQL is using {{ $value | humanizePercentage }} of its max_connections
             for 5 minutes. Investigate which service is holding connections open.
-          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningPgConnectionHigh.md"
 
       # Specifically catches the 2026-04 Authentik idle-connection leak bug:
       # the worker held hundreds of idle sessions without recycling them,
@@ -54,7 +52,6 @@ groups:
             pool is not recycling. Historical bug (2026-04-xx). Remediation:
             restart the authentik-worker container; upgrade Authentik; verify
             DB_POOL_* env vars in compose override.
-          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosCriticalPgAuthentikIdleLeak.md"
 
   - name: nos_infra_mariadb
     interval: 30s
@@ -70,7 +67,6 @@ groups:
           description: |
             MariaDB is using {{ $value | humanizePercentage }} of its max_connections
             for 5 minutes. Investigate WordPress, Nextcloud, or BookStack workers.
-          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningMariadbConnectionHigh.md"
 
   - name: nos_infra_redis
     interval: 30s
@@ -87,7 +83,6 @@ groups:
             Redis is using {{ $value | humanizePercentage }} of its configured
             maxmemory. Keys will start getting evicted based on policy.
             Consider raising maxmemory or reviewing key TTLs.
-          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningRedisMemoryHigh.md"
 
   - name: nos_infra_containers
     interval: 30s
@@ -104,7 +99,6 @@ groups:
             Container {{ $labels.name }} restarted {{ $value }} times in the last
             10 minutes. Likely crash-loop — inspect logs via Loki or
             `docker logs {{ $labels.name }}`.
-          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningContainerRestartFlapping.md"
 
       - alert: NosCriticalContainerDown
         expr: up{job=~"docker_.*"} == 0
@@ -118,7 +112,6 @@ groups:
             Prometheus cannot scrape {{ $labels.instance }} (job {{ $labels.job }})
             for 5 minutes. The container is either stopped, unresponsive, or its
             metrics endpoint is misconfigured.
-          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosCriticalContainerDown.md"
 
   - name: nos_infra_host
     interval: 30s
@@ -176,7 +169,6 @@ groups:
             Only {{ $value | humanizePercentage }} of host memory is available on
             {{ $labels.instance }}. Docker services may start OOM-killing —
             check Ollama (MLX), Authentik, GitLab first.
-          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningMemoryHigh.md"
 
   # ── Log pipeline: the sink must actually accept what the shipper sends ───────
   #
