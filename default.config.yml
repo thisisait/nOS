@@ -926,7 +926,7 @@ loki_version: "3.7.10"          # grpc 1.83.2 (high), containerd, Go 1.26.10 reb
 # Gitea Docker
 gitea_version: "28.4.0"                 # 2026-11-16: 9 high (GHSA-frjx, -6m4f, -wmr3, -wgx7, -4p89, -w87g, -q3q9, -9vh6, -5mx6) fixed in 28.4.0; prior 28.3.0
 
-postgres_exporter_version: "v0.21.1"  # PG_EXPORTER_EXTEND_QUERY_PATH dropped from the grafana compose (REM-370); counters > 2^53 wrap (one-time rate spike). Prior v0.20.1: v0.21.x held: deprecates PG_EXPORTER_* env (grafana compose sets PG_EXPORTER_EXTEND_QUERY_PATH), wraps counters [2026-11-21]
+postgres_exporter_version: "v0.20.1"  # v0.21.x held: deprecates PG_EXPORTER_* env (grafana compose sets PG_EXPORTER_EXTEND_QUERY_PATH), wraps counters [2026-11-21]
 mysqld_exporter_version: "v0.20.0"  # v0.21.0 held: BREAKING metric-type change + $$ password escaping in config files [2026-11-21].
 # -alpine, and the suffix is load-bearing. Upstream's DEFAULT image is now
 # scratch — no wget, no shell, nothing but the binary — so the compose
@@ -977,7 +977,7 @@ openhuman_skills: [nos-datatables, nos-for-openhuman]  # copied into ~/.openhuma
 # 2.32.7 is the queue's number and sits above that floor, with six days of soak;
 # 2.34.2 shipped today and buys nothing — no advisory has been published since
 # 2026-07-22. Same-major, migrate-on-start. arm64 tag confirmed on the registry.
-n8n_version: "2.48.8"  # 2.48.x is stable since 2.48.4 (no prerelease); GHSA fixes on 2.47/2.48; one-way DB migrations: back up ~/n8n. Prior 2.47.7: GHSA-q8rc-7m84-mfvj fixed in 2.47.6 (stable; 2.48.x is beta). One-way DB migrations: back up ~/n8n. Prior 2.45.7.
+n8n_version: "2.47.7"  # GHSA-q8rc-7m84-mfvj fixed in 2.47.6 (stable; 2.48.x is beta). One-way DB migrations: back up ~/n8n. Prior 2.45.7.
 n8n_data_dir: "{{ ansible_facts['env']['HOME'] }}/n8n"
 
 # ==============================================================================
@@ -1490,7 +1490,7 @@ rustfs_version: "1.0.6"                 # 1.0.4 CA distrust, 1.0.5 root-derived 
 # in this wave the result cannot be verified against `docker ps`. The tag and
 # its arm64 manifest are verified against the registry; that the service comes
 # up on it is not. First supervised `-e install_erpnext=true` run is the test.
-erpnext_version: "v15.127.0"              # v15 head (2026-11-25), notes name no breaking change. Prior v15.124.5: top of v15 (2026-11-04): GHSA-m668-9q43-8g29 + GHSA-x267-fgf5-54q9 fixed by 15.124.2 [advisory-status 2026-11-08]. Prior GHSA-v38v-9h2p-hr8v (critical) fixed by 15.121.3. REM-208: GHSA-6w83-8777-v93q SSTI (CVSS 9.9), floor 15.119.1 — pinned above it so the fourth overtake has margin
+erpnext_version: "v15.124.5"              # top of v15 (2026-11-04): GHSA-m668-9q43-8g29 + GHSA-x267-fgf5-54q9 fixed by 15.124.2 [advisory-status 2026-11-08]. Prior GHSA-v38v-9h2p-hr8v (critical) fixed by 15.121.3. REM-208: GHSA-6w83-8777-v93q SSTI (CVSS 9.9), floor 15.119.1 — pinned above it so the fourth overtake has margin
 # Bind-mount target for the ERPNext sites volume. The Docker named volume
 # `b2b_erpnext_sites` is the live storage; this var is referenced by
 # tasks/post.yml when reading site_config.json + bench migrate. Operators
