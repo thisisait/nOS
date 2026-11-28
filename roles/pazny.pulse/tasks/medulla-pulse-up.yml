@@ -70,3 +70,46 @@
   when:
     - _medulla_pulse_staleness is changed
     - (nos_service_manager | default('launchd')) == 'systemd-user'
+
+# Loaded is not running (live 2026-11-27: `spawn scheduled`, last exit 78 EX_CONFIG after a rebuild left a stale BTM
+# record, and the bootstrap above said already-loaded). Wait past ThrottleInterval for a PID, else bootout + bootstrap
+# once. Only the pid and last-exit lines leave the shell: `launchctl print` also prints the job's env (the Wing bearer).
+- name: "[pazny.pulse] (macOS) The medulla-pulse job runs (re-bootstrapped once if loaded and dead)"
+  ansible.builtin.shell: |
+    set -uo pipefail
+    LABEL={{ medulla_pulse_launchd_label | quote }}; DOM="gui/$(id -u)"
+    [ -x {{ pulse_medulla_bin | quote }} ] || { echo NOBIN; exit 0; }
+    state() { launchctl print "$DOM/$LABEL" 2>/dev/null | awk '
+      /^[[:space:]]*pid = / && !p { p = $3 }
+      /^[[:space:]]*last exit code = / && !e { sub(/.*last exit code = /, ""); e = $0 }
+      END { print (p ? "pid " p : "no pid, last exit " (e ? e : "unknown")) }'; }
+    await() { for _ in 1 2 3 4 5 6 7 8 9 10; do S=$(state); case "$S" in pid*) return 0;; esac; sleep 4; done; return 1; }
+    await && { echo "RUNNING $S"; exit 0; }
+    launchctl bootout "$DOM/$LABEL" 2>/dev/null
+    sleep 1  # bootout is asynchronous: a bootstrap into it returns 5 and leaves the job down (2026-08-15)
+    launchctl bootstrap "$DOM" "$HOME/Library/LaunchAgents/$LABEL.plist" || echo "BOOTSTRAP-FAILED rc $?"
+    await && { echo "REBOOTSTRAPPED $S"; exit 0; }
+    echo "DEAD $S"; exit 3
+  args:
+    executable: /bin/bash
+  register: _medulla_pulse_runs
+  changed_when: "'REBOOTSTRAPPED' in _medulla_pulse_runs.stdout"
+  failed_when: _medulla_pulse_runs.rc not in [0, 3]
+  when:
+    - pulse_medulla_jobs | length > 0
+    - (nos_service_manager | default('launchd')) == 'launchd'
+
+- name: "[pazny.pulse] (macOS) Refuse a medulla-pulse that launchd will not run"
+  ansible.builtin.assert:
+    that: _medulla_pulse_runs.rc == 0
+    fail_msg: >-
+      {{ medulla_pulse_launchd_label }} is loaded but launchd will not run it, even after one bootout + bootstrap
+      ({{ _medulla_pulse_runs.stdout | regex_replace('^DEAD ', '') }}). The medulla's jobs (pulse_medulla_jobs) do not
+      fire. Measured 2026-11-27: exit 78 EX_CONFIG with a stale background-task record; `sfltool dumpbtm` lists it.
+    quiet: true
+  when: _medulla_pulse_runs is not skipped and _medulla_pulse_runs.rc is defined
+
+- name: "[pazny.pulse] (macOS) The medulla binary is not built yet"
+  ansible.builtin.debug:
+    msg: "{{ pulse_medulla_bin }} is not built yet: launchd retries every 30 s and serve starts once pazny.medulla built it"
+  when: _medulla_pulse_runs is not skipped and 'NOBIN' in (_medulla_pulse_runs.stdout | default(''))

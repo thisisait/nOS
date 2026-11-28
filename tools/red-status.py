@@ -525,6 +525,20 @@ def pulse_daemon() -> dict:
     return {"running": True, "how": st["source"]}
 
 
+def medulla_scheduler() -> dict | None:
+    """The medulla's half of the split (the pulse row's launchd_helpers): {label, loaded, running, detail}; None =
+    UNKNOWN. Not loaded is calm (medulla-pulse.yml removes it with an empty set); loaded with no process is the
+    2026-11-27 failure (launchd exit 78 for 14 h, seen only as overdue jobs)."""
+    try:
+        import nos_identity  # noqa: PLC0415
+        label = next(r for r in nos_identity.services() if r["id"] == "pulse")["launchd_helpers"][0]
+    except Exception:  # noqa: BLE001
+        return None
+    import nos_host  # noqa: PLC0415
+    st = nos_host.service_state(label)
+    return None if st is None else {"label": label, **{k: st[k] for k in ("loaded", "running", "detail")}}
+
+
 def _queue_pending() -> dict[str, int] | None:
     """Pending counts by severity, read to re-decide a `security-drift` claim (`_still_holds`): the LIVE
     notebook joined with dispositions.json (nos_security.load_queue_items), the queue rem-status shows.
@@ -1320,6 +1334,9 @@ def collect() -> dict:
     report["pulse"] = pulse_daemon()
     if report["pulse"]["running"] is None:
         report["sources_missing"].append(f"Pulse daemon ({report['pulse']['how']})")
+    report["medulla_pulse"] = medulla_scheduler()
+    if report["medulla_pulse"] is None:
+        report["sources_missing"].append("the medulla scheduler (the pulse row's launchd_helpers: state UNKNOWN)")
 
     # Not a red source: None means "loops running", the healthy default, so it
     # never becomes an UNKNOWN. Its presence is a HOLD, reported by hold_lines().
@@ -1491,6 +1508,14 @@ def reds(report: dict, ids: list[str] | None = None) -> list[str]:
     overdue = report.get("overdue_jobs") or []
     # A stuck job is overdue at ~25.5 h and silent at 26 h: one cause, one line (measured 2026-11-05).
     silent = [c for c in report.get("silent_cells") or [] if c["job"] not in {j["job"] for j in overdue}]
+    med = report.get("medulla_pulse") or {}
+    if med.get("loaded") and not med.get("running"):
+        # One cause, one line: the jobs it fired in 24 h fold in (after 24 h dead they list again, beside it).
+        mine = set((report.get("schedulers") or {}).get("medulla") or [])
+        folded = [j for j in overdue if j["job"] in mine]
+        overdue = [j for j in overdue if j["job"] not in mine]
+        add("medulla-down", f"the medulla scheduler {med['label']}: {med['detail']} — {len(folded)} of its job(s) "
+                            "due and not fired; `nos --tags pulse` re-bootstraps it")
     if pulse.get("running") is False and (overdue or silent):
         # One cause, one line; the per-job lines return once Pulse runs.
         add("pulse-down", f"Pulse is not running ({pulse['how']}) — {len(overdue)} job(s) due "
