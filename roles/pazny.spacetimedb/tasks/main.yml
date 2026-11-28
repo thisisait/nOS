@@ -34,6 +34,7 @@
     owg_service: spacetimedb
     owg_pin: "{{ spacetimedb_version }}"
     owg_data_dir: "{{ spacetimedb_data_dir }}"
+    owg_copy_without_container: true  # unbacked: after a compose down this copy is the only rollback
 
 - name: "[pazny.spacetimedb] Stat JWT private key"
   ansible.builtin.stat:
