@@ -478,6 +478,10 @@ def test_roadmap_write_edge_is_backed_by_code(committed):
     scan = (REPO / "tools" / "discovery-scan.py").read_text(encoding="utf-8")
     seed = (REPO / "tools" / "roadmap-seed.py").read_text(encoding="utf-8")
     import re as _re
+    # Both name it through one function (keap_api.roadmap_table, row batch-1128-review-tail): one table.
+    one = r"^TABLE = roadmap_table\(\)$"
+    if _re.search(one, scan, _re.M) and _re.search(one, seed, _re.M):
+        return
     # roadmap-seed.py now resolves the id from NOS_ROADMAP_TABLE_ID with the same
     # uuid as its default (dtt env-addressing, 2026-09-07); accept the env-wrapped
     # form so the invariant "both address the SAME table" reads the default uuid.

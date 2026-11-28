@@ -47,7 +47,8 @@
     that:
       - _gls_have | length > 0
       - not (_pin is version(_have, '<'))
-      - not (_stop | length > 0 and _pin is version(_stop | regex_replace('-.*$', ''), '>'))
+      # a stop binds its major.minor, not its patch: 19.6.0 -> 19.6.2 past a 19.6.1 stop is legal (review 11-28)
+      - not (_stop | length > 0 and _pin_mm is version((_stop | regex_replace('-.*$', '')).split('.')[:2] | join('.'), '>'))
       - not (_stop | length == 0 and _have_mm is version(_pin_mm, '<'))
     fail_msg: >-
       {% if _gls_have | length == 0 %}GitLab data is in {{ gitlab_data_dir }} but its version is unreadable: `docker ps -a`

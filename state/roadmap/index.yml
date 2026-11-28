@@ -210,6 +210,9 @@
 - slug: batch-1128-review-tail
   parent: watch
   track: platform
+- slug: batch-1128b-review-tail
+  parent: watch
+  track: platform
 - slug: bff-table-read-tier-gate
   parent: consulting-firm-deployment
   track: security
@@ -2091,6 +2094,9 @@
 - slug: medulla-pulse-env-no-binaries
   parent: agents-run-away-from-the-secrets
   track: security
+- slug: medulla-pulse-loaded-not-running
+  parent: watch
+  track: platform
 - slug: medulla-remediation-reads
   parent: medulla-long-tail-tables
   track: platform
