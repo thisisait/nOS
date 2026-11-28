@@ -14,7 +14,8 @@
 # unconditionally (gdpr-breach-base precedent), so gating lives in the script —
 # run-tofu-drift.sh exits 0 with a skip line when the tofu binary OR
 # terraform/authentik/nos.auto.tfvars.json is absent (both only exist once the
-# operator has run the tofu cutover). No drift → quiet exit 0, no notification.
+# operator has run the tofu cutover). No drift → exit 0 with one info "in sync" row (never pushed) that
+# retires the last drift/plan-error row: every row carries supersede_key authentik-tofu-drift.
 # =============================================================================
 
 name: authentik-tofu-drift-base
@@ -113,6 +114,11 @@ notification:
         Review with `tofu plan` in `$tofu_dir`, then reconverge via
         `ansible-playbook main.yml --tags tofu-authentik` (destroy-guarded).
         This job never applies.
+    in_sync:
+      title: "Authentik matches OpenTofu state"
+      body: |
+        Read-only `tofu plan` in `$tofu_dir` found no drift. This row replaces the last drift or
+        plan-error row of this job (supersede_key authentik-tofu-drift).
     plan_error:
       title: "Authentik tofu drift check FAILED"
       body: |

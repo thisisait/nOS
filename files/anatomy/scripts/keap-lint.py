@@ -11,7 +11,7 @@ GET /agent/v1/lint and the Admin /api/lint.
 Severity routing mirrors keap-base's notification block:
   new critical/high  -> high   (wing-inbox + ntfy)
   new medium         -> medium (wing-inbox)
-  new low/info only  -> no notification (report-only)
+  nothing new        -> info (wing-inbox, never pushed) under the same key: it retires the last red row
 
 Env (Pulse-rendered):
   KEAP_API_URL          default http://127.0.0.1:8091
@@ -96,6 +96,11 @@ def main() -> int:
             notify("high", "KEAP lint: new high findings", body, "wing-inbox,ntfy")
         else:
             notify("medium", "KEAP lint: new findings", body, "wing-inbox")
+    else:
+        # A run with nothing new is the current answer under the same key: it retires the last red row (a failed
+        # run, or new findings), which nothing else ever would. Info, inbox only, never pushed (row
+        # security-readers-report-supersede, ruled (a)); the standing counts stay in the body.
+        notify("info", "KEAP lint: no new findings", f"Knowledge lint: {summary}", "wing-inbox")
     return 0
 
 
