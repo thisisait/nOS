@@ -16,6 +16,16 @@ export type InboxQuestion = {
 	onExpiry: string | null;
 };
 
+/** A decided question (row wing-inc1-questions-history): who decided it, never what was answered. */
+export type InboxDecided = {
+	uuid: string;
+	agent: string;
+	prompt: string;
+	status: string;
+	created: string;
+	answeredBy: string;
+};
+
 export type InboxNotification = {
 	uuid: string;
 	severity: string;
@@ -63,6 +73,20 @@ export function projectQuestions(rows: unknown): InboxQuestion[] {
 			onExpiry: opt(r.default_on_expiry)
 		}))
 		.filter((q) => q.uuid && q.prompt);
+}
+
+/** Wing's history, every status but open (those wait above): fixed fields, no answer text, no token. */
+export function projectHistory(rows: unknown): InboxDecided[] {
+	return rowsOf(rows)
+		.map((r) => ({
+			uuid: str(r.uuid),
+			agent: str(r.agent_name) || 'an agent',
+			prompt: str(r.prompt),
+			status: str(r.status),
+			created: str(r.created_at),
+			answeredBy: str(r.answered_by)
+		}))
+		.filter((q) => q.uuid && q.prompt && q.status && q.status !== 'open');
 }
 
 export function projectNotifications(rows: unknown): InboxNotification[] {

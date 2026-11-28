@@ -141,6 +141,8 @@ final class RouterFactory
 		$api->addRoute('api/v1/intents/<uuid>/pick', 'Intents:pick');
 		$api->addRoute('api/v1/intents/<uuid>/outcome', 'Intents:outcome');
 		$api->addRoute('api/v1/inbox/questions/<uuid>/cancel', 'Inbox:cancel');
+		// Before questions[/<uuid>]: first match wins, and that route would read "history" as a uuid (404).
+		$api->addRoute('api/v1/inbox/questions/history', 'Inbox:history');
 		$api->addRoute('api/v1/inbox/questions[/<uuid>]', 'Inbox:questions');
 
 		// Gitleaks findings (Anatomy A7, 2026-05-06).

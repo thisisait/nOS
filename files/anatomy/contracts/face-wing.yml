@@ -63,7 +63,7 @@ wire:
     - "GET  /api/v1/agents/<name>/sessions"
     - "POST /api/v1/agents/<name>/sessions   body: {prompt?, parent?}; vault and actor_id refused"
     - "GET  /api/v1/agent-sessions/<uuid>    {session, threads, iterations, children}"
-    - "GET  /api/v1/pulse_jobs, /pulse_runs[/summary], /events, /notifications — Tier 1 only (BaseApiPresenter::$bffOperatorReads)"
+    - "GET  /api/v1/pulse_jobs, /pulse_runs[/summary], /events, /notifications, /inbox/questions[/history] — Tier 1 only (BaseApiPresenter::$bffOperatorReads)"
     - "POST every operator verb (BaseApiPresenter::$operatorActions; scope wing.operator) — Tier 1 only; the record names user:<uid>"
   # A second delegate (iris-agent-dendrogram inc.2): the thalamus, which the kernel tells who its peer is,
   # starts an agent session for the person who approved Iris's start_agent card. Same headers, same fold.
