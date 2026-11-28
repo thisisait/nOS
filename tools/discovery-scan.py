@@ -70,16 +70,16 @@ CLAUDE_MD = REPO / "CLAUDE.md"
 # Live notebook filenames, recorded in git under these promotion paths.
 HOST_WRITTEN = list(GIT_REL)
 
-# Same default as roadmap-seed.py; both obey NOS_ROADMAP_TABLE_ID so they address
-# ONE table at runtime, not just by shared default (the graph write-edge gate).
 # Not 1: an uncaught exception exits 1, and 5/5 crashing runs (2026-10-23..27)
 # read as findings. 10 is the estate's findings code.
 EXIT_FINDINGS = 10
 EXIT_NOT_FILED = 3  # a contradiction found and KEAP refused the row
-TABLE = os.environ.get("NOS_ROADMAP_TABLE_ID", "2d498264-bc9a-4324-9935-489e5e4d92f3")
+from keap_api import ROADMAP_UNNAMED, human_headers, paged, roadmap_table  # noqa: E402 — sibling helper in tools/
+# One answer with roadmap-seed.py: NOS_ROADMAP_TABLE_ID, else keap_roadmap_table_id; "" = nothing names it
+# and main() refuses (row batch-1128-review-tail).
+TABLE = roadmap_table()
 KEAP = "http://127.0.0.1:8091"
 BASE = f"{KEAP}/api/tables/{TABLE}"
-from keap_api import human_headers, paged  # noqa: E402 — sibling helper in tools/
 
 #: X-Authentik-* admin identity + the SEC-02 x-keap-proxy-secret (resolved once
 #: by keap_api, on the first KEAP call). Without the secret every /api call here 401s since KEAP P1.
@@ -1284,6 +1284,9 @@ def main() -> int:
                     help="write findings as roadmap rows (default: report only)")
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args()
+    if not TABLE:  # the stale check reads the roadmap and --file writes it: never a guessed table
+        print(f"[-] {ROADMAP_UNNAMED}. NOTHING WAS COMPARED.", file=sys.stderr)
+        return 2
 
     res = ScanResult()
     try:

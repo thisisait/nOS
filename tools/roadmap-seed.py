@@ -34,15 +34,18 @@ import sys
 import urllib.error
 import urllib.request
 
-from keap_api import human_base, human_headers, paged, write_row  # noqa: E402 — sibling helper in tools/
+from keap_api import ROADMAP_UNNAMED, human_base, human_headers, paged, roadmap_table, write_row  # noqa: E402 — sibling helper in tools/
 from roadmap_seed_lib import GIT_OWNED, invalid, only_arg, refuse_unknown_args, is_estate_checkout, load_rows, restore_table_owned, seed_dir, adopt_parents, write_index  # noqa: E402
 refuse_unknown_args(sys.argv[1:], __doc__)  # an unknown flag used to seed live (loop dry run 2026-11-10)
 
 _REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-#: NOS_ROADMAP_TABLE_ID overrides for an estate whose roadmap table was minted
-#: through the agent door (id == slug, e.g. "roadmap"); KEAP_API_URL for a
-#: non-default loopback publish. Defaults are the operator estate's values.
-TABLE = os.environ.get("NOS_ROADMAP_TABLE_ID", "2d498264-bc9a-4324-9935-489e5e4d92f3")
+#: The table: NOS_ROADMAP_TABLE_ID (e.g. "roadmap", minted through the agent door), else
+#: keap_roadmap_table_id through the config layers (keap_api.roadmap_table); nothing named = refused, never guessed.
+#: KEAP_API_URL for a non-default loopback publish.
+TABLE = roadmap_table()
+if not TABLE:
+    print(f"roadmap-seed: {ROADMAP_UNNAMED}", file=sys.stderr)
+    sys.exit(2)
 BASE = f"{human_base()}/api/tables/{TABLE}"
 H = human_headers()  # identity + SEC-02 x-keap-proxy-secret (else /api 401s)
 
