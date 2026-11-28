@@ -1,6 +1,7 @@
 <!--
   InboxApp — Wing's inbox as a face app (row wing-inc1-inbox-app, Tier 1). The agents' open
-  questions first (a blocked run waits on a person), then the unread notifications. Answers and
+  questions first (a blocked run waits on a person), then the unread notifications, then the decided
+  questions and who decided them, loaded when the person opens that section (row wing-inc1-questions-history). Answers and
   "read" go through /bff/inbox; Wing decides the tier again, records the person and resolves a
   question once. What Wing said is shown in its own words: a lost race names the answer that won.
   Agent text is drawn as text, never markup.
@@ -8,14 +9,17 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { StatusNote, Badge, severityTone as tone } from '$lib/components/ui';
-	import { answerQuestion, loadInbox, markRead, type Inbox } from '$lib/api/inbox';
-	import type { AnswerOutcome } from '$lib/inbox/project';
+	import { answerQuestion, loadDecided, loadInbox, markRead, type Inbox } from '$lib/api/inbox';
+	import type { AnswerOutcome, InboxDecided } from '$lib/inbox/project';
 
 	let inbox = $state<Inbox | null>(null);
 	let failed = $state<string | null>(null);
 	let busy = $state<string | null>(null);
 	let draft: Record<string, string> = $state({});
 	let said: Record<string, { text: string; ok: boolean }> = $state({});
+	let decided = $state<InboxDecided[] | null>(null);
+	let decidedFailed = $state<string | null>(null);
+	let decidedOpen = $state(false);
 
 	function words(o: AnswerOutcome): string {
 		switch (o.outcome) {
@@ -38,6 +42,23 @@
 			inbox = null;
 			failed = String(e);
 		}
+		decided = null;
+		if (decidedOpen) await refreshDecided();
+	}
+
+	async function refreshDecided() {
+		decidedFailed = null;
+		try {
+			decided = (await loadDecided()).decided;
+		} catch (e) {
+			decided = null;
+			decidedFailed = String(e);
+		}
+	}
+
+	function toggled(e: Event) {
+		decidedOpen = (e.currentTarget as HTMLDetailsElement).open;
+		if (decidedOpen && decided === null) refreshDecided();
 	}
 
 	async function answer(uuid: string, text: string) {
@@ -146,6 +167,31 @@
 				</article>
 			{/each}
 		</section>
+
+		<section aria-label="decided questions">
+			<details ontoggle={toggled}>
+				<summary><h3>Decided{decided ? ` (${decided.length})` : ''}</h3></summary>
+				{#if decidedFailed}
+					<StatusNote kind="error" title="The decided questions did not load"
+						>{decidedFailed}</StatusNote
+					>
+				{:else if decided === null}
+					<StatusNote kind="loading">loading…</StatusNote>
+				{:else if decided.length === 0}
+					<StatusNote kind="empty" title="Nothing decided yet." />
+				{/if}
+				{#each decided ?? [] as q (q.uuid)}
+					<article class="decided">
+						<p class="who">
+							<Badge tone="neutral">{q.status}</Badge>
+							{q.agent}{#if q.answeredBy}<span>· {q.answeredBy}</span>{/if}
+						</p>
+						<p class="prompt">{q.prompt}</p>
+						<p class="meta">{q.created}</p>
+					</article>
+				{/each}
+			</details>
+		</section>
 	{/if}
 </div>
 
@@ -191,6 +237,12 @@
 	}
 	article.unread {
 		border-left-color: var(--info);
+	}
+	article.decided {
+		border-left-color: var(--glass-brd);
+	}
+	summary h3 {
+		display: inline;
 	}
 	article.done {
 		border-left-color: var(--glass-brd);

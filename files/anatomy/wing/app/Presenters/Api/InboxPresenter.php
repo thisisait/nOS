@@ -14,6 +14,7 @@ use Nette\Http\IResponse;
  *
  * POST /api/v1/inbox/questions              — an agent asks; returns uuid + reply_token
  * GET  /api/v1/inbox/questions              — open questions (operator/UI)
+ * GET  /api/v1/inbox/questions/history      — the newest 100 questions and who decided them (Tier 1, via the face)
  * GET  /api/v1/inbox/questions/<uuid>       — poll; the asking agent's blocking loop
  * POST /api/v1/inbox/questions/<uuid>/answer — answer it (resolve-once)
  * POST /api/v1/inbox/questions/<uuid>/cancel — the agent withdraws it
@@ -47,12 +48,33 @@ final class InboxPresenter extends BaseApiPresenter
 
 	protected array $answerActions = ['answer'];
 
-	/** The face Inbox app lists the open questions as a Tier-1 person (row wing-inc1-inbox-app, 2026-11-08). */
-	protected array $bffOperatorReads = ['questions'];
+	/** The face Inbox app lists the open questions, and the decided ones (row wing-inc1-questions-history), as a Tier-1 person. */
+	protected array $bffOperatorReads = ['questions', 'history'];
+
+	/** What the history carries: never the reply token, its hash, the context blob or the answer text. */
+	private const HISTORY_FIELDS = ['uuid', 'agent_name', 'prompt', 'status', 'created_at', 'answered_by'];
 
 	public function __construct(
 		private AgentQuestionRepository $questions,
 	) {
+	}
+
+	/**
+	 * GET /api/v1/inbox/questions/history — the newest 100 questions, an open one past its deadline as
+	 * expired (listRecent), fixed fields only. For a Tier-1 person through the face: a token that speaks
+	 * for nobody is refused (row wing-inc1-questions-history; who else may list it is the operator's ruling).
+	 */
+	public function actionHistory(): void
+	{
+		$this->requireMethod('GET');
+		if ($this->endUser === null) {
+			$this->sendError('the question history is read through the face, for a Tier-1 person', IResponse::S403_Forbidden);
+		}
+		$keep = array_flip(self::HISTORY_FIELDS);
+		$this->sendSuccess(['questions' => array_map(
+			static fn(array $q): array => array_intersect_key($q, $keep),
+			$this->questions->listRecent(100),
+		)]);
 	}
 
 	/**

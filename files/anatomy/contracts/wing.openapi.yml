@@ -1124,6 +1124,25 @@ paths:
           description: Not found
       security:
         - BearerAuth: []
+  /api/v1/inbox/questions/history:
+    get:
+      summary: the newest 100 questions and who decided them (Tier 1, via the face)
+      operationId: Inbox_history_get
+      tags:
+        - Inbox
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '403':
+          description: 'The token''s scopes do not permit this call'
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
   '/api/v1/inbox/questions/{uuid}':
     get:
       summary: 'poll; the asking agent''s blocking loop'

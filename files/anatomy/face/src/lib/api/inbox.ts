@@ -1,6 +1,11 @@
 /** The face Inbox app's client (row wing-inc1-inbox-app): /bff/inbox, Tier 1. */
 import { bffGet, bffPost } from './client';
-import type { AnswerOutcome, InboxNotification, InboxQuestion } from '$lib/inbox/project';
+import type {
+	AnswerOutcome,
+	InboxDecided,
+	InboxNotification,
+	InboxQuestion
+} from '$lib/inbox/project';
 
 export type Inbox = {
 	questions: InboxQuestion[];
@@ -10,6 +15,10 @@ export type Inbox = {
 
 export function loadInbox(): Promise<Inbox> {
 	return bffGet<Inbox>('/bff/inbox');
+}
+
+export function loadDecided(): Promise<{ decided: InboxDecided[] }> {
+	return bffGet<{ decided: InboxDecided[] }>('/bff/inbox', { view: 'decided' });
 }
 
 export async function markRead(uuid: string): Promise<void> {

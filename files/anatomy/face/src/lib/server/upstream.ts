@@ -307,6 +307,11 @@ export async function wingQuestions(user: WingUser): Promise<unknown> {
 	return wingGet(user, '/inbox/questions');
 }
 
+/** The newest 100 questions and who decided them (Api\InboxPresenter::actionHistory, $bffOperatorReads). */
+export async function wingQuestionsHistory(user: WingUser): Promise<unknown> {
+	return wingGet(user, '/inbox/questions/history');
+}
+
 /** Mark one notification read; 404 = already read or unknown, said, never a quiet success. */
 export async function wingMarkRead(user: WingUser, uuid: string): Promise<unknown> {
 	const u = WING_API() + '/notifications/' + encodeURIComponent(uuid) + '/read';

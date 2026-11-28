@@ -1,7 +1,8 @@
 /** BFF · the face Inbox app (row wing-inc1-inbox-app): Wing's inbox for a Tier-1 person.
  *
  * GET   the unread notifications and the open agent questions, projected (lib/inbox/project.ts):
- *       never a reply token, its hash or a question's context.
+ *       never a reply token, its hash or a question's context. ?view=decided: the decided ones
+ *       ({decided}: agent, prompt, status, who decided; never the answer text).
  * POST  {op: 'read', uuid} marks one notification read; {op: 'answer', uuid, answer} answers one
  *       question as the person (Wing records user:<uid>, via face, and resolves it once).
  *
@@ -18,11 +19,17 @@ import {
 	wingBffConfigured,
 	wingMarkRead,
 	wingNotifications,
-	wingQuestions
+	wingQuestions,
+	wingQuestionsHistory
 } from '$lib/server/upstream';
 import { fromThisSite } from '$lib/server/thalamus';
 import { canViewAnatomy } from '$lib/security/tier';
-import { answerOutcome, projectNotifications, projectQuestions } from '$lib/inbox/project';
+import {
+	answerOutcome,
+	projectHistory,
+	projectNotifications,
+	projectQuestions
+} from '$lib/inbox/project';
 
 const UUID = /^[0-9a-z-]{1,64}$/;
 
@@ -32,9 +39,13 @@ function gate(groups: readonly string[] | undefined) {
 		throw error(503, 'NOS_WING_BFF_TOKEN is not set on the face container.');
 }
 
-export const GET: RequestHandler = async ({ locals }) => {
+export const GET: RequestHandler = async ({ locals, url }) => {
 	gate(locals.identity?.groups);
 	try {
+		if (url.searchParams.get('view') === 'decided') {
+			const h = (await wingQuestionsHistory(locals.identity)) as { questions?: unknown };
+			return json({ decided: projectHistory(h.questions) });
+		}
 		const [q, n] = (await Promise.all([
 			wingQuestions(locals.identity),
 			wingNotifications(locals.identity, { unread_only: '1', limit: '200' })
