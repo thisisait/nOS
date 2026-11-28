@@ -708,6 +708,13 @@ const PROGRAM_TOOLS: [&str; 3] = ["query_rows", "show", "propose_program"];
 /// A program's wall clock, checked between its calls beside face.stopped().
 const PROGRAM_WALL: Duration = Duration::from_secs(60);
 
+/// plan()'s answer: a mapped plan, or the person's Stop during the plan's own model call, which ends the turn
+/// (row iris-stop-ends-the-turn: plan_chat passed no face, so a plan turn ran on after "Stopped.").
+enum Plan {
+    Ran(Planned),
+    Stopped,
+}
+
 /// A cortex plan mapped to tool calls (plan()); `program` is minted only for a plan the thalamus runs.
 struct Planned {
     msg: Value,
@@ -2646,16 +2653,19 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
         let planned = match (&self.cortex, o.model.clone()) {
             (Some(c), Ok(m)) => routed(o, c).and_then(|wide| {
                 activity(out, o, Phase::Thinking);
-                self.plan(who, o, &m, c, text, wide)
+                self.plan(who, o, &m, c, text, wide, face)
             }),
             _ => None,
         };
         // iris_plan_run: thalamus: a plan of reads runs here and ends the turn (plan() mints its id only then).
         let planned = match planned {
-            Some(Planned { msg, source, program: Some(program), title }) => {
+            // The Stop was consumed by the plan's call: the turn ends here, never falls back to the tool loop.
+            Some(Plan::Stopped) => return self.end_turn(out, o, &[], STOPPED, "Stopped.".into()),
+            Some(Plan::Ran(Planned { msg, source, program: Some(program), title })) => {
                 return self.run_program(who, out, o, face, &msg, source, program, title);
             }
-            p => p.map(|p| p.msg),
+            Some(Plan::Ran(p)) => Some(p.msg),
+            None => None,
         };
         // A turn that names our knowledge searches it first, so the answer is grounded or said absent.
         let named = cortex_plan::names_knowledge(text);
@@ -2667,8 +2677,10 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
         self.think_from(who, out, o, planned, face);
     }
 
-    /// The cortex plan as one assistant message of mapped tool calls; None after the model heard why not.
-    fn plan(&self, who: &Person, o: &mut Open, model: &Binding, c: &Cortex, text: &str, wide: bool) -> Option<Planned> {
+    /// The cortex plan as one assistant message of mapped tool calls; None after the model heard why not;
+    /// Plan::Stopped when the person stopped the plan's model call (within 200 ms, as the tool loop's).
+    #[allow(clippy::too_many_arguments)]
+    fn plan(&self, who: &Person, o: &mut Open, model: &Binding, c: &Cortex, text: &str, wide: bool, face: &Face) -> Option<Plan> {
         let tool = Some("cortex_plan");
         // kind: "infra" (the estate failed: no verdict on the model) or "model" (its plan does not run)
         let refused = |o: &mut Open, why: String, kind: &str, rec: Value| {
@@ -2707,16 +2719,19 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                 }
                 Engine::Free => {}
             }
-            let answer = match self.plan_chat(model, o, body) {
+            let answer = match self.plan_chat(model, o, body, face) {
                 Ok(m) => m,
+                // First: a stopped call is neither a downgrade nor a refusal (the tool loop would call the model again).
+                Err(why) if why == STOPPED => return Some(Plan::Stopped),
                 // Ollama MLX answers 501 to any format, a row may 400 a forced call: the same request, unconstrained.
                 Err(why) if engine == Engine::JsonSchema || (engine == Engine::Tool && cortex_plan::tool_refused(&why)) => {
                     // said on the plan row: a timeout or a 500 downgrades too, and a constrained run must show it
                     downgrade = Some((engine.name(), why));
                     engine = Engine::Free;
                     msgs[0] = json!({"role": "system", "content": cortex_plan::primer(engine, &catalogue)});
-                    match self.plan_chat(model, o, json!({"model": model.model_id, "messages": msgs})) {
+                    match self.plan_chat(model, o, json!({"model": model.model_id, "messages": msgs}), face) {
                         Ok(m) => m,
+                        Err(why) if why == STOPPED => return Some(Plan::Stopped),
                         Err(why) => return refused(o, why, "infra", json!({})),
                     }
                 }
@@ -2796,8 +2811,8 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                             let _ = self.record(o, Kind::ToolResult, tool, res);
                             let tool_calls: Vec<Value> = calls.iter().enumerate().map(|(i, (n, a))| json!({"id": format!("cortex-{}", i + 1),
                                 "type": "function", "function": {"name": n, "arguments": a.to_string()}})).collect();
-                            Some(Planned { msg: json!({"role": "assistant", "content": null, "tool_calls": tool_calls}), source, program,
-                                           title: table["title"].as_str().map(str::to_string) })
+                            Some(Plan::Ran(Planned { msg: json!({"role": "assistant", "content": null, "tool_calls": tool_calls}), source, program,
+                                           title: table["title"].as_str().map(str::to_string) }))
                         }
                     };
                 }
@@ -3644,9 +3659,9 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
     }
 
     /// The plan's model request, an iris.complete span like every other (a thalamus-run turn has only this one).
-    fn plan_chat(&self, model: &Binding, o: &mut Open, body: Value) -> Result<Value, String> {
+    fn plan_chat(&self, model: &Binding, o: &mut Open, body: Value, face: &Face) -> Result<Value, String> {
         let (span, before) = (o.trace.as_mut().map(|t| t.begin("iris.complete")), o.tokens);
-        let msg = self.chat(model, o, body, None);
+        let msg = self.chat(model, o, body, Some(face));
         if let (Some(i), Some(t)) = (span, o.trace.as_mut()) {
             t.end(i, msg.is_ok(), vec![("gen_ai.request.model", json!(model.model_id)),
                                        ("gen_ai.usage.input_tokens", json!(o.tokens.0 - before.0)),
