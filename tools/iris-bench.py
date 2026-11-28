@@ -46,6 +46,8 @@ a single-prompt case without expect_pipeline must fall back (pipeline_fell_back)
 judge cannot answer (validator, evidence) makes the case NO-DATA. --validate-url is loopback only.
 --as goes through the face, which never sends a bench hello: it takes --plan tools only.
 Two plans are equal when the thalamus runs the same query for them (meaning()), not when they read alike.
+A single-prompt case whose plan ran in the thalamus (plan_run thalamus) closes on serve's line, not the model's:
+its prose checks read what was shown (THALAMUS_EQUIVALENT); answers_in and the like are unjudged, never pass or fail.
 
 `--rescore run.json ...` re-judges pipeline_equals_expected on saved runs offline (the cases come from
 the run's own argv; --domain needs NOS_ASSAY_DIR) and writes run.rescored.json; other verdicts are kept.
@@ -473,8 +475,53 @@ PLAN_CHECKS = ("pipeline_valid", "pipeline_equals_expected", "pipeline_fell_back
 
 
 def unjudged(failed: list[str]) -> bool:
-    """Every failure is a plan check the judge could not answer ("name: why"): NO-DATA, not red."""
-    return bool(failed) and all(f.startswith(tuple(f"{n}: " for n in PLAN_CHECKS)) for f in failed)
+    """Every failure is a check the judge could not answer ("name: why"), a plan check or a prose check under a
+    thalamus-run plan: NO-DATA, not red."""
+    return bool(failed) and all(f.startswith(tuple(f"{n}: " for n in PLAN_CHECKS)) or f.endswith(f": {THALAMUS_RUN}")
+                                for f in failed)
+
+
+# Under iris_plan_run: thalamus serve's program_line closes the turn, not the model (row iris-code-mode-bench-render-checks).
+THALAMUS_RUN = "thalamus-run: no model prose"
+
+
+def judged_as(case: dict, got: dict) -> str | None:
+    """"thalamus" when this single-prompt case's plan ran in the thalamus (its plan evidence says so), else None."""
+    p = got.get("plan")
+    # ponytail: the evidence is the session's last plan, so a multi-turn case is judged as before; per-turn evidence lifts it
+    return "thalamus" if "turns" not in case and isinstance(p, dict) and p.get("plan_run") == "thalamus" else None
+
+
+def shown(got: dict) -> str:
+    """What the thalamus showed, as text: the closing Text and each render's titles, labels and cells (never its query)."""
+    out = [got["text"]]
+    for r in got["renders"]:
+        kind, p = r["component"].get("kind"), r["component"].get("props", {})
+        out += [p.get("title"), p.get("unit")]
+        if kind == "chart":
+            out += [x for s in p.get("series", []) for x in (s.get("name"), *(v for pt in s.get("points", []) for v in pt))]
+        elif kind == "kpi":
+            out.append(p.get("value"))
+        elif kind == "table":
+            out += p.get("columns", []) + [v for row in p.get("rows", []) for v in row]
+        elif kind == "table_results":
+            out += [p.get("name"), *p.get("columns", []), *(v for row in p.get("rows", []) for v in row.get("cells", {}).values())]
+    return "\n".join(str(x) for x in out if x not in (None, ""))
+
+
+def _unjudged_prose(arg, got, now):
+    raise Unjudged(THALAMUS_RUN)
+
+
+# A prose check under a thalamus-run plan: judged on what was shown, or unjudged (counted apart, never pass or fail).
+THALAMUS_EQUIVALENT = {
+    "not_blank": lambda arg, got, now: bool(got["renders"] or got["cards"]) or check("not_blank", arg, got | {"judged_as": None}, now),
+    "text_contains": lambda arg, got, now: check("text_contains", arg, got | {"judged_as": None, "text": shown(got)}, now),
+    "turn_text_contains": lambda arg, got, now: check("turn_text_contains", arg, got | {"judged_as": None, "texts": [shown(got)]}, now),
+    # matched is serve's count, never the model's: the table it drew is the answer
+    "count_equals_matched": lambda arg, got, now: any(r["component"].get("kind") == "table_results" for r in got["renders"]),
+    **dict.fromkeys(("answers_in", "text_not_equals", "time_within", "says_cannot_see", "no_number"), _unjudged_prose),
+}
 
 
 # A tool renamed (iris-grounded-knowledge, 2026-10-19): an old run or case reads as the new name, for one release.
@@ -519,6 +566,8 @@ def _cited(arg, got: dict, text: str) -> bool:
 
 def check(name: str, arg, got: dict, now: float) -> bool:
     got = renamed(got)
+    if got.get("judged_as") == "thalamus" and name in THALAMUS_EQUIVALENT:
+        return THALAMUS_EQUIVALENT[name](arg, got, now)
     if name in ("tools_called", "tools_not_called"):
         arg = [RENAMED.get(t, t) for t in arg]
     if name == "pipeline_fell_back":  # no cortex_plan row, or one whose result fell back
@@ -893,6 +942,7 @@ def _failed(checks: dict, got: dict, prior: list[dict], now: float) -> list[str]
 def judge(case: dict, got: dict, now: float) -> tuple[list[str], list[dict]]:
     """(failed, turns): each turn judged on its slice while every earlier turn passed; case checks with the last."""
     raw = case["turns"] if "turns" in case else [case["prompt"]]
+    got = got | {"judged_as": judged_as(case, got)}
     per, failed, turns = got.get("per_turn", [got] if len(raw) == 1 else []), [], []
     for i, t in enumerate(raw):
         if turns and turns[-1]["status"] != "pass":
@@ -1453,6 +1503,7 @@ def bench(a, cases: list[dict], where: str, validate, opener=None, who: dict | N
                         "seconds": round(sum(r[2] for r in runs) / n, 2), "model_uri": got["model_uri"], "tools": got["tools"],
                         "approvals_rejected": sum(len(r[0]["approvals"]) for r in runs), "refused": got["refused"],
                         "queries": queries(got), "text": got["text"], "pipeline": got.get("plan"),
+                        "judged_as": judged_as(case, got),
                         "plan_checks": sorted(plan_checks(case, (got.get("route") or "tools") if a.plan == "hybrid" else a.plan)),
                         **({"route": got.get("route")} if a.plan == "hybrid" else {}),
                         # Why an offered widget was left out (round 2: the model only paraphrased it).
