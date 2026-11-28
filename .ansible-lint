@@ -11,8 +11,6 @@ exclude_paths:
   # requirements.yml; absent on CI). Excluded so a whole-tree local ansible-lint
   # isn't red on a vendored Molecule-only dep we never run.
   - roles/geerlingguy.dotfiles/molecule
-  # Cargo's build dir (gitignored): a hand cargo run leaves it in-tree; tests/conftest.py points the gates elsewhere.
-  - files/anatomy/thalamus/target
 
 skip_list:
   - schema[meta]
