@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import argparse
 import collections
+import functools
 import json
 import os
 import re
@@ -168,16 +169,26 @@ def _grade(m: dict) -> str:
     return g
 
 
-def _judgements() -> dict:
-    """The operator's advisory verdicts, read by advisory-status's own loader (one source). {} when it does
-    not load: then no judgement silences a regrade, so the answer errs red, never quiet."""
+@functools.lru_cache(maxsize=1)
+def _advisory():
+    """advisory-status as a sibling (its judgements loader and in_force), or None when it does not load."""
     import importlib.util  # noqa: PLC0415 — sibling reader, not a package
 
     try:
         spec = importlib.util.spec_from_file_location("_advisory", Path(__file__).resolve().parent / "advisory-status.py")
         adv = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(adv)
-        return adv.judgements()
+        return adv
+    except Exception:  # noqa: BLE001 — unreadable is the same answer: nothing judged
+        return None
+
+
+def _judgements() -> dict:
+    """The operator's advisory verdicts, read by advisory-status's own loader (one source). {} when it does
+    not load: then no judgement silences a regrade, so the answer errs red, never quiet."""
+    adv = _advisory()
+    try:
+        return adv.judgements() if adv else {}
     except Exception:  # noqa: BLE001 — unreadable is the same answer: nothing judged
         return {}
 
@@ -193,9 +204,11 @@ def regrade(items: list[dict], report: dict | None, judged: dict | None = None, 
     judged = _judgements() if judged is None else judged
     today = today or time.strftime("%Y-%m-%d", time.gmtime())
 
+    adv = _advisory()
+
     def live(subject: str, m: dict) -> bool:
         j = judged.get((str(m.get("id")), subject))
-        return not (j and str(j.get("until")) >= today and j.get("verdict") == "not-applicable")
+        return not (adv and adv.in_force(j, today) and j.get("verdict") == "not-applicable")
 
     by_subject: dict[str, list[dict]] = {}
     for r in report.get("pins") or []:

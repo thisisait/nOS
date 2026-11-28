@@ -122,12 +122,17 @@ def judge(lines, trees: tuple[str, ...], since: datetime, dev: tuple[str, ...] =
             "dev_toolchain": [{"path": p, "count": c} for p, c in sorted(toolchain.items(), key=lambda x: -x[1])]}
 
 
-def _lines(since: datetime, missing: list[str]):
+def _lines(since: datetime, missing: list[str], walk: dict | None = None):
     """The live log, then each rotation newest first (santa.log.N or .N.gz), streamed line by line,
     until one starts before `since`. An unreadable rotation is named in `missing` (UNKNOWN past it)
-    and ends the walk; the live log's error is raised, as before."""
+    and ends the walk; the live log's error is raised, as before. `walk["oldest"]` is the first event of
+    the last file read (the files are newest first, each in time order): how far back the walk reached."""
+    walk = {} if walk is None else walk
     with LOG.open("r", encoding="utf-8", errors="replace") as fh:
-        yield from fh
+        for line in fh:
+            if "oldest" not in walk and (ev := parse(line)):
+                walk["oldest"] = ev["ts"]
+            yield line
     for n in range(ROTATIONS_MAX):
         plain, gz = LOG.with_name(f"{LOG.name}.{n}"), LOG.with_name(f"{LOG.name}.{n}.gz")
         path = gz if gz.exists() else plain if plain.exists() else None
@@ -139,7 +144,7 @@ def _lines(since: datetime, missing: list[str]):
                   else path.open("r", encoding="utf-8", errors="replace")) as fh:
                 for line in fh:
                     if first is None and (ev := parse(line)):
-                        first = ev["ts"]
+                        first = walk["oldest"] = ev["ts"]
                     yield line
         except (OSError, EOFError, zlib.error) as exc:
             missing.append(f"{path} ({getattr(exc, 'strerror', None) or exc})")
@@ -163,11 +168,25 @@ def collect(hours: int = 24, now: datetime | None = None) -> dict:
     except (OSError, subprocess.SubprocessError, ValueError, KeyError, TypeError):
         report["sources_missing"].append(f"{SANTACTL} status --json")
     since = now - timedelta(hours=hours)
+    walk: dict = {}
     try:
-        report.update(judge(_lines(since, report["sources_missing"]), declared_trees(), since, dev_trees()))
+        report.update(judge(_lines(since, report["sources_missing"], walk), declared_trees(), since, dev_trees()))
     except OSError as exc:
         report["sources_missing"].append(f"{LOG} ({exc.strerror or exc})")
+        return report
+    # The window read is a fact, not the one asked for: a walk that ended (no older rotation, one unreadable,
+    # ROTATIONS_MAX) before any event older than `since` covered less. No event at all = the window is UNKNOWN.
+    if "oldest" not in walk:
+        report["sources_missing"].append(f"{LOG} (no event read: the window is UNKNOWN)")
+    else:
+        report["short"] = walk["oldest"] > since
+        report["covered_since"] = (walk["oldest"] if report["short"] else since).isoformat(timespec="minutes")
     return report
+
+
+def _window(report: dict) -> str:
+    """`in <h>h`, or `since <time>` when the walk read less than the window it was asked for."""
+    return f"since {report['covered_since']}" if report.get("short") else f"in {report['window_h']}h"
 
 
 def summary(report: dict) -> list[str]:
@@ -182,7 +201,7 @@ def summary(report: dict) -> list[str]:
         out.append(f"{len(report['denied'])} exec DENY")
     rows = report.get("outside") or []
     if rows:
-        out.append(f"{len(rows)} executable(s) outside the declared trees in {report['window_h']}h: "
+        out.append(f"{len(rows)} executable(s) outside the declared trees {_window(report)}: "
                    + ", ".join(f"{r['path']} ×{r['count']}" for r in rows[:5]) + (" …" if len(rows) > 5 else ""))
     return out
 
@@ -212,7 +231,7 @@ def main() -> int:
         print(f"  DENY    {d['path']} ({d['reason']}) {d['ts']}")
     for m in report["sources_missing"]:
         print(f"  ?       {m} — unreadable, UNKNOWN not green")
-    print(f"{len(report.get('outside', []))} outside the declared trees in {report['window_h']}h"
+    print(f"{len(report.get('outside', []))} outside the declared trees {_window(report)}"
           + (" (some sources UNKNOWN)" if report["sources_missing"] else ""))
     return 0
 
