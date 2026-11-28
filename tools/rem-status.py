@@ -198,7 +198,10 @@ def regrade(items: list[dict], report: dict | None, judged: dict | None = None, 
     security-scan-staleness-missed-a-live-critical): the scanner filed WordPress LOW eight days before
     it became a 9.2. A proposal for the operator, never a rewrite. None = the report is unreadable.
     A match a judgement in force covers (id + subject, until >= today, advisory-judgements.yml) drives
-    nothing: all 24 regrades of 2026-11-22 were driven by advisories already judged n/a."""
+    nothing: all 24 regrades of 2026-11-22 were driven by advisories already judged n/a.
+    A row that names its ids (cve_ids, ghsa_ids, osv_ids) is regraded only by a match with one of them
+    (join "id"); a row naming none by its component (join "component"), the weaker kind (row
+    security-readers-join-by-cve, ruled (a): no component fallback for a row that names ids)."""
     if not isinstance(report, dict):
         return None
     judged = _judgements() if judged is None else judged
@@ -211,24 +214,36 @@ def regrade(items: list[dict], report: dict | None, judged: dict | None = None, 
         return not (adv and adv.in_force(j, today) and j.get("verdict") == "not-applicable")
 
     by_subject: dict[str, list[dict]] = {}
+    by_id: dict[str, list[dict]] = {}
+
+    def keep(key: str, m: dict) -> None:
+        by_subject.setdefault(_norm(key), []).append(m)
+        for k in {str(m.get("id") or "").upper(), str(m.get("cve") or "").upper()} - {""}:
+            by_id.setdefault(k, []).append(m)
+
     for r in report.get("pins") or []:
         stem = re.sub(r"_(version|image|tag)$", "", str(r.get("var") or ""))
-        by_subject.setdefault(_norm(stem), []).extend(m for m in r.get("matches") or [] if live(str(r.get("var") or ""), m))
+        for m in r.get("matches") or []:
+            if live(str(r.get("var") or ""), m):
+                keep(stem, m)
     for lf in report.get("lockfiles") or []:
         for m in lf.get("matches") or []:
             if live(f"{lf.get('organ')}:{m.get('package')}", m):
-                by_subject.setdefault(_norm(str(m.get("package") or "")), []).append(m)
+                keep(str(m.get("package") or ""), m)
     out = []
     for i in items:
         if i.get("status") != "pending" or i.get("severity") not in SEVERITY_ORDER:
             continue
-        hits = by_subject.get(_norm(str(i.get("component") or "")), [])
+        ids = {str(x).upper() for k in ("cve_ids", "ghsa_ids", "osv_ids") for x in (i.get(k) or []) if str(x).strip()}
+        join = "id" if ids else "component"
+        hits = [m for x in sorted(ids) for m in by_id.get(x, [])] if ids \
+            else by_subject.get(_norm(str(i.get("component") or "")), [])
         if not hits:
             continue
         worst = min(hits, key=lambda m: SEVERITY_ORDER.index(_grade(m)))
         if SEVERITY_ORDER.index(_grade(worst)) < SEVERITY_ORDER.index(i["severity"]):
             out.append({"id": i.get("id"), "component": i.get("component"), "from": i["severity"],
-                        "to": _grade(worst), "by": worst.get("cve") or worst.get("id")})
+                        "to": _grade(worst), "by": worst.get("cve") or worst.get("id"), "join": join})
     return sorted(out, key=lambda r: (SEVERITY_ORDER.index(r["to"]), str(r["id"])))
 
 
@@ -385,8 +400,8 @@ def main() -> int:
     if rg is None:
         print(f"\n  regrade: UNKNOWN — no advisory report at {ADVISORY_SNAPSHOT}")
     for r in rg or []:
-        print(f"\n  REGRADE: {r['id']} {r['from']}->{r['to']} by {r['by']} ({r['component']}) — a proposal; apply it in the queue"
-              if r is rg[0] else f"  REGRADE: {r['id']} {r['from']}->{r['to']} by {r['by']} ({r['component']})")
+        print(f"\n  REGRADE: {r['id']} {r['from']}->{r['to']} by {r['by']} ({r['component']}, by {r['join']}) — a proposal; apply it in the queue"
+              if r is rg[0] else f"  REGRADE: {r['id']} {r['from']}->{r['to']} by {r['by']} ({r['component']}, by {r['join']})")
 
     # A pending row may simply be stale: the estate can be fixed while the queue
     # is not. Say so here rather than letting a count imply exposure.
