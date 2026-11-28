@@ -561,6 +561,10 @@ def insert_notification(payload: dict[str, Any]) -> tuple[int, str]:
     # crashing would empty the inbox of a live class; inserting first and
     # crashing would leave the duplicate this exists to remove. Both halves
     # or neither.
+    #
+    # The key is the emitter's own: one shared HMAC signs every sender, so a key
+    # another emitter reuses must not retire its rows. origin_plugin is that
+    # emitter (row batch-1128-review-tail, ruled 1(a)); `IS` matches NULL to NULL.
     supersede_key = payload.get("supersede_key")
     superseded = 0
 
@@ -572,10 +576,11 @@ def insert_notification(payload: dict[str, Any]) -> tuple[int, str]:
                    SET superseded_at = datetime('now'), superseded_by = ?
                  WHERE supersede_key = ?
                    AND target_actor_id = ?
+                   AND origin_plugin IS ?
                    AND superseded_at IS NULL
                    AND wing_inbox_read_at IS NULL
                 """,
-                (uuid_, supersede_key, target),
+                (uuid_, supersede_key, target, payload.get("origin_plugin")),
             )
             superseded = int(cur0.rowcount or 0)
         cur = conn.execute(
