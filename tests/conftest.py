@@ -25,6 +25,10 @@ for _p in (_REPO_ROOT, _ANATOMY, _HERE):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
+# A cargo gate run without CARGO_TARGET_DIR built into files/anatomy/thalamus/target, inside the tree
+# ansible-lint walks (review 11-28). One shared default, under the runner's own home (never a baked path).
+os.environ.setdefault("CARGO_TARGET_DIR", os.path.expanduser("~/.cache/nos-cargo"))
+
 # CI splits the suite across runners (NOS_PYTEST_SHARD=k/N); unset = everything.
 # Before the split, tests/_lanes.yml files leave the commit path (NOS_LANE=all keeps them).
 import pytest  # noqa: E402
