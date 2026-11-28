@@ -71,8 +71,7 @@ def test_promtool_fresh_is_quiet_lost_and_undeclared_fire(tmp_path):
                           "exp_annotations": {
                               "summary": f"Backup source {s} is empty (0 bytes)",
                               "description": f"Source `{s}` produced a 0-byte archive. Even an\n\"empty\" database usually "
-                                             "dumps to at least a few KB of schema.\nInspect the source logs before trusting this snapshot.\n",
-                              "runbook_url": "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningBackupSourceEmpty.md"}}
+                                             "dumps to at least a few KB of schema.\nInspect the source logs before trusting this snapshot.\n"}}
     (tmp_path / "t.yml").write_text(yaml.safe_dump({"rule_files": ["rules.yml"], "evaluation_interval": "1m", "tests": [{
         "interval": "1m", "input_series": [
             {"series": 'nos_backup_source_size_bytes{source="dir-fresh",empty_ok="true"}', "values": "0x400"},
