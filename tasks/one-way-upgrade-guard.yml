@@ -8,11 +8,15 @@
 # place rewrites the snapshot too). So: when the running tag differs from the pin,
 # stop the container, tar the data dir to another volume, verify the archive holds
 # every file, and only then let compose recreate it. No running container (first
-# install) = nothing to protect. Rollback: restore the tar, re-pin the old tag.
+# install) = nothing to protect, unless the role sets owg_copy_without_container: then
+# data with no container (after a compose down) is copied as `<name>-unknown-…`, its
+# version unknown (row batch-1128-review-tail; spacetimedb only, its data is unbacked).
+# Rollback: restore the tar, re-pin the old tag.
 # Gate: tests/anatomy/test_a_one_way_upgrade_keeps_a_cold_copy.py.
 #
 # Inputs: owg_name (jellyfin), owg_service (compose service label), owg_pin (the
-# tag the converge will run), owg_data_dir (what the migration rewrites).
+# tag the converge will run), owg_data_dir (what the migration rewrites),
+# owg_copy_without_container (optional, default false).
 
 - name: "[one-way {{ owg_name }}] Which tag runs now"
   ansible.builtin.shell: >
@@ -34,12 +38,13 @@
         done
       changed_when: true
 
-    - name: "[one-way {{ owg_name }}] Archive the data dir to another volume"
+    - &owg_archive
+      name: "[one-way {{ owg_name }}] Archive the data dir to another volume"
       ansible.builtin.shell: |
         set -euo pipefail
         dest="{{ one_way_upgrade_backup_dir }}"
         mkdir -p "$dest" && chmod 700 "$dest"
-        out="$dest/{{ owg_name }}-{{ (_owg_running.stdout | trim).splitlines()[0].split(':') | last }}-$(date -u +%Y%m%dT%H%M%SZ).tar.gz"
+        out="$dest/{{ owg_name }}-{{ ((_owg_running.stdout | trim).splitlines() + ['unknown'])[0].split(':') | last }}-$(date -u +%Y%m%dT%H%M%SZ).tar.gz"
         parent="$(dirname '{{ owg_data_dir }}')"; base="$(basename '{{ owg_data_dir }}')"
         export COPYFILE_DISABLE=1   # macOS tar would add ._ AppleDouble members and pad the count
         tar -czf "$out" -C "$parent" "$base"
@@ -53,6 +58,26 @@
       register: _owg_archive
       changed_when: true
 
-    - name: "[one-way {{ owg_name }}] Where the copy is (rollback: restore it, re-pin the old tag)"
+    - &owg_where
+      name: "[one-way {{ owg_name }}] Where the copy is (rollback: restore it, re-pin the old tag)"
       ansible.builtin.debug:
         msg: "{{ _owg_archive.stdout }}"
+
+- name: "[one-way {{ owg_name }}] No container: is there data to copy (opt-in roles only)"
+  ansible.builtin.find:
+    paths: "{{ owg_data_dir }}"
+    file_type: any
+    recurse: false  # a non-dot entry is data; a stray .DS_Store is not
+  register: _owg_data
+  when:
+    - _owg_running.stdout | trim | length == 0
+    - owg_copy_without_container | default(false) | bool
+
+- name: "[one-way {{ owg_name }}] Cold copy of data no container runs (version unknown)"
+  when:
+    - _owg_running.stdout | trim | length == 0
+    - owg_copy_without_container | default(false) | bool
+    - _owg_data.matched | default(0) > 0
+  block:
+    - *owg_archive
+    - *owg_where
