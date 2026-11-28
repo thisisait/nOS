@@ -41,7 +41,6 @@ groups:
             HIGH item(s). Identity is in the queue; this gauge is the count.
             Emitted by hooks/playbook-end.d/20-cve-drift-check.sh, refreshed at
             end of every playbook run and by conductor:security-drift-watch.
-          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosCriticalCveFoundHigh.md"
 
       - alert: NosCriticalCveFoundCritical
         expr: nos_security_pending_total{severity="critical"} > 0
@@ -55,7 +54,6 @@ groups:
             docs/llm/security/remediation-queue.json holds {{ $value }} pending
             CRITICAL item(s). Patch immediately — consider taking the affected
             service offline until remediated. Identity is in the queue.
-          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosCriticalCveFoundCritical.md"
 
   - name: nos_security_secrets
     interval: 1h
@@ -79,7 +77,6 @@ groups:
             The Vaultwarden admin token has not been rotated in
             {{ $value | humanizeDuration }}. Rotate it via the role:
             `ansible-playbook main.yml -K --tags vaultwarden -e rotate_admin_token=true`.
-          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningVaultwardenAdminTokenOld.md"
 
   - name: nos_security_auth
     interval: 1m
@@ -103,7 +100,6 @@ groups:
             More than 5 failed sudo authentications in the last 10 minutes on
             {{ $labels.host }}. Could indicate a brute-force attempt or a
             misconfigured automation. Review the auth.log stream in Grafana Explore.
-          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningFailedSudoBurst.md"
 
       # DEFERRED: suspicious path-scanning detection rides the same unshipped
       # log-metric bridge — `log_pattern_matches_total` has no producer, so this
@@ -125,4 +121,3 @@ groups:
             (.env, /wp-admin, /admin.php) over 5 minutes. Usually harmless
             background noise from the internet, but consider fail2ban / CrowdSec
             if the rate stays elevated.
-          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningSuspiciousNginxPath.md"

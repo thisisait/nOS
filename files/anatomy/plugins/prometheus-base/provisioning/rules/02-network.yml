@@ -22,7 +22,6 @@ groups:
             Nginx is returning more than 5 5xx responses/second on {{ $labels.instance }}
             ({{ $value | printf "%.2f" }} rps). An upstream service is failing — check
             the Loki nginx access log panel and probe_success by target.
-          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningNginx5xxRate.md"
 
       - alert: NosWarningUpstreamLatency
         expr: histogram_quantile(0.95, sum by (le, instance) (rate(nginx_http_request_duration_seconds_bucket[5m]))) > 2
@@ -36,7 +35,6 @@ groups:
             95th-percentile request latency through Nginx is {{ $value | printf "%.2f" }}s
             for 10 minutes. A backend is slow — cross-check container CPU, DB
             connection pool, and Loki error logs.
-          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningUpstreamLatency.md"
 
   - name: nos_network_tls
     interval: 1m
@@ -53,7 +51,6 @@ groups:
             Certificate on {{ $labels.instance }} expires in
             {{ $value | humanizeDuration }}. Renew immediately or browsers will
             break the service. Check the Traefik ACME store / Nginx cert files.
-          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosCriticalCertExpirySoon.md"
 
       - alert: NosWarningCertExpiry30d
         expr: probe_ssl_earliest_cert_expiry - time() < 30 * 86400
@@ -66,7 +63,6 @@ groups:
           description: |
             Certificate on {{ $labels.instance }} expires in
             {{ $value | humanizeDuration }}. Schedule renewal.
-          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningCertExpiry30d.md"
 
   - name: nos_network_probes
     interval: 30s
@@ -83,7 +79,6 @@ groups:
             Blackbox probe for {{ $labels.instance }} (module {{ $labels.module }})
             has been failing for 5 minutes. The endpoint is unreachable or
             returning non-2xx. Check the upstream container and Nginx vhost.
-          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosCriticalProbeFail.md"
 
       # DEFERRED: requires blackbox_exporter 'dns' module configured in its config
       # file. The scrape config wires only http_2xx / tcp_connect modules, so
@@ -104,4 +99,3 @@ groups:
             Blackbox DNS module reports a zero lookup time for {{ $labels.instance }},
             which indicates a resolution failure for 5 minutes. Check the upstream
             resolver and any split-horizon DNS (Tailscale MagicDNS, Pi-hole).
-          runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningDnsResolutionFail.md"

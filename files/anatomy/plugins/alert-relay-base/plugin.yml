@@ -5,7 +5,7 @@
 # firefly, nginx-exporter, phpfpm-exporter) had been FIRING since 2026-07-26 —
 # ten days — and reached nobody. `GET /api/v1/status/config` on Prometheus has
 # no `alerting:` block, so there is no Alertmanager and nothing downstream of
-# rule evaluation. Six rule files with runbook_url annotations, evaluating on
+# rule evaluation. Six rule files, evaluating on
 # schedule, terminating in a void.
 #
 # This plugin registers the poller that closes it: Prometheus /api/v1/alerts →
@@ -102,7 +102,7 @@ notification:
 # GDPR Article 30 — mandatory for every manifest, and honest here rather than
 # boilerplate: the relay forwards ALERT text, which carries service names,
 # instances and rule annotations. No personal data flows through it, but a
-# `runbook_url` and a hostname are still processing metadata about a system an
+# hostname is still processing metadata about a system an
 # operator is identified with, so the block declares that rather than claiming
 # the category is empty.
 # =============================================================================
