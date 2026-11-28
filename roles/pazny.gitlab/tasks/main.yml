@@ -13,10 +13,6 @@
 # has a 60x10s retry loop for readiness.
 # ==============================================================================
 
-# Before anything renders or starts: a pin that skips a required upgrade stop, or goes below the data, is refused.
-- name: "[pazny.gitlab] Required upgrade stops"
-  ansible.builtin.import_tasks: upgrade-stops.yml
-
 # ── Adresarova struktura ─────────────────────────────────────────────────────
 
 - name: "[pazny.gitlab] Ensure data directories exist"
