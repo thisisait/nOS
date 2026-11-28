@@ -132,14 +132,23 @@ _POSTFIX = {"=<": ">=", "<=": ">=", "<": ">", "=>": "<=", ">=": "<=", ">": "<", 
 _LOWER, _UPPER = (">=", ">"), ("<=", "<")
 
 
+#: GitHub's whole-field "every version" and "no patch yet" (row advisory-matcher-all-tbd, ruled (a) strict,
+#: case-insensitive). A field that merely contains them ("All versions before 1.2", "1.2.3, TBD") stays unreadable.
+_ALL = re.compile(r"\s*all(?: versions)?\s*", re.I)
+_TBD = re.compile(r"\s*tbd\s*", re.I)
+
+
 def range_groups(rng: str) -> list[list[tuple[str, tuple]]]:
     """A vulnerable_version_range as an OR of AND-groups of (op, version key).
 
     Forms seen live (2026-10-23): "<= 1.13.1", ">= 1.0, < 1.2.3",
     "v1.11.2=< <=v1.12.2", ">=9.2.0 <9.2.10 >=9.3.0 <9.3.4" (space-joined
     pairs: a lower bound after an upper starts a new range), "1.0.0 - 1.1.1"
-    (inclusive), "\u2264 2026.5.2". Anything else raises ValueError.
+    (inclusive), "\u2264 2026.5.2"; the WHOLE field "All" / "All versions" (any case) is >= 0
+    (ruled 2026-11-27, row advisory-matcher-all-tbd). Anything else raises ValueError.
     """
+    if _ALL.fullmatch(str(rng or "")):
+        return [[(">=", parse_version("0"))]]
     # ";" joins bounds like "," (woodpecker ">= 1.0.0; < 1.0.2"); only "||" is OR.
     s = str(rng or "").replace("\u2264", "<=").replace("\u2265", ">=").replace(";", ",")
     groups: list[list[tuple[str, tuple]]] = []
@@ -413,9 +422,10 @@ def _match_github(version: str, advisories: list[dict]) -> tuple[list[dict], lis
                 raise ValueError("no range")
             rows = []
             for v in vulns:
-                # n8n writes patched as ">= 2.42.1": the fix is the version after ">=".
-                patched = [parse_version(p) for p in re.split(r"[,\s]+|>=", str(v.get("patched_versions") or ""))
-                           if p.strip()]
+                # n8n writes patched as ">= 2.42.1": the fix is the version after ">=". A whole-field "TBD" is no patch.
+                raw = str(v.get("patched_versions") or "")
+                patched = [] if _TBD.fullmatch(raw) else [parse_version(p) for p in re.split(r"[,\s]+|>=", raw)
+                                                          if p.strip()]
                 # An open group (gitea ">1.27.0") is closed only by patches inside it: 1.27.0
                 # sits under its floor and belongs to "<= 1.26.4", so it clears no 28.x.
                 rows.append((v, any(_holds(key, g) and (any(op in _UPPER for op, _ in g)
@@ -441,7 +451,7 @@ def _match_github(version: str, advisories: list[dict]) -> tuple[list[dict], lis
                                             if _holds(key, g) for op, _ in g)
             hits.append({"id": a.get("ghsa_id"), "cve": a.get("cve_id"),
                          "severity": a.get("severity"), "range": v["vulnerable_version_range"],
-                         "fixed": v.get("patched_versions") or None, "package": pkg.get("name"),
+                         "fixed": (v.get("patched_versions") or None) if patched else None, "package": pkg.get("name"),
                          "ecosystem": pkg.get("ecosystem"), "url": a.get("html_url"), "open": open_})
             break
     return hits, unreadable
