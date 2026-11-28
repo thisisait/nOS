@@ -2,15 +2,15 @@
 # Required upgrade stops, held at the converge (row upgrade-stops-guarded-at-converge; ruled 2026-11-27 (a)).
 # upgrades/gitlab.yml encodes GitLab's required stops (18.11 -> 19.2 -> 19.5 -> 19.6) and only
 # `--tags upgrade -e upgrade_service=gitlab` walks them; a plain converge renders gitlab_version, so it would
-# jump past a stop, or a stale pin would downgrade migrated data. Both lose data. No data = a fresh install =
-# no stop. The data's version is the GitLab container's image tag (what the upgrade engine reads,
+# jump past a stop, or a stale pin would downgrade migrated data. Both lose data. No data (no non-dot entry: a
+# stray .DS_Store is not data) = a fresh install = no stop. A stop binds only while the data is below it; with
+# none bound, a newer minor than the data's is refused (no recipe walks there). The data's version is the GitLab container's image tag (what the upgrade engine reads,
 # nos_state_lib.introspect_docker_image), else <gitlab_data_dir>/gitlab-rails/VERSION; unreadable is refused.
 
 - name: "[pazny.gitlab] Upgrade stops: is there GitLab data"
   ansible.builtin.find:
     paths: "{{ gitlab_data_dir }}"
     file_type: any
-    hidden: true
     recurse: false
   register: _gls_data
 
@@ -48,6 +48,7 @@
       - _gls_have | length > 0
       - not (_pin is version(_have, '<'))
       - not (_stop | length > 0 and _pin is version(_stop | regex_replace('-.*$', ''), '>'))
+      - not (_stop | length == 0 and _have_mm is version(_pin_mm, '<'))
     fail_msg: >-
       {% if _gls_have | length == 0 %}GitLab data is in {{ gitlab_data_dir }} but its version is unreadable: `docker ps -a`
       found no gitlab container with a version tag (rc {{ _gls_image.rc | default('?') }}) and
@@ -55,17 +56,23 @@
       holds this data, or walk the stops with `nos --tags upgrade -e upgrade_service=gitlab`.
       {% elif _pin is version(_have, '<') %}gitlab_version {{ gitlab_version }} is older than the data's {{ _gls_have }}:
       that would downgrade migrated data. Set gitlab_version to at least {{ _gls_have }} in config.yml.
-      {% else %}gitlab_version {{ gitlab_version }} skips the required stop {{ _stop }} (the data runs {{ _gls_have }}).
-      Walk the stops with `nos --tags upgrade -e upgrade_service=gitlab` (one stop per run), or hold gitlab_version
-      at {{ _stop }} in config.yml.{% endif %}
+      {% elif _stop | length > 0 %}gitlab_version {{ gitlab_version }} skips the required stop {{ _stop }} (the data runs
+      {{ _gls_have }}). Walk the stops with `nos --tags upgrade -e upgrade_service=gitlab` (one stop per run), or hold
+      gitlab_version at {{ _stop }} in config.yml.
+      {% else %}gitlab_version {{ gitlab_version }} is a newer minor than the data's {{ _gls_have }}, and no recipe in
+      upgrades/gitlab.yml walks from {{ _gls_have }}: refusing rather than skip a stop nobody wrote down. Hold
+      gitlab_version at {{ _have_mm }}.x in config.yml, or add the stop to upgrades/gitlab.yml.{% endif %}
     quiet: true
   vars:
     _pin: "{{ gitlab_version | regex_replace('-.*$', '') }}"
     _have: "{{ _gls_have | regex_replace('-.*$', '') }}"
+    _pin_mm: "{{ (_pin.split('.'))[:2] | join('.') }}"
+    _have_mm: "{{ (_have.split('.'))[:2] | join('.') }}"
     _recipes: "{{ (lookup('ansible.builtin.file', playbook_dir ~ '/upgrades/gitlab.yml') | from_yaml).recipes | default([]) }}"
     _stop: >-
       {%- set ns = namespace(to='') -%}
       {%- for r in _recipes -%}
-        {%- if not ns.to and r.from_regex is defined and (_gls_have is search(r.from_regex)) -%}{%- set ns.to = r.to -%}{%- endif -%}
+        {%- if not ns.to and r.from_regex is defined and (_gls_have is search(r.from_regex))
+              and _have is version(r.to | regex_replace('-.*$', ''), '<') -%}{%- set ns.to = r.to -%}{%- endif -%}
       {%- endfor -%}{{ ns.to }}
   when: _gls_data.matched | default(0) > 0
